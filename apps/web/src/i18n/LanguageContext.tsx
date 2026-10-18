@@ -28,7 +28,6 @@ function detectInitialLanguage(): SupportedLanguage {
 
   const browserLang = (navigator.language || '').toLowerCase();
   if (browserLang.startsWith('ca')) return 'ca';
-  if (browserLang.startsWith('en')) return 'en';
   return 'es';
 }
 
