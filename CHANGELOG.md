@@ -5,6 +5,28 @@ All notable changes to the **OpenBarrio** platform are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.2] - 2026-10-18
+
+### Added
+- **Official Cadastral GML Export (`apps/web/src/utils/gml.ts`)**:
+  - Implemented client-side generation and download of official INSPIRE Cadastral Parcels GML 3.2.1 datasets.
+  - Allows exporting registered cadastral polygon coordinates, reference, and building year directly from the dashboard.
+- **Stitch Civic Precision Visual Alignment**:
+  - Complete overhaul of the web dashboard workspace, dossier, score gauge, highlights, and pillar cards to match Stitch Civic Precision dark GIS design standards.
+
+### Fixed
+- **Basemap CARTO Deprecation & API Key 401/403 Errors**:
+  - Replaced CARTO Dark Matter basemap raster tiles (`cartocdn.com`) with Esri World Dark Gray Canvas (`server.arcgisonline.com`).
+  - Esri World Dark Gray is completely free, requires zero API key, and permanently eliminates tile authentication errors and watermarks.
+- **Map Click Snapping to Default Landmark (Gran Vía 28)**:
+  - Tightened landmark preset snapping in `api.client.ts` from 0.003° (~330m) down to 0.00015° (~15m, single building footprint).
+  - Clicks anywhere across Madrid or other municipalities now reliably preserve exact clicked coordinates, generated cadastral references, and reverse-geocoded addresses instead of collapsing into Gran Vía 28.
+- **Map Marker Popup UX & Transition State**:
+  - Added pending feedback (`Consultando Catastro...`, `Punto seleccionado`) to `MapView.tsx` so clicking new coordinates does not display stale property details while fetching data.
+  - Constrained `map.flyTo` to trigger only when distance > 0.001° (~100m) to eliminate camera jitter on nearby clicks.
+
+---
+
 ## [0.2.1] - 2026-10-18
 
 ### Fixed
