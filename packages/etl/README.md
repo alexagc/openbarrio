@@ -2,17 +2,18 @@
 
 This package provides the autonomous ETL pipeline implementing **Option B (Data Sovereignty)** from `AGENTS.md`. It eliminates external rate limits and latency for INE and census tract queries by pre-processing official public open datasets into:
 
-1. **Cloudflare D1 (SQLite):** Ingests ~36,000 Spanish census tracts from the **INE ADRH** (Atlas de Distribución de Renta de los Hogares) with municipal percentiles, rankings, and demographic metrics for sub-5ms edge lookups.
-2. **Cloudflare R2 (PMTiles):** Simplifies geometry polygons from the **IGN Seccionado Censal** into optimized PMTiles for dual-use (Edge Point-in-Polygon spatial resolution in Cloudflare Workers and vector heatmaps in MapLibre GL frontend).
+1. **Cloudflare D1 (SQLite):** Ingests Spanish census tracts from the **INE ADRH** (Atlas de Distribución de Renta de los Hogares) with municipal percentiles, rankings, and demographic metrics for sub-5ms edge lookups.
+2. **Cloudflare R2 (PMTiles):** Simplifies geometry polygons from the **INE/IGN Cartografía Seccionado Censal** into optimized PMTiles for dual-use (Edge Point-in-Polygon spatial resolution in Cloudflare Workers and vector heatmaps in MapLibre GL frontend).
 
 ---
 
 ## 🛠️ Architecture & Tools
 
-* **DuckDB:** High-performance analytical columnar database engine executing vectorised income aggregation and municipal window ranking calculations.
-* **DuckDB Spatial:** Native OGC geospatial extension (`INSTALL spatial; LOAD spatial;`) reading official shapefiles, reprojecting to WGS84 (EPSG:4326), and simplifying topological boundaries (`ST_SimplifyPreserveTopology`).
+* **Dataset Downloader (`src/download_datasets.py`):** Automatically fetches official tables from the INE Tempus API (`https://servicios.ine.es/wstempus/js/ES/TABLAS_OPERACION/353`) and cartography shapefiles (`https://www.ine.es/prodyser/cartografia/seccionado_2024.zip`).
+* **DuckDB:** High-performance analytical columnar database engine executing vectorized income aggregation and municipal window ranking calculations (`src/process_ine_adrh.py`).
+* **DuckDB Spatial:** Native OGC geospatial extension (`INSTALL spatial; LOAD spatial;`) reading official shapefiles, reprojecting UTM to WGS84 (EPSG:4326), and simplifying topological boundaries (`src/process_ign_boundaries.py`).
 * **Tippecanoe:** Compiles simplified GeoJSON into compact, multi-scale PMTiles archives (zooms 6 to 14) for low-cost Cloudflare R2 object storage.
-* **GitHub Actions:** Runs on a scheduled pipeline (`.github/workflows/data-pipeline.yml`) to download raw datasets, execute DuckDB processing, and synchronize Cloudflare D1 and R2.
+* **GitHub Actions:** Scheduled and on-demand workflow (`.github/workflows/data-pipeline.yml`) automating ingestion, processing, artifact archiving, and Cloudflare D1/R2 synchronization.
 
 ---
 
@@ -41,19 +42,49 @@ CREATE INDEX IF NOT EXISTS idx_census_tract_muni ON census_tract_income (municip
 
 ## 🚀 Execution Commands
 
+### 1. Trigger Autonomous Pipeline via GitHub Actions
+Run the automated cloud pipeline directly via the GitHub CLI:
+
 ```bash
-# Generate sample data for dry-run
-python3 src/sample_data.py
+# Run pipeline with metropolitan provinces + upload to D1/R2
+gh workflow run data-pipeline.yml
 
-# Process INE ADRH into Cloudflare D1 SQL file & SQLite DB
-python3 src/process_ine_adrh.py --input data/ine_adrh_raw.csv --output-sql dist/ine_adrh.sql --output-db dist/ine_adrh.db
+# Run pipeline downloading all 52 Spanish provinces
+gh workflow run data-pipeline.yml -f all_provinces=true
 
-# Process IGN cartography into simplified GeoJSON and PMTiles
-python3 src/process_ign_boundaries.py --input data/ign_secciones_censales.geojson --output-pmtiles dist/census_tracts.pmtiles
+# Dry run (compile and archive artifacts without modifying Cloudflare)
+gh workflow run data-pipeline.yml -f dry_run=true
+```
 
-# Apply SQL to Cloudflare D1 (Production)
+### 2. Local / Codespaces Execution
+Within GitHub Codespaces or a Linux environment with GDAL & Tippecanoe:
+
+```bash
+# 1. Download official INE tables and cartography (or use --force-sample)
+python3 src/download_datasets.py
+
+# 2. Process INE ADRH into Cloudflare D1 SQL file & SQLite DB
+python3 src/process_ine_adrh.py \
+  --input data/ine_adrh_raw.csv \
+  --output-sql dist/ine_adrh.sql \
+  --output-db dist/ine_adrh.db
+
+# 3. Process cartography into simplified GeoJSON and PMTiles
+python3 src/process_ign_boundaries.py \
+  --input data/ign_secciones_censales.geojson \
+  --output-pmtiles dist/census_tracts.pmtiles
+
+# 4. Apply SQL to Cloudflare D1 (Production)
 npx wrangler d1 execute openbarrio-d1 --file=dist/ine_adrh.sql --remote
 
-# Upload PMTiles to Cloudflare R2 (Production)
+# 5. Upload PMTiles to Cloudflare R2 (Production)
 npx wrangler r2 object put openbarrio-r2/census_tracts.pmtiles --file=dist/census_tracts.pmtiles
 ```
+
+---
+
+## 📦 Pipeline Artifacts
+Every GitHub Actions run publishes the processed artifacts to the workflow summary with 30-day retention:
+* `ine_adrh.sql`: Complete D1 batched SQL insert script for all census tracts.
+* `census_tracts.pmtiles`: Optimized multi-zoom vector tile package for Cloudflare R2.
+* `census_tracts_simplified.geojson`: Lightweight WGS84 GeoJSON for spatial analysis.
