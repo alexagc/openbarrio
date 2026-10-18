@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import maplibregl, { Map as MapLibreMap, Marker, NavigationControl } from 'maplibre-gl';
+import 'maplibre-gl/dist/maplibre-gl.css';
 import { Layers, MapPin, Maximize2 } from 'lucide-react';
 
 interface MapViewProps {
@@ -73,7 +74,7 @@ export function MapView({
           'catastro-wms': {
             type: 'raster',
             tiles: [
-              'https://ovc.catastro.meh.es/Cartografia/WMS/BuscarCadastral.aspx?SERVICE=WMS&SRS=EPSG:3857&REQUEST=GetMap&FORMAT=image/png&BBOX={bbox-epsg-3857}&WIDTH=256&HEIGHT=256&LAYERS=Catastro&TRANSPARENT=TRUE',
+              'https://ovc.catastro.meh.es/Cartografia/WMS/ServidorWMS.aspx?SERVICE=WMS&SRS=EPSG:3857&REQUEST=GetMap&FORMAT=image/png&BBOX={bbox-epsg-3857}&WIDTH=256&HEIGHT=256&LAYERS=Catastro&TRANSPARENT=TRUE',
             ],
             tileSize: 256,
             attribution: '&copy; Dirección General del Catastro (España)',
@@ -133,9 +134,22 @@ export function MapView({
       onMapClick(lat, lon);
     });
 
+    map.on('load', () => {
+      map.resize();
+    });
+
     mapRef.current = map;
 
+    let resizeObserver: ResizeObserver | null = null;
+    if (typeof ResizeObserver !== 'undefined' && mapContainerRef.current) {
+      resizeObserver = new ResizeObserver(() => {
+        map.resize();
+      });
+      resizeObserver.observe(mapContainerRef.current);
+    }
+
     return () => {
+      resizeObserver?.disconnect();
       map.remove();
       mapRef.current = null;
     };
@@ -229,9 +243,9 @@ export function MapView({
   };
 
   return (
-    <div className="relative w-full h-full min-h-[380px] rounded-2xl overflow-hidden border border-slate-200 shadow-inner bg-slate-100 flex flex-col">
+    <div className="relative w-full h-full min-h-[420px] rounded-2xl overflow-hidden border border-slate-200 shadow-inner bg-slate-100">
       {/* MapLibre DOM Target */}
-      <div ref={mapContainerRef} className="w-full h-full flex-1" />
+      <div ref={mapContainerRef} className="absolute inset-0 w-full h-full" />
 
       {/* Floating Map Controls & Indicators */}
       <div className="absolute top-3 left-3 z-10 flex flex-col space-y-2 no-print">
