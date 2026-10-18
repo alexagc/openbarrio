@@ -31,13 +31,13 @@ jobs:
         continue-on-error: true
 
       - name: Check code formatting & linting
-        run: pnpm run lint --if-present
+        run: pnpm run --if-present lint
 
       - name: Run unit & integration tests
-        run: pnpm run test --if-present
+        run: pnpm run --if-present test
 
       - name: Validate build
-        run: pnpm run build --if-present
+        run: pnpm run --if-present build
 
   dependency-review:
     name: Dependency Review & License Audit
