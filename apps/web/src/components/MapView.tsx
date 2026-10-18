@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, useMemo } from 'react';
-import maplibregl, { Map as MapLibreMap, Marker, Popup } from 'maplibre-gl';
+import * as maplibregl from 'maplibre-gl';
+import type { Map as MapLibreMap, Marker, MapMouseEvent } from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import {
   Layers,
@@ -301,7 +302,7 @@ export function MapView({
 
     map.getCanvas().style.cursor = 'crosshair';
 
-    map.on('click', (e) => {
+    map.on('click', (e: MapMouseEvent) => {
       const lat = parseFloat(e.lngLat.lat.toFixed(6));
       const lon = parseFloat(e.lngLat.lng.toFixed(6));
       onMapClickRef.current(lat, lon);
@@ -450,13 +451,13 @@ export function MapView({
       </div>
     `;
 
-    const popup = new Popup({
+    const popup = new maplibregl.Popup({
       offset: 20,
       closeButton: false,
       className: 'stitch-dark-popup',
     }).setHTML(popupHtml);
 
-    const marker = new Marker({ element: el })
+    const marker = new maplibregl.Marker({ element: el })
       .setLngLat([lon, lat])
       .setPopup(popup)
       .addTo(map);
