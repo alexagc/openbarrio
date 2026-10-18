@@ -1,0 +1,27 @@
+{
+  "type": "FeatureCollection",
+  "totalFeatures": 2,
+  "features": [
+    {
+      "type": "Feature",
+      "id": "ZI_T100.59821",
+      "layer": "ZI_T100",
+      "properties": {
+        "CUENCA": "Tajo",
+        "PERIODO": 100,
+        "PROBABILIDAD": "Media",
+        "ZFP": false
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "ZI_ZFP.10294",
+      "layer": "ZI_ZFP",
+      "properties": {
+        "CUENCA": "Tajo",
+        "TIPO": "Zona de Flujo Preferente",
+        "ZFP": true
+      }
+    }
+  ]
+}

@@ -20,7 +20,7 @@ The project is structured as a TypeScript monorepo with 100% shared types across
 ```
 openbarrio/
 ├── packages/core/       # Shared TypeScript schemas, DTOs & scoring algorithms
-├── apps/api/            # Fastify 5 REST API with Swagger docs (/docs) & RFC 7807 errors
+├── apps/api/            # Hono Universal REST API (Cloudflare Workers & Node.js) with Swagger docs & RFC 7807 errors
 ├── apps/web/            # Interactive React + MapLibre GL due diligence dashboard
 └── apps/extension/      # Chrome Extension (Manifest V3) for Idealista & Fotocasa
 ```

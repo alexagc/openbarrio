@@ -1,0 +1,11 @@
+{
+  "municipalityCode": "08019",
+  "municipalityName": "Barcelona",
+  "isStressedHousingZone": true,
+  "officialRangeLowerEurM2": 15.2,
+  "officialRangeUpperEurM2": 19.8,
+  "cadastralReference": "9872023VH5797S0001WX",
+  "builtSurfaceM2": 104,
+  "estimatedMonthlyRentLowerEur": 1581,
+  "estimatedMonthlyRentUpperEur": 2059
+}

@@ -12,7 +12,7 @@
   * **MITECO** (SICA noise levels and SNCZI flood risk mapping).
   * **MIVAU** (SERPAVI rental price reference index).
 * **Delivery Formats:**
-  1. **Core API:** High-performance Fastify backend with automatic OpenAPI/Swagger documentation.
+  1. **Core API:** High-performance Hono Universal backend (Cloudflare Workers & Node.js) with automatic OpenAPI/Swagger documentation.
   2. **Web Dashboard:** Interactive React + MapLibre GL exploration app with printable due diligence reports.
   3. **Browser Extension:** Chrome Manifest V3 companion widget injecting instant public audit cards directly into property portals (Idealista & Fotocasa).
 * **Strict English Mandate:** All code, identifiers, comments, documentation, commit messages, issue templates, and internal notes **MUST be written in English**. No exceptions.
@@ -39,8 +39,8 @@ openbarrio/
 ├── .github/workflows/      # Automated CI pipelines
 ├── .notes/                 # Local developer boards (gitignored)
 ├── apps/
-│   ├── api/                # Fastify backend service
-│   ├── web/                # React + Vite web dashboard
+│   ├── api/                # Hono Universal backend service (Cloudflare Workers & Node.js)
+│   ├── web/                # React + Vite web dashboard (Cloudflare Pages)
 │   └── extension/          # Chrome Extension (Manifest V3)
 ├── packages/
 │   └── core/               # Shared TypeScript schemas, DTOs & scoring formulas
@@ -54,7 +54,7 @@ openbarrio/
 * **Zero duplication:** Never duplicate Catastro, INE, or Audit models across `apps/api`, `apps/web`, or `apps/extension`.
 * Use TypeBox or native TypeScript types for compile-time and runtime validation parity.
 
-### 3.2. Fastify Backend Rules (`apps/api`)
+### 3.2. Hono Backend Rules (`apps/api`)
 * **Hexagonal Architecture:** External services (`catastro`, `ine`, `miteco`, `mivau`) must be implemented behind provider interfaces with in-memory mock implementations for isolated testing.
 * **Standardized Error Handling:** All API errors must conform to **RFC 7807 (Problem Details for HTTP APIs)**.
 * **Schema Validation:** Every route must declare input (params, query, body) and response schemas.
@@ -67,6 +67,15 @@ openbarrio/
 ### 3.4. Chrome Extension Rules (`apps/extension`)
 * **Manifest V3 Only:** Strictly adhere to Chrome Manifest V3 standards.
 * **Content Script Isolation:** Content scripts injected into Idealista or Fotocasa must be isolated, perform non-blocking DOM checks, and communicate securely with the OpenBarrio API.
+
+### 3.5. Data Ingestion & Sovereignty Rules (Option B)
+* **Zero External Rate Limits for INE:** Census tract income (INE ADRH) and geographic boundary resolution (IGN Seccionado Censal) **MUST NOT** rely on synchronous external APIs in production.
+* **Autonomous ETL Pipeline:** A GitHub Actions workflow (`.github/workflows/data-pipeline.yml`) using **DuckDB Spatial** processes official raw census files:
+  - Ingests INE ADRH CSVs (~36,000 tracts) -> stored in **Cloudflare D1** (SQLite) for sub-5ms income queries.
+  - Ingests IGN boundary polygons -> simplified and stored in **Cloudflare R2** as **PMTiles** for dual-use (Edge Point-in-Polygon spatial resolution and MapLibre GL frontend vector heatmaps).
+* **Catastro & MITECO Hybrid Access:**
+  - Catastro OVC: On-demand live queries proxied and protected via Cloudflare Cache API (60-day TTL).
+  - MITECO: On-demand WMS `GetFeatureInfo` queries.
 
 ---
 
@@ -88,7 +97,7 @@ To support concurrent work between humans and autonomous AI agents:
 
 ## 5. Specialized Rules
 Refer to `.agent/rules/` for in-depth guidelines:
-* [Backend Fastify Rules](file:///.agent/rules/backend-fastify.md)
+* [Backend Hono Rules](file:///.agent/rules/backend-hono.md)
 * [Frontend React Rules](file:///.agent/rules/frontend-react.md)
 * [Chrome Extension Rules](file:///.agent/rules/chrome-extension.md)
 * [Git & Workflow Rules](file:///.agent/rules/git-workflow.md)
