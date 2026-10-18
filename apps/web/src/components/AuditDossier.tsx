@@ -4,13 +4,17 @@ import { ScoreGauge } from './ScoreGauge';
 import { PillarCards } from './PillarCard';
 import { RentalModule } from './RentalModule';
 import { HighlightsAndRisks } from './HighlightsAndRisks';
+import { downloadCadastralGML } from '../utils/gml';
 import {
   Printer,
   Copy,
   Check,
   ExternalLink,
   Calendar,
-  FileCheck,
+  Building,
+  Bookmark,
+  MapPin,
+  Download,
 } from 'lucide-react';
 
 interface AuditDossierProps {
@@ -19,15 +23,14 @@ interface AuditDossierProps {
 
 export function AuditDossier({ report }: AuditDossierProps) {
   const [copied, setCopied] = useState(false);
+  const [bookmarked, setBookmarked] = useState(false);
 
   const { property, neighborhood, environment, score, rentalBenchmark, generatedAt } = report;
-  const fullAddress = `${property.address.street} ${property.address.number}, ${property.address.postalCode} ${property.address.municipality} (${property.address.province})`;
+  const fullAddress = `${property.address.street} ${property.address.number}, ${property.address.postalCode} ${property.address.municipality}`;
   const formattedDate = new Date(generatedAt).toLocaleDateString('es-ES', {
     day: '2-digit',
     month: 'long',
     year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
   });
 
   const handleCopyRefcat = () => {
@@ -40,6 +43,10 @@ export function AuditDossier({ report }: AuditDossierProps) {
     window.print();
   };
 
+  const handleDownloadGML = () => {
+    downloadCadastralGML(report);
+  };
+
   const getCatastroUrl = (rc: string): string => {
     const sanitized = rc.replace(/[^A-Za-z0-9]/g, '');
     const url = new URL('https://www1.sedecatastro.gob.es/CYCBienInmueble/OVCListaBienes.aspx');
@@ -48,72 +55,131 @@ export function AuditDossier({ report }: AuditDossierProps) {
     return url.toString();
   };
 
+  const usageLabel = property.building.primaryUse || 'Residencial Colectivo';
+  const districtLabel = `${property.address.municipality} · Sección ${neighborhood.censusTractCode.slice(-3)}`;
+
   return (
-    <div className="dossier-container space-y-4 max-w-4xl mx-auto">
-      {/* Dossier Header / Identification Card */}
-      <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <div>
-          <div className="flex items-center space-x-2 text-xs font-semibold text-indigo-600 uppercase tracking-wider mb-1">
-            <FileCheck className="w-3.5 h-3.5" />
-            <span>Dossier Oficial de Due Diligence Inmobiliario</span>
-          </div>
-
-          <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
-            {fullAddress}
-          </h1>
-
-          <div className="mt-2 flex flex-wrap items-center gap-y-1.5 gap-x-3 text-xs text-slate-500">
-            <div className="flex items-center space-x-1 font-mono bg-slate-50 px-2 py-0.5 rounded border border-slate-200 text-slate-700">
-              <span className="font-sans text-[10px] text-slate-400 font-bold uppercase mr-1">RC</span>
-              <span>{property.cadastralReference}</span>
-              <button
-                type="button"
-                onClick={handleCopyRefcat}
-                className="ml-1 text-slate-400 hover:text-indigo-600 transition"
-                title="Copiar Referencia Catastral"
-              >
-                {copied ? <Check className="w-3 h-3 text-emerald-600" /> : <Copy className="w-3 h-3" />}
-              </button>
+    <div className="dossier-container w-full h-full bg-surface overflow-y-auto flex flex-col divide-y divide-outline-variant text-on-surface">
+      {/* 1. PROPERTY DOSSIER HEADER (Stitch Civic Precision) */}
+      <div className="p-space-lg bg-surface-container-low">
+        <div className="flex items-start justify-between gap-2">
+          <div>
+            <div className="flex items-center gap-2 mb-1.5 flex-wrap">
+              <span className="px-2 py-0.5 rounded text-[10px] font-mono uppercase bg-primary-container/20 text-primary border border-primary/40 font-semibold">
+                {property.building.constructionYear < 1940 ? 'Edificio Singular Histórico' : usageLabel}
+              </span>
+              <span className="text-xs font-mono text-outline">{districtLabel}</span>
             </div>
 
-            <span className="flex items-center text-slate-400">
-              <Calendar className="w-3.5 h-3.5 mr-1" />
-              Auditado el {formattedDate}
-            </span>
+            <h1 className="font-headline text-xl sm:text-2xl font-bold text-on-surface tracking-tight leading-tight">
+              {fullAddress}
+            </h1>
+
+            <p className="text-xs sm:text-sm text-on-surface-variant mt-1 flex items-center gap-1.5">
+              <Building className="w-4 h-4 text-outline shrink-0" />
+              <span>
+                {property.address.province} · {property.building.builtSurfaceM2.toLocaleString('es-ES')} m² construidos (Año {property.building.constructionYear})
+              </span>
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => setBookmarked(!bookmarked)}
+            className={`p-2 rounded hover:bg-surface-container transition-colors ${
+              bookmarked ? 'text-primary' : 'text-on-surface-variant hover:text-on-surface'
+            }`}
+            title="Marcar inmueble como guardado"
+          >
+            <Bookmark className={`w-5 h-5 ${bookmarked ? 'fill-primary' : ''}`} />
+          </button>
+        </div>
+
+        {/* Cadastral Pill Box */}
+        <div className="mt-3.5 p-2 bg-surface-container border border-outline-variant rounded flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <div className="flex items-center gap-2 overflow-hidden">
+            <MapPin className="text-secondary w-4 h-4 shrink-0" />
+            <div className="flex flex-col min-w-0">
+              <span className="text-[10px] font-mono text-outline uppercase leading-none">
+                Referencia Catastral Inmueble
+              </span>
+              <span className="font-mono text-xs sm:text-sm text-on-surface font-semibold truncate tracking-wider mt-0.5">
+                {property.cadastralReference}
+              </span>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-1.5 shrink-0 self-end sm:self-auto">
+            <button
+              type="button"
+              onClick={handleCopyRefcat}
+              className="px-2.5 py-1 bg-surface-container-high hover:bg-surface-variant text-on-surface text-xs font-mono rounded border border-outline-variant transition-colors flex items-center gap-1"
+              title="Copiar Referencia Catastral"
+            >
+              {copied ? (
+                <>
+                  <Check className="w-3.5 h-3.5 text-primary" />
+                  <span className="text-primary">Copiada</span>
+                </>
+              ) : (
+                <>
+                  <Copy className="w-3.5 h-3.5" />
+                  <span>Copiar</span>
+                </>
+              )}
+            </button>
+
+            <a
+              href={getCatastroUrl(property.cadastralReference)}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="px-2.5 py-1 bg-surface-container-high hover:bg-surface-variant text-on-surface text-xs font-mono rounded border border-outline-variant transition-colors flex items-center gap-1"
+              title="Ver en Sede Electrónica del Catastro"
+            >
+              <ExternalLink className="w-3.5 h-3.5 text-tertiary" />
+              <span className="hidden sm:inline">Sede</span>
+            </a>
           </div>
         </div>
 
         {/* Action Toolbar */}
-        <div className="flex items-center space-x-2 no-print self-end sm:self-center">
+        <div className="mt-3 flex items-center gap-2 no-print flex-wrap">
+          <button
+            type="button"
+            onClick={handleDownloadGML}
+            className="bg-surface-container-high hover:bg-surface-variant text-on-surface border border-outline-variant text-xs font-mono px-3 py-1.5 rounded flex items-center gap-1.5 transition-colors cursor-pointer"
+            title="Descargar archivo GML INSPIRE oficial de la parcela"
+          >
+            <Download className="w-3.5 h-3.5 text-primary" />
+            <span>Descargar GML</span>
+          </button>
+
           <button
             type="button"
             onClick={handlePrint}
-            className="flex items-center space-x-1.5 px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold transition"
-            title="Imprimir informe en PDF"
+            className="bg-inverse-primary hover:bg-primary-container text-white text-xs font-semibold px-3 py-1.5 rounded flex items-center gap-1.5 transition-colors shadow-sm cursor-pointer"
+            title="Exportar informe de due diligence en formato PDF"
           >
-            <Printer className="w-4 h-4 text-slate-600" />
-            <span>Imprimir / PDF</span>
+            <Printer className="w-3.5 h-3.5" />
+            <span>Exportar Dossier PDF</span>
           </button>
 
-          <a
-            href={getCatastroUrl(property.cadastralReference)}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center space-x-1.5 px-3 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-xl text-xs font-semibold transition"
-            title="Abrir en Sede Electrónica del Catastro"
-          >
-            <span>Ficha Catastro</span>
-            <ExternalLink className="w-3.5 h-3.5 ml-0.5" />
-          </a>
+          <span className="text-[10px] font-mono text-outline ml-auto flex items-center gap-1">
+            <Calendar className="w-3 h-3" /> {formattedDate}
+          </span>
         </div>
       </div>
 
-      {/* Barrio Score Hero Gauge */}
+      {/* 2. HERO BARRIO SCORE CARD */}
       <div className="page-break-inside-avoid">
-        <ScoreGauge score={score} />
+        <ScoreGauge
+          score={score}
+          cityOrProvince={property.address.province}
+          percentile={neighborhood.incomePercentile}
+        />
       </div>
 
-      {/* 4 Pillars Breakdown */}
+      {/* 3. FOUR PILLARS BREAKDOWN */}
       <div className="page-break-inside-avoid">
         <PillarCards
           property={property}
@@ -122,26 +188,30 @@ export function AuditDossier({ report }: AuditDossierProps) {
         />
       </div>
 
-      {/* MIVAU SERPAVI Rental Module */}
+      {/* 4. MIVAU SERPAVI RENTAL MODULE */}
       {rentalBenchmark && (
         <div className="page-break-inside-avoid">
           <RentalModule rental={rentalBenchmark} />
         </div>
       )}
 
-      {/* Highlights & Risks Section */}
+      {/* 5. DUE DILIGENCE CLEARANCE & RISKS */}
       <div className="page-break-inside-avoid">
         <HighlightsAndRisks
           highlights={score.keyHighlights}
           risks={score.keyRisks}
+          refcat={property.cadastralReference}
+          municipality={property.address.municipality}
         />
       </div>
 
-      {/* Legal & Methodological Disclaimer */}
-      <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 text-[11px] text-slate-500 leading-relaxed space-y-1">
-        <p className="font-semibold text-slate-700">Nota Metodológica & Descargo Cívico:</p>
+      {/* 6. METHODOLOGICAL & LEGAL DISCLAIMER */}
+      <div className="p-space-lg bg-surface text-[11px] text-outline font-mono leading-relaxed space-y-1">
+        <p className="font-semibold text-on-surface-variant">
+          Nota Metodológica & Descargo Cívico:
+        </p>
         <p>
-          Este informe ha sido generado de forma automatizada por la plataforma de código abierto OpenBarrio mediante agregación y normalización en tiempo real de registros públicos de la Sede Electrónica del Catastro, Instituto Nacional de Estadística (INE ADRH), Ministerio para la Transición Ecológica (MITECO SICA y SNCZI) y Ministerio de Vivienda y Agenda Urbana (MIVAU SERPAVI). Los datos ofrecidos tienen carácter informativo y no sustituyen certificaciones administrativas formales, tasaciones periciales oficiales ni auditorías técnicas de arquitectura (ITE/IEE).
+          Este informe ha sido generado de forma automatizada por la plataforma de código abierto OpenBarrio mediante agregación y normalización en tiempo real de registros públicos de la Sede Electrónica del Catastro (OVC), Instituto Nacional de Estadística (INE ADRH), Ministerio para la Transición Ecológica (MITECO SICA y SNCZI) y Ministerio de Vivienda y Agenda Urbana (MIVAU SERPAVI). Los datos ofrecidos tienen carácter informativo y no sustituyen certificaciones administrativas formales ni tasaciones periciales oficiales.
         </p>
       </div>
     </div>

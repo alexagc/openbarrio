@@ -3,141 +3,138 @@ import { ShieldCheck, AlertTriangle, ShieldAlert } from 'lucide-react';
 
 interface ScoreGaugeProps {
   score: AuditScoreBreakdown;
+  cityOrProvince?: string;
+  percentile?: number;
 }
 
-export function ScoreGauge({ score }: ScoreGaugeProps) {
+export function ScoreGauge({ score, cityOrProvince = 'España', percentile = 89 }: ScoreGaugeProps) {
   const { overallScore } = score;
 
-  let colorTheme = {
-    badgeBg: 'bg-emerald-50 text-emerald-800 border-emerald-200',
-    barBg: 'bg-emerald-500',
-    textColor: 'text-emerald-600',
-    label: 'Excelente / Favorable',
-    description: 'Bajo riesgo integral, alta solvencia socioeconómica y entorno favorable.',
-    icon: ShieldCheck,
-  };
+  let badgeText = 'Notable Alto - Entorno Consolidado';
+  let badgeClass = 'bg-primary/10 text-primary border-primary/30';
+  let gaugeColor = 'text-primary';
+  let Icon = ShieldCheck;
 
-  if (overallScore < 50) {
-    colorTheme = {
-      badgeBg: 'bg-rose-50 text-rose-800 border-rose-200',
-      barBg: 'bg-rose-500',
-      textColor: 'text-rose-600',
-      label: 'Alerta / Riesgo Elevado',
-      description: 'Factores de riesgo identificados: acústica crítica, inundabilidad o antigüedad.',
-      icon: ShieldAlert,
-    };
+  if (overallScore >= 85) {
+    badgeText = 'Sobresaliente - Alta Solvencia & Confort';
+    badgeClass = 'bg-primary/15 text-primary border-primary/40';
+    gaugeColor = 'text-primary';
+    Icon = ShieldCheck;
+  } else if (overallScore < 50) {
+    badgeText = 'Alerta / Precaución Técnica';
+    badgeClass = 'bg-error/15 text-error border-error/40';
+    gaugeColor = 'text-error';
+    Icon = ShieldAlert;
   } else if (overallScore < 75) {
-    colorTheme = {
-      badgeBg: 'bg-amber-50 text-amber-800 border-amber-200',
-      barBg: 'bg-amber-500',
-      textColor: 'text-amber-600',
-      label: 'Moderado / Precaución',
-      description: 'Nivel medio. Se recomienda revisar parámetros de aislamiento o ITE.',
-      icon: AlertTriangle,
-    };
+    badgeText = 'Moderado - Revisar Aislamiento o ITE';
+    badgeClass = 'bg-secondary/15 text-secondary border-secondary/40';
+    gaugeColor = 'text-secondary';
+    Icon = AlertTriangle;
   }
 
-  const Icon = colorTheme.icon;
+  // Calculate circumference: 2 * Math.PI * 15.9155 ~= 100
+  const strokeDashoffset = 100 - overallScore;
 
   return (
-    <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm">
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        {/* Left: Overall Score Dial */}
-        <div className="flex items-center space-x-4">
-          <div className="relative flex items-center justify-center">
-            {/* Circular Gauge */}
-            <svg className="w-24 h-24 transform -rotate-90">
-              <circle
-                cx="48"
-                cy="48"
-                r="40"
+    <div className="p-space-lg bg-surface">
+      <div className="flex items-center justify-between mb-3">
+        <h2 className="font-title-md text-title-md text-on-surface flex items-center gap-2 font-bold">
+          <Icon className="w-4 h-4 text-primary" />
+          <span>Índice Integral OpenBarrio</span>
+        </h2>
+        <span className={`px-2 py-0.5 rounded text-label-sm font-label-sm border font-semibold ${badgeClass}`}>
+          {badgeText}
+        </span>
+      </div>
+
+      <div className="grid grid-cols-12 gap-4 items-center bg-surface-container-low p-space-md rounded border border-outline-variant">
+        {/* Circular Gauge */}
+        <div className="col-span-12 sm:col-span-4 flex flex-col items-center justify-center sm:border-r border-outline-variant/60 sm:pr-2 pb-2 sm:pb-0">
+          <div className="relative w-24 h-24 flex items-center justify-center">
+            <svg className="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
+              <path
+                className="text-surface-variant"
+                d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                fill="none"
                 stroke="currentColor"
-                strokeWidth="8"
-                className="text-slate-100"
-                fill="transparent"
+                strokeWidth="3.5"
               />
-              <circle
-                cx="48"
-                cy="48"
-                r="40"
+              <path
+                className={`${gaugeColor} transition-all duration-1000 ease-out`}
+                d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                fill="none"
                 stroke="currentColor"
-                strokeWidth="8"
-                strokeDasharray={251.2}
-                strokeDashoffset={251.2 - (251.2 * overallScore) / 100}
+                strokeDasharray="100, 100"
+                strokeDashoffset={strokeDashoffset}
                 strokeLinecap="round"
-                className={`${colorTheme.textColor} transition-all duration-1000 ease-out`}
-                fill="transparent"
+                strokeWidth="3.5"
               />
             </svg>
             <div className="absolute flex flex-col items-center justify-center">
-              <span className="text-3xl font-black text-slate-900 tracking-tight">{overallScore}</span>
-              <span className="text-[10px] uppercase font-bold text-slate-400">/ 100</span>
-            </div>
-          </div>
-
-          <div>
-            <div className="flex items-center space-x-2">
-              <h2 className="text-xl font-bold text-slate-900 tracking-tight">Barrio Score™</h2>
-              <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold border ${colorTheme.badgeBg}`}>
-                <Icon className="w-3.5 h-3.5 mr-1" />
-                {colorTheme.label}
+              <span className="font-headline-lg text-2xl font-bold text-on-surface font-mono leading-none">
+                {overallScore}
               </span>
+              <span className="text-[9px] font-mono text-outline uppercase">/100</span>
             </div>
-            <p className="text-xs text-slate-600 mt-1 max-w-sm">
-              {colorTheme.description}
-            </p>
           </div>
+          <span className="text-[10px] font-mono text-center text-outline mt-1">
+            Percentil {percentile}º {cityOrProvince}
+          </span>
         </div>
 
-        {/* Right: Quick Sub-score Mini-Bars */}
-        <div className="w-full sm:w-56 space-y-2 text-xs border-t sm:border-t-0 sm:border-l sm:pl-5 border-slate-100 pt-3 sm:pt-0">
+        {/* 4 Sub-score Progress Bars */}
+        <div className="col-span-12 sm:col-span-8 space-y-2">
+          {/* Sub-score 1: INE */}
           <div>
-            <div className="flex justify-between text-slate-600 font-medium mb-1">
-              <span>Socioeconómico</span>
-              <span className="font-bold text-slate-800">{score.socioeconomicScore}%</span>
+            <div className="flex justify-between text-body-sm mb-0.5 font-mono text-[11px]">
+              <span className="text-on-surface-variant font-sans">Nivel Socioeconómico (INE)</span>
+              <span className="text-on-surface font-semibold">{score.socioeconomicScore}/100</span>
             </div>
-            <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
+            <div className="w-full h-1.5 bg-surface-variant rounded-full overflow-hidden">
               <div
-                className="bg-indigo-600 h-1.5 rounded-full"
+                className="h-full bg-primary rounded-full transition-all duration-700"
                 style={{ width: `${score.socioeconomicScore}%` }}
               />
             </div>
           </div>
 
+          {/* Sub-score 2: Catastro */}
           <div>
-            <div className="flex justify-between text-slate-600 font-medium mb-1">
-              <span>Salud Edificio</span>
-              <span className="font-bold text-slate-800">{score.buildingHealthScore}%</span>
+            <div className="flex justify-between text-body-sm mb-0.5 font-mono text-[11px]">
+              <span className="text-on-surface-variant font-sans">Salud Edificatoria & Tejido</span>
+              <span className="text-on-surface font-semibold">{score.buildingHealthScore}/100</span>
             </div>
-            <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
+            <div className="w-full h-1.5 bg-surface-variant rounded-full overflow-hidden">
               <div
-                className="bg-blue-600 h-1.5 rounded-full"
+                className="h-full bg-primary rounded-full transition-all duration-700"
                 style={{ width: `${score.buildingHealthScore}%` }}
               />
             </div>
           </div>
 
+          {/* Sub-score 3: MITECO SICA */}
           <div>
-            <div className="flex justify-between text-slate-600 font-medium mb-1">
-              <span>Confort Acústico</span>
-              <span className="font-bold text-slate-800">{score.acousticComfortScore}%</span>
+            <div className="flex justify-between text-body-sm mb-0.5 font-mono text-[11px]">
+              <span className="text-on-surface-variant font-sans">Confort Acústico (MITECO)</span>
+              <span className="text-secondary font-semibold">{score.acousticComfortScore}/100</span>
             </div>
-            <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
+            <div className="w-full h-1.5 bg-surface-variant rounded-full overflow-hidden">
               <div
-                className="bg-teal-600 h-1.5 rounded-full"
+                className="h-full bg-secondary-container rounded-full transition-all duration-700"
                 style={{ width: `${score.acousticComfortScore}%` }}
               />
             </div>
           </div>
 
+          {/* Sub-score 4: MITECO SNCZI */}
           <div>
-            <div className="flex justify-between text-slate-600 font-medium mb-1">
-              <span>Seguridad Climática</span>
-              <span className="font-bold text-slate-800">{score.climateSafetyScore}%</span>
+            <div className="flex justify-between text-body-sm mb-0.5 font-mono text-[11px]">
+              <span className="text-on-surface-variant font-sans">Seguridad Hídrica & Clima</span>
+              <span className="text-primary font-semibold">{score.climateSafetyScore}/100</span>
             </div>
-            <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
+            <div className="w-full h-1.5 bg-surface-variant rounded-full overflow-hidden">
               <div
-                className="bg-sky-600 h-1.5 rounded-full"
+                className="h-full bg-primary-fixed rounded-full transition-all duration-700"
                 style={{ width: `${score.climateSafetyScore}%` }}
               />
             </div>
