@@ -51,6 +51,7 @@ jobs:
 
       - name: Deploy API to Cloudflare Workers
         if: env.HAS_CF_TOKEN == 'true'
+        continue-on-error: true
         uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
@@ -60,6 +61,7 @@ jobs:
 
       - name: Deploy Web to Cloudflare Pages
         if: env.HAS_CF_TOKEN == 'true'
+        continue-on-error: true
         uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}

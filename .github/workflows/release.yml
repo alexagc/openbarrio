@@ -34,11 +34,11 @@ jobs:
       - name: Install dependencies
         run: pnpm install --no-frozen-lockfile
 
-      - name: Run verification tests
-        run: pnpm test
-
       - name: Build monorepo packages
         run: pnpm run build
+
+      - name: Run verification tests
+        run: pnpm test
 
       - name: Package Chrome Extension ZIP
         id: package-ext
