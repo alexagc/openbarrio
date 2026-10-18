@@ -1,5 +1,5 @@
 import { CadastralProperty } from '@openbarrio/core';
-import { CadastralNotFoundError, UpstreamProviderError } from '../errors/problem-details.js';
+import { CadastralNotFoundError } from '../errors/problem-details.js';
 
 function extractTag(xml: string, tag: string): string | null {
   const regex = new RegExp(`<${tag}[^>]*>([\\s\\S]*?)<\\/${tag}>`, 'i');

@@ -1,7 +1,7 @@
 import { CadastralProperty } from '@openbarrio/core';
 import { ICatastroProvider } from './types.js';
 import { parseCatastroCoordinatesXml, parseCatastroDnprcXml } from './catastro.parser.js';
-import { CadastralNotFoundError, UpstreamProviderError } from '../errors/problem-details.js';
+import { UpstreamProviderError } from '../errors/problem-details.js';
 
 export interface CatastroProviderOptions {
   baseUrl?: string;

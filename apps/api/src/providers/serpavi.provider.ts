@@ -62,7 +62,7 @@ export class SERPAVIProvider implements ISERPAVIProvider {
     const isStressed = this.isStressedZone(muniCode, provinceCode);
 
     // Compute baseline EUR/m2 based on municipality tier
-    let [baseLowerEurM2, baseUpperEurM2] = this.getBaseRatesByTerritory(
+    const [baseLowerEurM2, baseUpperEurM2] = this.getBaseRatesByTerritory(
       muniCode,
       provinceCode,
       cadastralProperty.address.municipality
