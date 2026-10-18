@@ -14,7 +14,7 @@ This document outlines the multi-phase roadmap for **OpenBarrio**, tracking comp
 | **Phase 3** | Additional Public Data Providers (MITECO & MIVAU) | **In Progress** 🔄 |
 | **Phase 4** | Interactive Web Dashboard with MapLibre GL (`apps/web`) | Backlog ⏳ |
 | **Phase 5** | Chrome Manifest V3 Companion Extension (`apps/extension`) | Backlog ⏳ |
-| **Phase 6** | Due Diligence Dossier PDF Export & Production Hardening | Backlog ⏳ |
+| **Phase 6** | Cloudflare Live Production Deployment & Hardening | Backlog ⏳ |
 
 ---
 
@@ -64,7 +64,18 @@ This document outlines the multi-phase roadmap for **OpenBarrio**, tracking comp
 - [ ] Non-blocking DOM content script for **Fotocasa** property pages.
 - [ ] Floating public audit card widget fetching instant metrics from the Cloudflare API.
 
-### Phase 6: Dossier Export & Hardening (Backlog ⏳)
-- [ ] Printable PDF export for complete Due Diligence Dossiers.
-- [ ] Edge caching policies via Cloudflare Cache API & KV for Catastro & INE queries.
-- [ ] Rate limiting, CORS hardening, and production telemetry.
+### Phase 6: Cloudflare Live Production Deployment & Hardening (Backlog ⏳)
+- [ ] **Cloudflare Account & Credentials Setup:**
+  - Create free Cloudflare account and obtain `CLOUDFLARE_ACCOUNT_ID`.
+  - Generate Cloudflare API Token with `Workers:Edit` and `Pages:Edit` permissions.
+  - Configure GitHub Secrets: `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID`.
+- [ ] **First Live Production Release:**
+  - Trigger automated deployment via GitHub Actions (`.github/workflows/deploy.yml`).
+  - Verify live web dashboard on `openbarrio-web.pages.dev`.
+  - Verify live API endpoints and Swagger docs on `openbarrio-api.workers.dev/docs`.
+- [ ] **Custom Domain & Edge Optimization:**
+  - Map custom domains (`openbarrio.org` and `api.openbarrio.org`) with Cloudflare DNS proxy.
+  - Implement Edge caching policies via Cloudflare Cache API / KV for Catastro & INE queries.
+  - Rate limiting, security headers, and CORS hardening.
+- [ ] **Dossier Reporting:**
+  - Printable PDF export for complete Due Diligence Dossiers.
