@@ -1,8 +1,13 @@
 {
   "manifest_version": 3,
-  "name": "OpenBarrio - Detector Inmobiliario Oficial",
+  "name": "OpenBarrio - Due Diligence Inmobiliario Oficial",
   "version": "0.1.0",
-  "description": "Auditoría pública en tiempo real de Catastro e INE para Idealista y Fotocasa",
+  "description": "Companion widget oficial para Idealista y Fotocasa. Auditoría instantánea de Catastro, INE, MITECO y MIVAU.",
+  "icons": {
+    "16": "icons/icon-16.png",
+    "48": "icons/icon-48.png",
+    "128": "icons/icon-128.png"
+  },
   "permissions": [
     "activeTab",
     "storage"
@@ -10,16 +15,35 @@
   "host_permissions": [
     "*://*.idealista.com/*",
     "*://*.fotocasa.es/*",
-    "http://localhost:3001/*"
+    "http://localhost:3001/*",
+    "https://*.workers.dev/*",
+    "https://api.openbarrio.org/*"
   ],
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "action": {
+    "default_popup": "popup/index.html",
+    "default_title": "OpenBarrio - Auditoría Inmobiliaria",
+    "default_icon": {
+      "16": "icons/icon-16.png",
+      "48": "icons/icon-48.png",
+      "128": "icons/icon-128.png"
+    }
+  },
   "content_scripts": [
     {
       "matches": [
         "*://*.idealista.com/inmueble/*",
         "*://*.fotocasa.es/*/comprar/*",
-        "*://*.fotocasa.es/*/alquiler/*"
+        "*://*.fotocasa.es/*/alquiler/*",
+        "*://*.fotocasa.es/es/comprar/*",
+        "*://*.fotocasa.es/es/alquiler/*"
       ],
-      "js": ["dist/content.js"],
+      "js": [
+        "content.js"
+      ],
       "run_at": "document_idle"
     }
   ]

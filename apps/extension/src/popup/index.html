@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OpenBarrio - Detector Inmobiliario</title>
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <div class="popup-container">
+    <!-- Header -->
+    <header class="popup-header">
+      <div class="header-brand">
+        <div class="header-logo">OB</div>
+        <div>
+          <h1 class="header-title">OpenBarrio</h1>
+          <p class="header-subtitle">Auditoría Inmobiliaria Oficial</p>
+        </div>
+      </div>
+      <span class="badge-version">v0.1.0</span>
+    </header>
+
+    <!-- Tab Status Card -->
+    <section class="card tab-card" id="tab-status-card">
+      <div class="card-header">
+        <span class="card-icon" id="tab-icon">🌐</span>
+        <h2 class="card-title" id="tab-title">Pestaña Activa</h2>
+      </div>
+      <p class="card-description" id="tab-desc">
+        Comprobando portal inmobiliario...
+      </p>
+      <div class="tab-portal-badge hidden" id="portal-badge">
+        <span class="portal-indicator"></span>
+        <span id="portal-name">Portal</span>
+      </div>
+    </section>
+
+    <!-- Quick Search -->
+    <section class="card">
+      <h2 class="card-title">Búsqueda Rápida de Catastro</h2>
+      <p class="card-description">Introduce una Referencia Catastral (14 o 20 caracteres):</p>
+      <form id="search-form" class="search-form">
+        <input
+          type="text"
+          id="search-refcat"
+          placeholder="Ej: 9872023VH5797S0001WX"
+          class="input-text"
+          maxlength="20"
+          autocomplete="off"
+        />
+        <button type="submit" class="btn btn-primary">Auditar</button>
+      </form>
+    </section>
+
+    <!-- Endpoint Settings (Collapsible) -->
+    <section class="card">
+      <div class="card-header-toggle" id="settings-toggle">
+        <h2 class="card-title">Configuración de Servidores</h2>
+        <span class="toggle-icon" id="settings-toggle-icon">▸</span>
+      </div>
+      <div class="settings-content hidden" id="settings-content">
+        <form id="settings-form">
+          <div class="form-group">
+            <label for="api-url" class="form-label">API OpenBarrio URL</label>
+            <input type="url" id="api-url" class="input-text" placeholder="http://localhost:3001" required />
+          </div>
+
+          <div class="form-group">
+            <label for="web-url" class="form-label">Web Dashboard URL</label>
+            <input type="url" id="web-url" class="input-text" placeholder="http://localhost:3000" required />
+          </div>
+
+          <div class="preset-buttons">
+            <button type="button" class="btn btn-secondary btn-sm" id="btn-preset-local">Local Dev</button>
+            <button type="button" class="btn btn-secondary btn-sm" id="btn-preset-cloud">Cloudflare Edge</button>
+          </div>
+
+          <button type="submit" class="btn btn-primary btn-block" style="margin-top: 10px;">Guardar Configuración</button>
+          <p class="feedback-msg hidden" id="settings-feedback">Configuración guardada correctamente.</p>
+        </form>
+      </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="popup-footer">
+      <div class="footer-status">
+        <span class="status-dot status-unknown" id="api-status-dot"></span>
+        <span id="api-status-text">Comprobando API...</span>
+      </div>
+      <div class="footer-links">
+        <a href="https://github.com/alexagc/openbarrio" target="_blank" rel="noopener">GitHub</a>
+        <span>·</span>
+        <a href="http://localhost:3000" target="_blank" rel="noopener" id="web-link">Web App</a>
+      </div>
+    </footer>
+  </div>
+
+  <script type="module" src="./popup.ts"></script>
+</body>
+</html>

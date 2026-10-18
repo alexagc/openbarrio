@@ -12,10 +12,11 @@ This document outlines the multi-phase roadmap for **OpenBarrio**, tracking comp
 | **Phase 2** | Core Data Providers & Audit REST API (`apps/api`) | **Done** ✅ |
 | **Phase 2.5** | Cloudflare & Hono Edge Architecture (`apps/api` & `apps/web`) | **Done** ✅ |
 | **Phase 3** | Additional Public Data Providers (MITECO & MIVAU) | **Done** ✅ |
-| **Phase 4** | Interactive Web Dashboard with MapLibre GL (`apps/web`) | Backlog ⏳ |
+| **Phase 4** | Interactive Web Dashboard with MapLibre GL (`apps/web`) | **Done** ✅ |
 | **Phase 5** | Chrome Manifest V3 Companion Extension (`apps/extension`) | **Done** ✅ |
 | **Phase 6** | Cloudflare Live Production Deployment & Hardening | **Done** ✅ |
 | **Phase 7** | Automated Governance, SAST & Dependency Security | **Done** ✅ |
+| **Phase 8** | Civic Precision Landing Page & Trilingual i18n Architecture (`apps/web`) | **Done** ✅ |
 
 ---
 
@@ -59,11 +60,14 @@ This document outlines the multi-phase roadmap for **OpenBarrio**, tracking comp
 - [x] Incorporate acoustic comfort, flood risk safety, and rental benchmark metrics into the Barrio Score algorithm and AuditService.
 - [x] Comprehensive unit and route integration tests with Vitest fixtures.
 
-### Phase 4: Interactive Web Dashboard (Backlog ⏳)
-- [ ] MapLibre GL map engine integrated into `apps/web`.
-- [ ] Cadastral vector parcel rendering and census tract overlay coloring.
-- [ ] Search bar supporting address geocoding, coordinates, and Cadastral Reference (RC).
-- [ ] Due diligence dossier visual card with score breakdown, radars, and alerts.
+### Phase 4: Interactive Web Dashboard (Completed ✅)
+- [x] MapLibre GL map engine integrated into `apps/web` with CARTO Positron and IGN PNOA Satellite basemaps.
+- [x] Cadastral vector parcel rendering and Catastro WMS overlay toggling.
+- [x] Universal property search bar supporting address geocoding, coordinates, and Cadastral Reference (RC).
+- [x] Due diligence dossier visual card with Barrio Score (0-100), pillars breakdown, rental benchmark, and risk radar.
+- [x] Print & PDF export layout with clean styling and official Sede del Catastro links.
+- [x] Typed API client (`src/services/api.client.ts`) with RFC 7807 error parsing and offline preview fallback.
+- [x] Comprehensive Vitest unit and integration test suite (`apps/web/tests/api.client.test.ts`).
 
 ### Phase 5: Chrome Extension MV3 (Completed ✅)
 - [x] Manifest V3 extension architecture in `apps/extension` with minimal permissions (`activeTab`, `storage`).
@@ -112,4 +116,17 @@ This document outlines the multi-phase roadmap for **OpenBarrio**, tracking comp
 - [x] **Security Policy & Governance Documentation:**
   - Document vulnerability disclosure protocols and security controls in `docs/SECURITY.md`.
 
-
+### Phase 8: Civic Precision Landing Page & Trilingual i18n (Completed ✅)
+- [x] **Stitch Civic Precision Design System:**
+  - Semantic high-density cartographic layout, custom elevation layers, and `.gis-grid-pattern` background in `apps/web/tailwind.config.js`.
+- [x] **Trilingual Type-Safe i18n Architecture:**
+  - Zero-dependency React `LanguageContext` supporting Spanish (`es`), English (`en`), and Catalan (`ca`) with localStorage persistence and HTML `lang` synchronization.
+- [x] **Civic Landing Page Components (`apps/web/src/components/landing`):**
+  - Brand header with language switcher pill and interactive map launcher.
+  - Hero section with dual-mode address/refcat geocoder and instant example chips.
+  - Four-pillar public data grid (Catastro, INE ADRH, MITECO SICA/SNCZI, MIVAU SERPAVI).
+  - Browser extension interactive showcase with simulated property portal injection.
+  - Civic principles bento grid (0% real estate ads, no user tracking, open data architecture).
+  - Due diligence modal with instant property audit card and transition to MapLibre GIS explorer.
+- [x] **Automated Testing:**
+  - Vitest test suites verifying 100% dictionary key parity and full landing component user flows (`tests/i18n.test.ts`, `tests/landing.test.tsx`).

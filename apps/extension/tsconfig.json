@@ -3,7 +3,10 @@
   "compilerOptions": {
     "outDir": "./dist",
     "rootDir": "./src",
-    "lib": ["DOM", "ES2022"]
+    "lib": ["DOM", "DOM.Iterable", "ES2022"]
   },
+  "references": [
+    { "path": "../../packages/core" }
+  ],
   "include": ["src/**/*"]
 }
