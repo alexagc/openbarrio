@@ -48,6 +48,14 @@ export const AuditModal: React.FC<AuditModalProps> = ({ data, onClose, onOpenMap
     return 'text-error bg-error-container/20 border-error/40';
   };
 
+  const getCatastroUrl = (rc: string): string => {
+    const sanitized = rc.replace(/[^A-Za-z0-9]/g, '');
+    const url = new URL('https://www1.sedecatastro.gob.es/CYCBienInmueble/OVCListaBienes.aspx');
+    url.searchParams.set('rc1', sanitized.slice(0, 7));
+    url.searchParams.set('rc2', sanitized.slice(7, 14));
+    return url.toString();
+  };
+
   const getScoreRatingText = (score: number) => {
     if (score >= 75) return t('auditPreview.scoreRatingHigh');
     if (score >= 50) return t('auditPreview.scoreRatingMedium');
@@ -227,12 +235,9 @@ export const AuditModal: React.FC<AuditModalProps> = ({ data, onClose, onOpenMap
           <span className="font-mono text-outline">{t('auditPreview.sourceLinks')}:</span>
           <div className="flex items-center gap-3">
             <a
-              href={`https://www1.sedecatastro.gob.es/CYCBienInmueble/OVCListaBienes.aspx?rc1=${data.refcat.substring(
-                0,
-                7
-              )}&rc2=${data.refcat.substring(7, 14)}`}
+              href={getCatastroUrl(data.refcat)}
               target="_blank"
-              rel="noreferrer"
+              rel="noopener noreferrer"
               className="text-primary hover:underline flex items-center gap-1"
             >
               <span>Catastro OVC</span>

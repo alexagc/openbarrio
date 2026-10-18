@@ -8,12 +8,20 @@ export class FotocasaExtractor implements PropertyExtractor {
   readonly portal = 'fotocasa' as const;
 
   canExtract(url: string): boolean {
-    if (!url.includes('fotocasa.es')) return false;
-    if (/\/l(\/|\?|#|$)/i.test(url)) return false;
-    return (
-      /\/d(\/|\?|#|$)/i.test(url) &&
-      (url.includes('/comprar/') || url.includes('/alquiler/'))
-    );
+    try {
+      const parsed = new URL(url);
+      const isFotocasaHost =
+        parsed.hostname === 'fotocasa.es' ||
+        parsed.hostname.endsWith('.fotocasa.es');
+      if (!isFotocasaHost) return false;
+      if (/\/l(\/|\?|#|$)/i.test(parsed.pathname)) return false;
+      return (
+        /\/d(\/|\?|#|$)/i.test(parsed.pathname) &&
+        (parsed.pathname.includes('/comprar/') || parsed.pathname.includes('/alquiler/'))
+      );
+    } catch {
+      return false;
+    }
   }
 
   extract(doc: Document, url: string): ExtractedPropertyData | null {

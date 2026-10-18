@@ -11,6 +11,19 @@ interface MapViewProps {
 
 type BasemapType = 'positron' | 'pnoa-satellite';
 
+function escapeHtml(str: string): string {
+  return str.replace(/[&<>"']/g, (m) => {
+    switch (m) {
+      case '&': return '&amp;';
+      case '<': return '&lt;';
+      case '>': return '&gt;';
+      case '"': return '&quot;';
+      case "'": return '&#39;';
+      default: return m;
+    }
+  });
+}
+
 export function MapView({
   selectedCoords,
   onMapClick,
@@ -179,10 +192,12 @@ export function MapView({
       markerRef.current.remove();
     }
 
+    const safeTitle = escapeHtml(propertyName || 'Inmueble Auditado');
+    const safeAddress = escapeHtml(propertyAddress || `${lat.toFixed(5)}, ${lon.toFixed(5)}`);
     const popupHtml = `
       <div class="p-2 text-xs font-sans">
-        <p class="font-bold text-slate-900">${propertyName || 'Inmueble Auditado'}</p>
-        <p class="text-slate-600">${propertyAddress || `${lat.toFixed(5)}, ${lon.toFixed(5)}`}</p>
+        <p class="font-bold text-slate-900">${safeTitle}</p>
+        <p class="text-slate-600">${safeAddress}</p>
         <p class="mt-1 text-[10px] text-indigo-600 font-medium">Click en el mapa para auditar otro punto</p>
       </div>
     `;

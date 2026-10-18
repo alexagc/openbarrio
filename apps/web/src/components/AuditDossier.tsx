@@ -40,6 +40,14 @@ export function AuditDossier({ report }: AuditDossierProps) {
     window.print();
   };
 
+  const getCatastroUrl = (rc: string): string => {
+    const sanitized = rc.replace(/[^A-Za-z0-9]/g, '');
+    const url = new URL('https://www1.sedecatastro.gob.es/CYCBienInmueble/OVCListaBienes.aspx');
+    url.searchParams.set('rc1', sanitized.slice(0, 7));
+    url.searchParams.set('rc2', sanitized.slice(7, 14));
+    return url.toString();
+  };
+
   return (
     <div className="dossier-container space-y-4 max-w-4xl mx-auto">
       {/* Dossier Header / Identification Card */}
@@ -88,12 +96,9 @@ export function AuditDossier({ report }: AuditDossierProps) {
           </button>
 
           <a
-            href={`https://www1.sedecatastro.gob.es/CYCBienInmueble/OVCListaBienes.aspx?rc1=${property.cadastralReference.substring(
-              0,
-              7
-            )}&rc2=${property.cadastralReference.substring(7, 14)}`}
+            href={getCatastroUrl(property.cadastralReference)}
             target="_blank"
-            rel="noreferrer"
+            rel="noopener noreferrer"
             className="flex items-center space-x-1.5 px-3 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-xl text-xs font-semibold transition"
             title="Abrir en Sede Electrónica del Catastro"
           >

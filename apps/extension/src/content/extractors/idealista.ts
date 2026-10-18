@@ -8,7 +8,15 @@ export class IdealistaExtractor implements PropertyExtractor {
   readonly portal = 'idealista' as const;
 
   canExtract(url: string): boolean {
-    return /idealista\.com\/inmueble\/\d+/i.test(url) || url.includes('/inmueble/');
+    try {
+      const parsed = new URL(url);
+      const isIdealistaHost =
+        parsed.hostname === 'idealista.com' ||
+        parsed.hostname.endsWith('.idealista.com');
+      return isIdealistaHost && /^\/inmueble\/\d+/i.test(parsed.pathname);
+    } catch {
+      return false;
+    }
   }
 
   extract(doc: Document, url: string): ExtractedPropertyData | null {
