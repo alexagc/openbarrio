@@ -16,7 +16,7 @@ import { MapView } from './components/MapView';
 import { AuditDossier } from './components/AuditDossier';
 import { SkeletonDossier } from './components/SkeletonDossier';
 import { ErrorAlert } from './components/ErrorAlert';
-import { apiClient, ExtendedAuditReport, ApiError, auditDataToReport } from './services/api.client';
+import { apiClient, ExtendedAuditReport, auditDataToReport } from './services/api.client';
 import { ProblemDetails } from '@openbarrio/core';
 import { ArrowLeft, MapPin, Download, Printer } from 'lucide-react';
 import { downloadCadastralGML } from './utils/gml';
