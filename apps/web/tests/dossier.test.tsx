@@ -95,7 +95,7 @@ describe('AuditDossier Component (Stitch Civic Precision)', () => {
     expect(screen.getByText(/64 dBA Lden/i)).toBeTruthy();
     expect(screen.getByText(/Riesgo Hidrológico & Climático/i)).toBeTruthy();
     expect(screen.getByText(/Índice Alquiler MIVAU & Yield/i)).toBeTruthy();
-    expect(screen.getByText(/14,20 €\/m² - 18,50 €\/m²/i)).toBeTruthy();
+    expect(screen.getByText(/14[,.]20 €\/m² - 18[,.]50 €\/m²/i)).toBeTruthy();
   });
 
   it('renders Due Diligence clearance and risk chips with municipal sign-off', () => {

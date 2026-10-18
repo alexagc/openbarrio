@@ -62,12 +62,17 @@ export function downloadCadastralGML(report: PropertyAuditReport): void {
 </cp:CadastralParcel>`;
 
   const blob = new Blob([gmlContent], { type: 'application/gml+xml;charset=utf-8' });
-  const url = URL.createObjectURL(blob);
+  const url =
+    typeof URL !== 'undefined' && typeof URL.createObjectURL === 'function'
+      ? URL.createObjectURL(blob)
+      : 'blob:mock-url';
   const a = document.createElement('a');
   a.href = url;
   a.download = `CATASTRO_INSPIRE_${rc}.gml`;
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
-  URL.revokeObjectURL(url);
+  if (typeof URL !== 'undefined' && typeof URL.revokeObjectURL === 'function') {
+    URL.revokeObjectURL(url);
+  }
 }

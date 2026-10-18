@@ -2,6 +2,16 @@ import { describe, it, expect, vi } from 'vitest';
 import { downloadCadastralGML } from '../src/utils/gml';
 import { PropertyAuditReport } from '@openbarrio/core';
 
+// Polyfill URL.createObjectURL for JSDOM environment
+if (typeof window !== 'undefined') {
+  if (!window.URL.createObjectURL) {
+    window.URL.createObjectURL = () => 'blob:mock-url';
+  }
+  if (!window.URL.revokeObjectURL) {
+    window.URL.revokeObjectURL = () => {};
+  }
+}
+
 describe('downloadCadastralGML Utility', () => {
   it('generates and triggers download of INSPIRE-compliant CadastralParcel GML', () => {
     // Mock document.createElement and click

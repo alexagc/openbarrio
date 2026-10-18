@@ -16,6 +16,9 @@ export function RentalModule({ rental }: RentalModuleProps) {
     isStressedHousingZone,
   } = rental;
 
+  const lowerFormatted = officialRangeLowerEurM2.toFixed(2).replace('.', ',');
+  const upperFormatted = officialRangeUpperEurM2.toFixed(2).replace('.', ',');
+
   return (
     <div className="p-space-lg bg-surface space-y-3">
       <div className="flex items-center justify-between">
@@ -34,7 +37,7 @@ export function RentalModule({ rental }: RentalModuleProps) {
             Rango Estatal Oficial Alquiler
           </span>
           <span className="font-mono text-sm sm:text-base font-bold text-on-surface">
-            {officialRangeLowerEurM2.toFixed(2)} €/m² - {officialRangeUpperEurM2.toFixed(2)} €/m²
+            {lowerFormatted} €/m² - {upperFormatted} €/m²
           </span>
         </div>
 
