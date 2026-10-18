@@ -22,7 +22,7 @@
   },
   "devDependencies": {
     "eslint": "^9.14.0",
-    "typescript": "^5.6.3",
+    "typescript": "^7.0.2",
     "vitest": "^2.1.3"
   }
 }
