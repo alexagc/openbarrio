@@ -163,9 +163,9 @@ export function AppContent() {
             noiseLden: liveReport.environment.noise.dayEveningNightDecibels,
             noiseLevel: liveReport.environment.noise.category === 'NOISY' ? 'Tráfico alto' : 'Moderado',
             floodRisk: liveReport.environment.floodRisk.level === 'NONE' ? 'Nulo (T>500a)' : liveReport.environment.floodRisk.level,
-            rentMinM2: liveReport.rentalBenchmark.officialRangeLowerEurM2,
-            rentMaxM2: liveReport.rentalBenchmark.officialRangeUpperEurM2,
-            isStressedZone: liveReport.rentalBenchmark.isStressedHousingZone,
+            rentMinM2: liveReport.rentalBenchmark?.officialRangeLowerEurM2 ?? 12.0,
+            rentMaxM2: liveReport.rentalBenchmark?.officialRangeUpperEurM2 ?? 16.0,
+            isStressedZone: liveReport.rentalBenchmark?.isStressedHousingZone ?? false,
             coordinates: {
               lat: liveReport.property.coordinates.latitude,
               lon: liveReport.property.coordinates.longitude,
