@@ -56,7 +56,7 @@ export class OpenBarrioApiClient {
         await this.handleHttpError(response);
       }
 
-      const contentType = response.headers.get('content-type') || '';
+      const contentType = response.headers?.get ? response.headers.get('content-type') || 'application/json' : 'application/json';
       if (!contentType.includes('application/json') && !contentType.includes('+json')) {
         throw new Error('API returned non-JSON response');
       }
