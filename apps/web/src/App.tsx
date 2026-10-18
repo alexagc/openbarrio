@@ -136,11 +136,47 @@ export function AppContent() {
   ) => {
     const normalizedKey = query.toLowerCase().trim();
     const sample = SAMPLE_AUDITS[normalizedKey];
-    if (sample) {
-      setActiveAudit(sample);
-    } else {
-      setActiveAudit(generateAuditFallback(query, mode, coords));
-    }
+    const initialData = sample || generateAuditFallback(query, mode, coords);
+    setActiveAudit(initialData);
+
+    // Query live API in background to hydrate with official state data
+    (async () => {
+      try {
+        let liveReport: ExtendedAuditReport | null = null;
+        if (mode === 'refcat' && /^[0-9A-Za-z]{14,20}$/.test(query.trim())) {
+          liveReport = await apiClient.auditByCadastralReference(query.trim());
+        } else if (coords) {
+          liveReport = await apiClient.auditByCoordinates(coords.lat, coords.lon);
+        }
+
+        if (liveReport && !liveReport.isOfflineDemo) {
+          setActiveAudit({
+            query,
+            refcat: liveReport.property.cadastralReference,
+            address: `${liveReport.property.address.street} ${liveReport.property.address.number}, ${liveReport.property.address.municipality}`,
+            score: liveReport.score.overallScore,
+            yearBuilt: liveReport.property.building.constructionYear,
+            surfaceM2: liveReport.property.building.builtSurfaceM2,
+            cadastralUsage: liveReport.property.building.primaryUse,
+            householdIncome: liveReport.neighborhood.averageNetHouseholdIncomeEur,
+            incomePercentile: liveReport.neighborhood.percentileInMunicipality,
+            noiseLden: liveReport.environment.noise.dayEveningNightDecibels,
+            noiseLevel: liveReport.environment.noise.category === 'NOISY' ? 'Tráfico alto' : 'Moderado',
+            floodRisk: liveReport.environment.floodRisk.level === 'NONE' ? 'Nulo (T>500a)' : liveReport.environment.floodRisk.level,
+            rentMinM2: liveReport.rentalBenchmark.officialRangeLowerEurM2,
+            rentMaxM2: liveReport.rentalBenchmark.officialRangeUpperEurM2,
+            isStressedZone: liveReport.rentalBenchmark.isStressedHousingZone,
+            coordinates: {
+              lat: liveReport.property.coordinates.latitude,
+              lon: liveReport.property.coordinates.longitude,
+            },
+            isLive: true,
+          });
+        }
+      } catch {
+        // Keep initial fallback if network unreachable
+      }
+    })();
   };
 
   const handleOpenMap = (audit?: AuditData) => {
@@ -158,9 +194,11 @@ export function AppContent() {
       };
       setSelectedCoords(coords);
 
-      // 2. Refresh live report in background if valid cadastral reference
+      // 2. Refresh live report in background
       if (audit.refcat && /^[0-9A-Za-z]{14,20}$/.test(audit.refcat)) {
         loadAuditByRefcat(audit.refcat, coords);
+      } else if (coords) {
+        loadAuditByCoords(coords.lat, coords.lon);
       }
     } else if (!report) {
       loadAuditByCoords(40.42028, -3.70379);
@@ -250,8 +288,13 @@ export function AppContent() {
           </div>
 
           <div className="flex items-center gap-2">
-            <span className="font-mono text-xs text-on-surface-variant">
-              {report?.isOfflineDemo ? 'Modo Preview / Fixtures' : 'Conectado a Red'}
+            <span className="font-mono text-xs text-on-surface-variant flex items-center gap-1.5 bg-surface-container-high px-2.5 py-1 rounded border border-outline-variant">
+              <span
+                className={`w-2 h-2 rounded-full ${
+                  report?.isOfflineDemo ? 'bg-amber-400 animate-pulse' : 'bg-emerald-500'
+                }`}
+              />
+              {report?.isOfflineDemo ? 'Modo Preview / Fixtures' : 'Conectado a Red (D1 + Catastro OVC)'}
             </span>
           </div>
         </header>

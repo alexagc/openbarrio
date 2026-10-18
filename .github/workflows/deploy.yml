@@ -74,6 +74,6 @@ jobs:
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          workingDirectory: apps/api
+          workingDirectory: apps/web
           preCommands: npx wrangler pages project create openbarrio-web --production-branch=main || true
-          command: pages deploy ../web/dist --project-name=openbarrio-web --branch=main --commit-dirty=true
+          command: pages deploy dist --project-name=openbarrio-web --branch=main --commit-dirty=true

@@ -5,6 +5,19 @@ All notable changes to the **OpenBarrio** platform are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.1] - 2026-10-18
+
+### Fixed
+- **Cloudflare Pages Edge Worker Proxy & Service Binding**:
+  - Replaced non-working external 200 rewrite rule in `_redirects` with a dedicated Cloudflare Pages Edge Worker (`apps/web/public/_worker.js`).
+  - Added Cloudflare Pages configuration (`apps/web/wrangler.jsonc`) with Service Binding (`API -> openbarrio-api`), enabling zero-latency in-memory RPC between the web dashboard and API worker.
+  - Eliminated the issue where production web dashboard stayed locked in "Modo Preview / Fixtures" due to failed `/api/*` proxies returning HTML.
+- **Live State Hydration in Landing Audit & Map**:
+  - Updated `App.tsx` and `AuditModal.tsx` to asynchronously fetch real public data (Catastro + INE D1 + MITECO) during landing page searches, dynamically hydrating the audit dossier.
+  - Added visual connection status indicator dot (green for live network, pulsing amber for preview/fallback) and descriptive badge (`Conectado a Red (D1 + Catastro OVC)`).
+- **Vite Preview Proxy Configuration**:
+  - Configured `preview.proxy` in `apps/web/vite.config.ts` so `vite preview` correctly routes `/api` calls.
+
 ---
 
 ## [0.2.0] - 2026-10-18

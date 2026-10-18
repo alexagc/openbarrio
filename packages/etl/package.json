@@ -1,6 +1,6 @@
 {
   "name": "@openbarrio/etl",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Autonomous ETL data pipeline for INE ADRH and IGN Seccionado Censal using DuckDB Spatial",
   "private": true,
   "scripts": {

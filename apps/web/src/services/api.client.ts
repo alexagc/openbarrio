@@ -495,6 +495,7 @@ export interface RawAuditDataInput {
   rentMaxM2?: number;
   isStressedZone?: boolean;
   coordinates?: { lat: number; lon: number };
+  isLive?: boolean;
 }
 
 export function auditDataToReport(audit: RawAuditDataInput): ExtendedAuditReport {
@@ -593,6 +594,6 @@ export function auditDataToReport(audit: RawAuditDataInput): ExtendedAuditReport
     environment,
     score,
     rentalBenchmark,
-    isOfflineDemo: true,
+    isOfflineDemo: audit.isLive ? false : true,
   };
 }

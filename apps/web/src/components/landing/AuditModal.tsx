@@ -30,6 +30,7 @@ export interface AuditData {
   rentMaxM2: number;
   isStressedZone: boolean;
   coordinates?: { lat: number; lon: number };
+  isLive?: boolean;
 }
 
 interface AuditModalProps {
