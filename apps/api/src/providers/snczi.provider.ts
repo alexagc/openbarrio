@@ -18,7 +18,7 @@ export class SNCZIProvider implements ISNCZIProvider {
 
   constructor(options: SNCZIProviderOptions = {}) {
     this.wmsBaseUrl =
-      options.wmsBaseUrl || 'https://wms.mapama.gob.es/sig/Agua/ZonasInundables/wms.aspx';
+      options.wmsBaseUrl || 'https://gis.miteco.gob.es/geoserver/agua/wms';
     this.timeoutMs = options.timeoutMs || 8000;
   }
 
@@ -30,8 +30,8 @@ export class SNCZIProvider implements ISNCZIProvider {
     const maxLat = latitude + delta;
     const bbox = `${minLon},${minLat},${maxLon},${maxLat}`;
 
-    // Query layers including T10, T100, T500 and Preferential Flow Zone (ZFP)
-    const layers = 'ZI_T10,ZI_T50,ZI_T100,ZI_T500,ZI_ZFP';
+    // Query layers including T10, T50, T100, T500 and Preferential Flow Zone (ZFP)
+    const layers = 'Zi_laminas_q10,Zi_laminas_q50,Zi_laminas_q100,Zi_laminas_q500,ZI_Laminas_ZFP';
 
     const params = new URLSearchParams({
       SERVICE: 'WMS',

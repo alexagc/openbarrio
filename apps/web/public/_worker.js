@@ -20,9 +20,12 @@ export default {
       targetUrl.protocol = 'https:';
       targetUrl.port = '';
 
+      const headers = new Headers(request.headers);
+      headers.set('Host', targetUrl.hostname);
+
       const apiRequest = new Request(targetUrl.toString(), {
         method: request.method,
-        headers: request.headers,
+        headers,
         body: request.body,
         redirect: 'manual',
       });
