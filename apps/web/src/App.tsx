@@ -1,4 +1,3 @@
-import React from 'react';
 import { Building2, ShieldCheck, MapPin, Search } from 'lucide-react';
 
 export function App() {
