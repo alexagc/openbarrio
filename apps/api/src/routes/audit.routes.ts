@@ -1,6 +1,7 @@
 import { Hono } from 'hono';
 import { Value } from '@sinclair/typebox/value';
 import {
+  AuditCoordsQuery,
   AuditCoordsQuerySchema,
   AuditRefcatParamsSchema,
   PropertyAuditReport,
@@ -16,7 +17,7 @@ export function createAuditRoutes(providers: ProviderContainer): Hono {
   // GET /coords?lat=...&lon=...
   router.get('/coords', async (c) => {
     const rawQuery = c.req.query();
-    const query = Value.Convert(AuditCoordsQuerySchema, rawQuery);
+    const query = Value.Convert(AuditCoordsQuerySchema, rawQuery) as AuditCoordsQuery;
     const errors = [...Value.Errors(AuditCoordsQuerySchema, query)];
 
     if (errors.length > 0) {

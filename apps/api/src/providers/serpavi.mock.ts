@@ -14,10 +14,11 @@ export class MockSERPAVIProvider implements ISERPAVIProvider {
     }
 
     const surface = cadastralProperty.building.builtSurfaceM2 || 85;
-    const isBarcelona =
+    const isBarcelona = Boolean(
       cadastralProperty.address.municipality.toLowerCase() === 'barcelona' ||
       cadastralProperty.address.postalCode?.startsWith('08') ||
-      censusSectionCode?.startsWith('08019');
+      censusSectionCode?.startsWith('08019')
+    );
 
     const isStressed = isBarcelona;
 
