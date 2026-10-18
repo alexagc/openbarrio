@@ -1,68 +1,360 @@
-import { Building2, ShieldCheck, MapPin, Search } from 'lucide-react';
+import React, { useState } from 'react';
+import { LanguageProvider } from './i18n';
+import {
+  Header,
+  HeroSection,
+  PillarsSection,
+  ExtensionShowcaseSection,
+  CivicPrinciplesSection,
+  MapCtaSection,
+  Footer,
+  AuditModal,
+  AuditData,
+} from './components/landing';
+import { SearchBar, SAMPLE_PRESETS } from './components/SearchBar';
+import { MapView } from './components/MapView';
+import { AuditDossier } from './components/AuditDossier';
+import { SkeletonDossier } from './components/SkeletonDossier';
+import { ErrorAlert } from './components/ErrorAlert';
+import { apiClient, ExtendedAuditReport, ApiError } from './services/api.client';
+import { ProblemDetails } from '@openbarrio/core';
+import { ArrowLeft, Building2, MapPin } from 'lucide-react';
 
-export function App() {
-  return (
-    <div className="min-h-screen flex flex-col">
-      <header className="border-b bg-white px-6 py-4 flex items-center justify-between">
-        <div className="flex items-center space-x-3">
-          <Building2 className="w-7 h-7 text-indigo-600" />
-          <span className="text-xl font-bold tracking-tight text-slate-900">OpenBarrio</span>
-          <span className="text-xs bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded-full font-medium">Civic Tech España</span>
-        </div>
-        <nav className="flex items-center space-x-6 text-sm text-slate-600">
-          <a href="#about" className="hover:text-indigo-600 transition">Fuentes Públicas</a>
-          <a href="#extension" className="hover:text-indigo-600 transition">Extensión Portales</a>
-          <a href="https://github.com/alexagc/openbarrio" target="_blank" rel="noreferrer" className="hover:text-indigo-600 transition font-medium">GitHub</a>
-        </nav>
-      </header>
+const SAMPLE_AUDITS: Record<string, AuditData> = {
+  'gran vía 28, madrid': {
+    query: 'Gran Vía 28, Madrid',
+    refcat: '28900A012000340001LM',
+    address: 'Calle Gran Vía 28, 28013 Madrid (Centro)',
+    score: 88,
+    yearBuilt: 1924,
+    surfaceM2: 120,
+    cadastralUsage: 'Residencial Colectivo',
+    householdIncome: 28500,
+    incomePercentile: 89,
+    noiseLden: 58,
+    noiseLevel: 'Moderado',
+    floodRisk: 'Nulo (T>500a)',
+    rentMinM2: 18.5,
+    rentMaxM2: 24.2,
+    isStressedZone: false,
+  },
+  'passeig de gràcia 42, barcelona': {
+    query: 'Passeig de Gràcia 42, Barcelona',
+    refcat: '08019A023000450001JK',
+    address: "Passeig de Gràcia 42, 08007 Barcelona (L'Eixample)",
+    score: 82,
+    yearBuilt: 1954,
+    surfaceM2: 88,
+    cadastralUsage: 'Residencial Colectivo',
+    householdIncome: 19240,
+    incomePercentile: 74,
+    noiseLden: 64,
+    noiseLevel: 'Tráfico alto',
+    floodRisk: 'Nulo (T>500a)',
+    rentMinM2: 12.0,
+    rentMaxM2: 16.4,
+    isStressedZone: true,
+  },
+  'calle sierpes 12, sevilla': {
+    query: 'Calle Sierpes 12, Sevilla',
+    refcat: '41091A004000120001AB',
+    address: 'Calle Sierpes 12, 41004 Sevilla (Casco Antiguo)',
+    score: 78,
+    yearBuilt: 1968,
+    surfaceM2: 95,
+    cadastralUsage: 'Residencial Colectivo',
+    householdIncome: 16800,
+    incomePercentile: 62,
+    noiseLden: 60,
+    noiseLevel: 'Moderado peatonal',
+    floodRisk: 'Nulo (T>500a)',
+    rentMinM2: 10.2,
+    rentMaxM2: 14.1,
+    isStressedZone: false,
+  },
+};
 
-      <main className="flex-1 max-w-5xl w-full mx-auto px-6 py-12">
-        <section className="text-center space-y-4 max-w-2xl mx-auto">
-          <h1 className="text-4xl font-extrabold tracking-tight text-slate-900 sm:text-5xl">
-            Auditoría Inmobiliaria y Vecinal con Datos Oficiales
-          </h1>
-          <p className="text-lg text-slate-600">
-            Descubre la realidad de cualquier inmueble en España: cruce oficial de Catastro, renta media por sección censal del INE, mapa de ruido ambiental y riesgo de inundación.
-          </p>
+function generateAuditFallback(query: string, mode: 'address' | 'refcat'): AuditData {
+  const isRef = mode === 'refcat' || query.length === 20;
+  const hash = query.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+  const score = 65 + (hash % 30);
+  const yearBuilt = 1940 + (hash % 75);
+  const surfaceM2 = 60 + (hash % 90);
+  const householdIncome = 15000 + (hash % 20000);
+  const incomePercentile = 40 + (hash % 55);
+  const noiseLden = 55 + (hash % 16);
+  const isStressedZone = hash % 2 === 0;
 
-          <div className="pt-6 flex items-center max-w-xl mx-auto">
-            <div className="relative flex-1">
-              <MapPin className="absolute left-4 top-3.5 h-5 w-5 text-slate-400" />
-              <input
-                type="text"
-                placeholder="Ej. Calle Gran Vía 1, Madrid o Referencia Catastral..."
-                className="w-full pl-11 pr-4 py-3 rounded-l-xl border border-r-0 border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
-              />
-            </div>
-            <button className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold px-6 py-3 rounded-r-xl flex items-center space-x-2 transition">
-              <Search className="w-5 h-5" />
-              <span>Auditar</span>
+  return {
+    query,
+    refcat: isRef ? query.toUpperCase() : `28${hash}A001000120001XY`,
+    address: isRef ? `Inmueble con RC ${query.toUpperCase()}` : query,
+    score,
+    yearBuilt,
+    surfaceM2,
+    cadastralUsage: 'Residencial',
+    householdIncome,
+    incomePercentile,
+    noiseLden,
+    noiseLevel: noiseLden > 65 ? 'Tráfico alto' : 'Moderado',
+    floodRisk: 'Nulo (T>500a)',
+    rentMinM2: +(9.0 + (hash % 10) * 0.8).toFixed(1),
+    rentMaxM2: +(14.0 + (hash % 10) * 1.1).toFixed(1),
+    isStressedZone,
+  };
+}
+
+export function AppContent() {
+  const [viewMode, setViewMode] = useState<'landing' | 'map'>('landing');
+  const [activeAudit, setActiveAudit] = useState<AuditData | null>(null);
+
+  // MapLibre Interactive State
+  const [report, setReport] = useState<ExtendedAuditReport | null>(null);
+  const [selectedCoords, setSelectedCoords] = useState<{ lat: number; lon: number }>({
+    lat: 40.42028,
+    lon: -3.70379,
+  });
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [error, setError] = useState<{ message: string; problem?: ProblemDetails } | null>(null);
+  const [activeTab, setActiveTab] = useState<'dossier' | 'map'>('dossier');
+
+  const handleAudit = (query: string, mode: 'address' | 'refcat') => {
+    const normalizedKey = query.toLowerCase().trim();
+    const sample = SAMPLE_AUDITS[normalizedKey];
+    if (sample) {
+      setActiveAudit(sample);
+    } else {
+      setActiveAudit(generateAuditFallback(query, mode));
+    }
+  };
+
+  const handleOpenMap = () => {
+    setViewMode('map');
+    if (!report) {
+      loadAuditByCoords(40.42028, -3.70379);
+    }
+  };
+
+  const loadAuditByCoords = async (lat: number, lon: number) => {
+    setIsLoading(true);
+    setError(null);
+    setSelectedCoords({ lat, lon });
+
+    try {
+      const data = await apiClient.auditByCoordinates(lat, lon);
+      setReport(data);
+      setSelectedCoords({
+        lat: data.property.coordinates.latitude,
+        lon: data.property.coordinates.longitude,
+      });
+    } catch (err) {
+      if (err instanceof ApiError) {
+        setError({ message: err.message, problem: err.problem });
+      } else {
+        setError({ message: 'Error de conexión al consultar los servicios públicos.' });
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const loadAuditByRefcat = async (refcat: string) => {
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const data = await apiClient.auditByCadastralReference(refcat);
+      setReport(data);
+      setSelectedCoords({
+        lat: data.property.coordinates.latitude,
+        lon: data.property.coordinates.longitude,
+      });
+    } catch (err) {
+      if (err instanceof ApiError) {
+        setError({ message: err.message, problem: err.problem });
+      } else {
+        setError({ message: 'Error de conexión al consultar los servicios públicos.' });
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleMapClick = (lat: number, lon: number) => {
+    loadAuditByCoords(lat, lon);
+  };
+
+  const handleLoadSample = () => {
+    const sample = SAMPLE_PRESETS[0];
+    loadAuditByRefcat(sample.refcat);
+  };
+
+  // If map view is active, render the full interactive MapLibre workspace
+  if (viewMode === 'map') {
+    return (
+      <div className="min-h-screen bg-surface-container-lowest flex flex-col text-on-surface">
+        <header className="sticky top-0 z-40 w-full h-14 bg-surface-container border-b border-outline-variant shadow-sm flex items-center justify-between px-space-lg">
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setViewMode('landing')}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-surface-container-high border border-outline-variant hover:border-primary text-on-surface hover:text-primary transition-colors text-xs font-semibold cursor-pointer"
+              type="button"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              <span>Volver a la Portada</span>
             </button>
+            <div className="hidden sm:flex items-center gap-2">
+              <Building2 className="w-5 h-5 text-primary" />
+              <span className="font-headline font-bold text-primary">OpenBarrio GIS</span>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <span className="font-mono text-xs text-on-surface-variant">
+              {report?.isOfflineDemo ? 'Modo Preview / Fixtures' : 'Conectado a Red'}
+            </span>
+          </div>
+        </header>
+
+        {/* Universal Search Header */}
+        <section className="bg-surface-container border-b border-outline-variant px-4 sm:px-6 py-4 shadow-sm no-print">
+          <div className="max-w-7xl mx-auto space-y-3">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div>
+                <h1 className="text-lg sm:text-xl font-bold tracking-tight text-on-surface flex items-center gap-2">
+                  <span>Visor Cartográfico Catastral & Auditoría Territorial</span>
+                </h1>
+                <p className="text-xs text-on-surface-variant">
+                  Haz click en cualquier punto del mapa o busca por referencia catastral / coordenadas.
+                </p>
+              </div>
+
+              {/* Mobile Tab Toggle */}
+              <div className="flex lg:hidden bg-surface-container-high p-1 rounded border border-outline-variant self-start text-xs font-semibold">
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('dossier')}
+                  className={`px-3 py-1.5 rounded transition ${
+                    activeTab === 'dossier' ? 'bg-primary text-on-primary shadow-xs' : 'text-on-surface-variant'
+                  }`}
+                >
+                  Informe
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('map')}
+                  className={`px-3 py-1.5 rounded transition ${
+                    activeTab === 'map' ? 'bg-primary text-on-primary shadow-xs' : 'text-on-surface-variant'
+                  }`}
+                >
+                  Mapa
+                </button>
+              </div>
+            </div>
+
+            <SearchBar
+              onSearchRefcat={loadAuditByRefcat}
+              onSearchCoords={loadAuditByCoords}
+              isLoading={isLoading}
+            />
           </div>
         </section>
 
-        <section className="mt-16 grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="bg-white p-6 rounded-2xl border border-slate-200 space-y-2">
-            <Building2 className="w-6 h-6 text-indigo-600" />
-            <h3 className="font-bold text-slate-900">Catastro Inmobiliario</h3>
-            <p className="text-sm text-slate-600">Año real de construcción, metros cuadrados construidos, número de viviendas y división horizontal.</p>
+        {/* Dual Workspace (Dossier + Sticky Map) */}
+        <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 py-6">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+            {/* Left Column: Dossier */}
+            <section
+              className={`lg:col-span-7 xl:col-span-7 space-y-6 ${
+                activeTab === 'map' ? 'hidden lg:block' : 'block'
+              }`}
+            >
+              {error ? (
+                <ErrorAlert
+                  message={error.message}
+                  problem={error.problem}
+                  onRetry={() => {
+                    if (selectedCoords) {
+                      loadAuditByCoords(selectedCoords.lat, selectedCoords.lon);
+                    }
+                  }}
+                  onSelectSample={handleLoadSample}
+                />
+              ) : isLoading ? (
+                <SkeletonDossier />
+              ) : report ? (
+                <AuditDossier report={report} />
+              ) : (
+                <div className="text-center py-16 bg-surface-container rounded border border-dashed border-outline-variant p-8">
+                  <MapPin className="w-10 h-10 text-outline mx-auto mb-3" />
+                  <h3 className="font-bold text-on-surface">Selecciona un inmueble</h3>
+                  <p className="text-xs text-on-surface-variant mt-1 max-w-sm mx-auto">
+                    Usa el buscador o haz click en cualquier parcela del mapa para generar su informe de due diligence oficial.
+                  </p>
+                </div>
+              )}
+            </section>
+
+            {/* Right Column: Sticky MapLibre View */}
+            <section
+              className={`lg:col-span-5 xl:col-span-5 no-print lg:sticky lg:top-20 ${
+                activeTab === 'dossier' ? 'hidden lg:block' : 'block'
+              }`}
+            >
+              <div className="h-[520px] lg:h-[calc(100vh-140px)] w-full rounded overflow-hidden border border-outline-variant shadow-md">
+                <MapView
+                  selectedCoords={selectedCoords}
+                  onMapClick={handleMapClick}
+                  propertyName={
+                    report ? `${report.property.address.street} ${report.property.address.number}` : undefined
+                  }
+                  propertyAddress={
+                    report
+                      ? `${report.property.address.municipality} · RC ${report.property.cadastralReference.substring(
+                          0,
+                          14
+                        )}`
+                      : undefined
+                  }
+                />
+              </div>
+            </section>
           </div>
-          <div className="bg-white p-6 rounded-2xl border border-slate-200 space-y-2">
-            <ShieldCheck className="w-6 h-6 text-emerald-600" />
-            <h3 className="font-bold text-slate-900">Renta & Demografía INE</h3>
-            <p className="text-sm text-slate-600">Renta media por hogar en la sección censal, pirámide demográfica y percentil socioeconómico.</p>
-          </div>
-          <div className="bg-white p-6 rounded-2xl border border-slate-200 space-y-2">
-            <MapPin className="w-6 h-6 text-amber-600" />
-            <h3 className="font-bold text-slate-900">MITECO: Ruido & Inundaciones</h3>
-            <p className="text-sm text-slate-600">Mapas acústicos estratégicos y cartografía oficial de zonas con riesgo de inundación fluvial.</p>
-          </div>
-        </section>
+        </main>
+      </div>
+    );
+  }
+
+  // Default: Civic Precision Landing Page
+  return (
+    <div className="min-h-screen flex flex-col bg-background text-on-surface">
+      <Header onOpenMap={handleOpenMap} />
+
+      <main className="flex-1 flex flex-col">
+        <HeroSection onAudit={handleAudit} />
+        <PillarsSection />
+        <ExtensionShowcaseSection />
+        <CivicPrinciplesSection />
+        <MapCtaSection onOpenMap={handleOpenMap} />
       </main>
 
-      <footer className="border-t bg-white py-6 text-center text-xs text-slate-500">
-        OpenBarrio · Plataforma de código abierto basada en datos abiertos de España · Licencia Apache 2.0
-      </footer>
+      <Footer onOpenMap={handleOpenMap} />
+
+      <AuditModal
+        data={activeAudit}
+        onClose={() => setActiveAudit(null)}
+        onOpenMap={handleOpenMap}
+      />
     </div>
   );
 }
+
+export function App() {
+  return (
+    <LanguageProvider>
+      <AppContent />
+    </LanguageProvider>
+  );
+}
+
+export default App;
