@@ -54,7 +54,7 @@ export const SAMPLE_PRESETS: SearchPreset[] = [
 ];
 
 interface SearchBarProps {
-  onSearchRefcat: (refcat: string) => void;
+  onSearchRefcat: (refcat: string, coords?: { lat: number; lon: number }) => void;
   onSearchCoords: (lat: number, lon: number) => void;
   isLoading?: boolean;
   variant?: 'standard' | 'topbar';
@@ -106,9 +106,10 @@ export function SearchBar({
   // Debounced address suggestion search with CartoCiudad & Nominatim
   useEffect(() => {
     const trimmed = query.trim();
+    const cleanRefcat = trimmed.replace(/[\s\-_.]/g, '').toUpperCase();
     if (
       trimmed.length < 3 ||
-      /^[0-9A-Za-z]{14,20}$/.test(trimmed) ||
+      /^[0-9A-Z]{14,20}$/.test(cleanRefcat) ||
       /^[-+]?[0-9]*\.?[0-9]+[,\s]+[-+]?[0-9]*\.?[0-9]+$/.test(trimmed) ||
       trimmed.includes('(RC:')
     ) {
@@ -141,10 +142,10 @@ export function SearchBar({
       return;
     }
 
-    // 1. Direct Cadastral reference (14-20 alphanumeric)
-    const refcatMatch = raw.match(/^[0-9A-Za-z]{14,20}$/);
-    if (refcatMatch) {
-      onSearchRefcat(raw.toUpperCase());
+    // 1. Direct Cadastral reference (14-20 alphanumeric, stripped of spaces, dashes, dots)
+    const cleanRefcat = raw.replace(/[\s\-_.]/g, '').toUpperCase();
+    if (/^[0-9A-Z]{14,20}$/.test(cleanRefcat)) {
+      onSearchRefcat(cleanRefcat);
       return;
     }
 
@@ -161,23 +162,27 @@ export function SearchBar({
 
     // 3. Fallback: match first suggestion or query geocoder immediately
     if (suggestions.length > 0) {
-      if (suggestions[0].refcat) {
-        onSearchRefcat(suggestions[0].refcat);
+      const best = suggestions[0];
+      const coords = { lat: best.lat, lon: best.lon };
+      if (best.refcat) {
+        onSearchRefcat(best.refcat, coords);
       } else {
-        onSearchCoords(suggestions[0].lat, suggestions[0].lon);
+        onSearchCoords(best.lat, best.lon);
       }
     } else {
       setIsSearchingSuggestions(true);
       apiClient.searchAddress(raw).then((results) => {
         setIsSearchingSuggestions(false);
         if (results.length > 0) {
-          if (results[0].refcat) {
-            onSearchRefcat(results[0].refcat);
+          const best = results[0];
+          const coords = { lat: best.lat, lon: best.lon };
+          if (best.refcat) {
+            onSearchRefcat(best.refcat, coords);
           } else {
-            onSearchCoords(results[0].lat, results[0].lon);
+            onSearchCoords(best.lat, best.lon);
           }
         } else {
-          onSearchRefcat(raw);
+          onSearchRefcat(cleanRefcat);
         }
       });
     }
@@ -300,8 +305,9 @@ export function SearchBar({
                 onClick={() => {
                   setQuery(item.label);
                   setShowDropdown(false);
+                  const coords = { lat: item.lat, lon: item.lon };
                   if (item.refcat) {
-                    onSearchRefcat(item.refcat);
+                    onSearchRefcat(item.refcat, coords);
                   } else {
                     onSearchCoords(item.lat, item.lon);
                   }
@@ -399,8 +405,9 @@ export function SearchBar({
               onClick={() => {
                 setQuery(item.label);
                 setShowDropdown(false);
+                const coords = { lat: item.lat, lon: item.lon };
                 if (item.refcat) {
-                  onSearchRefcat(item.refcat);
+                  onSearchRefcat(item.refcat, coords);
                 } else {
                   onSearchCoords(item.lat, item.lon);
                 }

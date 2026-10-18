@@ -205,25 +205,25 @@ export function MapView({
           'ine-income-wms': {
             type: 'raster',
             tiles: [
-              'https://www.ine.es/geoserver/WMS_INE_SECCIONES_G01/wms?SERVICE=WMS&VERSION=1.3.0&REQUEST=GetMap&FORMAT=image/png&TRANSPARENT=TRUE&LAYERS=Secciones_2024&STYLES=&CRS=EPSG:3857&WIDTH=256&HEIGHT=256&BBOX={bbox-epsg-3857}',
+              'https://www.ine.es/geoserver/WMS_INE_SECCIONES_G01/wms?SERVICE=WMS&VERSION=1.3.0&REQUEST=GetMap&FORMAT=image/png&TRANSPARENT=TRUE&LAYERS=Secciones_2024&STYLES=SU.VectorStatisticalUnits.Default&CRS=EPSG:3857&WIDTH=256&HEIGHT=256&BBOX={bbox-epsg-3857}',
             ],
             tileSize: 256,
             attribution: '&copy; Instituto Nacional de Estadística (INE)',
           },
-          // MITECO SICA Noise WMS (Strategic Noise Maps / Mapas Estratégicos de Ruido - MER Lden)
+          // MITECO SICA Noise WMS via OpenBarrio CORS Edge proxy
           'miteco-sica': {
             type: 'raster',
             tiles: [
-              'https://gis.miteco.gob.es/geoserver/evaluacionambiental/wms?SERVICE=WMS&VERSION=1.3.0&REQUEST=GetMap&FORMAT=image/png&TRANSPARENT=TRUE&LAYERS=mer_carretera_lden,mer_aglomeracion_lden,mer_ferrocarril_lden,mer_aeropuerto_lden&STYLES=&CRS=EPSG:3857&WIDTH=256&HEIGHT=256&BBOX={bbox-epsg-3857}',
+              `${(import.meta.env.VITE_API_URL || '').replace(/\/$/, '')}/api/v1/tiles/miteco/noise?bbox={bbox-epsg-3857}&width=256&height=256`,
             ],
             tileSize: 256,
             attribution: '&copy; MITECO SICA / MER',
           },
-          // MITECO SNCZI Flood Risk WMS (Láminas de Inundación Q100, Q500 y Zona de Flujo Preferente ZFP)
+          // MITECO SNCZI Flood Risk WMS via OpenBarrio CORS Edge proxy
           'miteco-snczi': {
             type: 'raster',
             tiles: [
-              'https://gis.miteco.gob.es/geoserver/agua/wms?SERVICE=WMS&VERSION=1.3.0&REQUEST=GetMap&FORMAT=image/png&TRANSPARENT=TRUE&LAYERS=Zi_laminas_q100,Zi_laminas_q500,ZI_Laminas_ZFP&STYLES=&CRS=EPSG:3857&WIDTH=256&HEIGHT=256&BBOX={bbox-epsg-3857}',
+              `${(import.meta.env.VITE_API_URL || '').replace(/\/$/, '')}/api/v1/tiles/miteco/flood?bbox={bbox-epsg-3857}&width=256&height=256`,
             ],
             tileSize: 256,
             attribution: '&copy; MITECO SNCZI',
@@ -264,7 +264,7 @@ export function MapView({
             source: 'ine-income-wms',
             minzoom: 6,
             maxzoom: 20,
-            paint: { 'raster-opacity': 0.65 },
+            paint: { 'raster-opacity': 0.75 },
             layout: { visibility: 'visible' },
           },
           // 5. MITECO SNCZI Flood Overlay
@@ -274,7 +274,7 @@ export function MapView({
             source: 'miteco-snczi',
             minzoom: 7,
             maxzoom: 19,
-            paint: { 'raster-opacity': 0.7 },
+            paint: { 'raster-opacity': 0.75 },
             layout: { visibility: 'none' },
           },
           // 6. MITECO SICA Noise Overlay
@@ -284,7 +284,7 @@ export function MapView({
             source: 'miteco-sica',
             minzoom: 7,
             maxzoom: 19,
-            paint: { 'raster-opacity': 0.65 },
+            paint: { 'raster-opacity': 0.75 },
             layout: { visibility: 'none' },
           },
           // 7. Catastro Parcels Official WMS
@@ -292,9 +292,14 @@ export function MapView({
             id: 'catastro-layer',
             type: 'raster',
             source: 'catastro-wms',
-            minzoom: 13,
+            minzoom: 12,
             maxzoom: 20,
-            paint: { 'raster-opacity': 0.85 },
+            paint: {
+              'raster-opacity': 0.95,
+              'raster-brightness-min': 0.85,
+              'raster-brightness-max': 1.0,
+              'raster-contrast': 0.5,
+            },
             layout: { visibility: 'visible' },
           },
         ],
@@ -372,6 +377,21 @@ export function MapView({
       setVis('ine-income-layer', showIneIncome);
       setVis('sica-layer', showMitecoNoise);
       setVis('snczi-layer', showSncziFlood);
+
+      // Adjust Catastro parcel line contrast dynamically:
+      // Dark GIS and Satellite: brighten parcel boundary lines so they contrast sharply as white lines
+      // IGN base (light): standard contrast (crisp dark parcel lines)
+      try {
+        const hasCatastro = typeof map.getLayer === 'function' ? Boolean(map.getLayer('catastro-layer')) : true;
+        if (hasCatastro && typeof map.setPaintProperty === 'function') {
+          const isDark = activeBasemap === 'dark-gis' || activeBasemap === 'pnoa-satellite';
+          map.setPaintProperty('catastro-layer', 'raster-brightness-min', isDark ? 0.85 : 0.0);
+          map.setPaintProperty('catastro-layer', 'raster-brightness-max', 1.0);
+          map.setPaintProperty('catastro-layer', 'raster-contrast', isDark ? 0.5 : 0.0);
+        }
+      } catch {
+        // Gracefully ignore during style reloads
+      }
     };
 
     applyVisibility();
@@ -660,14 +680,28 @@ export function MapView({
         </div>
 
         {/* Zoom Hint for Cadastre & Thematic Layers */}
-        {showCatastroWms && currentZoom < 13 && (
-          <div className="mt-2 bg-amber-500/10 border border-amber-500/30 text-amber-300 text-[10px] font-sans px-2 py-1 rounded">
-            Acércate (Zoom &ge; 13) para activar parcelas del Catastro.
+        {showCatastroWms && currentZoom < 12 && (
+          <div className="mt-2 bg-amber-500/10 border border-amber-500/30 text-amber-300 text-[10px] font-sans px-2 py-1.5 rounded flex items-center justify-between gap-1.5">
+            <span>Acércate (Zoom &ge; 12) para parcelas.</span>
+            <button
+              type="button"
+              onClick={() => mapRef.current?.zoomTo(14, { duration: 600 })}
+              className="px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-200 border border-amber-500/40 text-[9px] font-mono hover:bg-amber-500/30 transition shrink-0 cursor-pointer"
+            >
+              Acercar
+            </button>
           </div>
         )}
         {(showMitecoNoise || showSncziFlood || showIneIncome) && currentZoom < 7 && (
-          <div className="mt-1.5 bg-blue-500/10 border border-blue-500/30 text-blue-300 text-[10px] font-sans px-2 py-1 rounded">
-            Acércate (Zoom &ge; 7) para activar capas de renta, ruido o inundación.
+          <div className="mt-1.5 bg-blue-500/10 border border-blue-500/30 text-blue-300 text-[10px] font-sans px-2 py-1.5 rounded flex items-center justify-between gap-1.5">
+            <span>Acércate (Zoom &ge; 7) para capas.</span>
+            <button
+              type="button"
+              onClick={() => mapRef.current?.zoomTo(8, { duration: 600 })}
+              className="px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-200 border border-blue-500/40 text-[9px] font-mono hover:bg-blue-500/30 transition shrink-0 cursor-pointer"
+            >
+              Acercar
+            </button>
           </div>
         )}
       </div>

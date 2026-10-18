@@ -48,8 +48,10 @@ export function createAuditRoutes(providers: ProviderContainer): Hono {
 
   // GET /refcat/:refcat
   router.get('/refcat/:refcat', async (c) => {
-    const rawParams = c.req.param();
-    const errors = [...Value.Errors(AuditRefcatParamsSchema, rawParams)];
+    const rawRefcat = c.req.param('refcat') || '';
+    const cleanRefcat = rawRefcat.replace(/[\s\-_.]/g, '').toUpperCase();
+    const validatedParams = { refcat: cleanRefcat };
+    const errors = [...Value.Errors(AuditRefcatParamsSchema, validatedParams)];
 
     if (errors.length > 0) {
       let instance: string;
@@ -70,8 +72,7 @@ export function createAuditRoutes(providers: ProviderContainer): Hono {
       );
     }
 
-    const { refcat } = rawParams;
-    const report: PropertyAuditReport = await auditService.auditByCadastralReference(refcat);
+    const report: PropertyAuditReport = await auditService.auditByCadastralReference(cleanRefcat);
     return c.json(report, 200);
   });
 

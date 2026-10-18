@@ -115,6 +115,14 @@ describe('Hono Audit Routes Integration', () => {
       expect(report.score.overallScore).toBeGreaterThanOrEqual(0);
     });
 
+    it('returns 200 with complete report when refcat contains spaces or hyphens', async () => {
+      const response = await app.request('/api/v1/audit/refcat/9872023%20VH5797S%200001%20WX');
+
+      expect(response.status).toBe(200);
+      const report = await response.json();
+      expect(report.property.cadastralReference).toBe('9872023VH5797S0001WX');
+    });
+
     it('returns 404 Not Found with RFC 7807 for non-existent cadastral reference', async () => {
       const response = await app.request('/api/v1/audit/refcat/00000000000000');
 
@@ -136,6 +144,24 @@ describe('Hono Audit Routes Integration', () => {
       const problem = await response.json();
       expect(problem.type).toBe('https://openbarrio.org/errors/invalid-parameters');
       expect(problem.status).toBe(400);
+    });
+  });
+
+  describe('GET /api/v1/tiles/miteco', () => {
+    it('returns image/png with CORS for MITECO noise proxy endpoint', async () => {
+      const response = await app.request('/api/v1/tiles/miteco/noise?bbox=-412554,4926988,-412054,4927488&width=256&height=256');
+
+      expect(response.status).toBe(200);
+      expect(response.headers.get('content-type')).toContain('image/png');
+      expect(response.headers.get('access-control-allow-origin')).toBe('*');
+    });
+
+    it('returns image/png with CORS for MITECO flood proxy endpoint', async () => {
+      const response = await app.request('/api/v1/tiles/miteco/flood?bbox=-412554,4926988,-412054,4927488&width=256&height=256');
+
+      expect(response.status).toBe(200);
+      expect(response.headers.get('content-type')).toContain('image/png');
+      expect(response.headers.get('access-control-allow-origin')).toBe('*');
     });
   });
 });

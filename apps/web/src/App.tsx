@@ -135,19 +135,41 @@ export function AppContent() {
     mode: 'address' | 'refcat',
     coords?: { lat: number; lon: number }
   ) => {
+    const cleanRefcat = query.replace(/[\s\-_.]/g, '').toUpperCase();
+    const isRefcat = mode === 'refcat' || /^[0-9A-Z]{14,20}$/.test(cleanRefcat);
     const normalizedKey = query.toLowerCase().trim();
     const sample = SAMPLE_AUDITS[normalizedKey];
-    const initialData = sample || generateAuditFallback(query, mode, coords);
+    const initialData =
+      sample ||
+      generateAuditFallback(
+        isRefcat ? cleanRefcat : query,
+        isRefcat ? 'refcat' : 'address',
+        coords
+      );
     setActiveAudit(initialData);
 
     // Query live API in background to hydrate with official state data
     (async () => {
       try {
         let liveReport: ExtendedAuditReport | null = null;
-        if (mode === 'refcat' && /^[0-9A-Za-z]{14,20}$/.test(query.trim())) {
-          liveReport = await apiClient.auditByCadastralReference(query.trim());
-        } else if (coords) {
-          liveReport = await apiClient.auditByCoordinates(coords.lat, coords.lon);
+        let effectiveCoords = coords;
+
+        if (isRefcat) {
+          liveReport = await apiClient.auditByCadastralReference(cleanRefcat);
+        } else if (effectiveCoords) {
+          liveReport = await apiClient.auditByCoordinates(effectiveCoords.lat, effectiveCoords.lon);
+        } else {
+          // If address was submitted without prior coords, geocode it via searchAddress
+          const results = await apiClient.searchAddress(query);
+          if (results.length > 0) {
+            const best = results[0];
+            effectiveCoords = { lat: best.lat, lon: best.lon };
+            if (best.refcat) {
+              liveReport = await apiClient.auditByCadastralReference(best.refcat);
+            } else {
+              liveReport = await apiClient.auditByCoordinates(best.lat, best.lon);
+            }
+          }
         }
 
         if (liveReport && !liveReport.isOfflineDemo) {
@@ -196,12 +218,13 @@ export function AppContent() {
       setSelectedCoords(coords);
 
       // 2. Refresh live report in background: prefer coords if available to query real parcel
-      if (audit.isLive && audit.refcat && /^[0-9A-Za-z]{14,20}$/.test(audit.refcat)) {
-        loadAuditByRefcat(audit.refcat, coords);
+      const cleanRefcat = audit.refcat ? audit.refcat.replace(/[\s\-_.]/g, '').toUpperCase() : '';
+      if (audit.isLive && cleanRefcat && /^[0-9A-Z]{14,20}$/.test(cleanRefcat)) {
+        loadAuditByRefcat(cleanRefcat, coords);
       } else if (coords) {
         loadAuditByCoords(coords.lat, coords.lon);
-      } else if (audit.refcat && /^[0-9A-Za-z]{14,20}$/.test(audit.refcat)) {
-        loadAuditByRefcat(audit.refcat);
+      } else if (cleanRefcat && /^[0-9A-Z]{14,20}$/.test(cleanRefcat)) {
+        loadAuditByRefcat(cleanRefcat);
       }
     } else if (!report) {
       loadAuditByCoords(40.42028, -3.70379);
@@ -231,9 +254,13 @@ export function AppContent() {
 
   const loadAuditByRefcat = async (refcat: string, fallbackCoords?: { lat: number; lon: number }) => {
     setIsLoading(true);
+    const cleanRefcat = refcat.replace(/[\s\-_.]/g, '').toUpperCase();
+    if (fallbackCoords) {
+      setSelectedCoords(fallbackCoords);
+    }
 
     try {
-      const data = await apiClient.auditByCadastralReference(refcat);
+      const data = await apiClient.auditByCadastralReference(cleanRefcat);
       setReport(data);
       setError(null);
       setSelectedCoords({
@@ -246,7 +273,7 @@ export function AppContent() {
       }
       setReport((currentReport) => {
         if (!currentReport) {
-          const fallback = apiClient.generateDeterministicAuditFromRefcat(refcat);
+          const fallback = apiClient.generateDeterministicAuditFromRefcat(cleanRefcat);
           if (fallbackCoords) {
             fallback.property.coordinates = {
               latitude: fallbackCoords.lat,

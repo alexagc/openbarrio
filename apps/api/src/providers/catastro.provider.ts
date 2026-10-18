@@ -1,6 +1,10 @@
 import { CadastralProperty } from '@openbarrio/core';
 import { ICatastroProvider } from './types.js';
-import { parseCatastroCoordinatesXml, parseCatastroDnprcXml } from './catastro.parser.js';
+import {
+  parseCatastroCoordinatesXml,
+  parseCatastroDnprcXml,
+  parseCatastroCpmrcXml,
+} from './catastro.parser.js';
 import { UpstreamProviderError } from '../errors/problem-details.js';
 
 export interface CatastroProviderOptions {
@@ -91,14 +95,40 @@ export class CatastroProvider implements ICatastroProvider {
     refcat: string,
     fallbackCoords?: { latitude: number; longitude: number }
   ): Promise<CadastralProperty> {
-    const cleanRef = refcat.trim().toUpperCase();
-    const url = `${this.callejeroBaseUrl}/Consulta_DNPRC?Provincia=&Municipio=&RC=${encodeURIComponent(cleanRef)}`;
+    const cleanRef = refcat.replace(/[\s\-_.]/g, '').toUpperCase();
+    const dnprcUrl = `${this.callejeroBaseUrl}/Consulta_DNPRC?Provincia=&Municipio=&RC=${encodeURIComponent(cleanRef)}`;
+
+    // If coordinates are not passed, query Consulta_CPMRC to get the exact parcel centroid coordinates
+    let resolvedCoords = fallbackCoords;
+    if (!resolvedCoords) {
+      try {
+        const cpmrcUrl = `${this.coordenadasBaseUrl}/Consulta_CPMRC?Provincia=&Municipio=&SRS=EPSG:4326&RC=${encodeURIComponent(cleanRef)}`;
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), this.timeoutMs);
+        const cpmrcRes = await fetch(cpmrcUrl, {
+          signal: controller.signal,
+          headers: { 'User-Agent': 'OpenBarrio-DueDiligence/0.1' },
+          ...({ cf: { cacheTtl: 7776000, cacheEverything: true } } as any),
+        });
+        clearTimeout(timer);
+
+        if (cpmrcRes.ok) {
+          const cpmrcXml = await cpmrcRes.text();
+          const parsed = parseCatastroCpmrcXml(cpmrcXml);
+          if (parsed) {
+            resolvedCoords = { latitude: parsed.latitude, longitude: parsed.longitude };
+          }
+        }
+      } catch {
+        // Non-critical: continue with fallback coordinates if CPMRC fails
+      }
+    }
 
     let xmlText: string;
     try {
       const controller = new AbortController();
       const timer = setTimeout(() => controller.abort(), this.timeoutMs);
-      const res = await fetch(url, {
+      const res = await fetch(dnprcUrl, {
         signal: controller.signal,
         headers: { 'User-Agent': 'OpenBarrio-DueDiligence/0.1' },
         ...({ cf: { cacheTtl: 7776000, cacheEverything: true } } as any),
@@ -114,6 +144,6 @@ export class CatastroProvider implements ICatastroProvider {
       throw new UpstreamProviderError('Catastro OVC', err.message || 'Network request failed');
     }
 
-    return parseCatastroDnprcXml(xmlText, cleanRef, fallbackCoords);
+    return parseCatastroDnprcXml(xmlText, cleanRef, resolvedCoords);
   }
 }

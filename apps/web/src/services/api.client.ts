@@ -75,7 +75,10 @@ export class OpenBarrioApiClient {
           if (revData && revData.address) {
             const streetType = revData.tip_via ? `${revData.tip_via} ` : '';
             const streetName = `${streetType}${revData.address}`.trim();
-            const portalNumber = revData.portalNumber ? String(revData.portalNumber) : '1';
+            let portalNumber = revData.portalNumber ? String(revData.portalNumber) : '1';
+            if (revData.extension) {
+              portalNumber = `${portalNumber} ${revData.extension}`.trim();
+            }
             const postalCode = revData.postalCode || '28001';
             const municipality = revData.muni || revData.poblacion || 'Madrid';
             const province = revData.province || municipality;
@@ -106,7 +109,7 @@ export class OpenBarrioApiClient {
    * Audits property by Spanish Cadastral Reference (14 or 20 characters).
    */
   async auditByCadastralReference(refcat: string): Promise<ExtendedAuditReport> {
-    const normalized = refcat.trim().toUpperCase();
+    const normalized = refcat.replace(/[\s\-_.]/g, '').toUpperCase();
     const url = `${this.baseUrl}/api/v1/audit/refcat/${encodeURIComponent(normalized)}`;
 
     try {
@@ -133,7 +136,7 @@ export class OpenBarrioApiClient {
 
   /**
    * Searches for address suggestions using CartoCiudad (official IGN Spanish geocoder)
-   * with fallback to OpenStreetMap Nominatim.
+   * with fallback to OpenStreetMap Nominatim. Supports portal numbers with letters/suffixes.
    */
   async searchAddress(
     query: string
@@ -143,31 +146,48 @@ export class OpenBarrioApiClient {
       return [];
     }
 
+    // Normalize potential portal number + letter without spaces (e.g. "25b" -> "25 B", "14bis" -> "14 bis")
+    const spacedQuery = trimmed.replace(/\b(\d+)([a-zA-Z]+)\b/g, '$1 $2');
+
     // 1. Try official Spanish CartoCiudad (IGN) geocoder
     try {
-      const cartoUrl = `https://www.cartociudad.es/geocoder/api/geocoder/candidates?q=${encodeURIComponent(
-        trimmed
+      // First try with spaced query, fallback to trimmed
+      let cartoUrl = `https://www.cartociudad.es/geocoder/api/geocoder/candidates?q=${encodeURIComponent(
+        spacedQuery
       )}&limit=6`;
-      const cartoRes = await fetch(cartoUrl);
-      if (cartoRes.ok) {
-        const cartoData = await cartoRes.json();
-        if (Array.isArray(cartoData) && cartoData.length > 0) {
-          const valid = cartoData
-            .filter((item: any) => item && item.address)
-            .map((item: any) => ({
-              label: item.address,
+      let cartoRes = await fetch(cartoUrl);
+      let cartoData = cartoRes.ok ? await cartoRes.json() : null;
+
+      if ((!Array.isArray(cartoData) || cartoData.length === 0) && spacedQuery !== trimmed) {
+        cartoUrl = `https://www.cartociudad.es/geocoder/api/geocoder/candidates?q=${encodeURIComponent(
+          trimmed
+        )}&limit=6`;
+        cartoRes = await fetch(cartoUrl);
+        cartoData = cartoRes.ok ? await cartoRes.json() : null;
+      }
+
+      if (Array.isArray(cartoData) && cartoData.length > 0) {
+        const valid = cartoData
+          .filter((item: any) => item && item.address)
+          .map((item: any) => {
+            let label = item.address;
+            if (item.extension && !label.includes(item.extension)) {
+              label = `${label} ${item.extension}`;
+            }
+            return {
+              label,
               lat: typeof item.lat === 'number' && item.lat !== 0 ? item.lat : undefined,
               lon: typeof item.lng === 'number' && item.lng !== 0 ? item.lng : undefined,
               refcat: item.refCatastral || undefined,
-            }));
+            };
+          });
 
-          const withCoords = valid.filter(
-            (v: any): v is { label: string; lat: number; lon: number; refcat?: string } =>
-              typeof v.lat === 'number' && typeof v.lon === 'number'
-          );
-          if (withCoords.length > 0) {
-            return withCoords;
-          }
+        const withCoords = valid.filter(
+          (v: any): v is { label: string; lat: number; lon: number; refcat?: string } =>
+            typeof v.lat === 'number' && typeof v.lon === 'number'
+        );
+        if (withCoords.length > 0) {
+          return withCoords;
         }
       }
     } catch {
@@ -177,7 +197,7 @@ export class OpenBarrioApiClient {
     // 2. Fallback to OpenStreetMap Nominatim
     try {
       const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(
-        trimmed
+        spacedQuery
       )}&countrycodes=es&format=json&limit=6&addressdetails=1`;
       const res = await fetch(url);
       if (!res.ok) return [];
