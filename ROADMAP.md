@@ -46,10 +46,15 @@ This document outlines the multi-phase roadmap for **OpenBarrio**, tracking comp
 - [x] Create automated CI/CD deployment workflow (`.github/workflows/deploy.yml`).
 - [x] Update AI rules and architecture documentation (`backend-hono.md` and `AGENTS.md`).
 
-### Phase 3: Additional Public Data Providers (Backlog ⏳)
+### Phase 3: Autonomous Data Pipeline & Additional Providers (Backlog ⏳)
+- [ ] **Autonomous ETL Pipeline (Option B - GitHub Actions & DuckDB Spatial):**
+  - Workflow in `.github/workflows/data-pipeline.yml` downloading official INE ADRH and IGN Seccionado Censal.
+  - DuckDB Spatial script processing ~36,000 census tracts, computing municipal percentiles, and simplifying geometries.
+  - Export structured census income tables into **Cloudflare D1** (SQLite) for sub-5ms lookups.
+  - Export simplified vector boundaries into **Cloudflare R2** as **PMTiles** for dual-use (Edge spatial Point-in-Polygon resolution + MapLibre GL frontend rendering).
 - [ ] **MITECO SICA Adapter:** Strategic noise map WFS query for traffic, railway, and industrial noise levels.
 - [ ] **MITECO SNCZI Adapter:** Flood risk cartography WFS query (T=10, T=100, T=500 return periods).
-- [ ] **MIVAU SERPAVI Adapter:** Reference rental price index calculator based on cadastral parameters.
+- [ ] **MIVAU SERPAVI Adapter:** Reference rental price index calculator based on cadastral parameters & stressed zone flag.
 - [ ] Incorporate acoustic, flood risk, and rental benchmark metrics into the Barrio Score algorithm.
 
 ### Phase 4: Interactive Web Dashboard (Backlog ⏳)

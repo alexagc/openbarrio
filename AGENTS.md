@@ -68,6 +68,15 @@ openbarrio/
 * **Manifest V3 Only:** Strictly adhere to Chrome Manifest V3 standards.
 * **Content Script Isolation:** Content scripts injected into Idealista or Fotocasa must be isolated, perform non-blocking DOM checks, and communicate securely with the OpenBarrio API.
 
+### 3.5. Data Ingestion & Sovereignty Rules (Option B)
+* **Zero External Rate Limits for INE:** Census tract income (INE ADRH) and geographic boundary resolution (IGN Seccionado Censal) **MUST NOT** rely on synchronous external APIs in production.
+* **Autonomous ETL Pipeline:** A GitHub Actions workflow (`.github/workflows/data-pipeline.yml`) using **DuckDB Spatial** processes official raw census files:
+  - Ingests INE ADRH CSVs (~36,000 tracts) -> stored in **Cloudflare D1** (SQLite) for sub-5ms income queries.
+  - Ingests IGN boundary polygons -> simplified and stored in **Cloudflare R2** as **PMTiles** for dual-use (Edge Point-in-Polygon spatial resolution and MapLibre GL frontend vector heatmaps).
+* **Catastro & MITECO Hybrid Access:**
+  - Catastro OVC: On-demand live queries proxied and protected via Cloudflare Cache API (60-day TTL).
+  - MITECO: On-demand WMS `GetFeatureInfo` queries.
+
 ---
 
 ## 4. Multi-Agent & Git Protocol
