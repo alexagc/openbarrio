@@ -1,4 +1,3 @@
-import React from 'react';
 import { RentalBenchmark } from '@openbarrio/core';
 import { Euro, AlertOctagon, CheckCircle2, Scale } from 'lucide-react';
 

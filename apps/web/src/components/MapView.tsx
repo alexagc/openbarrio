@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import maplibregl, { Map as MapLibreMap, Marker, NavigationControl } from 'maplibre-gl';
 import { Layers, MapPin, Maximize2 } from 'lucide-react';
 

@@ -1,4 +1,3 @@
-import React from 'react';
 import { AuditScoreBreakdown } from '@openbarrio/core';
 import { ShieldCheck, AlertTriangle, ShieldAlert } from 'lucide-react';
 

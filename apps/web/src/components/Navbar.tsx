@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Building2, Database, Github, Info, X, CheckCircle, ExternalLink } from 'lucide-react';
 
 interface NavbarProps {

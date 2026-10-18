@@ -1,4 +1,3 @@
-import React from 'react';
 import { CheckCircle2, AlertTriangle, ShieldCheck, AlertOctagon } from 'lucide-react';
 
 interface HighlightsAndRisksProps {

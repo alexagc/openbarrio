@@ -1,4 +1,3 @@
-import React from 'react';
 import { AlertCircle, RotateCcw, Sparkles } from 'lucide-react';
 import { ProblemDetails } from '@openbarrio/core';
 

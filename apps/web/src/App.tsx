@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { LanguageProvider } from './i18n';
 import {
   Header,

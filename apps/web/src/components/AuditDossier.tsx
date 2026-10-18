@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { PropertyAuditReport } from '@openbarrio/core';
 import { ScoreGauge } from './ScoreGauge';
 import { PillarCards } from './PillarCard';
