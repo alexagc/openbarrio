@@ -70,9 +70,32 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onAudit }) => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (searchValue.trim()) {
-      onAudit(searchValue.trim(), mode);
+    const raw = searchValue.trim();
+    if (!raw) return;
+
+    // Auto-detect cadastral reference format even if submitted in address mode
+    const cleanRefcat = raw.replace(/[\s\-_.]/g, '').toUpperCase();
+    if (/^[0-9A-Z]{14,20}$/.test(cleanRefcat)) {
+      onAudit(cleanRefcat, 'refcat');
+      return;
     }
+
+    // If suggestions are available, use the best match with its coordinates
+    if (suggestions.length > 0) {
+      const best = suggestions[0];
+      const coords =
+        typeof best.lat === 'number' && typeof best.lon === 'number'
+          ? { lat: best.lat, lon: best.lon }
+          : undefined;
+      if (best.refcat) {
+        onAudit(best.refcat, 'refcat', coords);
+      } else {
+        onAudit(best.label, 'address', coords);
+      }
+      return;
+    }
+
+    onAudit(raw, mode);
   };
 
   const handleExampleClick = (exampleQuery: string, exampleMode: 'address' | 'refcat' = 'address') => {

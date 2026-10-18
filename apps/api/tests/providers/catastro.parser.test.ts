@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url';
 import {
   parseCatastroCoordinatesXml,
   parseCatastroDnprcXml,
+  parseCatastroCpmrcXml,
 } from '../../src/providers/catastro.parser.js';
 import { CadastralNotFoundError } from '../../src/errors/problem-details.js';
 
@@ -39,6 +40,62 @@ describe('Catastro XML Parser', () => {
     expect(property.building.primaryUse).toBe('Comercial');
     expect(property.building.unitsCount).toBe(2);
     expect(property.building.hasCommercialGroundFloor).toBe(true);
+  });
+
+  it('correctly parses portal numbers with letters, suffixes, and extensions (e.g. 25 B)', () => {
+    const xmlWithLetter = `
+      <consulta_dnp xmlns="http://www.catastro.meh.es/">
+        <bico>
+          <bi>
+            <idbi><rc><pc1>0177207</pc1><pc2>VK6907N</pc2><car>0001</car><cc1>X</cc1><cc2>X</cc2></rc></idbi>
+            <dt>
+              <np>MADRID</np>
+              <nm>VALDEOLMOS-ALALPARDO</nm>
+              <locs>
+                <lous>
+                  <lourb>
+                    <dir>
+                      <tv>CL</tv>
+                      <nv>ALCALA</nv>
+                      <pnp>25</pnp>
+                      <plp>B</plp>
+                    </dir>
+                    <dp>28130</dp>
+                  </lourb>
+                </lous>
+              </locs>
+            </dt>
+            <ldt>CL ALCALA 25(B) 28130 VALDEOLMOS-ALALPARDO</ldt>
+            <debi><luso>Residencial</luso><sfc>120</sfc><ant>1998</ant></debi>
+          </bi>
+        </bico>
+      </consulta_dnp>
+    `;
+
+    const prop = parseCatastroDnprcXml(xmlWithLetter, '0177207VK6907N0001XX');
+    expect(prop.address.number).toBe('25 B');
+    expect(prop.address.postalCode).toBe('28130');
+    expect(prop.address.municipality).toBe('VALDEOLMOS-ALALPARDO');
+  });
+
+  it('correctly parses CPMRC XML to extract exact coordinates by cadastral reference', () => {
+    const cpmrcXml = `
+      <consulta_coordenadas xmlns="http://www.catastro.meh.es/">
+        <coordenadas>
+          <coord>
+            <pc><pc1>0177207</pc1><pc2>VK6907N</pc2></pc>
+            <geo><xcen>-3.472068</xcen><ycen>40.625864</ycen><srs>EPSG:4326</srs></geo>
+            <ldt>CL ALCALA 25(B) VALDEOLMOS-ALALPARDO (MADRID)</ldt>
+          </coord>
+        </coordenadas>
+      </consulta_coordenadas>
+    `;
+
+    const parsed = parseCatastroCpmrcXml(cpmrcXml);
+    expect(parsed).not.toBeNull();
+    expect(parsed?.latitude).toBeCloseTo(40.625864, 5);
+    expect(parsed?.longitude).toBeCloseTo(-3.472068, 5);
+    expect(parsed?.cadastralReference).toBe('0177207VK6907N');
   });
 
   it('throws CadastralNotFoundError when Catastro returns error XML', () => {

@@ -47,6 +47,42 @@ export function parseCatastroCoordinatesXml(xml: string): {
   };
 }
 
+export function parseCatastroCpmrcXml(xml: string): {
+  latitude: number;
+  longitude: number;
+  cadastralReference?: string;
+  addressStr?: string;
+} | null {
+  const errDes = extractTag(xml, 'des');
+  if (errDes) {
+    return null;
+  }
+
+  const xcenStr = extractTag(xml, 'xcen');
+  const ycenStr = extractTag(xml, 'ycen');
+  if (!xcenStr || !ycenStr) {
+    return null;
+  }
+
+  const lon = parseFloat(xcenStr);
+  const lat = parseFloat(ycenStr);
+  if (isNaN(lat) || isNaN(lon) || (lat === 0 && lon === 0)) {
+    return null;
+  }
+
+  const pc1 = extractTag(xml, 'pc1') || '';
+  const pc2 = extractTag(xml, 'pc2') || '';
+  const cadastralReference = pc1 && pc2 ? `${pc1}${pc2}` : undefined;
+  const addressStr = extractTag(xml, 'ldt') || undefined;
+
+  return {
+    latitude: lat,
+    longitude: lon,
+    cadastralReference,
+    addressStr,
+  };
+}
+
 export function parseCatastroDnprcXml(
   xml: string,
   queriedRefcat: string,
@@ -65,12 +101,29 @@ export function parseCatastroDnprcXml(
 
   const fullRc = pc1 && pc2 ? `${pc1}${pc2}${car}${cc1}${cc2}` : queriedRefcat;
 
-  // Address
+  // Address: parse street name, primary number, letters, suffixes, portal, and horizontal division
   const tv = extractTag(xml, 'tv') || 'CL';
   const nv = extractTag(xml, 'nv') || '';
   const pnp = extractTag(xml, 'pnp') || '';
-  const street = nv ? `${tv} ${nv}`.trim() : (extractTag(xml, 'ldt') || 'Calle Principal');
-  const postalCode = extractTag(xml, 'cp') || '28001';
+  const plp = extractTag(xml, 'plp') || '';
+  const snp = extractTag(xml, 'snp') || '';
+  const slp = extractTag(xml, 'slp') || '';
+  const ldt = extractTag(xml, 'ldt') || '';
+
+  let number = pnp;
+  if (plp) {
+    number = number ? `${number} ${plp}`.trim() : plp;
+  }
+  if (snp) {
+    number = `${number}-${snp}${slp ? ` ${slp}` : ''}`;
+  }
+  if (!number) {
+    const match = ldt.match(/\b(\d+[\s\w()/-]*?)(?:\s+\d{5}|$)/);
+    number = match ? match[1].trim() : '1';
+  }
+
+  const street = nv ? `${tv} ${nv}`.trim() : (ldt || 'Calle Principal');
+  const postalCode = extractTag(xml, 'dp') || extractTag(xml, 'cp') || '28001';
   const municipality = extractTag(xml, 'nm') || 'Madrid';
   const province = extractTag(xml, 'np') || 'Madrid';
 
@@ -100,7 +153,7 @@ export function parseCatastroDnprcXml(
     cadastralReference: fullRc,
     address: {
       street,
-      number: pnp || '1',
+      number: number || '1',
       postalCode,
       municipality,
       province,
