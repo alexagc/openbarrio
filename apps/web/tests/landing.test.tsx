@@ -1,7 +1,21 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen, fireEvent, act } from '@testing-library/react';
 import { App } from '../src/App';
 import { LanguageProvider, useTranslation } from '../src/i18n';
+
+// Polyfill URL.createObjectURL for JSDOM environment
+if (typeof window !== 'undefined') {
+  if (!window.URL.createObjectURL) {
+    window.URL.createObjectURL = () => 'blob:mock-url';
+  }
+  if (!window.URL.revokeObjectURL) {
+    window.URL.revokeObjectURL = () => {};
+  }
+}
+
+vi.mock('../src/components/MapView', () => ({
+  MapView: () => <div data-testid="mock-mapview" />,
+}));
 
 // Test component to verify useTranslation hook behavior
 const TranslationConsumer = () => {
