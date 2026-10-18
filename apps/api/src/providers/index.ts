@@ -49,8 +49,12 @@ export function createProviders(options?: {
   db?: D1Database;
   overrides?: Partial<ProviderContainer>;
 }): ProviderContainer {
+  const isTest = process.env.NODE_ENV === 'test' || typeof (globalThis as any).it === 'function';
   const useMocks =
-    options?.useMocks ?? (process.env.NODE_ENV === 'test' || process.env.USE_MOCKS !== 'false');
+    options?.useMocks ??
+    (isTest
+      ? process.env.USE_MOCKS !== 'false'
+      : process.env.USE_MOCKS === 'true');
 
   const defaultCatastro = useMocks ? new MockCatastroProvider() : new CatastroProvider();
   const defaultINE = useMocks ? new MockINEProvider() : new INEProvider({ db: options?.db });

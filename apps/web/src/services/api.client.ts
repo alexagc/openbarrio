@@ -56,6 +56,11 @@ export class OpenBarrioApiClient {
         await this.handleHttpError(response);
       }
 
+      const contentType = response.headers?.get ? response.headers.get('content-type') || 'application/json' : 'application/json';
+      if (!contentType.includes('application/json') && !contentType.includes('+json')) {
+        throw new Error('API returned non-JSON response');
+      }
+
       return await response.json();
     } catch (err) {
       // If backend is unreachable or fails for any reason (e.g. 502 upstream timeout, 404):
@@ -214,29 +219,26 @@ export class OpenBarrioApiClient {
   ): ExtendedAuditReport {
     // Check specific landmark presets ONLY for exact initial coordinates (~15m)
     // AND ensure no custom overrides (e.g. custom refcat or address) were provided
-    const hasCustomRefcat = Boolean(
-      overrides?.cadastralReference &&
-      !overrides.cadastralReference.startsWith('9872023VH5797S') &&
-      !overrides.cadastralReference.startsWith('28900A01200034')
-    );
-    const hasCustomAddress = Boolean(
-      overrides?.address?.street && !overrides.address.street.includes('Gran Vía')
+    const hasExplicitOverrides = Boolean(
+      overrides?.address?.street ||
+      (overrides?.cadastralReference &&
+        !overrides.cadastralReference.startsWith('9872023VH5797S') &&
+        !overrides.cadastralReference.startsWith('28900A01200034'))
     );
     const isGranVia =
-      !hasCustomRefcat &&
-      !hasCustomAddress &&
+      !hasExplicitOverrides &&
       Math.abs(lat - 40.42028) < 0.00015 &&
       Math.abs(lon - -3.70379) < 0.00015;
     const isGracia =
-      !hasCustomRefcat &&
+      !hasExplicitOverrides &&
       Math.abs(lat - 41.39167) < 0.00015 &&
       Math.abs(lon - 2.16472) < 0.00015;
     const isColon =
-      !hasCustomRefcat &&
+      !hasExplicitOverrides &&
       Math.abs(lat - 39.4699) < 0.00015 &&
       Math.abs(lon - -0.3735) < 0.00015;
     const isSierpes =
-      !hasCustomRefcat &&
+      !hasExplicitOverrides &&
       Math.abs(lat - 37.3908) < 0.00015 &&
       Math.abs(lon - -5.9942) < 0.00015;
 

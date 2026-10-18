@@ -183,11 +183,11 @@ export function MapView({
             tileSize: 256,
             attribution: '&copy; Instituto Geográfico Nacional (IGN España)',
           },
-          // Official IGN PNOA Orthophoto
+          // Official IGN PNOA Orthophoto (WMTS with CORS & persistent cache)
           'pnoa-base': {
             type: 'raster',
             tiles: [
-              'https://www.ign.es/wms-inspire/pnoa-ma?SERVICE=WMS&REQUEST=GetMap&LAYERS=OI.OrthoimageCoverage&STYLES=&FORMAT=image/jpeg&TRANSPARENT=false&VERSION=1.3.0&CRS=EPSG:3857&WIDTH=256&HEIGHT=256&BBOX={bbox-epsg-3857}',
+              'https://www.ign.es/wmts/pnoa-ma?service=WMTS&request=GetTile&version=1.0.0&Format=image/jpeg&layer=OI.OrthoimageCoverage&style=default&tilematrixset=GoogleMapsCompatible&TileMatrix={z}&TileRow={y}&TileCol={x}',
             ],
             tileSize: 256,
             attribution: '&copy; Instituto Geográfico Nacional (PNOA)',
@@ -348,26 +348,46 @@ export function MapView({
     };
   }, []);
 
-  // Update Basemap Visibility
+  // Resilient Basemap & Thematic Layer Visibility Updates
   useEffect(() => {
     const map = mapRef.current;
-    if (!map || !map.isStyleLoaded()) return;
+    if (!map) return;
 
-    map.setLayoutProperty('esri-dark-layer', 'visibility', activeBasemap === 'dark-gis' ? 'visible' : 'none');
-    map.setLayoutProperty('pnoa-layer', 'visibility', activeBasemap === 'pnoa-satellite' ? 'visible' : 'none');
-    map.setLayoutProperty('ign-layer', 'visibility', activeBasemap === 'ign-base' ? 'visible' : 'none');
-  }, [activeBasemap]);
+    const applyVisibility = () => {
+      const setVis = (layerId: string, visible: boolean) => {
+        try {
+          const hasLayer = typeof map.getLayer === 'function' ? Boolean(map.getLayer(layerId)) : true;
+          if (hasLayer && typeof map.setLayoutProperty === 'function') {
+            map.setLayoutProperty(layerId, 'visibility', visible ? 'visible' : 'none');
+          }
+        } catch {
+          // Gracefully ignore during style reloads
+        }
+      };
 
-  // Update Thematic Overlays Visibility
-  useEffect(() => {
-    const map = mapRef.current;
-    if (!map || !map.isStyleLoaded()) return;
+      setVis('esri-dark-layer', activeBasemap === 'dark-gis');
+      setVis('pnoa-layer', activeBasemap === 'pnoa-satellite');
+      setVis('ign-layer', activeBasemap === 'ign-base');
+      setVis('catastro-layer', showCatastroWms);
+      setVis('ine-income-layer', showIneIncome);
+      setVis('sica-layer', showMitecoNoise);
+      setVis('snczi-layer', showSncziFlood);
+    };
 
-    map.setLayoutProperty('catastro-layer', 'visibility', showCatastroWms ? 'visible' : 'none');
-    map.setLayoutProperty('ine-income-layer', 'visibility', showIneIncome ? 'visible' : 'none');
-    map.setLayoutProperty('sica-layer', 'visibility', showMitecoNoise ? 'visible' : 'none');
-    map.setLayoutProperty('snczi-layer', 'visibility', showSncziFlood ? 'visible' : 'none');
-  }, [showCatastroWms, showIneIncome, showMitecoNoise, showSncziFlood]);
+    applyVisibility();
+
+    if (typeof map.on === 'function') {
+      map.on('load', applyVisibility);
+      map.on('styledata', applyVisibility);
+    }
+
+    return () => {
+      if (typeof map.off === 'function') {
+        map.off('load', applyVisibility);
+        map.off('styledata', applyVisibility);
+      }
+    };
+  }, [activeBasemap, showCatastroWms, showIneIncome, showMitecoNoise, showSncziFlood]);
 
   // Toggle 3D Axonometric Tilt
   const toggle3DMode = () => {
@@ -435,8 +455,9 @@ export function MapView({
 
     const isMatchingReport =
       Boolean(report) &&
-      Math.abs((report?.property.coordinates.latitude ?? 0) - lat) < 0.001 &&
-      Math.abs((report?.property.coordinates.longitude ?? 0) - lon) < 0.001;
+      !isLoading &&
+      Math.abs((report?.property.coordinates.latitude ?? 0) - lat) < 0.02 &&
+      Math.abs((report?.property.coordinates.longitude ?? 0) - lon) < 0.02;
 
     const safeTitle = escapeHtml(
       isMatchingReport && propertyName ? propertyName : `Punto seleccionado (${lat.toFixed(5)}, ${lon.toFixed(5)})`
@@ -512,7 +533,10 @@ export function MapView({
       <div ref={mapContainerRef} className="absolute inset-0 w-full h-full" />
 
       {/* ================= FLOATING HUD: LAYER SWITCHER WIDGET (Top-Left) ================= */}
-      <div className="absolute top-3 left-3 z-20 bg-surface-container-low/95 backdrop-blur-md border border-outline-variant rounded p-2.5 shadow-2xl w-64 text-on-surface no-print">
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="absolute top-3 left-3 z-20 bg-surface-container-low/95 backdrop-blur-md border border-outline-variant rounded p-2.5 shadow-2xl w-64 text-on-surface no-print"
+      >
         {/* HUD Title Bar */}
         <div className="flex items-center justify-between border-b border-outline-variant/60 pb-1.5 mb-2">
           <span className="text-xs font-semibold tracking-wider uppercase flex items-center gap-1.5 text-primary font-mono">
@@ -649,7 +673,10 @@ export function MapView({
       </div>
 
       {/* ================= FLOATING MAP CONTROLS: ZOOM & 3D (Top-Right) ================= */}
-      <div className="absolute top-3 right-3 z-20 flex flex-col gap-1.5 no-print">
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="absolute top-3 right-3 z-20 flex flex-col gap-1.5 no-print"
+      >
         {/* Zoom Controls */}
         <div className="bg-surface-container-low/95 backdrop-blur-md border border-outline-variant rounded flex flex-col overflow-hidden shadow-xl">
           <button
@@ -732,7 +759,10 @@ export function MapView({
 
       {/* ================= FLOATING DUE DILIGENCE AUDIT CARD (Bottom Dock) ================= */}
       {isLoading ? (
-        <div className="absolute bottom-12 sm:bottom-10 left-3 right-3 sm:left-auto sm:right-3 z-30 bg-surface-container/95 backdrop-blur-md px-4 py-3 rounded-lg shadow-2xl border border-outline-variant flex items-center space-x-3 text-xs text-on-surface animate-in fade-in">
+        <div
+          onClick={(e) => e.stopPropagation()}
+          className="absolute bottom-12 sm:bottom-10 left-3 right-3 sm:left-auto sm:right-3 z-30 bg-surface-container/95 backdrop-blur-md px-4 py-3 rounded-lg shadow-2xl border border-outline-variant flex items-center space-x-3 text-xs text-on-surface animate-in fade-in"
+        >
           <Loader2 className="w-4 h-4 text-primary animate-spin shrink-0" />
           <div>
             <p className="font-semibold text-on-surface font-headline">Auditando punto seleccionado...</p>
@@ -740,7 +770,10 @@ export function MapView({
           </div>
         </div>
       ) : report ? (
-        <div className="absolute bottom-12 sm:bottom-10 left-3 right-3 sm:left-auto sm:right-3 z-30 bg-surface-container/95 backdrop-blur-md p-3.5 rounded-lg shadow-2xl border border-outline-variant flex items-center justify-between gap-4 text-xs sm:max-w-md animate-in slide-in-from-bottom-2">
+        <div
+          onClick={(e) => e.stopPropagation()}
+          className="absolute bottom-12 sm:bottom-10 left-3 right-3 sm:left-auto sm:right-3 z-30 bg-surface-container/95 backdrop-blur-md p-3.5 rounded-lg shadow-2xl border border-outline-variant flex items-center justify-between gap-4 text-xs sm:max-w-md animate-in slide-in-from-bottom-2"
+        >
           <div className="flex items-center space-x-3 min-w-0">
             <div
               className={`w-10 h-10 rounded-md flex flex-col items-center justify-center font-bold text-sm shrink-0 shadow-inner font-mono ${

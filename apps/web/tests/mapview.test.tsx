@@ -6,6 +6,7 @@ import { MapView, wgs84ToUtm30n } from '../src/components/MapView';
 vi.mock('maplibre-gl', () => {
   const mockMapInstance = {
     on: vi.fn(),
+    off: vi.fn(),
     resize: vi.fn(),
     remove: vi.fn(),
     flyTo: vi.fn(),
@@ -17,6 +18,7 @@ vi.mock('maplibre-gl', () => {
     getZoom: vi.fn().mockReturnValue(15),
     getCenter: vi.fn().mockReturnValue({ lat: 40.42028, lng: -3.70379 }),
     setLayoutProperty: vi.fn(),
+    getLayer: vi.fn().mockReturnValue({}),
     isStyleLoaded: vi.fn().mockReturnValue(true),
   };
 
