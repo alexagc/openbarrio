@@ -11,8 +11,7 @@
     {
       "binding": "DB",
       "database_name": "openbarrio-d1",
-      // Replace with your actual database_id from `wrangler d1 create openbarrio-d1`
-      "database_id": "00000000-0000-0000-0000-000000000000",
+      "database_id": "978c6710-c30f-4a1c-9afd-93c850a2b202",
       "migrations_dir": "migrations"
     }
   ],
