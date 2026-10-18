@@ -17,6 +17,29 @@ vi.mock('../src/components/MapView', () => ({
   MapView: () => <div data-testid="mock-mapview" />,
 }));
 
+vi.mock('../src/services/api.client', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../src/services/api.client')>();
+  return {
+    ...actual,
+    apiClient: {
+      ...actual.apiClient,
+      searchAddress: vi.fn().mockResolvedValue([]),
+      auditByCadastralReference: vi.fn().mockImplementation((refcat: string) => {
+        return Promise.resolve(
+          actual.auditDataToReport({
+            query: 'Passeig de Gràcia 42, Barcelona',
+            refcat: refcat || '08019A023000450001JK',
+            address: "Passeig de Gràcia 42, 08007 Barcelona (L'Eixample)",
+            score: 82,
+            yearBuilt: 1954,
+            surfaceM2: 88,
+          })
+        );
+      }),
+    },
+  };
+});
+
 // Test component to verify useTranslation hook behavior
 const TranslationConsumer = () => {
   const { t, language, setLanguage, availableLanguages } = useTranslation();

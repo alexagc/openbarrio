@@ -192,11 +192,11 @@ export function AppContent() {
 
   const loadAuditByRefcat = async (refcat: string, fallbackCoords?: { lat: number; lon: number }) => {
     setIsLoading(true);
-    setError(null);
 
     try {
       const data = await apiClient.auditByCadastralReference(refcat);
       setReport(data);
+      setError(null);
       setSelectedCoords({
         lat: data.property.coordinates.latitude,
         lon: data.property.coordinates.longitude,
@@ -205,11 +205,16 @@ export function AppContent() {
       if (fallbackCoords) {
         setSelectedCoords(fallbackCoords);
       }
-      if (err instanceof ApiError) {
-        setError({ message: err.message, problem: err.problem });
-      } else {
-        setError({ message: 'Error de conexión al consultar los servicios públicos.' });
-      }
+      setReport((currentReport) => {
+        if (!currentReport) {
+          if (err instanceof ApiError) {
+            setError({ message: err.message, problem: err.problem });
+          } else {
+            setError({ message: 'Error de conexión al consultar los servicios públicos.' });
+          }
+        }
+        return currentReport;
+      });
     } finally {
       setIsLoading(false);
     }
