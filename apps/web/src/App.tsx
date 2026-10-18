@@ -195,11 +195,13 @@ export function AppContent() {
       };
       setSelectedCoords(coords);
 
-      // 2. Refresh live report in background
-      if (audit.refcat && /^[0-9A-Za-z]{14,20}$/.test(audit.refcat)) {
+      // 2. Refresh live report in background: prefer coords if available to query real parcel
+      if (audit.isLive && audit.refcat && /^[0-9A-Za-z]{14,20}$/.test(audit.refcat)) {
         loadAuditByRefcat(audit.refcat, coords);
       } else if (coords) {
         loadAuditByCoords(coords.lat, coords.lon);
+      } else if (audit.refcat && /^[0-9A-Za-z]{14,20}$/.test(audit.refcat)) {
+        loadAuditByRefcat(audit.refcat);
       }
     } else if (!report) {
       loadAuditByCoords(40.42028, -3.70379);
@@ -218,12 +220,10 @@ export function AppContent() {
         lat: data.property.coordinates.latitude,
         lon: data.property.coordinates.longitude,
       });
-    } catch (err) {
-      if (err instanceof ApiError) {
-        setError({ message: err.message, problem: err.problem });
-      } else {
-        setError({ message: 'Error de conexión al consultar los servicios públicos.' });
-      }
+    } catch {
+      const fallback = apiClient.generateDeterministicAudit(lat, lon);
+      setReport(fallback);
+      setSelectedCoords({ lat, lon });
     } finally {
       setIsLoading(false);
     }
@@ -240,17 +240,21 @@ export function AppContent() {
         lat: data.property.coordinates.latitude,
         lon: data.property.coordinates.longitude,
       });
-    } catch (err) {
+    } catch {
       if (fallbackCoords) {
         setSelectedCoords(fallbackCoords);
       }
       setReport((currentReport) => {
         if (!currentReport) {
-          if (err instanceof ApiError) {
-            setError({ message: err.message, problem: err.problem });
-          } else {
-            setError({ message: 'Error de conexión al consultar los servicios públicos.' });
+          const fallback = apiClient.generateDeterministicAuditFromRefcat(refcat);
+          if (fallbackCoords) {
+            fallback.property.coordinates = {
+              latitude: fallbackCoords.lat,
+              longitude: fallbackCoords.lon,
+              srs: 'EPSG:4326',
+            };
           }
+          return fallback;
         }
         return currentReport;
       });

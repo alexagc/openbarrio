@@ -213,10 +213,32 @@ export class OpenBarrioApiClient {
     overrides?: Partial<CadastralProperty>
   ): ExtendedAuditReport {
     // Check specific landmark presets ONLY for exact initial coordinates (~15m)
-    const isGranVia = Math.abs(lat - 40.42028) < 0.00015 && Math.abs(lon - -3.70379) < 0.00015;
-    const isGracia = Math.abs(lat - 41.39167) < 0.00015 && Math.abs(lon - 2.16472) < 0.00015;
-    const isColon = Math.abs(lat - 39.4699) < 0.00015 && Math.abs(lon - -0.3735) < 0.00015;
-    const isSierpes = Math.abs(lat - 37.3908) < 0.00015 && Math.abs(lon - -5.9942) < 0.00015;
+    // AND ensure no custom overrides (e.g. custom refcat or address) were provided
+    const hasCustomRefcat = Boolean(
+      overrides?.cadastralReference &&
+      !overrides.cadastralReference.startsWith('9872023VH5797S') &&
+      !overrides.cadastralReference.startsWith('28900A01200034')
+    );
+    const hasCustomAddress = Boolean(
+      overrides?.address?.street && !overrides.address.street.includes('Gran Vía')
+    );
+    const isGranVia =
+      !hasCustomRefcat &&
+      !hasCustomAddress &&
+      Math.abs(lat - 40.42028) < 0.00015 &&
+      Math.abs(lon - -3.70379) < 0.00015;
+    const isGracia =
+      !hasCustomRefcat &&
+      Math.abs(lat - 41.39167) < 0.00015 &&
+      Math.abs(lon - 2.16472) < 0.00015;
+    const isColon =
+      !hasCustomRefcat &&
+      Math.abs(lat - 39.4699) < 0.00015 &&
+      Math.abs(lon - -0.3735) < 0.00015;
+    const isSierpes =
+      !hasCustomRefcat &&
+      Math.abs(lat - 37.3908) < 0.00015 &&
+      Math.abs(lon - -5.9942) < 0.00015;
 
     // Geographic regions in Spain
     const isMadridRegion = lat >= 40.0 && lat <= 41.2 && lon >= -4.5 && lon <= -3.0;
@@ -467,8 +489,14 @@ export class OpenBarrioApiClient {
     if (provCode === '50') {
       return this.generateDeterministicAudit(41.6561, -0.8773, { cadastralReference: clean });
     }
+    if (provCode === '28') {
+      return this.generateDeterministicAudit(40.4168, -3.7038, { cadastralReference: clean });
+    }
 
-    return this.generateDeterministicAudit(40.42028, -3.70379, { cadastralReference: clean });
+    const hash = clean.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+    const derivedLat = +(40.4168 + ((hash % 100) - 50) * 0.005).toFixed(5);
+    const derivedLon = +(-3.7038 + (((hash * 3) % 100) - 50) * 0.005).toFixed(5);
+    return this.generateDeterministicAudit(derivedLat, derivedLon, { cadastralReference: clean });
   }
 }
 

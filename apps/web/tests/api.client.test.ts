@@ -138,5 +138,16 @@ describe('OpenBarrioApiClient', () => {
     expect(report.property.cadastralReference).not.toBe('9872023VH5797S0001WX');
     expect(report.property.address.street).not.toBe('Calle Gran Vía');
   });
+
+  it('generates deterministic coordinates and avoids Gran Vía snapping for arbitrary urban refcat', () => {
+    const customRefcat = '1234567AB1234C0001XY';
+    const report = client.generateDeterministicAuditFromRefcat(customRefcat);
+
+    expect(report.isOfflineDemo).toBe(true);
+    expect(report.property.cadastralReference).toBe(customRefcat);
+    expect(report.property.address.street).not.toBe('Calle Gran Vía');
+    expect(report.property.coordinates.latitude).not.toBe(40.42028);
+    expect(report.property.coordinates.longitude).not.toBe(-3.70379);
+  });
 });
 
