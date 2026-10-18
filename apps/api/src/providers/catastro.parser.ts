@@ -83,10 +83,86 @@ export function parseCatastroCpmrcXml(xml: string): {
   };
 }
 
+export interface CatastroDnprcMetadata {
+  unitsCount?: number;
+  hasCommercialGroundFloor?: boolean;
+  totalBuildingSurface?: number;
+}
+
+export function isMultiUnitParcelXml(xml: string): boolean {
+  return /<lrcdnp\b/i.test(xml) && !/<bico\b/i.test(xml);
+}
+
+export function parseMultiUnitParcelSummary(xml: string): {
+  totalUnits: number;
+  primaryUnitRef?: string;
+  hasCommercialUnit: boolean;
+} {
+  const cudnpStr = extractTag(xml, 'cudnp');
+  const rcdnpList = extractAllTags(xml, 'rcdnp');
+  const totalUnits = cudnpStr ? parseInt(cudnpStr, 10) : (rcdnpList.length || 1);
+
+  let primaryUnitRef: string | undefined;
+  if (rcdnpList.length > 0) {
+    const firstRcdnp = rcdnpList[0];
+    const pc1 = extractTag(firstRcdnp, 'pc1');
+    const pc2 = extractTag(firstRcdnp, 'pc2');
+    const car = extractTag(firstRcdnp, 'car');
+    const cc1 = extractTag(firstRcdnp, 'cc1');
+    const cc2 = extractTag(firstRcdnp, 'cc2');
+    if (pc1 && pc2 && car && cc1 && cc2) {
+      primaryUnitRef = `${pc1}${pc2}${car}${cc1}${cc2}`;
+    }
+  }
+
+  const hasCommercialUnit = /comercial|oficina|local/i.test(xml);
+
+  return {
+    totalUnits,
+    primaryUnitRef,
+    hasCommercialUnit,
+  };
+}
+
+export function extractConstructionYear(xml: string): number | null {
+  // 1. Check <ant> (antigüedad de la construcción in <debi> or <de>)
+  const antStr = extractTag(xml, 'ant');
+  if (antStr) {
+    const y = parseInt(antStr, 10);
+    if (!isNaN(y) && y >= 1000 && y <= new Date().getFullYear() + 2) {
+      return y;
+    }
+  }
+
+  // 2. Check <aag> (año antigüedad in some construction elements)
+  const aagStr = extractTag(xml, 'aag');
+  if (aagStr) {
+    const y = parseInt(aagStr, 10);
+    if (!isNaN(y) && y >= 1000 && y <= new Date().getFullYear() + 2) {
+      return y;
+    }
+  }
+
+  // 3. Check inside any <dfcons> tags for <ant> or <aag>
+  const dfconsList = extractAllTags(xml, 'dfcons');
+  for (const dfcons of dfconsList) {
+    const dAnt = extractTag(dfcons, 'ant') || extractTag(dfcons, 'aag');
+    if (dAnt) {
+      const y = parseInt(dAnt, 10);
+      if (!isNaN(y) && y >= 1000 && y <= new Date().getFullYear() + 2) {
+        return y;
+      }
+    }
+  }
+
+  return null;
+}
+
 export function parseCatastroDnprcXml(
   xml: string,
   queriedRefcat: string,
-  fallbackCoords?: { latitude: number; longitude: number }
+  fallbackCoords?: { latitude: number; longitude: number },
+  metadata?: CatastroDnprcMetadata
 ): CadastralProperty {
   const errDes = extractTag(xml, 'des');
   if (errDes) {
@@ -99,7 +175,11 @@ export function parseCatastroDnprcXml(
   const cc1 = extractTag(xml, 'cc1') || '';
   const cc2 = extractTag(xml, 'cc2') || '';
 
-  const fullRc = pc1 && pc2 ? `${pc1}${pc2}${car}${cc1}${cc2}` : queriedRefcat;
+  // Retain queried reference when valid, else compose from XML components
+  let fullRc = queriedRefcat;
+  if (!fullRc || fullRc.length < 14) {
+    fullRc = pc1 && pc2 ? `${pc1}${pc2}${car}${cc1}${cc2}` : queriedRefcat;
+  }
 
   // Address: parse street name, primary number, letters, suffixes, portal, and horizontal division
   const tv = extractTag(xml, 'tv') || 'CL';
@@ -114,7 +194,7 @@ export function parseCatastroDnprcXml(
   if (plp) {
     number = number ? `${number} ${plp}`.trim() : plp;
   }
-  if (snp) {
+  if (snp && snp !== '0') {
     number = `${number}-${snp}${slp ? ` ${slp}` : ''}`;
   }
   if (!number) {
@@ -133,21 +213,53 @@ export function parseCatastroDnprcXml(
   const latitude = ycen !== 0 ? ycen : fallbackCoords?.latitude || 40.4168;
   const longitude = xcen !== 0 ? xcen : fallbackCoords?.longitude || -3.7038;
 
-  // Building
-  const antStr = extractTag(xml, 'ant');
-  const constructionYear = antStr ? parseInt(antStr, 10) : 1975;
-  const supStr = extractTag(xml, 'sup');
-  const builtSurfaceM2 = supStr ? parseInt(supStr, 10) : 100;
-  const primaryUse = extractTag(xml, 'uso') || 'Residencial';
+  // Building Attributes
+  const parsedYear = extractConstructionYear(xml);
+  const constructionYear = parsedYear !== null ? parsedYear : 0;
+  const primaryUse = extractTag(xml, 'luso') || extractTag(xml, 'uso') || 'Residencial';
 
   // Units count in horizontal division
-  const consList = extractAllTags(xml, 'cons');
-  const unitsCount = consList.length > 0 ? consList.length : 1;
+  let unitsCount = metadata?.unitsCount;
+  if (!unitsCount) {
+    const cudnpStr = extractTag(xml, 'cudnp');
+    const cudnp = cudnpStr ? parseInt(cudnpStr, 10) : 0;
+    const consList = extractAllTags(xml, 'cons');
+    const rcdnpList = extractAllTags(xml, 'rcdnp');
+    unitsCount = cudnp > 0 ? cudnp : rcdnpList.length > 0 ? rcdnpList.length : consList.length > 0 ? consList.length : 1;
+  }
 
-  // Check if commercial ground floor exists
+  // Commercial ground floor presence
+  const consList = extractAllTags(xml, 'cons');
   const hasCommercialGroundFloor =
-    primaryUse.toLowerCase().includes('comercial') ||
-    consList.some((c) => c.toLowerCase().includes('comercial'));
+    metadata?.hasCommercialGroundFloor ??
+    (primaryUse.toLowerCase().includes('comercial') ||
+      primaryUse.toLowerCase().includes('oficina') ||
+      consList.some((c) => /comercial|oficina|local/i.test(c)));
+
+  // Built surface (m2)
+  let builtSurfaceM2 = metadata?.totalBuildingSurface;
+  if (!builtSurfaceM2) {
+    const sfcStr = extractTag(xml, 'sfc') || extractTag(xml, 'sup');
+    const rawSurface = sfcStr ? parseInt(sfcStr, 10) : 0;
+    const cptStr = extractTag(xml, 'cpt');
+
+    if (queriedRefcat && queriedRefcat.length === 14 && cptStr) {
+      const cptVal = parseFloat(cptStr.replace(',', '.'));
+      if (cptVal > 0 && cptVal < 100 && rawSurface > 0) {
+        builtSurfaceM2 = Math.round(rawSurface / (cptVal / 100));
+      } else {
+        builtSurfaceM2 = rawSurface > 0 ? rawSurface : (unitsCount > 1 ? unitsCount * 90 : 100);
+      }
+    } else if (rawSurface > 0) {
+      builtSurfaceM2 = rawSurface;
+    } else if (constructionYear === 0 && primaryUse.toLowerCase().includes('agrario')) {
+      builtSurfaceM2 = 0;
+    } else if (unitsCount > 1) {
+      builtSurfaceM2 = unitsCount * 90;
+    } else {
+      builtSurfaceM2 = 100;
+    }
+  }
 
   return {
     cadastralReference: fullRc,
@@ -164,7 +276,7 @@ export function parseCatastroDnprcXml(
       srs: 'EPSG:4326',
     },
     building: {
-      constructionYear: isNaN(constructionYear) ? 1975 : constructionYear,
+      constructionYear: isNaN(constructionYear) ? 0 : constructionYear,
       builtSurfaceM2: isNaN(builtSurfaceM2) ? 100 : builtSurfaceM2,
       primaryUse,
       unitsCount,

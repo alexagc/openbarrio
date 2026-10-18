@@ -6,6 +6,9 @@ import {
   parseCatastroCoordinatesXml,
   parseCatastroDnprcXml,
   parseCatastroCpmrcXml,
+  isMultiUnitParcelXml,
+  parseMultiUnitParcelSummary,
+  extractConstructionYear,
 } from '../../src/providers/catastro.parser.js';
 import { CadastralNotFoundError } from '../../src/errors/problem-details.js';
 
@@ -96,6 +99,83 @@ describe('Catastro XML Parser', () => {
     expect(parsed?.latitude).toBeCloseTo(40.625864, 5);
     expect(parsed?.longitude).toBeCloseTo(-3.472068, 5);
     expect(parsed?.cadastralReference).toBe('0177207VK6907N');
+  });
+
+  it('identifies multi-unit parcel responses (horizontal division) vs single unit', () => {
+    const multiUnitXml = `
+      <consulta_dnp xmlns="http://www.catastro.meh.es/">
+        <control><cudnp>29</cudnp></control>
+        <lrcdnp>
+          <rcdnp>
+            <rc><pc1>0548203</pc1><pc2>VK4704H</pc2><car>0002</car><cc1>H</cc1><cc2>X</cc2></rc>
+            <dt><np>MADRID</np><nm>MADRID</nm><locs><lous><lourb><dir><tv>CL</tv><nv>VALVERDE</nv><pnp>1</pnp></dir></lourb></lous></dt>
+          </rcdnp>
+        </lrcdnp>
+      </consulta_dnp>
+    `;
+
+    expect(isMultiUnitParcelXml(multiUnitXml)).toBe(true);
+    expect(isMultiUnitParcelXml(dnprcXml)).toBe(false);
+
+    const summary = parseMultiUnitParcelSummary(multiUnitXml);
+    expect(summary.totalUnits).toBe(29);
+    expect(summary.primaryUnitRef).toBe('0548203VK4704H0002HX');
+  });
+
+  it('accurately extracts construction year from debi, de, and dfcons without defaulting to 1975', () => {
+    const xmlWithDebiAnt = `<debi><luso>Residencial</luso><sfc>143</sfc><ant>2022</ant></debi>`;
+    expect(extractConstructionYear(xmlWithDebiAnt)).toBe(2022);
+
+    const xmlWithDeAnt = `<de><ant>1924</ant></de>`;
+    expect(extractConstructionYear(xmlWithDeAnt)).toBe(1924);
+
+    const xmlWithDfconsAnt = `<cons><dfcons><stl>120</stl><ant>1986</ant></dfcons></cons>`;
+    expect(extractConstructionYear(xmlWithDfconsAnt)).toBe(1986);
+
+    const rusticNoAntXml = `<debi><luso>Agrario</luso><sfc>0</sfc></debi>`;
+    expect(extractConstructionYear(rusticNoAntXml)).toBeNull();
+  });
+
+  it('accurately parses unit XML with metadata and computes building surface from participation coefficient', () => {
+    const unitXml = `
+      <consulta_dnp xmlns="http://www.catastro.meh.es/">
+        <bico>
+          <bi>
+            <idbi><rc><pc1>0548203</pc1><pc2>VK4704H</pc2><car>0002</car><cc1>H</cc1><cc2>X</cc2></rc></idbi>
+            <dt>
+              <np>MADRID</np>
+              <nm>MADRID</nm>
+              <locs><lous><lourb><dir><tv>CL</tv><nv>VALVERDE</nv><pnp>1</pnp></dir><dp>28004</dp></lourb></lous></dt>
+            </dt>
+            <ldt>CL VALVERDE 1 28004 MADRID (MADRID)</ldt>
+            <debi>
+              <luso>Residencial</luso>
+              <sfc>143</sfc>
+              <cpt>2,580000</cpt>
+              <ant>2022</ant>
+            </debi>
+          </bi>
+        </bico>
+      </consulta_dnp>
+    `;
+
+    // Querying by 14-char parcel code should compute total building surface from participation coefficient
+    const propParcel = parseCatastroDnprcXml(unitXml, '0548203VK4704H', undefined, {
+      unitsCount: 29,
+      hasCommercialGroundFloor: true,
+    });
+
+    expect(propParcel.cadastralReference).toBe('0548203VK4704H');
+    expect(propParcel.building.constructionYear).toBe(2022);
+    expect(propParcel.building.unitsCount).toBe(29);
+    expect(propParcel.building.builtSurfaceM2).toBe(5543); // 143 / 0.0258 ≈ 5543 m²
+    expect(propParcel.building.hasCommercialGroundFloor).toBe(true);
+
+    // Querying by 20-char unit code should retain the unit's exact surface
+    const propUnit = parseCatastroDnprcXml(unitXml, '0548203VK4704H0002HX');
+    expect(propUnit.cadastralReference).toBe('0548203VK4704H0002HX');
+    expect(propUnit.building.constructionYear).toBe(2022);
+    expect(propUnit.building.builtSurfaceM2).toBe(143);
   });
 
   it('throws CadastralNotFoundError when Catastro returns error XML', () => {

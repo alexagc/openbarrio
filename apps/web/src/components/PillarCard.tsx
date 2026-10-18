@@ -24,9 +24,12 @@ export function PillarCards({ property, neighborhood, environment }: PillarCards
   const year = property.building.constructionYear;
   let codeStandard = 'Pre-normativa (Sin código térmico)';
   let codeBadge = 'bg-secondary-container/20 text-secondary border-secondary/40';
-  let eraTag = year < 1950 ? 'Edificio Histórico' : 'Edificio Consolidado';
+  let eraTag = year === 0 ? 'Suelo / Terreno' : year < 1950 ? 'Edificio Histórico' : 'Edificio Consolidado';
 
-  if (year >= 2007) {
+  if (year === 0) {
+    codeStandard = 'Parcela / Sin edificación registrada';
+    codeBadge = 'bg-surface-container text-on-surface-variant border-outline/30';
+  } else if (year >= 2007) {
     codeStandard = 'CTE (Código Técnico RD 314/2006)';
     codeBadge = 'bg-primary-container/20 text-primary border-primary/40';
     eraTag = 'Normativa Actual';
