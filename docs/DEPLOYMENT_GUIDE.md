@@ -121,14 +121,30 @@ To allow GitHub Actions CI/CD to build, migrate, and deploy automatically on eve
 
 ---
 
-## 5. Step 4: Automated CI/CD Pipeline
+## 5. Step 4: Automated CI/CD Pipeline (Release-Driven Deployment)
 
-The GitHub Actions workflow in `.github/workflows/deploy.yml` triggers on every `push` to `main` (and on manual `workflow_dispatch`):
+To ensure production stability, deployment to Cloudflare Edge is triggered strictly upon **publishing a release** or **pushing a version tag** (as well as via manual `workflow_dispatch`):
 
-1. **Build Monorepo:** Runs `pnpm run build` across `@openbarrio/core`, `@openbarrio/api`, and `@openbarrio/web`.
-2. **Apply D1 Migrations:** Runs `d1 execute openbarrio-d1 --file=migrations/0001_initial_schema.sql --remote` to ensure schema updates are applied.
-3. **Deploy API to Cloudflare Workers:** Deploys `apps/api` to `openbarrio-api.workers.dev`.
-4. **Deploy Web Dashboard to Cloudflare Pages:** Deploys `apps/web/dist` to `openbarrio-web.pages.dev`.
+* **Triggers:**
+  * **GitHub Release:** Publishing a release in GitHub (`release: [published]`).
+  * **Git Version Tag:** Pushing a semantic version tag (e.g. `v0.2.0`, `v1.0.0`).
+  * **Manual Trigger:** Running the `workflow_dispatch` event in the GitHub Actions UI.
+
+* **Pipeline Execution Steps (`.github/workflows/deploy.yml`):**
+  1. **Build Monorepo:** Runs `pnpm run build` across `@openbarrio/core`, `@openbarrio/api`, and `@openbarrio/web`.
+  2. **Apply D1 Migrations:** Runs `d1 execute openbarrio-d1 --file=migrations/0001_initial_schema.sql --remote --yes` to ensure schema updates are applied.
+  3. **Deploy API to Cloudflare Workers:** Deploys `apps/api` to `openbarrio-api.workers.dev`.
+  4. **Deploy Web Dashboard to Cloudflare Pages:** Deploys `apps/web/dist` to `openbarrio-web.pages.dev`.
+
+* **How to trigger a deployment:**
+  ```bash
+  # Option 1: Create and push a git tag
+  git tag -a v0.2.0 -m "Release v0.2.0: Cloudflare production deployment"
+  git push origin v0.2.0
+
+  # Option 2: Publish a GitHub Release via UI or CLI
+  gh release create v0.2.0 --title "v0.2.0: Cloudflare Live Deployment" --generate-notes
+  ```
 
 ---
 
