@@ -24,6 +24,19 @@ vi.mock('../src/services/api.client', async (importOriginal) => {
     apiClient: {
       ...actual.apiClient,
       searchAddress: vi.fn().mockResolvedValue([]),
+      auditByCoordinates: vi.fn().mockImplementation((lat: number, lon: number) => {
+        return Promise.resolve(
+          actual.auditDataToReport({
+            query: 'Passeig de Gràcia 42, Barcelona',
+            refcat: '08019A023000450001JK',
+            address: "Passeig de Gràcia 42, 08007 Barcelona (L'Eixample)",
+            score: 82,
+            yearBuilt: 1954,
+            surfaceM2: 88,
+            coordinates: { lat, lon },
+          })
+        );
+      }),
       auditByCadastralReference: vi.fn().mockImplementation((refcat: string) => {
         return Promise.resolve(
           actual.auditDataToReport({
@@ -35,6 +48,12 @@ vi.mock('../src/services/api.client', async (importOriginal) => {
             surfaceM2: 88,
           })
         );
+      }),
+      generateDeterministicAudit: vi.fn().mockImplementation((lat: number, lon: number, overrides?: any) => {
+        return actual.apiClient.generateDeterministicAudit(lat, lon, overrides);
+      }),
+      generateDeterministicAuditFromRefcat: vi.fn().mockImplementation((refcat: string) => {
+        return actual.apiClient.generateDeterministicAuditFromRefcat(refcat);
       }),
     },
   };
