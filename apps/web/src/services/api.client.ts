@@ -589,7 +589,7 @@ export function auditDataToReport(audit: RawAuditDataInput): ExtendedAuditReport
       srs: 'EPSG:4326',
     },
     building: {
-      constructionYear: audit.yearBuilt || 1975,
+      constructionYear: typeof audit.yearBuilt === 'number' ? audit.yearBuilt : 0,
       builtSurfaceM2: surface,
       primaryUse: audit.cadastralUsage || 'Residencial Colectivo',
       unitsCount: 1,

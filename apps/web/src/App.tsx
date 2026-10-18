@@ -173,6 +173,7 @@ export function AppContent() {
         }
 
         if (liveReport && !liveReport.isOfflineDemo) {
+          setReport(liveReport);
           setActiveAudit({
             query,
             refcat: liveReport.property.cadastralReference,

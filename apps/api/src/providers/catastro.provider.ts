@@ -4,6 +4,8 @@ import {
   parseCatastroCoordinatesXml,
   parseCatastroDnprcXml,
   parseCatastroCpmrcXml,
+  isMultiUnitParcelXml,
+  parseMultiUnitParcelSummary,
 } from './catastro.parser.js';
 import { UpstreamProviderError } from '../errors/problem-details.js';
 
@@ -142,6 +144,34 @@ export class CatastroProvider implements ICatastroProvider {
     } catch (err: any) {
       if (err instanceof UpstreamProviderError) throw err;
       throw new UpstreamProviderError('Catastro OVC', err.message || 'Network request failed');
+    }
+
+    // If parcel has horizontal division (<lrcdnp>), fetch primary unit to extract official building year and specs
+    if (isMultiUnitParcelXml(xmlText)) {
+      const summary = parseMultiUnitParcelSummary(xmlText);
+      if (summary.primaryUnitRef) {
+        try {
+          const unitUrl = `${this.callejeroBaseUrl}/Consulta_DNPRC?Provincia=&Municipio=&RC=${encodeURIComponent(summary.primaryUnitRef)}`;
+          const unitController = new AbortController();
+          const unitTimer = setTimeout(() => unitController.abort(), this.timeoutMs);
+          const unitRes = await fetch(unitUrl, {
+            signal: unitController.signal,
+            headers: { 'User-Agent': 'OpenBarrio-DueDiligence/0.1' },
+            ...({ cf: { cacheTtl: 7776000, cacheEverything: true } } as any),
+          });
+          clearTimeout(unitTimer);
+
+          if (unitRes.ok) {
+            const unitXml = await unitRes.text();
+            return parseCatastroDnprcXml(unitXml, cleanRef, resolvedCoords, {
+              unitsCount: summary.totalUnits,
+              hasCommercialGroundFloor: summary.hasCommercialUnit,
+            });
+          }
+        } catch {
+          // Fall through to parsing parent XML on unit lookup timeout/error
+        }
+      }
     }
 
     return parseCatastroDnprcXml(xmlText, cleanRef, resolvedCoords);

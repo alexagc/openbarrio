@@ -66,7 +66,9 @@ export function AuditDossier({ report }: AuditDossierProps) {
           <div>
             <div className="flex items-center gap-2 mb-1.5 flex-wrap">
               <span className="px-2 py-0.5 rounded text-[10px] font-mono uppercase bg-primary-container/20 text-primary border border-primary/40 font-semibold">
-                {property.building.constructionYear < 1940 ? 'Edificio Singular Histórico' : usageLabel}
+                {property.building.constructionYear > 0 && property.building.constructionYear < 1940
+                  ? 'Edificio Singular Histórico'
+                  : usageLabel}
               </span>
               <span className="text-xs font-mono text-outline">{districtLabel}</span>
             </div>
@@ -78,7 +80,11 @@ export function AuditDossier({ report }: AuditDossierProps) {
             <p className="text-xs sm:text-sm text-on-surface-variant mt-1 flex items-center gap-1.5">
               <Building className="w-4 h-4 text-outline shrink-0" />
               <span>
-                {property.address.province} · {property.building.builtSurfaceM2.toLocaleString('es-ES')} m² construidos (Año {property.building.constructionYear})
+                {property.address.province} ·{' '}
+                {property.building.builtSurfaceM2.toLocaleString('es-ES')} m²{' '}
+                {property.building.constructionYear > 0
+                  ? `construidos (Año ${property.building.constructionYear})`
+                  : 'superficie (Suelo sin edificar)'}
               </span>
             </p>
           </div>

@@ -1,6 +1,6 @@
 {
   "name": "@openbarrio/core",
-  "version": "0.2.5",
+  "version": "0.2.6",
   "description": "Shared domain models, schemas, and scoring formulas for OpenBarrio",
   "type": "module",
   "main": "./dist/index.js",

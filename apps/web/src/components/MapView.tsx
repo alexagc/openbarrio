@@ -486,8 +486,12 @@ export function MapView({
       isMatchingReport && propertyAddress ? propertyAddress : 'Consultando Sede del Catastro & INE...'
     );
     const refcat = isMatchingReport ? report!.property.cadastralReference : 'Consultando Catastro...';
-    const surfaceM2 = isMatchingReport ? `${report!.property.building.builtSurfaceM2} m²` : 'Calculando...';
-    const yearBuilt = isMatchingReport ? `Año ${report!.property.building.constructionYear}` : 'Consultando...';
+    const surfaceM2 = isMatchingReport ? `${report!.property.building.builtSurfaceM2.toLocaleString('es-ES')} m²` : 'Calculando...';
+    const yearBuilt = isMatchingReport
+      ? report!.property.building.constructionYear > 0
+        ? `Año ${report!.property.building.constructionYear}`
+        : 'Suelo sin edificar'
+      : 'Consultando...';
     const scoreVal = isMatchingReport ? `${report!.score.overallScore}/100` : '--/100';
 
     const popupHtml = `

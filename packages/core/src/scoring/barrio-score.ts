@@ -74,11 +74,15 @@ export function calculateBarrioScore(
     risks.push(
       `Built in ${year} prior to NBE-CT-79: recommended to inspect mandatory ITE/IEE (Building Technical Inspection) and insulation`
     );
-  } else {
+  } else if (year > 0) {
     // Pre-1940 historic heritage
     buildingScore = 65;
     highlights.push(`Historic building constructed in ${year} with heritage character`);
     risks.push(`Historic structural age: verify ongoing building maintenance fund and structural rehabilitation status`);
+  } else {
+    // Unbuilt plot, agricultural land, or parcel without recorded building antiquity
+    buildingScore = 70;
+    highlights.push(`Unbuilt parcel or land without recorded building antiquity in Cadastral registry`);
   }
 
   // Density adjustment
