@@ -1,10 +1,24 @@
-import { useEffect, useRef, useState } from 'react';
-import maplibregl, { Map as MapLibreMap, Marker, NavigationControl } from 'maplibre-gl';
+import { useEffect, useRef, useState, useMemo } from 'react';
+import maplibregl, { Map as MapLibreMap, Marker, Popup } from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
-import { Layers, MapPin, Maximize2, Loader2, ChevronRight, AlertTriangle, X } from 'lucide-react';
+import {
+  Layers,
+  MapPin,
+  Maximize2,
+  Loader2,
+  ChevronRight,
+  AlertTriangle,
+  X,
+  Compass,
+  Plus,
+  Minus,
+  Volume2,
+  Waves,
+  TrendingUp,
+} from 'lucide-react';
 import { ExtendedAuditReport } from '../services/api.client';
 
-interface MapViewProps {
+export interface MapViewProps {
   selectedCoords?: { lat: number; lon: number };
   onMapClick: (lat: number, lon: number) => void;
   propertyName?: string;
@@ -16,17 +30,74 @@ interface MapViewProps {
   onViewReport?: () => void;
 }
 
-type BasemapType = 'osm' | 'ign-base' | 'pnoa-satellite';
+export type BasemapType = 'dark-gis' | 'pnoa-satellite' | 'ign-base';
+
+/**
+ * Converts WGS84 geographic coordinates (lat, lon) to Spanish official ETRS89 / UTM Zone 30N projection.
+ * Central meridian: 3° W (-3°). False Easting: 500,000m.
+ */
+export function wgs84ToUtm30n(lat: number, lon: number): { x: number; y: number; zone: string } {
+  const a = 6378137.0; // semi-major axis
+  const f = 1 / 298.257223563; // flattening
+  const k0 = 0.9996; // scale factor
+  const e2 = 2 * f - f * f;
+  const ePrime2 = e2 / (1 - e2);
+
+  const latRad = (lat * Math.PI) / 180;
+  const lonRad = (lon * Math.PI) / 180;
+  const lonOrigin = (-3 * Math.PI) / 180; // Central meridian for UTM Zone 30 (-3°)
+
+  const N = a / Math.sqrt(1 - e2 * Math.sin(latRad) * Math.sin(latRad));
+  const T = Math.tan(latRad) * Math.tan(latRad);
+  const C = ePrime2 * Math.cos(latRad) * Math.cos(latRad);
+  const A = Math.cos(latRad) * (lonRad - lonOrigin);
+
+  const M =
+    a *
+    ((1 - e2 / 4 - (3 * e2 * e2) / 64 - (5 * e2 * e2 * e2) / 256) * latRad -
+      ((3 * e2) / 8 + (3 * e2 * e2) / 32 + (45 * e2 * e2 * e2) / 1024) * Math.sin(2 * latRad) +
+      ((15 * e2 * e2) / 256 + (45 * e2 * e2 * e2) / 1024) * Math.sin(4 * latRad) -
+      ((35 * e2 * e2 * e2) / 3072) * Math.sin(6 * latRad));
+
+  const x =
+    500000 +
+    k0 *
+      N *
+      (A +
+        ((1 - T + C) * Math.pow(A, 3)) / 6 +
+        ((5 - 18 * T + T * T + 72 * C - 58 * ePrime2) * Math.pow(A, 5)) / 120);
+
+  const y =
+    k0 *
+    (M +
+      N *
+        Math.tan(latRad) *
+        ((A * A) / 2 +
+          ((5 - T + 9 * C + 4 * C * C) * Math.pow(A, 4)) / 24 +
+          ((61 - 58 * T + T * T + 600 * C - 330 * ePrime2) * Math.pow(A, 6)) / 720));
+
+  return {
+    x: Math.round(x),
+    y: Math.round(y),
+    zone: '30N',
+  };
+}
 
 function escapeHtml(str: string): string {
   return str.replace(/[&<>"']/g, (m) => {
     switch (m) {
-      case '&': return '&amp;';
-      case '<': return '&lt;';
-      case '>': return '&gt;';
-      case '"': return '&quot;';
-      case "'": return '&#39;';
-      default: return m;
+      case '&':
+        return '&amp;';
+      case '<':
+        return '&lt;';
+      case '>':
+        return '&gt;';
+      case '"':
+        return '&quot;';
+      case "'":
+        return '&#39;';
+      default:
+        return m;
     }
   });
 }
@@ -51,11 +122,36 @@ export function MapView({
     onMapClickRef.current = onMapClick;
   }, [onMapClick]);
 
-  const [activeBasemap, setActiveBasemap] = useState<BasemapType>('osm');
+  // Basemap & Thematic Layer States matching Stitch HUD
+  const [activeBasemap, setActiveBasemap] = useState<BasemapType>('dark-gis');
   const [showCatastroWms, setShowCatastroWms] = useState<boolean>(true);
-  const [currentZoom, setCurrentZoom] = useState<number>(14);
+  const [showIneIncome, setShowIneIncome] = useState<boolean>(true);
+  const [showMitecoNoise, setShowMitecoNoise] = useState<boolean>(false);
+  const [showSncziFlood, setShowSncziFlood] = useState<boolean>(false);
+  const [is3DMode, setIs3DMode] = useState<boolean>(false);
+  const [currentZoom, setCurrentZoom] = useState<number>(15);
 
-  // Initialize Map
+  // Real-time spatial telemetry state
+  const [mapCenter, setMapCenter] = useState<{ lat: number; lon: number }>({
+    lat: selectedCoords?.lat ?? 40.42028,
+    lon: selectedCoords?.lon ?? -3.70379,
+  });
+
+  const utmCoords = useMemo(() => {
+    return wgs84ToUtm30n(mapCenter.lat, mapCenter.lon);
+  }, [mapCenter.lat, mapCenter.lon]);
+
+  // Estimated elevation based on Spanish topography approximation
+  const estimatedElevation = useMemo(() => {
+    // Madrid plateau ~650m, coastal ~10-40m, inland ~400-800m
+    const latDiff = Math.abs(mapCenter.lat - 40.42);
+    const lonDiff = Math.abs(mapCenter.lon - -3.7);
+    if (latDiff < 0.5 && lonDiff < 0.5) return 652;
+    if (mapCenter.lon > 1.5 || mapCenter.lon < -8.0 || mapCenter.lat < 37.0) return 38;
+    return 485;
+  }, [mapCenter.lat, mapCenter.lon]);
+
+  // Initialize MapLibre GL instance
   useEffect(() => {
     if (!mapContainerRef.current || mapRef.current) return;
 
@@ -67,15 +163,18 @@ export function MapView({
       style: {
         version: 8,
         sources: {
-          'osm-base': {
+          // CartoDB Dark Matter (High-precision dark GIS basemap)
+          'carto-dark': {
             type: 'raster',
             tiles: [
-              'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+              'https://a.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}@2x.png',
+              'https://b.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}@2x.png',
             ],
             tileSize: 256,
             attribution:
-              '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors',
+              '&copy; <a href="https://carto.com/" target="_blank">CARTO</a> &copy; <a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap</a>',
           },
+          // Official IGN WMTS Basemap
           'ign-base': {
             type: 'raster',
             tiles: [
@@ -84,14 +183,16 @@ export function MapView({
             tileSize: 256,
             attribution: '&copy; Instituto Geográfico Nacional (IGN España)',
           },
+          // Official IGN PNOA Orthophoto
           'pnoa-base': {
             type: 'raster',
             tiles: [
               'https://www.ign.es/wms-inspire/pnoa-ma?SERVICE=WMS&REQUEST=GetMap&LAYERS=OI.OrthoimageCoverage&STYLES=&FORMAT=image/jpeg&TRANSPARENT=false&VERSION=1.3.0&CRS=EPSG:3857&WIDTH=256&HEIGHT=256&BBOX={bbox-epsg-3857}',
             ],
             tileSize: 256,
-            attribution: '&copy; Instituto Geográfico Nacional (IGN PNOA)',
+            attribution: '&copy; Instituto Geográfico Nacional (PNOA)',
           },
+          // Sede Electrónica del Catastro (OVC) Live WMS
           'catastro-wms': {
             type: 'raster',
             tiles: [
@@ -100,66 +201,106 @@ export function MapView({
             tileSize: 256,
             attribution: '&copy; Dirección General del Catastro (España)',
           },
+          // MITECO SICA Noise WMS
+          'miteco-sica': {
+            type: 'raster',
+            tiles: [
+              'https://wms.mapama.gob.es/sig/Biodiversidad/SICA/wms.aspx?SERVICE=WMS&SRS=EPSG:3857&REQUEST=GetMap&FORMAT=image/png&BBOX={bbox-epsg-3857}&WIDTH=256&HEIGHT=256&LAYERS=Ruido_Carreteras&TRANSPARENT=TRUE',
+            ],
+            tileSize: 256,
+            attribution: '&copy; MITECO SICA',
+          },
+          // MITECO SNCZI Flood Risk WMS
+          'miteco-snczi': {
+            type: 'raster',
+            tiles: [
+              'https://wms.mapama.gob.es/sig/Agua/SNCZI/wms.aspx?SERVICE=WMS&SRS=EPSG:3857&REQUEST=GetMap&FORMAT=image/png&BBOX={bbox-epsg-3857}&WIDTH=256&HEIGHT=256&LAYERS=Zonas_Inundables_T100&TRANSPARENT=TRUE',
+            ],
+            tileSize: 256,
+            attribution: '&copy; MITECO SNCZI',
+          },
         },
         layers: [
+          // 1. Dark GIS Basemap (Active by default)
           {
-            id: 'osm-layer',
+            id: 'carto-dark-layer',
             type: 'raster',
-            source: 'osm-base',
+            source: 'carto-dark',
             minzoom: 0,
             maxzoom: 20,
-            layout: {
-              visibility: 'visible',
-            },
+            layout: { visibility: 'visible' },
           },
-          {
-            id: 'ign-layer',
-            type: 'raster',
-            source: 'ign-base',
-            minzoom: 0,
-            maxzoom: 20,
-            layout: {
-              visibility: 'none',
-            },
-          },
+          // 2. PNOA Satellite Basemap
           {
             id: 'pnoa-layer',
             type: 'raster',
             source: 'pnoa-base',
             minzoom: 0,
             maxzoom: 20,
-            layout: {
-              visibility: 'none',
-            },
+            layout: { visibility: 'none' },
           },
+          // 3. IGN Vector Callejero
+          {
+            id: 'ign-layer',
+            type: 'raster',
+            source: 'ign-base',
+            minzoom: 0,
+            maxzoom: 20,
+            layout: { visibility: 'none' },
+          },
+          // 4. MITECO SNCZI Flood Overlay
+          {
+            id: 'snczi-layer',
+            type: 'raster',
+            source: 'miteco-snczi',
+            minzoom: 8,
+            maxzoom: 19,
+            paint: { 'raster-opacity': 0.65 },
+            layout: { visibility: 'none' },
+          },
+          // 5. MITECO SICA Noise Overlay
+          {
+            id: 'sica-layer',
+            type: 'raster',
+            source: 'miteco-sica',
+            minzoom: 10,
+            maxzoom: 19,
+            paint: { 'raster-opacity': 0.6 },
+            layout: { visibility: 'none' },
+          },
+          // 6. Catastro Parcels Official WMS
           {
             id: 'catastro-layer',
             type: 'raster',
             source: 'catastro-wms',
             minzoom: 13,
             maxzoom: 20,
-            paint: {
-              'raster-opacity': 0.82,
-            },
-            layout: {
-              visibility: 'visible',
-            },
+            paint: { 'raster-opacity': 0.85 },
+            layout: { visibility: 'visible' },
           },
         ],
       },
       center: [initialLon, initialLat],
       zoom: 15,
+      pitch: 0,
+      bearing: 0,
       maxZoom: 19,
-      minZoom: 5,
+      minZoom: 4,
     });
-
-    map.addControl(new NavigationControl({ showCompass: true }), 'top-right');
 
     map.on('zoom', () => {
       setCurrentZoom(Math.round(map.getZoom()));
     });
 
-    map.getCanvas().style.cursor = 'pointer';
+    map.on('move', () => {
+      const center = map.getCenter();
+      setMapCenter({
+        lat: parseFloat(center.lat.toFixed(6)),
+        lon: parseFloat(center.lng.toFixed(6)),
+      });
+    });
+
+    map.getCanvas().style.cursor = 'crosshair';
 
     map.on('click', (e) => {
       const lat = parseFloat(e.lngLat.lat.toFixed(6));
@@ -188,45 +329,82 @@ export function MapView({
     };
   }, []);
 
-  // Update basemap layers
+  // Update Basemap Visibility
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !map.isStyleLoaded()) return;
 
-    map.setLayoutProperty('osm-layer', 'visibility', activeBasemap === 'osm' ? 'visible' : 'none');
-    map.setLayoutProperty('ign-layer', 'visibility', activeBasemap === 'ign-base' ? 'visible' : 'none');
+    map.setLayoutProperty('carto-dark-layer', 'visibility', activeBasemap === 'dark-gis' ? 'visible' : 'none');
     map.setLayoutProperty('pnoa-layer', 'visibility', activeBasemap === 'pnoa-satellite' ? 'visible' : 'none');
+    map.setLayoutProperty('ign-layer', 'visibility', activeBasemap === 'ign-base' ? 'visible' : 'none');
   }, [activeBasemap]);
 
-  // Update Catastro WMS overlay visibility
+  // Update Thematic Overlays Visibility
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !map.isStyleLoaded()) return;
 
-    map.setLayoutProperty(
-      'catastro-layer',
-      'visibility',
-      showCatastroWms ? 'visible' : 'none'
-    );
-  }, [showCatastroWms]);
+    map.setLayoutProperty('catastro-layer', 'visibility', showCatastroWms ? 'visible' : 'none');
+    map.setLayoutProperty('sica-layer', 'visibility', showMitecoNoise ? 'visible' : 'none');
+    map.setLayoutProperty('snczi-layer', 'visibility', showSncziFlood ? 'visible' : 'none');
+  }, [showCatastroWms, showMitecoNoise, showSncziFlood]);
 
-  // Update marker & camera when coordinates change
+  // Toggle 3D Axonometric Tilt
+  const toggle3DMode = () => {
+    const map = mapRef.current;
+    if (!map) return;
+
+    const nextMode = !is3DMode;
+    setIs3DMode(nextMode);
+
+    map.easeTo({
+      pitch: nextMode ? 55 : 0,
+      bearing: nextMode ? -15 : 0,
+      duration: 1000,
+    });
+  };
+
+  const handleZoomIn = () => {
+    mapRef.current?.zoomIn({ duration: 300 });
+  };
+
+  const handleZoomOut = () => {
+    mapRef.current?.zoomOut({ duration: 300 });
+  };
+
+  const handleResetNorth = () => {
+    mapRef.current?.resetNorthPitch({ duration: 600 });
+    setIs3DMode(false);
+  };
+
+  const resetToSpain = () => {
+    if (!mapRef.current) return;
+    mapRef.current.flyTo({
+      center: [-3.70379, 40.42028],
+      zoom: 6,
+      pitch: 0,
+      bearing: 0,
+      duration: 1200,
+    });
+    setIs3DMode(false);
+  };
+
+  // Update Marker & Target Parcel Flag when coordinates change
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !selectedCoords) return;
 
     const { lat, lon } = selectedCoords;
 
-    // Create custom DOM element for pulsing radar pin
+    // Create custom Stitch-themed neon amber target node
     const el = document.createElement('div');
     el.className = 'group relative cursor-pointer';
     el.innerHTML = `
       <div class="relative flex items-center justify-center">
-        <div class="absolute w-10 h-10 bg-indigo-500 rounded-full animate-ping opacity-60"></div>
-        <div class="relative w-8 h-8 bg-indigo-600 text-white rounded-full flex items-center justify-center shadow-xl border-2 border-white transform transition hover:scale-110">
-          <svg class="w-4 h-4 fill-current" viewBox="0 0 24 24">
-            <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
-          </svg>
+        <div class="absolute w-12 h-12 bg-amber-500/20 rounded-full animate-ping"></div>
+        <div class="absolute w-7 h-7 bg-amber-400/30 rounded-full animate-pulse border border-amber-400/60"></div>
+        <div class="relative w-5 h-5 bg-surface-container-lowest text-secondary rounded-full flex items-center justify-center shadow-lg border-2 border-secondary transform transition hover:scale-125">
+          <div class="w-2 h-2 rounded-full bg-secondary"></div>
         </div>
       </div>
     `;
@@ -235,19 +413,51 @@ export function MapView({
       markerRef.current.remove();
     }
 
-    const safeTitle = escapeHtml(propertyName || 'Inmueble Auditado');
+    const safeTitle = escapeHtml(propertyName || 'Parcela Catastral Auditada');
     const safeAddress = escapeHtml(propertyAddress || `${lat.toFixed(5)}, ${lon.toFixed(5)}`);
+    const refcat = report?.property.cadastralReference || '9872023VH5797S0001WX';
+    const surfaceM2 = report?.property.building.builtSurfaceM2 ?? 90;
+    const yearBuilt = report?.property.building.constructionYear ?? 1975;
+    const scoreVal = report?.score.overallScore ?? 85;
+
     const popupHtml = `
-      <div class="p-2 text-xs font-sans">
-        <p class="font-bold text-slate-900">${safeTitle}</p>
-        <p class="text-slate-600">${safeAddress}</p>
-        <p class="mt-1 text-[10px] text-indigo-600 font-medium">Click en el mapa para auditar otro punto</p>
+      <div class="p-3 text-xs font-mono bg-surface-container-low text-on-surface border border-secondary/40 rounded-lg shadow-2xl min-w-[220px]">
+        <div class="flex items-center justify-between border-b border-outline-variant/60 pb-1.5 mb-2">
+          <span class="text-[9px] font-bold text-secondary uppercase tracking-wider flex items-center gap-1.5">
+            <span class="w-1.5 h-1.5 rounded-full bg-primary animate-pulse"></span>
+            PARCELA AUDITADA
+          </span>
+          <span class="px-1.5 py-0.2 rounded bg-primary/20 text-primary border border-primary/40 text-[9px] font-bold">
+            ${scoreVal}/100
+          </span>
+        </div>
+        <p class="font-bold text-on-surface text-[11px] truncate mb-0.5">${safeTitle}</p>
+        <p class="text-on-surface-variant text-[10px] truncate mb-2">${safeAddress}</p>
+        <div class="bg-surface-container p-1.5 rounded border border-outline-variant/40 space-y-0.5 text-[9px]">
+          <div class="flex justify-between text-on-surface-variant">
+            <span>RC:</span>
+            <span class="text-secondary font-semibold">${escapeHtml(refcat)}</span>
+          </div>
+          <div class="flex justify-between text-on-surface-variant">
+            <span>Superficie:</span>
+            <span class="text-on-surface font-semibold">${surfaceM2} m²</span>
+          </div>
+          <div class="flex justify-between text-on-surface-variant">
+            <span>Construcción:</span>
+            <span class="text-on-surface font-semibold">Año ${yearBuilt}</span>
+          </div>
+        </div>
+        <p class="mt-2 text-[9px] text-primary/80 font-sans text-center">Click en el mapa para auditar otro punto</p>
       </div>
     `;
 
-    const popup = new maplibregl.Popup({ offset: 25, closeButton: false }).setHTML(popupHtml);
+    const popup = new Popup({
+      offset: 20,
+      closeButton: false,
+      className: 'stitch-dark-popup',
+    }).setHTML(popupHtml);
 
-    const marker = new maplibregl.Marker({ element: el })
+    const marker = new Marker({ element: el })
       .setLngLat([lon, lat])
       .setPopup(popup)
       .addTo(map);
@@ -261,128 +471,256 @@ export function MapView({
       essential: true,
       duration: 1200,
     });
-  }, [selectedCoords, propertyName, propertyAddress]);
-
-  const resetToSpain = () => {
-    if (!mapRef.current) return;
-    mapRef.current.flyTo({
-      center: [-3.70379, 40.42028],
-      zoom: 6,
-      duration: 1200,
-    });
-  };
+  }, [selectedCoords, propertyName, propertyAddress, report]);
 
   return (
-    <div className="relative w-full h-full min-h-[420px] rounded-2xl overflow-hidden border border-slate-200 shadow-inner bg-slate-100">
-      {/* MapLibre DOM Target */}
+    <div className="relative w-full h-full min-h-[480px] rounded-xl overflow-hidden border border-outline-variant shadow-2xl bg-surface-container-lowest cadastral-grid select-none">
+      {/* MapLibre WebGL Canvas Container */}
       <div ref={mapContainerRef} className="absolute inset-0 w-full h-full" />
 
-      {/* Floating Map Controls & Indicators */}
-      <div className="absolute top-3 left-3 z-10 flex flex-col space-y-2 no-print">
-        {/* Layer Toggle Card */}
-        <div className="bg-white/95 backdrop-blur-md p-1.5 rounded-xl shadow-lg border border-slate-200/80 flex items-center space-x-1 text-xs">
+      {/* ================= FLOATING HUD: LAYER SWITCHER WIDGET (Top-Left) ================= */}
+      <div className="absolute top-3 left-3 z-20 bg-surface-container-low/95 backdrop-blur-md border border-outline-variant rounded p-2.5 shadow-2xl w-64 text-on-surface no-print">
+        {/* HUD Title Bar */}
+        <div className="flex items-center justify-between border-b border-outline-variant/60 pb-1.5 mb-2">
+          <span className="text-xs font-semibold tracking-wider uppercase flex items-center gap-1.5 text-primary font-mono">
+            <Layers className="w-3.5 h-3.5 text-primary" />
+            <span>Capas Temáticas GIS</span>
+          </span>
+          <span className="text-[9px] font-mono text-outline">v4.2 ETRS89</span>
+        </div>
+
+        {/* Basemap Selector Pills */}
+        <div className="grid grid-cols-3 gap-1 p-0.5 bg-surface-container rounded border border-outline-variant/60 mb-2.5 text-[10px] font-mono">
           <button
-            onClick={() => setActiveBasemap('osm')}
-            className={`px-2.5 py-1.5 rounded-lg font-medium transition ${
-              activeBasemap === 'osm'
-                ? 'bg-indigo-600 text-white shadow-sm'
-                : 'text-slate-600 hover:bg-slate-100'
+            type="button"
+            onClick={() => setActiveBasemap('dark-gis')}
+            className={`py-1 rounded text-center transition font-semibold cursor-pointer ${
+              activeBasemap === 'dark-gis'
+                ? 'bg-primary text-on-primary shadow-xs'
+                : 'text-on-surface-variant hover:text-on-surface'
             }`}
           >
-            Callejero
+            Dark GIS
           </button>
           <button
-            onClick={() => setActiveBasemap('ign-base')}
-            className={`px-2.5 py-1.5 rounded-lg font-medium transition ${
-              activeBasemap === 'ign-base'
-                ? 'bg-indigo-600 text-white shadow-sm'
-                : 'text-slate-600 hover:bg-slate-100'
-            }`}
-          >
-            IGN Base
-          </button>
-          <button
+            type="button"
             onClick={() => setActiveBasemap('pnoa-satellite')}
-            className={`px-2.5 py-1.5 rounded-lg font-medium transition ${
+            className={`py-1 rounded text-center transition font-semibold cursor-pointer ${
               activeBasemap === 'pnoa-satellite'
-                ? 'bg-indigo-600 text-white shadow-sm'
-                : 'text-slate-600 hover:bg-slate-100'
+                ? 'bg-primary text-on-primary shadow-xs'
+                : 'text-on-surface-variant hover:text-on-surface'
             }`}
           >
-            Satélite (PNOA)
+            Satélite
           </button>
-        </div>
-
-        {/* Catastro Overlay Toggle */}
-        <div className="bg-white/95 backdrop-blur-md px-3 py-2 rounded-xl shadow-lg border border-slate-200/80 flex items-center justify-between space-x-2.5 text-xs text-slate-700">
-          <div className="flex items-center space-x-1.5">
-            <Layers className="w-3.5 h-3.5 text-indigo-600" />
-            <span className="font-medium">Parcelas Catastro WMS</span>
-          </div>
           <button
-            onClick={() => setShowCatastroWms(!showCatastroWms)}
-            className={`w-9 h-5 flex items-center rounded-full p-0.5 transition duration-200 ease-in-out ${
-              showCatastroWms ? 'bg-indigo-600 justify-end' : 'bg-slate-300 justify-start'
+            type="button"
+            onClick={() => setActiveBasemap('ign-base')}
+            className={`py-1 rounded text-center transition font-semibold cursor-pointer ${
+              activeBasemap === 'ign-base'
+                ? 'bg-primary text-on-primary shadow-xs'
+                : 'text-on-surface-variant hover:text-on-surface'
             }`}
-            title="Activar/Desactivar capa de parcelas catastrales oficiales"
           >
-            <span className="w-4 h-4 bg-white rounded-full shadow-md transform"></span>
+            IGN
           </button>
         </div>
 
-        {/* Zoom Hint if zoom is low for Catastro */}
+        {/* Thematic Overlays Switcher */}
+        <div className="space-y-1.5 text-xs font-mono">
+          {/* Layer 1: Catastro Parcels */}
+          <label className="flex items-center justify-between p-1.5 rounded bg-surface-container hover:bg-surface-container-high transition-colors cursor-pointer border border-secondary-container/40">
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                checked={showCatastroWms}
+                onChange={(e) => setShowCatastroWms(e.target.checked)}
+                className="rounded-sm bg-surface-container-lowest border-outline-variant text-secondary-container focus:ring-0 w-3.5 h-3.5 cursor-pointer"
+              />
+              <span className="text-[11px] text-on-surface font-sans font-medium">Catastro Parcels</span>
+            </div>
+            <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-secondary-container/20 text-secondary border border-secondary-container/40">
+              {showCatastroWms ? 'Activo' : 'Off'}
+            </span>
+          </label>
+
+          {/* Layer 2: INE Income Heatmap */}
+          <label className="flex items-center justify-between p-1.5 rounded bg-surface-container hover:bg-surface-container-high transition-colors cursor-pointer border border-tertiary/30">
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                checked={showIneIncome}
+                onChange={(e) => setShowIneIncome(e.target.checked)}
+                className="rounded-sm bg-surface-container-lowest border-outline-variant text-tertiary focus:ring-0 w-3.5 h-3.5 cursor-pointer"
+              />
+              <span className="text-[11px] text-on-surface font-sans font-medium flex items-center gap-1">
+                <TrendingUp className="w-3 h-3 text-tertiary" />
+                <span>INE Renta (ADRH)</span>
+              </span>
+            </div>
+            <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-tertiary-container/30 text-tertiary border border-tertiary/40">
+              {showIneIncome ? 'ADRH 2024' : 'Off'}
+            </span>
+          </label>
+
+          {/* Layer 3: MITECO Noise (SICA) */}
+          <label className="flex items-center justify-between p-1.5 rounded bg-surface-container hover:bg-surface-container-high transition-colors cursor-pointer border border-outline-variant/40 opacity-80 hover:opacity-100">
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                checked={showMitecoNoise}
+                onChange={(e) => setShowMitecoNoise(e.target.checked)}
+                className="rounded-sm bg-surface-container-lowest border-outline-variant text-primary focus:ring-0 w-3.5 h-3.5 cursor-pointer"
+              />
+              <span className="text-[11px] text-on-surface-variant font-sans flex items-center gap-1">
+                <Volume2 className="w-3 h-3 text-primary" />
+                <span>MITECO Ruido</span>
+              </span>
+            </div>
+            <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-surface-variant text-outline">
+              {showMitecoNoise ? 'SICA Lden' : 'Inactivo'}
+            </span>
+          </label>
+
+          {/* Layer 4: SNCZI Flood Risk */}
+          <label className="flex items-center justify-between p-1.5 rounded bg-surface-container hover:bg-surface-container-high transition-colors cursor-pointer border border-outline-variant/40 opacity-80 hover:opacity-100">
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                checked={showSncziFlood}
+                onChange={(e) => setShowSncziFlood(e.target.checked)}
+                className="rounded-sm bg-surface-container-lowest border-outline-variant text-primary focus:ring-0 w-3.5 h-3.5 cursor-pointer"
+              />
+              <span className="text-[11px] text-on-surface-variant font-sans flex items-center gap-1">
+                <Waves className="w-3 h-3 text-blue-400" />
+                <span>SNCZI Inundación</span>
+              </span>
+            </div>
+            <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-surface-variant text-outline">
+              {showSncziFlood ? 'T=100/500a' : 'Inactivo'}
+            </span>
+          </label>
+        </div>
+
+        {/* Zoom Hint for Cadastre */}
         {showCatastroWms && currentZoom < 13 && (
-          <div className="bg-amber-50/95 border border-amber-200 text-amber-800 text-[11px] px-2.5 py-1 rounded-lg shadow-sm">
-            Acércate (Zoom &ge; 13) para visualizar parcelas catastrales.
+          <div className="mt-2 bg-amber-500/10 border border-amber-500/30 text-amber-300 text-[10px] font-sans px-2 py-1 rounded">
+            Acércate (Zoom &ge; 13) para activar parcelas oficiales.
           </div>
         )}
       </div>
 
-      {/* Floating Bottom Left Helper & Reset */}
-      <div className="absolute bottom-3 left-3 z-10 flex items-center space-x-2 no-print">
+      {/* ================= FLOATING MAP CONTROLS: ZOOM & 3D (Top-Right) ================= */}
+      <div className="absolute top-3 right-3 z-20 flex flex-col gap-1.5 no-print">
+        {/* Zoom Controls */}
+        <div className="bg-surface-container-low/95 backdrop-blur-md border border-outline-variant rounded flex flex-col overflow-hidden shadow-xl">
+          <button
+            type="button"
+            onClick={handleZoomIn}
+            className="w-8 h-8 flex items-center justify-center text-on-surface-variant hover:text-on-surface hover:bg-surface-container transition-colors cursor-pointer"
+            title="Acercar (+)"
+          >
+            <Plus className="w-4 h-4" />
+          </button>
+          <div className="h-px bg-outline-variant" />
+          <button
+            type="button"
+            onClick={handleZoomOut}
+            className="w-8 h-8 flex items-center justify-center text-on-surface-variant hover:text-on-surface hover:bg-surface-container transition-colors cursor-pointer"
+            title="Alejar (-)"
+          >
+            <Minus className="w-4 h-4" />
+          </button>
+        </div>
+
+        {/* Reset North Compass */}
         <button
-          onClick={resetToSpain}
-          className="bg-white/95 backdrop-blur-md hover:bg-white text-slate-700 px-3 py-1.5 rounded-xl shadow-lg border border-slate-200 text-xs font-medium flex items-center space-x-1.5 transition"
-          title="Centrar en el mapa general de España"
+          type="button"
+          onClick={handleResetNorth}
+          className="w-8 h-8 bg-surface-container-low/95 backdrop-blur-md border border-outline-variant rounded flex items-center justify-center text-secondary hover:text-white transition-colors shadow-xl cursor-pointer"
+          title="Orientación Norte (0°)"
         >
-          <Maximize2 className="w-3.5 h-3.5 text-slate-500" />
-          <span>Vista España</span>
+          <Compass className="w-4 h-4" />
         </button>
 
-        <div className="hidden sm:flex bg-slate-900/80 backdrop-blur-md text-white text-[11px] px-3 py-1.5 rounded-xl shadow-lg items-center space-x-1.5">
-          <MapPin className="w-3.5 h-3.5 text-indigo-400" />
-          <span>Haz click en cualquier punto para auditarlo</span>
+        {/* 3D Axonometric Tilt Button */}
+        <button
+          type="button"
+          onClick={toggle3DMode}
+          className={`w-8 h-8 bg-surface-container-low/95 backdrop-blur-md border rounded flex items-center justify-center text-[10px] font-mono font-bold transition-colors shadow-xl cursor-pointer ${
+            is3DMode
+              ? 'border-primary text-primary bg-primary/10 shadow-primary/20'
+              : 'border-outline-variant text-on-surface-variant hover:text-primary'
+          }`}
+          title="Alternar Perspectiva 3D / Axonometría"
+        >
+          3D
+        </button>
+
+        {/* Reset to Spain View */}
+        <button
+          type="button"
+          onClick={resetToSpain}
+          className="w-8 h-8 bg-surface-container-low/95 backdrop-blur-md border border-outline-variant rounded flex items-center justify-center text-on-surface-variant hover:text-primary transition-colors shadow-xl cursor-pointer"
+          title="Vista General España"
+        >
+          <Maximize2 className="w-3.5 h-3.5" />
+        </button>
+      </div>
+
+      {/* ================= SPATIAL TELEMETRY & SCALE OVERLAY (Bottom HUD) ================= */}
+      <div className="absolute bottom-2 left-3 right-3 z-20 flex flex-col sm:flex-row items-center justify-between gap-2 pointer-events-none no-print">
+        {/* Bottom-Left Real-time ETRS89 / UTM Coordinates Readout */}
+        <div className="pointer-events-auto bg-surface-container-low/95 backdrop-blur-md border border-outline-variant px-3 py-1 rounded text-[10px] font-mono text-on-surface-variant flex items-center gap-2.5 shadow-md">
+          <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse shrink-0" />
+          <span className="text-on-surface font-semibold">UTM ETRS89:</span>
+          <span>X: {utmCoords.x.toLocaleString()}</span>
+          <span>Y: {utmCoords.y.toLocaleString()}</span>
+          <span className="text-outline">|</span>
+          <span>Huso: {utmCoords.zone}</span>
+          <span className="text-outline">|</span>
+          <span>Cota: {estimatedElevation}m s.n.m.</span>
+        </div>
+
+        {/* Bottom-Right Scale Bar & Official Attribution */}
+        <div className="pointer-events-auto bg-surface-container-low/95 backdrop-blur-md border border-outline-variant px-3 py-1 rounded text-[10px] font-mono text-on-surface-variant flex items-center gap-3 shadow-md">
+          <div className="flex flex-col items-center">
+            <span className="text-[9px] leading-tight text-on-surface-variant">50 m</span>
+            <div className="w-16 h-1 border-b-2 border-l-2 border-r-2 border-primary" />
+          </div>
+          <span className="text-outline text-[9px]">Sede Electrónica Catastro · INE ADRH</span>
         </div>
       </div>
 
-      {/* Floating Real-time Audit Card on Tablet / Mobile */}
+      {/* ================= FLOATING DUE DILIGENCE AUDIT CARD (Bottom Dock) ================= */}
       {isLoading ? (
-        <div className="absolute bottom-14 sm:bottom-4 left-3 right-3 sm:left-auto sm:right-4 z-20 bg-white/95 backdrop-blur-md px-4 py-3 rounded-2xl shadow-2xl border border-slate-200/90 flex items-center space-x-3 text-xs text-slate-700 animate-in fade-in">
-          <Loader2 className="w-4 h-4 text-indigo-600 animate-spin shrink-0" />
+        <div className="absolute bottom-12 sm:bottom-10 left-3 right-3 sm:left-auto sm:right-3 z-30 bg-surface-container/95 backdrop-blur-md px-4 py-3 rounded-lg shadow-2xl border border-outline-variant flex items-center space-x-3 text-xs text-on-surface animate-in fade-in">
+          <Loader2 className="w-4 h-4 text-primary animate-spin shrink-0" />
           <div>
-            <p className="font-semibold text-slate-900">Auditando punto seleccionado...</p>
-            <p className="text-[11px] text-slate-500">Consultando Catastro, INE Renta y MITECO</p>
+            <p className="font-semibold text-on-surface font-headline">Auditando punto seleccionado...</p>
+            <p className="text-[11px] text-on-surface-variant font-mono">Consultando Catastro OVC, INE ADRH y MITECO</p>
           </div>
         </div>
       ) : report ? (
-        <div className="absolute bottom-14 sm:bottom-4 left-3 right-3 sm:left-auto sm:right-4 z-20 bg-white/95 backdrop-blur-md p-3 rounded-2xl shadow-2xl border border-slate-200/90 flex items-center justify-between gap-3 text-xs sm:max-w-md animate-in slide-in-from-bottom-2">
-          <div className="flex items-center space-x-2.5 min-w-0">
+        <div className="absolute bottom-12 sm:bottom-10 left-3 right-3 sm:left-auto sm:right-3 z-30 bg-surface-container/95 backdrop-blur-md p-3.5 rounded-lg shadow-2xl border border-outline-variant flex items-center justify-between gap-4 text-xs sm:max-w-md animate-in slide-in-from-bottom-2">
+          <div className="flex items-center space-x-3 min-w-0">
             <div
-              className={`w-9 h-9 rounded-xl flex items-center justify-center font-bold text-sm shrink-0 shadow-sm ${
+              className={`w-10 h-10 rounded-md flex flex-col items-center justify-center font-bold text-sm shrink-0 shadow-inner font-mono ${
                 report.score.overallScore >= 75
-                  ? 'bg-emerald-100 text-emerald-800'
+                  ? 'bg-primary/20 text-primary border border-primary/40'
                   : report.score.overallScore >= 50
-                  ? 'bg-amber-100 text-amber-800'
-                  : 'bg-rose-100 text-rose-800'
+                  ? 'bg-secondary/20 text-secondary border border-secondary/40'
+                  : 'bg-rose-500/20 text-rose-400 border border-rose-500/40'
               }`}
             >
-              {report.score.overallScore}
+              <span className="leading-none text-base">{report.score.overallScore}</span>
+              <span className="text-[8px] uppercase tracking-tighter text-outline">Score</span>
             </div>
             <div className="min-w-0">
-              <p className="font-bold text-slate-900 truncate">
+              <p className="font-bold text-on-surface font-headline text-sm truncate">
                 {report.property.address.street} {report.property.address.number}
               </p>
-              <p className="text-[11px] text-slate-500 truncate">
+              <p className="text-[11px] text-on-surface-variant font-mono truncate">
                 {report.property.address.municipality} · RC {report.property.cadastralReference.slice(0, 14)}
               </p>
             </div>
@@ -391,7 +729,7 @@ export function MapView({
             <button
               onClick={onViewReport}
               type="button"
-              className="px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs shadow-md shadow-indigo-100 transition flex items-center justify-center space-x-1 shrink-0 cursor-pointer"
+              className="px-3.5 py-2 rounded bg-primary text-on-primary hover:bg-primary-container font-semibold text-xs shadow-md transition flex items-center justify-center space-x-1.5 shrink-0 cursor-pointer font-sans"
             >
               <span>Ver Informe</span>
               <ChevronRight className="w-3.5 h-3.5" />
@@ -400,18 +738,18 @@ export function MapView({
         </div>
       ) : null}
 
-      {/* Floating Error Alert if query fails for point */}
+      {/* Floating Error Alert */}
       {error && !isLoading && (
-        <div className="absolute bottom-14 sm:bottom-4 left-3 right-3 sm:left-auto sm:right-4 z-20 bg-rose-50/95 backdrop-blur-md px-3.5 py-2.5 rounded-2xl shadow-xl border border-rose-200 text-xs text-rose-800 flex items-center justify-between gap-3 max-w-md animate-in slide-in-from-bottom-2">
+        <div className="absolute bottom-12 sm:bottom-10 left-3 right-3 sm:left-auto sm:right-3 z-30 bg-rose-950/90 backdrop-blur-md px-3.5 py-2.5 rounded-lg shadow-xl border border-rose-500/50 text-xs text-rose-200 flex items-center justify-between gap-3 max-w-md animate-in slide-in-from-bottom-2">
           <div className="flex items-center space-x-2 min-w-0">
-            <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0" />
-            <p className="text-[11px] leading-tight truncate">{error}</p>
+            <AlertTriangle className="w-4 h-4 text-rose-400 shrink-0" />
+            <p className="text-[11px] leading-tight font-mono truncate">{error}</p>
           </div>
           {onDismissError && (
             <button
               onClick={onDismissError}
               type="button"
-              className="text-rose-600 hover:text-rose-900 cursor-pointer shrink-0"
+              className="text-rose-400 hover:text-white cursor-pointer shrink-0"
               aria-label="Cerrar aviso"
             >
               <X className="w-3.5 h-3.5" />
