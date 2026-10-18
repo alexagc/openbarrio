@@ -1,6 +1,6 @@
 {
   "name": "@openbarrio/api",
-  "version": "0.2.4",
+  "version": "0.2.5",
   "description": "Universal REST API server for OpenBarrio (Cloudflare Workers & Node.js)",
   "type": "module",
   "main": "./dist/index.js",

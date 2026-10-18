@@ -5,6 +5,25 @@ All notable changes to the **OpenBarrio** platform are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.5] - 2026-10-18
+
+### Fixed
+- **Portal Numbers with Letters, Suffixes & Extensions**:
+  - Extracted and formatted `plp` (primera letra de policía), `snp` (segundo número de policía), and `slp` in Catastro parser (`parseCatastroDnprcXml`), preserving letters and extensions (e.g. `25 B`, `38 B`, `14 bis`) in the property address, map marker popup, and due diligence dossier.
+  - Fixed CartoCiudad reverse geocoding in `api.client.ts` to concatenate `revData.extension` to `revData.portalNumber`.
+  - Normalized address searches with unspaced letters (e.g. `25b` -> `25 B`) to maximize geocoding candidate hit rates.
+- **Cadastral Reference & Coordinate Resolution**:
+  - Added `parseCatastroCpmrcXml` and integrated `Consulta_CPMRC` in `CatastroProvider.getByCadastralReference`, resolving official centroid coordinates across all of Spain instead of defaulting to Madrid Centro / Gran Vía when auditing by cadastral reference.
+  - Sanitized cadastral reference input across `SearchBar`, `HeroSection`, `App.tsx`, and API routes (`audit.routes.ts`) by stripping whitespace, hyphens, and periods.
+  - Implemented automatic geocoding fallback for addresses submitted directly from the Hero Section to ensure live audit data is fetched without requiring a dropdown click.
+- **GIS Thematic Layer Visibility & Contrast**:
+  - Implemented dynamic raster contrast and brightness filtering for `catastro-layer` on dark basemaps (`esri-dark` and `pnoa-satellite`), rendering parcel boundary lines as bright white/silver (`raster-brightness-min: 0.85`, `raster-contrast: 0.5`) so they stand out crisply against dark backgrounds.
+  - Configured INE Secciones Censales WMS to use the official INSPIRE `SU.VectorStatisticalUnits.Default` style (translucent yellow fill with solid magenta borders) for clear visual boundaries.
+  - Lowered Catastro WMS `minzoom` from 13 to 12 and added quick "Acercar" action buttons in the HUD zoom hints.
+  - Added dedicated edge proxy endpoints `/api/v1/tiles/miteco/noise` and `/api/v1/tiles/miteco/flood` with CORS headers (`Access-Control-Allow-Origin: *`) and transparent tile fallback to prevent upstream browser CORS blocking.
+
+---
+
 ## [0.2.4] - 2026-10-18
 
 ### Fixed
