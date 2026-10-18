@@ -5,6 +5,22 @@ All notable changes to the **OpenBarrio** platform are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.4] - 2026-10-18
+
+### Fixed
+- **MapLibre Thematic Layer Switcher & Basemap Toggling**:
+  - Removed blocking `!map.isStyleLoaded()` checks that permanently froze the layer switcher HUD whenever asynchronous raster tiles (Catastro, INE, MITECO) were in-flight.
+  - Implemented resilient listener-based visibility synchronization with safe `map.getLayer()` validation on both `load` and `styledata` events.
+  - Upgraded PNOA satellite basemap source from legacy dynamic WMS (which returned `text/html`) to the official IGN WMTS tile endpoint (`https://www.ign.es/wmts/pnoa-ma?service=WMTS...`) with full CORS support and tile cache.
+- **Eliminated Broad Landmark Snapping to Gran Vía 28**:
+  - Fixed `MockCatastroProvider.getByCoordinates` which had an overly broad `0.2°` (~22km) proximity matching condition that collapsed every clicked coordinate in the Madrid metropolitan area into Gran Vía 28.
+  - Tightened landmark preset matching to exact building coordinates (`< 0.00015°`, ~15m) and added regional address & reference generation for mock coordinates.
+  - Defaulted `createProviders` to real public providers (`CatastroProvider`, `INEProvider`) in production, reserving mocks strictly for automated test suites.
+  - Stopped click event bubbling on floating HUD panels and audit card docks so UI interactions do not trigger unwanted map parcel clicks behind them.
+  - Broadened `isMatchingReport` coordinate tolerance to ensure reverse-geocoded cadastral parcels immediately show their real audited dossier in marker popups.
+
+---
+
 ## [0.2.3] - 2026-10-18
 
 ### Fixed
