@@ -163,16 +163,16 @@ export function MapView({
       style: {
         version: 8,
         sources: {
-          // CartoDB Dark Matter (High-precision dark GIS basemap)
-          'carto-dark': {
+          // Esri World Dark Gray Canvas (High-precision dark GIS basemap, 100% free, zero API key)
+          'esri-dark': {
             type: 'raster',
             tiles: [
-              'https://a.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}@2x.png',
-              'https://b.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}@2x.png',
+              'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}',
             ],
             tileSize: 256,
+            maxzoom: 19,
             attribution:
-              '&copy; <a href="https://carto.com/" target="_blank">CARTO</a> &copy; <a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap</a>',
+              '&copy; <a href="https://www.esri.com" target="_blank">Esri</a> &copy; <a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap</a>',
           },
           // Official IGN WMTS Basemap
           'ign-base': {
@@ -223,11 +223,11 @@ export function MapView({
         layers: [
           // 1. Dark GIS Basemap (Active by default)
           {
-            id: 'carto-dark-layer',
+            id: 'esri-dark-layer',
             type: 'raster',
-            source: 'carto-dark',
+            source: 'esri-dark',
             minzoom: 0,
-            maxzoom: 20,
+            maxzoom: 19,
             layout: { visibility: 'visible' },
           },
           // 2. PNOA Satellite Basemap
@@ -334,7 +334,7 @@ export function MapView({
     const map = mapRef.current;
     if (!map || !map.isStyleLoaded()) return;
 
-    map.setLayoutProperty('carto-dark-layer', 'visibility', activeBasemap === 'dark-gis' ? 'visible' : 'none');
+    map.setLayoutProperty('esri-dark-layer', 'visibility', activeBasemap === 'dark-gis' ? 'visible' : 'none');
     map.setLayoutProperty('pnoa-layer', 'visibility', activeBasemap === 'pnoa-satellite' ? 'visible' : 'none');
     map.setLayoutProperty('ign-layer', 'visibility', activeBasemap === 'ign-base' ? 'visible' : 'none');
   }, [activeBasemap]);
@@ -413,12 +413,21 @@ export function MapView({
       markerRef.current.remove();
     }
 
-    const safeTitle = escapeHtml(propertyName || 'Parcela Catastral Auditada');
-    const safeAddress = escapeHtml(propertyAddress || `${lat.toFixed(5)}, ${lon.toFixed(5)}`);
-    const refcat = report?.property.cadastralReference || '9872023VH5797S0001WX';
-    const surfaceM2 = report?.property.building.builtSurfaceM2 ?? 90;
-    const yearBuilt = report?.property.building.constructionYear ?? 1975;
-    const scoreVal = report?.score.overallScore ?? 85;
+    const isMatchingReport =
+      Boolean(report) &&
+      Math.abs((report?.property.coordinates.latitude ?? 0) - lat) < 0.001 &&
+      Math.abs((report?.property.coordinates.longitude ?? 0) - lon) < 0.001;
+
+    const safeTitle = escapeHtml(
+      isMatchingReport && propertyName ? propertyName : `Punto seleccionado (${lat.toFixed(5)}, ${lon.toFixed(5)})`
+    );
+    const safeAddress = escapeHtml(
+      isMatchingReport && propertyAddress ? propertyAddress : 'Consultando Sede del Catastro & INE...'
+    );
+    const refcat = isMatchingReport ? report!.property.cadastralReference : 'Consultando Catastro...';
+    const surfaceM2 = isMatchingReport ? `${report!.property.building.builtSurfaceM2} m²` : 'Calculando...';
+    const yearBuilt = isMatchingReport ? `Año ${report!.property.building.constructionYear}` : 'Consultando...';
+    const scoreVal = isMatchingReport ? `${report!.score.overallScore}/100` : '--/100';
 
     const popupHtml = `
       <div class="p-3 text-xs font-mono bg-surface-container-low text-on-surface border border-secondary/40 rounded-lg shadow-2xl min-w-[220px]">
@@ -428,7 +437,7 @@ export function MapView({
             PARCELA AUDITADA
           </span>
           <span class="px-1.5 py-0.2 rounded bg-primary/20 text-primary border border-primary/40 text-[9px] font-bold">
-            ${scoreVal}/100
+            ${scoreVal}
           </span>
         </div>
         <p class="font-bold text-on-surface text-[11px] truncate mb-0.5">${safeTitle}</p>
@@ -440,11 +449,11 @@ export function MapView({
           </div>
           <div class="flex justify-between text-on-surface-variant">
             <span>Superficie:</span>
-            <span class="text-on-surface font-semibold">${surfaceM2} m²</span>
+            <span class="text-on-surface font-semibold">${surfaceM2}</span>
           </div>
           <div class="flex justify-between text-on-surface-variant">
             <span>Construcción:</span>
-            <span class="text-on-surface font-semibold">Año ${yearBuilt}</span>
+            <span class="text-on-surface font-semibold">${yearBuilt}</span>
           </div>
         </div>
         <p class="mt-2 text-[9px] text-primary/80 font-sans text-center">Click en el mapa para auditar otro punto</p>
@@ -465,12 +474,16 @@ export function MapView({
     markerRef.current = marker;
     marker.togglePopup();
 
-    map.flyTo({
-      center: [lon, lat],
-      zoom: Math.max(map.getZoom(), 16),
-      essential: true,
-      duration: 1200,
-    });
+    const center = map.getCenter();
+    const dist = Math.hypot(center.lat - lat, center.lng - lon);
+    if (dist > 0.001) {
+      map.flyTo({
+        center: [lon, lat],
+        zoom: Math.max(map.getZoom(), 16),
+        essential: true,
+        duration: 1000,
+      });
+    }
   }, [selectedCoords, propertyName, propertyAddress, report]);
 
   return (

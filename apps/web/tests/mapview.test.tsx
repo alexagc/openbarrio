@@ -120,5 +120,22 @@ describe('MapView Component (Stitch Civic Precision)', () => {
       expect(btn3D).toBeTruthy();
       fireEvent.click(btn3D);
     });
+
+    it('should switch basemap layer to satellite and dark-gis without errors', () => {
+      render(
+        <MapView
+          selectedCoords={{ lat: 40.42028, lon: -3.70379 }}
+          onMapClick={vi.fn()}
+        />
+      );
+
+      const satBtn = screen.getByText('Satélite');
+      fireEvent.click(satBtn);
+
+      const darkBtn = screen.getByText('Dark GIS');
+      fireEvent.click(darkBtn);
+      expect(darkBtn).toBeTruthy();
+    });
   });
 });
+

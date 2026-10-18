@@ -216,11 +216,12 @@ export class OpenBarrioApiClient {
     lon: number,
     overrides?: Partial<CadastralProperty>
   ): ExtendedAuditReport {
-    // Check specific landmark presets within ~300m
-    const isGranVia = Math.abs(lat - 40.42028) < 0.003 && Math.abs(lon - -3.70379) < 0.003;
-    const isGracia = Math.abs(lat - 41.39167) < 0.003 && Math.abs(lon - 2.16472) < 0.003;
-    const isColon = Math.abs(lat - 39.4699) < 0.003 && Math.abs(lon - -0.3735) < 0.003;
-    const isSierpes = Math.abs(lat - 37.3908) < 0.003 && Math.abs(lon - -5.9942) < 0.003;
+    // Check specific landmark presets ONLY for exact initial coordinates (~15m) and when no overrides
+    const hasAddressOverride = Boolean(overrides?.address?.street);
+    const isGranVia = !hasAddressOverride && Math.abs(lat - 40.42028) < 0.00015 && Math.abs(lon - -3.70379) < 0.00015;
+    const isGracia = !hasAddressOverride && Math.abs(lat - 41.39167) < 0.00015 && Math.abs(lon - 2.16472) < 0.00015;
+    const isColon = !hasAddressOverride && Math.abs(lat - 39.4699) < 0.00015 && Math.abs(lon - -0.3735) < 0.00015;
+    const isSierpes = !hasAddressOverride && Math.abs(lat - 37.3908) < 0.00015 && Math.abs(lon - -5.9942) < 0.00015;
 
     // Geographic regions in Spain
     const isMadridRegion = lat >= 40.0 && lat <= 41.2 && lon >= -4.5 && lon <= -3.0;

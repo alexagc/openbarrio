@@ -124,4 +124,19 @@ describe('OpenBarrioApiClient', () => {
     expect(report.property.address.municipality).toBe('Barcelona');
     expect(report.rentalBenchmark?.isStressedHousingZone).toBe(true);
   });
+
+  it('generates distinct coordinates and refcat when clicking other points without snapping to Gran Vía', async () => {
+    vi.spyOn(globalThis, 'fetch').mockRejectedValueOnce(new TypeError('Failed to fetch'));
+
+    const chamberiLat = 40.435;
+    const chamberiLon = -3.69;
+    const report = await client.auditByCoordinates(chamberiLat, chamberiLon);
+
+    expect(report.isOfflineDemo).toBe(true);
+    expect(report.property.coordinates.latitude).toBe(chamberiLat);
+    expect(report.property.coordinates.longitude).toBe(chamberiLon);
+    expect(report.property.cadastralReference).not.toBe('9872023VH5797S0001WX');
+    expect(report.property.address.street).not.toBe('Calle Gran Vía');
+  });
 });
+
