@@ -2,8 +2,8 @@ name: OpenBarrio Autonomous Data Pipeline (ETL)
 
 on:
   schedule:
-    # Run quarterly on the 1st of the month at 03:00 UTC
-    - cron: '0 3 1 */3 *'
+    # Run quarterly on the 1st of January, April, July, October at 03:00 UTC
+    - cron: '0 3 1 1,4,7,10 *'
   workflow_dispatch:
     inputs:
       dry_run:
@@ -44,8 +44,6 @@ jobs:
 
       - name: Setup Node.js & pnpm for Wrangler
         uses: pnpm/action-setup@v4
-        with:
-          version: 9
 
       - name: Setup Node 22 LTS
         uses: actions/setup-node@v4
