@@ -26,22 +26,23 @@ describe('AuditDossier Component (Stitch Civic Precision)', () => {
       },
     },
     neighborhood: {
-      censusTractCode: '2807901043',
+      censusSectionCode: '2807901043',
       averageNetHouseholdIncomeEur: 45200,
       averageNetPersonIncomeEur: 22600,
-      incomePercentile: 82,
-      incomeQuintile: 5,
-      municipality: 'Madrid',
-      province: 'Madrid',
+      percentileInMunicipality: 82,
+      rankingInCity: { rank: 14, totalSections: 150 },
+      demographics: { medianAge: 46, singlePersonHouseholdPercentage: 42 },
     },
     environment: {
       noise: {
         dayEveningNightDecibels: 64,
-        source: 'ROAD_TRAFFIC',
+        category: 'MODERATE',
+        predominantSource: 'ROAD_TRAFFIC',
       },
       floodRisk: {
         level: 'NONE',
         returnPeriodYears: null,
+        isInPreferentialFlowZone: false,
       },
     },
     score: {

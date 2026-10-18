@@ -40,22 +40,23 @@ describe('downloadCadastralGML Utility', () => {
         },
       },
       neighborhood: {
-        censusTractCode: '2807901001',
+        censusSectionCode: '2807901001',
         averageNetHouseholdIncomeEur: 52000,
         averageNetPersonIncomeEur: 22600,
-        incomePercentile: 91,
-        incomeQuintile: 5,
-        municipality: 'Madrid',
-        province: 'Madrid',
+        percentileInMunicipality: 91,
+        rankingInCity: { rank: 14, totalSections: 150 },
+        demographics: { medianAge: 44, singlePersonHouseholdPercentage: 29 },
       },
       environment: {
         noise: {
           dayEveningNightDecibels: 61,
-          source: 'ROAD_TRAFFIC',
+          category: 'MODERATE',
+          predominantSource: 'ROAD_TRAFFIC',
         },
         floodRisk: {
           level: 'NONE',
           returnPeriodYears: null,
+          isInPreferentialFlowZone: false,
         },
       },
       score: {

@@ -56,9 +56,8 @@ export function downloadCadastralGML(report: PropertyAuditReport): void {
   <cp:areaValue uom="m2">${area}</cp:areaValue>
   <!-- Extended Cadastral Due Diligence Metadata -->
   <cp:label>${street} ${num}, ${postal} ${muni}</cp:label>
-  <cp:constructionYear>${year}</cp:constructionYear>
-  <cp:administrativeUnit>ES.${report.neighborhood.province}</cp:administrativeUnit>
-  <cp:censusTract>${report.neighborhood.censusTractCode}</cp:censusTract>
+  <cp:administrativeUnit>ES.${report.property.address.province}</cp:administrativeUnit>
+  <cp:censusTract>${report.neighborhood.censusSectionCode}</cp:censusTract>
 </cp:CadastralParcel>`;
 
   const blob = new Blob([gmlContent], { type: 'application/gml+xml;charset=utf-8' });

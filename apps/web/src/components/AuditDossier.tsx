@@ -56,7 +56,7 @@ export function AuditDossier({ report }: AuditDossierProps) {
   };
 
   const usageLabel = property.building.primaryUse || 'Residencial Colectivo';
-  const districtLabel = `${property.address.municipality} · Sección ${neighborhood.censusTractCode.slice(-3)}`;
+  const districtLabel = `${property.address.municipality} · Sección ${neighborhood.censusSectionCode.slice(-3)}`;
 
   return (
     <div className="dossier-container w-full h-full bg-surface overflow-y-auto flex flex-col divide-y divide-outline-variant text-on-surface">
@@ -175,7 +175,7 @@ export function AuditDossier({ report }: AuditDossierProps) {
         <ScoreGauge
           score={score}
           cityOrProvince={property.address.province}
-          percentile={neighborhood.incomePercentile}
+          percentile={neighborhood.percentileInMunicipality}
         />
       </div>
 

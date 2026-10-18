@@ -169,28 +169,28 @@ export function PillarCards({ property, neighborhood, environment }: PillarCards
           </div>
           <div className="flex items-center justify-between text-[10px] font-mono text-on-surface-variant">
             <span>
-              Percentil {neighborhood.incomePercentile}º {neighborhood.province}
+              Percentil {neighborhood.percentileInMunicipality}º {property.address.province}
             </span>
             <span className="text-primary font-semibold flex items-center gap-1">
-              <TrendingUp className="w-3 h-3" /> Quintil {neighborhood.incomeQuintile} (Alta Renta)
+              <TrendingUp className="w-3 h-3" /> Ranking #{neighborhood.rankingInCity?.rank ?? 1} / {neighborhood.rankingInCity?.totalSections ?? 100}
             </span>
           </div>
         </div>
 
         <div className="grid grid-cols-2 gap-2 text-xs">
           <div className="p-2.5 bg-surface-container-low border border-outline-variant rounded">
-            <span className="text-[10px] font-mono text-outline uppercase block">Renta Neta / Persona</span>
+            <span className="text-[10px] font-mono text-outline uppercase block">Edad Media Residente</span>
             <span className="font-mono text-sm font-semibold text-on-surface">
-              €{neighborhood.averageNetPersonIncomeEur.toLocaleString('es-ES')}
+              {neighborhood.demographics?.medianAge ?? 44} años
             </span>
-            <span className="text-[10px] text-outline block mt-0.5">Ingreso per cápita anual</span>
+            <span className="text-[10px] text-outline block mt-0.5">Pirámide demográfica</span>
           </div>
           <div className="p-2.5 bg-surface-container-low border border-outline-variant rounded">
-            <span className="text-[10px] font-mono text-outline uppercase block">Sección Censal INE</span>
+            <span className="text-[10px] font-mono text-outline uppercase block">Hogares Unipersonales</span>
             <span className="font-mono text-sm font-semibold text-on-surface">
-              {neighborhood.censusTractCode}
+              {neighborhood.demographics?.singlePersonHouseholdPercentage ?? 35}%
             </span>
-            <span className="text-[10px] text-outline block mt-0.5">{neighborhood.municipality}</span>
+            <span className="text-[10px] text-outline block mt-0.5">Sección {neighborhood.censusSectionCode}</span>
           </div>
         </div>
       </div>
@@ -214,7 +214,7 @@ export function PillarCards({ property, neighborhood, environment }: PillarCards
               {noise.dayEveningNightDecibels} dBA Lden
             </div>
             <div className="text-[11px] text-on-surface-variant font-sans">
-              {noiseSourceTranslation[noise.source] || noiseLevelTag}
+              {noiseSourceTranslation[noise.predominantSource] || noiseLevelTag}
             </div>
           </div>
           <div className="text-right">
