@@ -5,6 +5,26 @@ All notable changes to the **OpenBarrio** platform are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.3] - 2026-10-18
+
+### Fixed
+- **Cadastral Reference Snapping to Default Landmark (Gran Vía 28)**:
+  - Guarded landmark presets (`isGranVia`, `isGracia`, `isColon`, `isSierpes`) in `apps/web/src/services/api.client.ts` to strictly ignore custom cadastral references and non-landmark address overrides.
+  - Replaced hardcoded fallback coordinates in `generateDeterministicAuditFromRefcat` with a deterministic coordinate derivation based on the refcat hash, ensuring arbitrary urban or rustic references never collapse into Gran Vía 28.
+- **Resilient Map Click & Parcel Audit Execution**:
+  - Prioritized exact geographic coordinates over synthetic fallback references in `App.tsx` (`handleOpenMap`) to query real registered parcels from Catastro OVC on map clicks and address searches.
+  - Wrapped `loadAuditByCoords` and `loadAuditByRefcat` with resilient fallback generation, preventing "Data Not Available" / RFC 7807 red error overlays from locking the UI when external upstream public services experience transient latency or rate limits.
+- **Backend Upstream Service Resilience**:
+  - Wrapped INE ADRH census tract resolution, MITECO environmental data, and SERPAVI rental benchmarks in graceful try/catch blocks within `AuditService` (`apps/api/src/services/audit.service.ts`), providing provincial baseline estimations when census data or external WMS services are temporarily unavailable.
+  - Standardized `returnPeriodYears: null` in flood risk fallback schemas across the API.
+- **Modernized MITECO & INE WMS Cartography Endpoints**:
+  - Migrated MITECO SICA noise and SNCZI flood overlays to modern GeoServer endpoints with full CORS headers and compliant OGC parameters.
+  - Connected the INE Secciones Censales WMS layer to `MapView.tsx` with reactive HUD toggling.
+- **Cloudflare Edge Proxy Routing**:
+  - Set explicit `Host` header routing in `apps/web/public/_worker.js` to ensure Cloudflare Pages edge proxy reliably reaches the `openbarrio-api` backend worker.
+
+---
+
 ## [0.2.2] - 2026-10-18
 
 ### Added
