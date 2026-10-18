@@ -1,6 +1,6 @@
 {
   "name": "openbarrio-monorepo",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "private": true,
   "type": "module",
   "description": "Civic-tech and real estate due diligence platform using Spanish public open data",
