@@ -4,7 +4,7 @@
  * and falls back to serving static assets from Cloudflare Pages CDN with SPA routing.
  */
 export default {
-  async fetch(request, env, ctx) {
+  async fetch(request, env, _ctx) {
     const url = new URL(request.url);
 
     // 1. Route API requests to the OpenBarrio backend worker
