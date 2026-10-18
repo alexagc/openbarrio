@@ -85,7 +85,7 @@ jobs:
           command: r2 object put openbarrio-r2/census_tracts.pmtiles --file=packages/etl/dist/census_tracts.pmtiles
 
       - name: Upload Processed Artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: openbarrio-etl-dist
           path: |
