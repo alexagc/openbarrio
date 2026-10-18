@@ -185,7 +185,7 @@ describe('Landing Page & i18n Integration', () => {
       expect(screen.getByText(/Ficha de Auditoría Territorial/i)).toBeTruthy();
       expect(screen.getByText(/Passeig de Gràcia 42, 08007 Barcelona/i)).toBeTruthy();
       expect(screen.getAllByText(/Ref: 08019A023000450001JK/i).length).toBeGreaterThan(0);
-      expect(screen.getByText('82/100')).toBeTruthy();
+      expect(screen.getAllByText(/82\/100/).length).toBeGreaterThan(0);
       expect(screen.getByText(/SÍ \(Topes legales aplicables\)/i)).toBeTruthy();
 
       // Close modal
