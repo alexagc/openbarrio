@@ -187,7 +187,8 @@ def download_cartography(output_dir: str) -> str:
 def main():
     parser = argparse.ArgumentParser(description="Download official Spanish INE & IGN open datasets for OpenBarrio")
     parser.add_argument("--output-dir", default=DATA_DIR, help="Target data directory")
-    parser.add_argument("--all-provinces", action="store_true", help="Download all 52 Spanish provinces (otherwise metropolitan set)")
+    parser.add_argument("--all-provinces", action="store_true", default=True, help="Download all 52 Spanish provinces (default: True)")
+    parser.add_argument("--metropolitan-only", action="store_true", help="Download only major metropolitan provinces for fast preview")
     parser.add_argument("--skip-cartography", action="store_true", help="Skip cartography shapefile download")
     parser.add_argument("--force-sample", action="store_true", help="Generate sample datasets instead of downloading")
     args = parser.parse_args()
@@ -203,8 +204,9 @@ def main():
             generate_sample_ign_geojson(ign_geojson_path)
         return 0
 
-    # 1. Download official INE ADRH income data
-    ine_success = download_ine_adrh(ine_csv_path, all_provinces=args.all_provinces)
+    # 1. Download official INE ADRH income data across all 52 provinces
+    all_provinces = False if args.metropolitan_only else True
+    ine_success = download_ine_adrh(ine_csv_path, all_provinces=all_provinces)
     if not ine_success:
         print("Falling back to rich seed dataset for INE ADRH...")
         if generate_sample_ine_csv:

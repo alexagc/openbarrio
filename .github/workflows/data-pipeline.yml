@@ -7,9 +7,9 @@ on:
   workflow_dispatch:
     inputs:
       all_provinces:
-        description: 'Download all 52 Spanish provinces from INE ADRH (otherwise metropolitan set)'
+        description: 'Download all 52 Spanish provinces from INE ADRH (default: true)'
         required: false
-        default: false
+        default: true
         type: boolean
       dry_run:
         description: 'Dry run only (skip Cloudflare D1/R2 sync)'
@@ -66,12 +66,11 @@ jobs:
       - name: Ingest Public Open Datasets (INE ADRH & Cartography)
         run: |
           mkdir -p packages/etl/data packages/etl/dist
-          ARGS=""
-          if [ "${{ inputs.all_provinces }}" = "true" ]; then
-            ARGS="$ARGS --all-provinces"
-          fi
+          ARGS="--all-provinces"
           if [ "${{ inputs.force_sample }}" = "true" ]; then
-            ARGS="$ARGS --force-sample"
+            ARGS="--force-sample"
+          elif [ "${{ inputs.all_provinces }}" = "false" ]; then
+            ARGS="--metropolitan-only"
           fi
           python3 packages/etl/src/download_datasets.py $ARGS
 
