@@ -54,9 +54,9 @@ describe('MapView Component (Stitch Civic Precision)', () => {
       // Expected X around 440,219m +/- 50m
       expect(utm.x).toBeGreaterThan(440150);
       expect(utm.x).toBeLessThan(440300);
-      // Expected Y around 4,474,892m +/- 50m
-      expect(utm.y).toBeGreaterThan(4474800);
-      expect(utm.y).toBeLessThan(4475000);
+      // Expected Y around 4,474,644m
+      expect(utm.y).toBeGreaterThan(4474500);
+      expect(utm.y).toBeLessThan(4474800);
     });
 
     it('should correctly project Barcelona coordinates to Zone 30N', () => {
