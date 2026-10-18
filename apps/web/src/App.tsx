@@ -130,6 +130,7 @@ export function AppContent() {
 
   const handleOpenMap = () => {
     setViewMode('map');
+    setActiveTab('map');
     if (!report) {
       loadAuditByCoords(40.42028, -3.70379);
     }
@@ -316,6 +317,9 @@ export function AppContent() {
                         )}`
                       : undefined
                   }
+                  report={report}
+                  isLoading={isLoading}
+                  onViewReport={() => setActiveTab('dossier')}
                 />
               </div>
             </section>

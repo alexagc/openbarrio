@@ -1,13 +1,17 @@
 import { useEffect, useRef, useState } from 'react';
 import maplibregl, { Map as MapLibreMap, Marker, NavigationControl } from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
-import { Layers, MapPin, Maximize2 } from 'lucide-react';
+import { Layers, MapPin, Maximize2, Loader2, ChevronRight } from 'lucide-react';
+import { ExtendedAuditReport } from '../services/api.client';
 
 interface MapViewProps {
   selectedCoords?: { lat: number; lon: number };
   onMapClick: (lat: number, lon: number) => void;
   propertyName?: string;
   propertyAddress?: string;
+  report?: ExtendedAuditReport | null;
+  isLoading?: boolean;
+  onViewReport?: () => void;
 }
 
 type BasemapType = 'osm' | 'ign-base' | 'pnoa-satellite';
@@ -30,6 +34,9 @@ export function MapView({
   onMapClick,
   propertyName,
   propertyAddress,
+  report,
+  isLoading = false,
+  onViewReport,
 }: MapViewProps) {
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<MapLibreMap | null>(null);
@@ -235,6 +242,7 @@ export function MapView({
       .addTo(map);
 
     markerRef.current = marker;
+    marker.togglePopup();
 
     map.flyTo({
       center: [lon, lat],
@@ -335,6 +343,51 @@ export function MapView({
           <span>Haz click en cualquier punto para auditarlo</span>
         </div>
       </div>
+
+      {/* Floating Real-time Audit Card on Tablet / Mobile */}
+      {isLoading ? (
+        <div className="absolute bottom-14 sm:bottom-4 left-3 right-3 sm:left-auto sm:right-4 z-20 bg-white/95 backdrop-blur-md px-4 py-3 rounded-2xl shadow-2xl border border-slate-200/90 flex items-center space-x-3 text-xs text-slate-700 animate-in fade-in">
+          <Loader2 className="w-4 h-4 text-indigo-600 animate-spin shrink-0" />
+          <div>
+            <p className="font-semibold text-slate-900">Auditando punto seleccionado...</p>
+            <p className="text-[11px] text-slate-500">Consultando Catastro, INE Renta y MITECO</p>
+          </div>
+        </div>
+      ) : report ? (
+        <div className="absolute bottom-14 sm:bottom-4 left-3 right-3 sm:left-auto sm:right-4 z-20 bg-white/95 backdrop-blur-md p-3 rounded-2xl shadow-2xl border border-slate-200/90 flex items-center justify-between gap-3 text-xs sm:max-w-md animate-in slide-in-from-bottom-2">
+          <div className="flex items-center space-x-2.5 min-w-0">
+            <div
+              className={`w-9 h-9 rounded-xl flex items-center justify-center font-bold text-sm shrink-0 shadow-sm ${
+                report.score.overallScore >= 75
+                  ? 'bg-emerald-100 text-emerald-800'
+                  : report.score.overallScore >= 50
+                  ? 'bg-amber-100 text-amber-800'
+                  : 'bg-rose-100 text-rose-800'
+              }`}
+            >
+              {report.score.overallScore}
+            </div>
+            <div className="min-w-0">
+              <p className="font-bold text-slate-900 truncate">
+                {report.property.address.street} {report.property.address.number}
+              </p>
+              <p className="text-[11px] text-slate-500 truncate">
+                {report.property.address.municipality} · RC {report.property.cadastralReference.slice(0, 14)}
+              </p>
+            </div>
+          </div>
+          {onViewReport && (
+            <button
+              onClick={onViewReport}
+              type="button"
+              className="px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs shadow-md shadow-indigo-100 transition flex items-center justify-center space-x-1 shrink-0 cursor-pointer"
+            >
+              <span>Ver Informe</span>
+              <ChevronRight className="w-3.5 h-3.5" />
+            </button>
+          )}
+        </div>
+      ) : null}
     </div>
   );
 }
