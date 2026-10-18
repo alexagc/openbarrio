@@ -49,7 +49,6 @@ CURATED_METROPOLITAN_TABLES = [
     {"province": "30", "name": "Murcia", "table_id": 31115},
     {"province": "35", "name": "Las Palmas", "table_id": 31178},
     {"province": "38", "name": "S.C. Tenerife", "table_id": 31187},
-    {"province": "15", "name": "A Coruña", "table_id": 31070},
     {"province": "31", "name": "Navarra", "table_id": 31124},
     {"province": "18", "name": "Granada", "table_id": 31025},
     {"province": "19", "name": "Guadalajara", "table_id": 31034},
@@ -120,6 +119,11 @@ def download_ine_adrh(output_csv: str, all_provinces: bool = False) -> bool:
             lines = [line.strip() for line in content.splitlines() if line.strip()]
             
             if lines:
+                cols = lines[0].split(";")
+                if len(cols) != 6:
+                    print(f"  Skipping table {tid}: unexpected column count ({len(cols)} cols), expected 6 for income indicators.")
+                    continue
+
                 if not header_written:
                     combined_lines.append(lines[0])
                     header_written = True

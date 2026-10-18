@@ -56,7 +56,7 @@ def process_ine_adrh(input_path: str, output_sql: str, output_db: str = None) ->
 
     # Load raw CSV and inspect schema
     print(f"Loading raw INE ADRH from: {input_path}")
-    con.execute(f"CREATE TABLE raw_ine AS SELECT * FROM read_csv_auto('{input_path}', all_varchar=true);")
+    con.execute(f"CREATE TABLE raw_ine AS SELECT * FROM read_csv_auto('{input_path}', all_varchar=true, ignore_errors=true, null_padding=true);")
 
     # Detect column names dynamically
     cols = [col[0].lower() for col in con.execute("DESCRIBE raw_ine").fetchall()]
