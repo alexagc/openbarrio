@@ -15,6 +15,7 @@ This document outlines the multi-phase roadmap for **OpenBarrio**, tracking comp
 | **Phase 4** | Interactive Web Dashboard with MapLibre GL (`apps/web`) | Backlog ⏳ |
 | **Phase 5** | Chrome Manifest V3 Companion Extension (`apps/extension`) | Backlog ⏳ |
 | **Phase 6** | Cloudflare Live Production Deployment & Hardening | Backlog ⏳ |
+| **Phase 7** | Automated Governance, SAST & Dependency Security | Backlog ⏳ |
 
 ---
 
@@ -85,3 +86,18 @@ This document outlines the multi-phase roadmap for **OpenBarrio**, tracking comp
   - Rate limiting, security headers, and CORS hardening.
 - [ ] **Dossier Reporting:**
   - Printable PDF export for complete Due Diligence Dossiers.
+
+### Phase 7: Automated Governance, SAST & Dependency Security (Backlog ⏳)
+- [ ] **Automated Dependency Updates (Dependabot):**
+  - Configure `.github/dependabot.yml` monitoring `pnpm` workspaces and `github-actions` weekly.
+  - Automatic alerts and security update PRs for vulnerable dependencies.
+- [ ] **Static Code Security Analysis (SAST - GitHub CodeQL):**
+  - Automated `.github/workflows/codeql.yml` scanning TypeScript/JavaScript and Python codebases.
+  - Security gates detecting CWE vulnerabilities, unsafe regexes, and injection vectors.
+- [ ] **Dependency Vulnerability Auditing in CI:**
+  - Automated `pnpm audit --audit-level=high` check in CI pipeline (`.github/workflows/ci.yml`).
+  - GitHub Dependency Review action blocking pull requests introducing vulnerable or non-compliant dependencies.
+- [ ] **Monorepo-wide Code Quality & Strict Linting:**
+  - Standardize ESLint across `apps/*` and `packages/*` with TypeScript rules.
+  - Ensure zero warnings policy on CI validation.
+
