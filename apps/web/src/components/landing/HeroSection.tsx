@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { ShieldCheck, MapPin, Tag, Search, Zap, BarChart3, Building, Code2 } from 'lucide-react';
 import { useTranslation } from '../../i18n';
+import { apiClient } from '../../services/api.client';
 
 interface HeroSectionProps {
   onAudit: (query: string, mode: 'address' | 'refcat') => void;
@@ -10,6 +11,53 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onAudit }) => {
   const { t } = useTranslation();
   const [mode, setMode] = useState<'address' | 'refcat'>('address');
   const [searchValue, setSearchValue] = useState<string>('Gran Vía 28, Madrid');
+  const [suggestions, setSuggestions] = useState<
+    Array<{ label: string; lat: number; lon: number; refcat?: string }>
+  >([]);
+  const [showDropdown, setShowDropdown] = useState(false);
+  const [isSearching, setIsSearching] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Close dropdown on outside click or touch
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent | TouchEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setShowDropdown(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('touchstart', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('touchstart', handleClickOutside);
+    };
+  }, []);
+
+  // Debounced address search
+  useEffect(() => {
+    if (mode !== 'address') {
+      setSuggestions([]);
+      setShowDropdown(false);
+      return;
+    }
+
+    const trimmed = searchValue.trim();
+    if (trimmed.length < 3) {
+      setSuggestions([]);
+      setShowDropdown(false);
+      return;
+    }
+
+    const timer = setTimeout(async () => {
+      setIsSearching(true);
+      const results = await apiClient.searchAddress(trimmed);
+      setSuggestions(results);
+      setIsSearching(false);
+      setShowDropdown(results.length > 0);
+    }, 350);
+
+    return () => clearTimeout(timer);
+  }, [searchValue, mode]);
 
   const handleModeChange = (newMode: 'address' | 'refcat') => {
     setMode(newMode);
@@ -95,7 +143,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onAudit }) => {
 
           {/* Input Bar */}
           <div className="flex flex-col sm:flex-row items-center gap-2">
-            <div className="relative flex-1 w-full">
+            <div className="relative flex-1 w-full" ref={dropdownRef}>
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-outline">
                 <Search className="w-4 h-4" />
               </div>
@@ -104,9 +152,49 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onAudit }) => {
                 type="text"
                 value={searchValue}
                 onChange={(e) => setSearchValue(e.target.value)}
+                onFocus={() => {
+                  if (suggestions.length > 0) setShowDropdown(true);
+                }}
                 placeholder={mode === 'address' ? t('hero.placeholderAddress') : t('hero.placeholderRefcat')}
                 className="w-full pl-10 pr-4 py-2.5 rounded bg-surface-container border border-outline-variant focus:border-primary focus:ring-1 focus:ring-primary text-on-surface font-body text-sm placeholder:text-outline outline-hidden transition-colors"
               />
+
+              {/* Autocomplete Dropdown */}
+              {showDropdown && suggestions.length > 0 && (
+                <div className="absolute left-0 right-0 top-full mt-1.5 bg-surface-container border border-outline-variant rounded-lg shadow-2xl overflow-hidden z-50 max-h-60 overflow-y-auto">
+                  <div className="p-2 border-b border-outline-variant bg-surface-container-high text-[11px] font-semibold text-on-surface-variant uppercase tracking-wider flex items-center justify-between">
+                    <span>Sugerencias de Dirección</span>
+                    {isSearching && <span className="text-primary text-[10px]">Buscando...</span>}
+                  </div>
+                  {suggestions.map((item, idx) => (
+                    <button
+                      key={idx}
+                      type="button"
+                      onMouseDown={(e) => e.preventDefault()}
+                      onClick={() => {
+                        setSearchValue(item.label);
+                        setShowDropdown(false);
+                        if (item.refcat) {
+                          onAudit(item.refcat, 'refcat');
+                        } else {
+                          onAudit(item.label, 'address');
+                        }
+                      }}
+                      className="w-full text-left px-3.5 py-2.5 text-xs text-on-surface hover:bg-surface-container-high border-b border-outline-variant/40 last:border-0 flex items-center justify-between space-x-2 transition cursor-pointer"
+                    >
+                      <div className="flex items-start space-x-2 min-w-0">
+                        <MapPin className="w-4 h-4 text-primary flex-shrink-0 mt-0.5" />
+                        <span className="truncate">{item.label}</span>
+                      </div>
+                      {item.refcat && (
+                        <span className="shrink-0 px-1.5 py-0.5 rounded bg-primary/20 text-primary font-mono text-[10px] font-semibold border border-primary/30">
+                          RC Oficial
+                        </span>
+                      )}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
             <button
               type="submit"
