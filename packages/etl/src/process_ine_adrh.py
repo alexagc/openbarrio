@@ -202,8 +202,11 @@ def process_ine_adrh(input_path: str, output_sql: str, output_db: str = None) ->
         con.execute("INSTALL sqlite; LOAD sqlite;")
         con.execute(f"ATTACH '{output_db}' AS sqlite_db (TYPE SQLITE);")
         con.execute("CREATE TABLE sqlite_db.census_tract_income AS SELECT * FROM processed_tracts;")
-        con.execute("CREATE INDEX IF NOT EXISTS sqlite_db.idx_census_tract_muni ON census_tract_income (municipality_code);")
         con.execute("DETACH sqlite_db;")
+
+        import sqlite3
+        with sqlite3.connect(output_db) as sq_con:
+            sq_con.execute("CREATE INDEX IF NOT EXISTS idx_census_tract_muni ON census_tract_income (municipality_code);")
 
     # Export Cloudflare D1 SQL File with batched INSERT statements
     print(f"Generating Cloudflare D1 SQL statements to: {output_sql}")
