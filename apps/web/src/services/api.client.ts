@@ -97,22 +97,54 @@ export class OpenBarrioApiClient {
   }
 
   /**
-   * Searches for address suggestions using OpenStreetMap Nominatim.
+   * Searches for address suggestions using CartoCiudad (official IGN Spanish geocoder)
+   * with fallback to OpenStreetMap Nominatim.
    */
-  async searchAddress(query: string): Promise<Array<{ label: string; lat: number; lon: number }>> {
-    if (!query || query.trim().length < 3) {
+  async searchAddress(
+    query: string
+  ): Promise<Array<{ label: string; lat: number; lon: number; refcat?: string }>> {
+    const trimmed = query.trim();
+    if (!trimmed || trimmed.length < 3) {
       return [];
     }
 
+    // 1. Try official Spanish CartoCiudad (IGN) geocoder
+    try {
+      const cartoUrl = `https://www.cartociudad.es/geocoder/api/geocoder/candidates?q=${encodeURIComponent(
+        trimmed
+      )}&limit=6`;
+      const cartoRes = await fetch(cartoUrl);
+      if (cartoRes.ok) {
+        const cartoData = await cartoRes.json();
+        if (Array.isArray(cartoData) && cartoData.length > 0) {
+          const valid = cartoData
+            .filter((item: any) => item && item.address)
+            .map((item: any) => ({
+              label: item.address,
+              lat: typeof item.lat === 'number' && item.lat !== 0 ? item.lat : undefined,
+              lon: typeof item.lng === 'number' && item.lng !== 0 ? item.lng : undefined,
+              refcat: item.refCatastral || undefined,
+            }));
+
+          const withCoords = valid.filter(
+            (v: any): v is { label: string; lat: number; lon: number; refcat?: string } =>
+              typeof v.lat === 'number' && typeof v.lon === 'number'
+          );
+          if (withCoords.length > 0) {
+            return withCoords;
+          }
+        }
+      }
+    } catch {
+      // CartoCiudad failed or network issue, fallback to Nominatim
+    }
+
+    // 2. Fallback to OpenStreetMap Nominatim
     try {
       const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(
-        query
-      )}&countrycodes=es&format=json&limit=5&addressdetails=1`;
-      const res = await fetch(url, {
-        headers: {
-          'Accept-Language': 'es',
-        },
-      });
+        trimmed
+      )}&countrycodes=es&format=json&limit=6&addressdetails=1`;
+      const res = await fetch(url);
       if (!res.ok) return [];
       const data = await res.json();
       return (data || []).map((item: any) => ({

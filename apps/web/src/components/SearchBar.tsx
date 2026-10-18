@@ -61,28 +61,34 @@ interface SearchBarProps {
 
 export function SearchBar({ onSearchRefcat, onSearchCoords, isLoading = false }: SearchBarProps) {
   const [query, setQuery] = useState('');
-  const [suggestions, setSuggestions] = useState<Array<{ label: string; lat: number; lon: number }>>([]);
+  const [suggestions, setSuggestions] = useState<
+    Array<{ label: string; lat: number; lon: number; refcat?: string }>
+  >([]);
   const [isSearchingSuggestions, setIsSearchingSuggestions] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  // Close dropdown on outside click
+  // Close dropdown on outside click or touch
   useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
+    function handleClickOutside(event: MouseEvent | TouchEvent) {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
         setShowDropdown(false);
       }
     }
     document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    document.addEventListener('touchstart', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('touchstart', handleClickOutside);
+    };
   }, []);
 
-  // Debounced address suggestion search
+  // Debounced address suggestion search with CartoCiudad & Nominatim
   useEffect(() => {
     const trimmed = query.trim();
-    // Do not search if it looks like coordinates or RC
+    // Do not search if it looks like coordinates or exact 14-20 alphanumeric RC
     if (
-      trimmed.length < 4 ||
+      trimmed.length < 3 ||
       /^[0-9A-Za-z]{14,20}$/.test(trimmed) ||
       /^[-+]?[0-9]*\.?[0-9]+[,\s]+[-+]?[0-9]*\.?[0-9]+$/.test(trimmed)
     ) {
@@ -96,7 +102,7 @@ export function SearchBar({ onSearchRefcat, onSearchCoords, isLoading = false }:
       setSuggestions(results);
       setIsSearchingSuggestions(false);
       setShowDropdown(results.length > 0);
-    }, 400);
+    }, 350);
 
     return () => clearTimeout(timer);
   }, [query]);
@@ -128,13 +134,21 @@ export function SearchBar({ onSearchRefcat, onSearchCoords, isLoading = false }:
 
     // 3. Fallback: match first suggestion or query geocoder immediately
     if (suggestions.length > 0) {
-      onSearchCoords(suggestions[0].lat, suggestions[0].lon);
+      if (suggestions[0].refcat) {
+        onSearchRefcat(suggestions[0].refcat);
+      } else {
+        onSearchCoords(suggestions[0].lat, suggestions[0].lon);
+      }
     } else {
       setIsSearchingSuggestions(true);
       apiClient.searchAddress(raw).then((results) => {
         setIsSearchingSuggestions(false);
         if (results.length > 0) {
-          onSearchCoords(results[0].lat, results[0].lon);
+          if (results[0].refcat) {
+            onSearchRefcat(results[0].refcat);
+          } else {
+            onSearchCoords(results[0].lat, results[0].lon);
+          }
         } else {
           // If no geocoder match, try as refcat
           onSearchRefcat(raw);
@@ -238,15 +252,27 @@ export function SearchBar({ onSearchRefcat, onSearchCoords, isLoading = false }:
             <button
               key={idx}
               type="button"
+              onMouseDown={(e) => e.preventDefault()}
               onClick={() => {
                 setQuery(item.label);
                 setShowDropdown(false);
-                onSearchCoords(item.lat, item.lon);
+                if (item.refcat) {
+                  onSearchRefcat(item.refcat);
+                } else {
+                  onSearchCoords(item.lat, item.lon);
+                }
               }}
-              className="w-full text-left px-3.5 py-2.5 text-xs text-slate-700 hover:bg-indigo-50 hover:text-indigo-900 border-b border-slate-50 last:border-0 flex items-start space-x-2 transition"
+              className="w-full text-left px-3.5 py-2.5 text-xs text-slate-700 hover:bg-indigo-50 hover:text-indigo-900 border-b border-slate-50 last:border-0 flex items-center justify-between space-x-2 transition cursor-pointer"
             >
-              <MapPin className="w-4 h-4 text-indigo-500 flex-shrink-0 mt-0.5" />
-              <span className="line-clamp-2">{item.label}</span>
+              <div className="flex items-start space-x-2 min-w-0">
+                <MapPin className="w-4 h-4 text-indigo-500 flex-shrink-0 mt-0.5" />
+                <span className="truncate">{item.label}</span>
+              </div>
+              {item.refcat && (
+                <span className="shrink-0 px-1.5 py-0.5 rounded bg-indigo-50 text-indigo-700 font-mono text-[10px] font-semibold border border-indigo-200">
+                  RC Oficial
+                </span>
+              )}
             </button>
           ))}
         </div>
