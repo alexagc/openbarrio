@@ -60,23 +60,23 @@ export function PillarCards({ property, neighborhood, environment }: PillarCards
   // 3. Flood risk helper
   const flood = environment.floodRisk;
   let floodLabel = 'Riesgo Nulo';
-  let floodIcon = CheckCircle2;
+  let FloodIcon = CheckCircle2;
   let floodClass = 'text-primary';
   let returnPeriodText = 'Zona Segura T > 500 años';
 
   if (flood.level === 'HIGH') {
     floodLabel = 'Riesgo Alto (T=10a)';
-    floodIcon = AlertTriangle;
+    FloodIcon = AlertTriangle;
     floodClass = 'text-error';
     returnPeriodText = 'Lámina de agua T=10 años';
   } else if (flood.level === 'MEDIUM') {
     floodLabel = 'Riesgo Medio (T=100a)';
-    floodIcon = AlertTriangle;
+    FloodIcon = AlertTriangle;
     floodClass = 'text-secondary';
     returnPeriodText = 'Lámina de agua T=100 años';
   } else if (flood.level === 'LOW') {
     floodLabel = 'Riesgo Bajo (T=500a)';
-    floodIcon = ShieldCheck;
+    FloodIcon = ShieldCheck;
     floodClass = 'text-tertiary';
     returnPeriodText = 'Zona de flujo T=500 años';
   }
@@ -245,6 +245,7 @@ export function PillarCards({ property, neighborhood, environment }: PillarCards
           <div className="p-2.5 bg-surface-container-low border border-outline-variant rounded">
             <span className="text-[10px] font-mono text-outline uppercase block">Peligrosidad Fluvial</span>
             <span className={`font-mono text-sm font-bold ${floodClass} flex items-center gap-1 mt-0.5`}>
+              <FloodIcon className="w-3.5 h-3.5" />
               {floodLabel}
             </span>
             <span className="text-[10px] text-outline block mt-0.5">{returnPeriodText}</span>

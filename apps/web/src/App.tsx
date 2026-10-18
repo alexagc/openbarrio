@@ -18,7 +18,7 @@ import { SkeletonDossier } from './components/SkeletonDossier';
 import { ErrorAlert } from './components/ErrorAlert';
 import { apiClient, ExtendedAuditReport, ApiError, auditDataToReport } from './services/api.client';
 import { ProblemDetails } from '@openbarrio/core';
-import { ArrowLeft, Building2, MapPin, Download, Printer } from 'lucide-react';
+import { ArrowLeft, MapPin, Download, Printer } from 'lucide-react';
 import { downloadCadastralGML } from './utils/gml';
 
 const SAMPLE_AUDITS: Record<string, AuditData> = {
