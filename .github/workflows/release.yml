@@ -54,12 +54,19 @@ jobs:
           echo "zip_path=${ZIP_PATH}" >> $GITHUB_OUTPUT
           echo "tag_name=${TAG_NAME}" >> $GITHUB_OUTPUT
 
-      - name: Create GitHub Release
+      - name: Publish or Update GitHub Release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release create "${{ steps.package-ext.outputs.tag_name }}" \
-            "${{ steps.package-ext.outputs.zip_path }}" \
-            --title "OpenBarrio ${{ steps.package-ext.outputs.tag_name }}" \
-            --generate-notes \
-            --verify-tag
+          TARGET_TAG="${{ steps.package-ext.outputs.tag_name }}"
+          ASSET_PATH="${{ steps.package-ext.outputs.zip_path }}"
+          if gh release view "$TARGET_TAG" >/dev/null 2>&1; then
+            echo "Release $TARGET_TAG already exists. Uploading extension asset..."
+            gh release upload "$TARGET_TAG" "$ASSET_PATH" --clobber
+          else
+            echo "Creating new release $TARGET_TAG..."
+            gh release create "$TARGET_TAG" "$ASSET_PATH" \
+              --title "OpenBarrio $TARGET_TAG" \
+              --generate-notes \
+              --verify-tag
+          fi
