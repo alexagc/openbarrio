@@ -29,12 +29,13 @@ export interface AuditData {
   rentMinM2: number;
   rentMaxM2: number;
   isStressedZone: boolean;
+  coordinates?: { lat: number; lon: number };
 }
 
 interface AuditModalProps {
   data: AuditData | null;
   onClose: () => void;
-  onOpenMap?: () => void;
+  onOpenMap?: (audit: AuditData) => void;
 }
 
 export const AuditModal: React.FC<AuditModalProps> = ({ data, onClose, onOpenMap }) => {
@@ -267,8 +268,9 @@ export const AuditModal: React.FC<AuditModalProps> = ({ data, onClose, onOpenMap
           <button
             type="button"
             onClick={() => {
+              const current = data;
               onClose();
-              if (onOpenMap) onOpenMap();
+              if (onOpenMap && current) onOpenMap(current);
             }}
             className="w-full sm:w-auto px-4 py-2 rounded bg-primary text-on-primary font-body text-xs font-semibold hover:bg-primary-fixed transition-colors flex items-center justify-center gap-1.5 shadow-xs cursor-pointer"
           >

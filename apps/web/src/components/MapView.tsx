@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import maplibregl, { Map as MapLibreMap, Marker, NavigationControl } from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
-import { Layers, MapPin, Maximize2, Loader2, ChevronRight } from 'lucide-react';
+import { Layers, MapPin, Maximize2, Loader2, ChevronRight, AlertTriangle, X } from 'lucide-react';
 import { ExtendedAuditReport } from '../services/api.client';
 
 interface MapViewProps {
@@ -11,6 +11,8 @@ interface MapViewProps {
   propertyAddress?: string;
   report?: ExtendedAuditReport | null;
   isLoading?: boolean;
+  error?: string | null;
+  onDismissError?: () => void;
   onViewReport?: () => void;
 }
 
@@ -36,11 +38,18 @@ export function MapView({
   propertyAddress,
   report,
   isLoading = false,
+  error = null,
+  onDismissError,
   onViewReport,
 }: MapViewProps) {
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<MapLibreMap | null>(null);
   const markerRef = useRef<Marker | null>(null);
+  const onMapClickRef = useRef(onMapClick);
+
+  useEffect(() => {
+    onMapClickRef.current = onMapClick;
+  }, [onMapClick]);
 
   const [activeBasemap, setActiveBasemap] = useState<BasemapType>('osm');
   const [showCatastroWms, setShowCatastroWms] = useState<boolean>(true);
@@ -150,10 +159,12 @@ export function MapView({
       setCurrentZoom(Math.round(map.getZoom()));
     });
 
+    map.getCanvas().style.cursor = 'pointer';
+
     map.on('click', (e) => {
       const lat = parseFloat(e.lngLat.lat.toFixed(6));
       const lon = parseFloat(e.lngLat.lng.toFixed(6));
-      onMapClick(lat, lon);
+      onMapClickRef.current(lat, lon);
     });
 
     map.on('load', () => {
@@ -388,6 +399,26 @@ export function MapView({
           )}
         </div>
       ) : null}
+
+      {/* Floating Error Alert if query fails for point */}
+      {error && !isLoading && (
+        <div className="absolute bottom-14 sm:bottom-4 left-3 right-3 sm:left-auto sm:right-4 z-20 bg-rose-50/95 backdrop-blur-md px-3.5 py-2.5 rounded-2xl shadow-xl border border-rose-200 text-xs text-rose-800 flex items-center justify-between gap-3 max-w-md animate-in slide-in-from-bottom-2">
+          <div className="flex items-center space-x-2 min-w-0">
+            <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0" />
+            <p className="text-[11px] leading-tight truncate">{error}</p>
+          </div>
+          {onDismissError && (
+            <button
+              onClick={onDismissError}
+              type="button"
+              className="text-rose-600 hover:text-rose-900 cursor-pointer shrink-0"
+              aria-label="Cerrar aviso"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          )}
+        </div>
+      )}
     </div>
   );
 }

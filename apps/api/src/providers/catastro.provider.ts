@@ -5,24 +5,31 @@ import { UpstreamProviderError } from '../errors/problem-details.js';
 
 export interface CatastroProviderOptions {
   baseUrl?: string;
+  coordenadasBaseUrl?: string;
+  callejeroBaseUrl?: string;
   timeoutMs?: number;
 }
 
 export class CatastroProvider implements ICatastroProvider {
-  private readonly baseUrl: string;
+  private readonly coordenadasBaseUrl: string;
+  private readonly callejeroBaseUrl: string;
   private readonly timeoutMs: number;
 
   constructor(options: CatastroProviderOptions = {}) {
-    this.baseUrl =
+    this.coordenadasBaseUrl =
+      options.coordenadasBaseUrl ||
       options.baseUrl ||
       'https://ovc.catastro.meh.es/ovcservweb/ovcswlocalizacionrc/ovccoordenadas.asmx';
+    this.callejeroBaseUrl =
+      options.callejeroBaseUrl ||
+      'https://ovc.catastro.meh.es/ovcservweb/ovcswlocalizacionrc/ovccallejero.asmx';
     this.timeoutMs = options.timeoutMs || 8000;
   }
 
   async getByCoordinates(latitude: number, longitude: number): Promise<CadastralProperty> {
-    const url = `${this.baseUrl}/Consulta_RCCOOR?SRS=EPSG:4326&Coordenada_X=${longitude}&Coordenada_Y=${latitude}`;
+    const url = `${this.coordenadasBaseUrl}/Consulta_RCCOOR?SRS=EPSG:4326&Coordenada_X=${longitude}&Coordenada_Y=${latitude}`;
 
-    let xmlText: string;
+    let xmlText = '';
     try {
       const controller = new AbortController();
       const timer = setTimeout(() => controller.abort(), this.timeoutMs);
@@ -42,8 +49,36 @@ export class CatastroProvider implements ICatastroProvider {
       throw new UpstreamProviderError('Catastro OVC', err.message || 'Network request failed');
     }
 
-    const { cadastralReference, latitude: resLat, longitude: resLon } =
-      parseCatastroCoordinatesXml(xmlText);
+    let cadastralReference: string | undefined;
+    let resLat = latitude;
+    let resLon = longitude;
+
+    try {
+      const parsed = parseCatastroCoordinatesXml(xmlText);
+      cadastralReference = parsed.cadastralReference;
+      resLat = parsed.latitude || latitude;
+      resLon = parsed.longitude || longitude;
+    } catch (parseErr) {
+      // If Catastro has no exact parcel on coordinate (e.g. street), snap to nearest portal via CartoCiudad
+      try {
+        const cartoUrl = `https://www.cartociudad.es/geocoder/api/geocoder/reverseGeocode?lat=${latitude}&lon=${longitude}`;
+        const cartoRes = await fetch(cartoUrl);
+        if (cartoRes.ok) {
+          const cartoData = (await cartoRes.json()) as any;
+          if (cartoData && cartoData.refCatastral) {
+            cadastralReference = cartoData.refCatastral;
+            resLat = typeof cartoData.lat === 'number' ? cartoData.lat : latitude;
+            resLon = typeof cartoData.lng === 'number' ? cartoData.lng : longitude;
+          }
+        }
+      } catch {
+        // Fall through
+      }
+
+      if (!cadastralReference) {
+        throw parseErr;
+      }
+    }
 
     // Fetch detailed property attributes using the cadastral reference obtained
     return this.getByCadastralReference(cadastralReference, {
@@ -57,7 +92,7 @@ export class CatastroProvider implements ICatastroProvider {
     fallbackCoords?: { latitude: number; longitude: number }
   ): Promise<CadastralProperty> {
     const cleanRef = refcat.trim().toUpperCase();
-    const url = `${this.baseUrl}/Consulta_DNPRC?Provincia=&Municipio=&RC=${encodeURIComponent(cleanRef)}`;
+    const url = `${this.callejeroBaseUrl}/Consulta_DNPRC?Provincia=&Municipio=&RC=${encodeURIComponent(cleanRef)}`;
 
     let xmlText: string;
     try {

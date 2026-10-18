@@ -4,7 +4,7 @@ import { useTranslation } from '../../i18n';
 import { apiClient } from '../../services/api.client';
 
 interface HeroSectionProps {
-  onAudit: (query: string, mode: 'address' | 'refcat') => void;
+  onAudit: (query: string, mode: 'address' | 'refcat', coords?: { lat: number; lon: number }) => void;
 }
 
 export const HeroSection: React.FC<HeroSectionProps> = ({ onAudit }) => {
@@ -174,10 +174,13 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onAudit }) => {
                       onClick={() => {
                         setSearchValue(item.label);
                         setShowDropdown(false);
+                        const coords = (typeof item.lat === 'number' && typeof item.lon === 'number')
+                          ? { lat: item.lat, lon: item.lon }
+                          : undefined;
                         if (item.refcat) {
-                          onAudit(item.refcat, 'refcat');
+                          onAudit(item.refcat, 'refcat', coords);
                         } else {
-                          onAudit(item.label, 'address');
+                          onAudit(item.label, 'address', coords);
                         }
                       }}
                       className="w-full text-left px-3.5 py-2.5 text-xs text-on-surface hover:bg-surface-container-high border-b border-outline-variant/40 last:border-0 flex items-center justify-between space-x-2 transition cursor-pointer"

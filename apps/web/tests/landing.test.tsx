@@ -215,5 +215,31 @@ describe('Landing Page & i18n Integration', () => {
       expect(screen.getByRole('dialog')).toBeTruthy();
       expect(screen.getByText(/Calle Alcalá 50, Madrid/i)).toBeTruthy();
     });
+
+    it('should transition to map view showing the exact audited property when clicking openInMap in modal', () => {
+      render(<App />);
+
+      // Click on Barcelona example
+      const barcelonaChip = screen.getByText('Passeig de Gràcia 42, Barcelona');
+      act(() => {
+        fireEvent.click(barcelonaChip);
+      });
+
+      // Click "Localizar en Visor Cartográfico" button in modal
+      const openInMapButton = screen.getByRole('button', { name: /Localizar en Visor Cartográfico/i });
+      act(() => {
+        fireEvent.click(openInMapButton);
+      });
+
+      // Modal should be closed
+      expect(screen.queryByRole('dialog')).toBeNull();
+
+      // Map view should be active
+      expect(screen.getByText(/Visor Cartográfico Catastral & Auditoría Territorial/i)).toBeTruthy();
+
+      // The report displayed should be Barcelona, NOT default Gran Vía Madrid
+      expect(screen.getAllByText(/Passeig de Gràcia 42/i).length).toBeGreaterThan(0);
+      expect(screen.getAllByText(/08019A023000450001JK/i).length).toBeGreaterThan(0);
+    });
   });
 });

@@ -16,7 +16,7 @@ import { MapView } from './components/MapView';
 import { AuditDossier } from './components/AuditDossier';
 import { SkeletonDossier } from './components/SkeletonDossier';
 import { ErrorAlert } from './components/ErrorAlert';
-import { apiClient, ExtendedAuditReport, ApiError } from './services/api.client';
+import { apiClient, ExtendedAuditReport, ApiError, auditDataToReport } from './services/api.client';
 import { ProblemDetails } from '@openbarrio/core';
 import { ArrowLeft, Building2, MapPin } from 'lucide-react';
 
@@ -37,6 +37,7 @@ const SAMPLE_AUDITS: Record<string, AuditData> = {
     rentMinM2: 18.5,
     rentMaxM2: 24.2,
     isStressedZone: false,
+    coordinates: { lat: 40.42028, lon: -3.70379 },
   },
   'passeig de gràcia 42, barcelona': {
     query: 'Passeig de Gràcia 42, Barcelona',
@@ -54,6 +55,7 @@ const SAMPLE_AUDITS: Record<string, AuditData> = {
     rentMinM2: 12.0,
     rentMaxM2: 16.4,
     isStressedZone: true,
+    coordinates: { lat: 41.39167, lon: 2.16472 },
   },
   'calle sierpes 12, sevilla': {
     query: 'Calle Sierpes 12, Sevilla',
@@ -71,10 +73,15 @@ const SAMPLE_AUDITS: Record<string, AuditData> = {
     rentMinM2: 10.2,
     rentMaxM2: 14.1,
     isStressedZone: false,
+    coordinates: { lat: 37.3908, lon: -5.9942 },
   },
 };
 
-function generateAuditFallback(query: string, mode: 'address' | 'refcat'): AuditData {
+function generateAuditFallback(
+  query: string,
+  mode: 'address' | 'refcat',
+  coords?: { lat: number; lon: number }
+): AuditData {
   const isRef = mode === 'refcat' || query.length === 20;
   const hash = query.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
   const score = 65 + (hash % 30);
@@ -84,6 +91,9 @@ function generateAuditFallback(query: string, mode: 'address' | 'refcat'): Audit
   const incomePercentile = 40 + (hash % 55);
   const noiseLden = 55 + (hash % 16);
   const isStressedZone = hash % 2 === 0;
+
+  const derivedLat = coords?.lat ?? +(40.4168 + ((hash % 100) - 50) * 0.005).toFixed(5);
+  const derivedLon = coords?.lon ?? +(-3.7038 + (((hash * 3) % 100) - 50) * 0.005).toFixed(5);
 
   return {
     query,
@@ -101,6 +111,7 @@ function generateAuditFallback(query: string, mode: 'address' | 'refcat'): Audit
     rentMinM2: +(9.0 + (hash % 10) * 0.8).toFixed(1),
     rentMaxM2: +(14.0 + (hash % 10) * 1.1).toFixed(1),
     isStressedZone,
+    coordinates: { lat: derivedLat, lon: derivedLon },
   };
 }
 
@@ -118,20 +129,40 @@ export function AppContent() {
   const [error, setError] = useState<{ message: string; problem?: ProblemDetails } | null>(null);
   const [activeTab, setActiveTab] = useState<'dossier' | 'map'>('dossier');
 
-  const handleAudit = (query: string, mode: 'address' | 'refcat') => {
+  const handleAudit = (
+    query: string,
+    mode: 'address' | 'refcat',
+    coords?: { lat: number; lon: number }
+  ) => {
     const normalizedKey = query.toLowerCase().trim();
     const sample = SAMPLE_AUDITS[normalizedKey];
     if (sample) {
       setActiveAudit(sample);
     } else {
-      setActiveAudit(generateAuditFallback(query, mode));
+      setActiveAudit(generateAuditFallback(query, mode, coords));
     }
   };
 
-  const handleOpenMap = () => {
+  const handleOpenMap = (audit?: AuditData) => {
     setViewMode('map');
     setActiveTab('map');
-    if (!report) {
+    setError(null);
+
+    if (audit) {
+      // 1. Immediately convert audit to full report and focus map on that exact property
+      const auditReport = auditDataToReport(audit);
+      setReport(auditReport);
+      const coords = audit.coordinates || {
+        lat: auditReport.property.coordinates.latitude,
+        lon: auditReport.property.coordinates.longitude,
+      };
+      setSelectedCoords(coords);
+
+      // 2. Refresh live report in background if valid cadastral reference
+      if (audit.refcat && /^[0-9A-Za-z]{14,20}$/.test(audit.refcat)) {
+        loadAuditByRefcat(audit.refcat, coords);
+      }
+    } else if (!report) {
       loadAuditByCoords(40.42028, -3.70379);
     }
   };
@@ -159,7 +190,7 @@ export function AppContent() {
     }
   };
 
-  const loadAuditByRefcat = async (refcat: string) => {
+  const loadAuditByRefcat = async (refcat: string, fallbackCoords?: { lat: number; lon: number }) => {
     setIsLoading(true);
     setError(null);
 
@@ -171,6 +202,9 @@ export function AppContent() {
         lon: data.property.coordinates.longitude,
       });
     } catch (err) {
+      if (fallbackCoords) {
+        setSelectedCoords(fallbackCoords);
+      }
       if (err instanceof ApiError) {
         setError({ message: err.message, problem: err.problem });
       } else {
@@ -319,6 +353,8 @@ export function AppContent() {
                   }
                   report={report}
                   isLoading={isLoading}
+                  error={error?.message}
+                  onDismissError={() => setError(null)}
                   onViewReport={() => setActiveTab('dossier')}
                 />
               </div>
