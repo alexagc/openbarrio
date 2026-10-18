@@ -18,7 +18,8 @@ import { SkeletonDossier } from './components/SkeletonDossier';
 import { ErrorAlert } from './components/ErrorAlert';
 import { apiClient, ExtendedAuditReport, ApiError, auditDataToReport } from './services/api.client';
 import { ProblemDetails } from '@openbarrio/core';
-import { ArrowLeft, Building2, MapPin } from 'lucide-react';
+import { ArrowLeft, MapPin, Download, Printer } from 'lucide-react';
+import { downloadCadastralGML } from './utils/gml';
 
 const SAMPLE_AUDITS: Record<string, AuditData> = {
   'gran vía 28, madrid': {
@@ -267,92 +268,176 @@ export function AppContent() {
     loadAuditByRefcat(sample.refcat);
   };
 
-  // If map view is active, render the full interactive MapLibre workspace
+  // If map view is active, render the full interactive Stitch Civic Precision workspace
   if (viewMode === 'map') {
+    const activeAddress = report
+      ? `${report.property.address.street} ${report.property.address.number}`
+      : undefined;
+    const activeRefcat = report?.property.cadastralReference;
+    const activeLocation = report
+      ? `${report.property.address.municipality} (${report.property.address.province})`
+      : 'Madrid Centro / Sol';
+
     return (
-      <div className="min-h-screen bg-surface-container-lowest flex flex-col text-on-surface">
-        <header className="sticky top-0 z-40 w-full h-14 bg-surface-container border-b border-outline-variant shadow-sm flex items-center justify-between px-space-lg">
-          <div className="flex items-center gap-3">
+      <div className="h-screen bg-background text-on-surface antialiased overflow-hidden flex flex-col select-none">
+        {/* ================= TOP NAVIGATION BAR (Stitch Civic Precision) ================= */}
+        <header className="w-full px-space-lg flex items-center justify-between gap-space-md border-b border-outline-variant bg-surface-container top-0 z-50 h-14 shadow-sm shrink-0 no-print">
+          {/* Left: Brand Cluster & Return Button */}
+          <div className="flex items-center gap-space-md min-w-[280px]">
             <button
               onClick={() => setViewMode('landing')}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-surface-container-high border border-outline-variant hover:border-primary text-on-surface hover:text-primary transition-colors text-xs font-semibold cursor-pointer"
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded bg-surface-container-high border border-outline-variant hover:border-primary text-on-surface hover:text-primary transition-colors text-xs font-semibold cursor-pointer shrink-0"
               type="button"
+              title="Volver a la portada de OpenBarrio"
             >
               <ArrowLeft className="w-4 h-4" />
-              <span>Volver a la Portada</span>
+              <span className="hidden sm:inline">Portada</span>
             </button>
-            <div className="hidden sm:flex items-center gap-2">
-              <Building2 className="w-5 h-5 text-primary" />
-              <span className="font-headline font-bold text-primary">OpenBarrio GIS</span>
-            </div>
-          </div>
 
-          <div className="flex items-center gap-2">
-            <span className="font-mono text-xs text-on-surface-variant flex items-center gap-1.5 bg-surface-container-high px-2.5 py-1 rounded border border-outline-variant">
-              <span
-                className={`w-2 h-2 rounded-full ${
-                  report?.isOfflineDemo ? 'bg-amber-400 animate-pulse' : 'bg-emerald-500'
-                }`}
-              />
-              {report?.isOfflineDemo ? 'Modo Preview / Fixtures' : 'Conectado a Red (D1 + Catastro OVC)'}
-            </span>
-          </div>
-        </header>
-
-        {/* Universal Search Header */}
-        <section className="bg-surface-container border-b border-outline-variant px-4 sm:px-6 py-4 shadow-sm no-print">
-          <div className="max-w-7xl mx-auto space-y-3">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-              <div>
-                <h1 className="text-lg sm:text-xl font-bold tracking-tight text-on-surface flex items-center gap-2">
-                  <span>Visor Cartográfico Catastral & Auditoría Territorial</span>
-                </h1>
-                <p className="text-xs text-on-surface-variant">
-                  Haz click en cualquier punto del mapa o busca por referencia catastral / coordenadas.
-                </p>
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded bg-surface-container-high border border-outline-variant flex items-center justify-center relative shadow-inner">
+                <span className="font-headline font-bold text-primary tracking-tight text-sm">OB</span>
+                <span className="w-2 h-2 rounded-full bg-primary absolute -top-0.5 -right-0.5 ring-2 ring-surface-container" />
               </div>
-
-              {/* Mobile Tab Toggle */}
-              <div className="flex lg:hidden bg-surface-container-high p-1 rounded border border-outline-variant self-start text-xs font-semibold">
-                <button
-                  type="button"
-                  onClick={() => setActiveTab('dossier')}
-                  className={`px-3 py-1.5 rounded transition ${
-                    activeTab === 'dossier' ? 'bg-primary text-on-primary shadow-xs' : 'text-on-surface-variant'
-                  }`}
-                >
-                  Informe
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setActiveTab('map')}
-                  className={`px-3 py-1.5 rounded transition ${
-                    activeTab === 'map' ? 'bg-primary text-on-primary shadow-xs' : 'text-on-surface-variant'
-                  }`}
-                >
-                  Mapa
-                </button>
+              <div className="flex flex-col">
+                <span className="font-headline font-bold text-primary tracking-tight flex items-center gap-2 leading-none text-sm">
+                  OpenBarrio
+                </span>
+                <span className="font-mono text-[9px] text-on-surface-variant font-medium tracking-wider uppercase mt-0.5 truncate max-w-[200px]">
+                  Visor Cartográfico Catastral & Auditoría Territorial
+                </span>
               </div>
             </div>
 
+            {/* Desktop Navigation Tabs */}
+            <nav className="hidden 2xl:flex items-center gap-space-md ml-3 pl-3 border-l border-outline-variant">
+              <span className="text-primary border-b-2 border-primary font-medium py-4 text-xs font-mono flex items-center gap-1">
+                Visor Catastral
+              </span>
+              <span className="text-on-surface-variant hover:text-on-surface transition-colors py-4 text-xs font-mono flex items-center gap-1 cursor-default">
+                Auditoría Urbana
+              </span>
+              <span className="text-on-surface-variant hover:text-on-surface transition-colors py-4 text-xs font-mono flex items-center gap-1 cursor-default">
+                Inteligencia de Suelo
+              </span>
+            </nav>
+          </div>
+
+          {/* Center: Search Bar pre-filled or searchable */}
+          <div className="flex-1 max-w-2xl px-space-sm hidden md:block">
             <SearchBar
+              variant="topbar"
+              activeRefcat={activeRefcat}
+              activeAddress={activeAddress}
               onSearchRefcat={loadAuditByRefcat}
               onSearchCoords={loadAuditByCoords}
               isLoading={isLoading}
             />
           </div>
-        </section>
 
-        {/* Dual Workspace (Dossier + Sticky Map) */}
-        <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 py-6">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-            {/* Left Column: Dossier */}
-            <section
-              className={`lg:col-span-7 xl:col-span-7 space-y-6 ${
-                activeTab === 'map' ? 'hidden lg:block' : 'block'
-              }`}
+          {/* Right: Actions & Location Cluster */}
+          <div className="flex items-center gap-2">
+            {/* Mobile Tab Toggle (Informe vs Mapa) */}
+            <div className="flex lg:hidden bg-surface-container-high p-0.5 rounded border border-outline-variant text-xs font-semibold">
+              <button
+                type="button"
+                onClick={() => setActiveTab('dossier')}
+                className={`px-2.5 py-1 rounded transition text-xs ${
+                  activeTab === 'dossier' ? 'bg-primary text-on-primary shadow-xs' : 'text-on-surface-variant'
+                }`}
+              >
+                Informe
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveTab('map')}
+                className={`px-2.5 py-1 rounded transition text-xs ${
+                  activeTab === 'map' ? 'bg-primary text-on-primary shadow-xs' : 'text-on-surface-variant'
+                }`}
+              >
+                Mapa
+              </button>
+            </div>
+
+            <div className="hidden xl:flex items-center gap-1.5 px-2 py-1 rounded bg-surface-container-high border border-outline-variant text-on-surface-variant text-xs font-mono">
+              <MapPin className="w-3.5 h-3.5 text-tertiary" />
+              <span>{activeLocation}</span>
+            </div>
+
+            {report && (
+              <button
+                type="button"
+                onClick={() => downloadCadastralGML(report)}
+                className="hidden sm:flex bg-surface-container-low hover:bg-surface-container-high text-on-surface border border-outline-variant text-xs font-mono px-3 py-1.5 rounded items-center gap-1.5 transition-colors cursor-pointer"
+                title="Descargar archivo GML INSPIRE oficial de la parcela"
+              >
+                <Download className="w-3.5 h-3.5 text-primary" />
+                <span>Descargar GML</span>
+              </button>
+            )}
+
+            <button
+              type="button"
+              onClick={() => window.print()}
+              className="bg-inverse-primary hover:bg-primary-container text-white text-xs font-semibold px-3 py-1.5 rounded flex items-center gap-1.5 transition-colors shadow-sm cursor-pointer"
+              title="Exportar informe de due diligence en formato PDF"
             >
-              {error ? (
+              <Printer className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Exportar Dossier PDF</span>
+            </button>
+          </div>
+        </header>
+
+        {/* Mobile Search Bar below header */}
+        <div className="block md:hidden bg-surface-container border-b border-outline-variant p-2 no-print">
+          <SearchBar
+            variant="topbar"
+            activeRefcat={activeRefcat}
+            activeAddress={activeAddress}
+            onSearchRefcat={loadAuditByRefcat}
+            onSearchCoords={loadAuditByCoords}
+            isLoading={isLoading}
+          />
+        </div>
+
+        {/* ================= SPLIT SCREEN WORKSPACE ================= */}
+        <main className="flex-1 flex flex-col lg:flex-row overflow-hidden w-full relative">
+          {/* LEFT: GIS VECTOR MAP (60% Desktop) */}
+          <section
+            className={`w-full lg:w-[60%] h-full relative bg-surface-container-lowest overflow-hidden flex flex-col border-r border-outline-variant cadastral-grid no-print ${
+              activeTab === 'dossier' ? 'hidden lg:flex' : 'flex'
+            }`}
+          >
+            <MapView
+              selectedCoords={selectedCoords}
+              onMapClick={handleMapClick}
+              propertyName={
+                report ? `${report.property.address.street} ${report.property.address.number}` : undefined
+              }
+              propertyAddress={
+                report
+                  ? `${report.property.address.municipality} · RC ${report.property.cadastralReference.substring(
+                      0,
+                      14
+                    )}`
+                  : undefined
+              }
+              report={report}
+              isLoading={isLoading}
+              error={error?.message}
+              onDismissError={() => setError(null)}
+              onViewReport={() => setActiveTab('dossier')}
+            />
+          </section>
+
+          {/* RIGHT: PROPERTY AUDIT DOSSIER PANEL (40% Desktop) */}
+          <section
+            className={`w-full lg:w-[40%] h-full bg-surface overflow-y-auto flex flex-col ${
+              activeTab === 'map' ? 'hidden lg:flex' : 'flex'
+            }`}
+          >
+            {error ? (
+              <div className="p-4">
                 <ErrorAlert
                   message={error.message}
                   problem={error.problem}
@@ -363,51 +448,23 @@ export function AppContent() {
                   }}
                   onSelectSample={handleLoadSample}
                 />
-              ) : isLoading ? (
-                <SkeletonDossier />
-              ) : report ? (
-                <AuditDossier report={report} />
-              ) : (
-                <div className="text-center py-16 bg-surface-container rounded border border-dashed border-outline-variant p-8">
-                  <MapPin className="w-10 h-10 text-outline mx-auto mb-3" />
-                  <h3 className="font-bold text-on-surface">Selecciona un inmueble</h3>
-                  <p className="text-xs text-on-surface-variant mt-1 max-w-sm mx-auto">
-                    Usa el buscador o haz click en cualquier parcela del mapa para generar su informe de due diligence oficial.
-                  </p>
-                </div>
-              )}
-            </section>
-
-            {/* Right Column: Sticky MapLibre View */}
-            <section
-              className={`lg:col-span-5 xl:col-span-5 no-print lg:sticky lg:top-20 ${
-                activeTab === 'dossier' ? 'hidden lg:block' : 'block'
-              }`}
-            >
-              <div className="h-[520px] lg:h-[calc(100vh-140px)] w-full rounded overflow-hidden border border-outline-variant shadow-md">
-                <MapView
-                  selectedCoords={selectedCoords}
-                  onMapClick={handleMapClick}
-                  propertyName={
-                    report ? `${report.property.address.street} ${report.property.address.number}` : undefined
-                  }
-                  propertyAddress={
-                    report
-                      ? `${report.property.address.municipality} · RC ${report.property.cadastralReference.substring(
-                          0,
-                          14
-                        )}`
-                      : undefined
-                  }
-                  report={report}
-                  isLoading={isLoading}
-                  error={error?.message}
-                  onDismissError={() => setError(null)}
-                  onViewReport={() => setActiveTab('dossier')}
-                />
               </div>
-            </section>
-          </div>
+            ) : isLoading ? (
+              <div className="p-4">
+                <SkeletonDossier />
+              </div>
+            ) : report ? (
+              <AuditDossier report={report} />
+            ) : (
+              <div className="text-center py-16 bg-surface-container rounded border border-dashed border-outline-variant p-8 m-4">
+                <MapPin className="w-10 h-10 text-outline mx-auto mb-3" />
+                <h3 className="font-bold text-on-surface">Selecciona un inmueble</h3>
+                <p className="text-xs text-on-surface-variant mt-1 max-w-sm mx-auto">
+                  Usa el buscador superior o haz click en cualquier parcela del mapa para generar su informe de due diligence oficial.
+                </p>
+              </div>
+            )}
+          </section>
         </main>
       </div>
     );

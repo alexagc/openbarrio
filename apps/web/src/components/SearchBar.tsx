@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Search, MapPin, X, Loader2, Sparkles, Navigation } from 'lucide-react';
+import { Search, MapPin, X, Loader2, Sparkles, Navigation, Copy, Check } from 'lucide-react';
 import { apiClient } from '../services/api.client';
 
 export interface SearchPreset {
@@ -57,16 +57,36 @@ interface SearchBarProps {
   onSearchRefcat: (refcat: string) => void;
   onSearchCoords: (lat: number, lon: number) => void;
   isLoading?: boolean;
+  variant?: 'standard' | 'topbar';
+  activeRefcat?: string;
+  activeAddress?: string;
 }
 
-export function SearchBar({ onSearchRefcat, onSearchCoords, isLoading = false }: SearchBarProps) {
-  const [query, setQuery] = useState('');
+export function SearchBar({
+  onSearchRefcat,
+  onSearchCoords,
+  isLoading = false,
+  variant = 'standard',
+  activeRefcat,
+  activeAddress,
+}: SearchBarProps) {
+  const [query, setQuery] = useState(activeAddress ? `${activeAddress} (RC: ${activeRefcat || ''})` : '');
+  const [copiedRc, setCopiedRc] = useState(false);
   const [suggestions, setSuggestions] = useState<
     Array<{ label: string; lat: number; lon: number; refcat?: string }>
   >([]);
   const [isSearchingSuggestions, setIsSearchingSuggestions] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Sync query when activeAddress/refcat updates externally
+  useEffect(() => {
+    if (activeAddress && activeRefcat) {
+      setQuery(`${activeAddress} (RC: ${activeRefcat})`);
+    } else if (activeRefcat) {
+      setQuery(`Referencia Catastral: ${activeRefcat}`);
+    }
+  }, [activeAddress, activeRefcat]);
 
   // Close dropdown on outside click or touch
   useEffect(() => {
@@ -86,11 +106,11 @@ export function SearchBar({ onSearchRefcat, onSearchCoords, isLoading = false }:
   // Debounced address suggestion search with CartoCiudad & Nominatim
   useEffect(() => {
     const trimmed = query.trim();
-    // Do not search if it looks like coordinates or exact 14-20 alphanumeric RC
     if (
       trimmed.length < 3 ||
       /^[0-9A-Za-z]{14,20}$/.test(trimmed) ||
-      /^[-+]?[0-9]*\.?[0-9]+[,\s]+[-+]?[0-9]*\.?[0-9]+$/.test(trimmed)
+      /^[-+]?[0-9]*\.?[0-9]+[,\s]+[-+]?[0-9]*\.?[0-9]+$/.test(trimmed) ||
+      trimmed.includes('(RC:')
     ) {
       setSuggestions([]);
       return;
@@ -114,7 +134,14 @@ export function SearchBar({ onSearchRefcat, onSearchCoords, isLoading = false }:
 
     setShowDropdown(false);
 
-    // 1. Cadastral reference (14-20 alphanumeric)
+    // If query contains (RC: ...), extract RC
+    const rcInParentheses = raw.match(/\(RC:\s*([0-9A-Za-z]{14,20})\)/i);
+    if (rcInParentheses) {
+      onSearchRefcat(rcInParentheses[1].toUpperCase());
+      return;
+    }
+
+    // 1. Direct Cadastral reference (14-20 alphanumeric)
     const refcatMatch = raw.match(/^[0-9A-Za-z]{14,20}$/);
     if (refcatMatch) {
       onSearchRefcat(raw.toUpperCase());
@@ -150,10 +177,19 @@ export function SearchBar({ onSearchRefcat, onSearchCoords, isLoading = false }:
             onSearchCoords(results[0].lat, results[0].lon);
           }
         } else {
-          // If no geocoder match, try as refcat
           onSearchRefcat(raw);
         }
       });
+    }
+  };
+
+  const handleCopyRc = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const targetRc = activeRefcat || (query.match(/\b([0-9A-Za-z]{14,20})\b/) || [])[1];
+    if (targetRc) {
+      navigator.clipboard.writeText(targetRc);
+      setCopiedRc(true);
+      setTimeout(() => setCopiedRc(false), 2000);
     }
   };
 
@@ -183,15 +219,122 @@ export function SearchBar({ onSearchRefcat, onSearchCoords, isLoading = false }:
     );
   };
 
+  // TOPBAR COMPACT VARIANT (Stitch Civic Precision)
+  if (variant === 'topbar') {
+    return (
+      <div className="w-full relative" ref={dropdownRef}>
+        <form
+          onSubmit={handleSubmit}
+          className="flex items-center bg-surface-container-low border border-outline-variant rounded px-2.5 py-1.5 focus-within:border-primary focus-within:ring-1 focus-within:ring-primary transition-all w-full"
+        >
+          {isLoading ? (
+            <Loader2 className="w-4 h-4 text-primary animate-spin mr-2 shrink-0" />
+          ) : (
+            <Search className="w-4 h-4 text-outline mr-2 shrink-0" />
+          )}
+
+          <span className="bg-surface-variant text-tertiary font-mono text-[10px] uppercase px-1.5 py-0.5 rounded mr-2 tracking-wider shrink-0 font-semibold">
+            ES.CAT
+          </span>
+
+          <input
+            type="text"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            onFocus={() => {
+              if (suggestions.length > 0) setShowDropdown(true);
+            }}
+            placeholder="Buscar dirección, refcat o coordenadas..."
+            className="bg-transparent border-0 p-0 text-on-surface font-mono text-xs w-full focus:outline-none focus:ring-0 truncate placeholder:text-outline"
+          />
+
+          {query && (
+            <button
+              type="button"
+              onClick={() => {
+                setQuery('');
+                setSuggestions([]);
+                setShowDropdown(false);
+              }}
+              className="text-outline hover:text-on-surface p-0.5 mr-1"
+              title="Borrar texto"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          )}
+
+          {activeRefcat && (
+            <button
+              type="button"
+              onClick={handleCopyRc}
+              className="flex items-center gap-1 text-on-surface-variant hover:text-primary px-1.5 py-0.5 rounded hover:bg-surface-container-high transition-colors text-[10px] font-mono shrink-0 ml-1"
+              title="Copiar Referencia Catastral"
+            >
+              {copiedRc ? <Check className="w-3 h-3 text-primary" /> : <Copy className="w-3 h-3" />}
+              <span className="hidden sm:inline">RC</span>
+            </button>
+          )}
+
+          <div className="hidden sm:block h-3.5 w-px bg-outline-variant mx-1.5 shrink-0" />
+
+          <div className="hidden sm:flex items-center gap-1.5 px-2 py-0.5 rounded bg-primary-container/20 border border-primary/30 shrink-0">
+            <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
+            <span className="text-primary text-[10px] font-mono font-semibold tracking-tight">
+              Catastro Validado
+            </span>
+          </div>
+        </form>
+
+        {/* Autocomplete Dropdown in Dark GIS theme */}
+        {showDropdown && suggestions.length > 0 && (
+          <div className="absolute left-0 right-0 top-full mt-1 bg-surface-container border border-outline-variant rounded shadow-xl overflow-hidden z-50 max-h-60 overflow-y-auto">
+            <div className="p-2 border-b border-outline-variant bg-surface-container-high text-[10px] font-mono uppercase text-on-surface-variant flex items-center justify-between">
+              <span>Sugerencias CartoCiudad / Catastro</span>
+              {isSearchingSuggestions && <Loader2 className="w-3 h-3 animate-spin text-primary" />}
+            </div>
+            {suggestions.map((item, idx) => (
+              <button
+                key={idx}
+                type="button"
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={() => {
+                  setQuery(item.label);
+                  setShowDropdown(false);
+                  if (item.refcat) {
+                    onSearchRefcat(item.refcat);
+                  } else {
+                    onSearchCoords(item.lat, item.lon);
+                  }
+                }}
+                className="w-full text-left px-3 py-2 text-xs font-mono text-on-surface hover:bg-surface-container-high border-b border-outline-variant/40 last:border-0 flex items-center justify-between space-x-2 transition cursor-pointer"
+              >
+                <div className="flex items-start space-x-2 min-w-0">
+                  <MapPin className="w-3.5 h-3.5 text-primary flex-shrink-0 mt-0.5" />
+                  <span className="truncate">{item.label}</span>
+                </div>
+                {item.refcat && (
+                  <span className="shrink-0 px-1.5 py-0.5 rounded bg-surface-variant text-tertiary font-mono text-[9px] border border-outline-variant">
+                    RC Oficial
+                  </span>
+                )}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // STANDARD LANDING VARIANT
   return (
     <div className="w-full relative" ref={dropdownRef}>
       <form onSubmit={handleSubmit} className="relative flex items-center">
         <div className="relative flex-1">
           <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
             {isLoading ? (
-              <Loader2 className="w-5 h-5 text-indigo-600 animate-spin" />
+              <Loader2 className="w-5 h-5 text-primary animate-spin" />
             ) : (
-              <Search className="w-5 h-5 text-slate-400" />
+              <Search className="w-5 h-5 text-outline" />
             )}
           </div>
           <input
@@ -202,7 +345,7 @@ export function SearchBar({ onSearchRefcat, onSearchCoords, isLoading = false }:
               if (suggestions.length > 0) setShowDropdown(true);
             }}
             placeholder="Introduce Referencia Catastral (14-20 car.), coordenadas o dirección..."
-            className="w-full pl-11 pr-24 py-3 bg-white border border-slate-300 rounded-xl text-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 shadow-sm transition"
+            className="w-full pl-11 pr-24 py-3 bg-surface-container border border-outline-variant rounded text-sm text-on-surface placeholder:text-outline focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary shadow-sm transition"
           />
 
           <div className="absolute inset-y-0 right-0 pr-2 flex items-center space-x-1">
@@ -214,7 +357,7 @@ export function SearchBar({ onSearchRefcat, onSearchCoords, isLoading = false }:
                   setSuggestions([]);
                   setShowDropdown(false);
                 }}
-                className="p-1.5 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100 transition"
+                className="p-1.5 text-outline hover:text-on-surface rounded hover:bg-surface-container-high transition"
                 title="Limpiar"
               >
                 <X className="w-4 h-4" />
@@ -224,7 +367,7 @@ export function SearchBar({ onSearchRefcat, onSearchCoords, isLoading = false }:
             <button
               type="button"
               onClick={handleCurrentLocation}
-              className="p-1.5 text-slate-500 hover:text-indigo-600 rounded-lg hover:bg-indigo-50 transition"
+              className="p-1.5 text-outline hover:text-primary rounded hover:bg-surface-container-high transition"
               title="Mi ubicación actual"
             >
               <Navigation className="w-4 h-4" />
@@ -235,7 +378,7 @@ export function SearchBar({ onSearchRefcat, onSearchCoords, isLoading = false }:
         <button
           type="submit"
           disabled={isLoading || !query.trim()}
-          className="ml-2.5 px-4 sm:px-6 py-3 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold text-sm rounded-xl shadow-md shadow-indigo-100 flex items-center space-x-2 transition"
+          className="ml-2.5 px-4 sm:px-6 py-3 bg-primary hover:bg-primary-container text-on-primary font-semibold text-sm rounded shadow-sm flex items-center space-x-2 transition cursor-pointer"
         >
           <span>Auditar</span>
         </button>
@@ -243,10 +386,10 @@ export function SearchBar({ onSearchRefcat, onSearchCoords, isLoading = false }:
 
       {/* Autocomplete Suggestions Dropdown */}
       {showDropdown && suggestions.length > 0 && (
-        <div className="absolute left-0 right-0 top-full mt-1.5 bg-white rounded-xl shadow-xl border border-slate-200 overflow-hidden z-40 max-h-60 overflow-y-auto">
-          <div className="p-2 border-b border-slate-100 bg-slate-50 text-[11px] font-semibold text-slate-500 uppercase tracking-wider flex items-center justify-between">
+        <div className="absolute left-0 right-0 top-full mt-1.5 bg-surface-container rounded shadow-xl border border-outline-variant overflow-hidden z-40 max-h-60 overflow-y-auto">
+          <div className="p-2 border-b border-outline-variant bg-surface-container-high text-[11px] font-mono uppercase text-on-surface-variant flex items-center justify-between">
             <span>Sugerencias de Dirección</span>
-            {isSearchingSuggestions && <Loader2 className="w-3 h-3 animate-spin text-indigo-500" />}
+            {isSearchingSuggestions && <Loader2 className="w-3 h-3 animate-spin text-primary" />}
           </div>
           {suggestions.map((item, idx) => (
             <button
@@ -262,14 +405,14 @@ export function SearchBar({ onSearchRefcat, onSearchCoords, isLoading = false }:
                   onSearchCoords(item.lat, item.lon);
                 }
               }}
-              className="w-full text-left px-3.5 py-2.5 text-xs text-slate-700 hover:bg-indigo-50 hover:text-indigo-900 border-b border-slate-50 last:border-0 flex items-center justify-between space-x-2 transition cursor-pointer"
+              className="w-full text-left px-3.5 py-2.5 text-xs text-on-surface hover:bg-surface-container-high border-b border-outline-variant/40 last:border-0 flex items-center justify-between space-x-2 transition cursor-pointer"
             >
               <div className="flex items-start space-x-2 min-w-0">
-                <MapPin className="w-4 h-4 text-indigo-500 flex-shrink-0 mt-0.5" />
+                <MapPin className="w-4 h-4 text-primary flex-shrink-0 mt-0.5" />
                 <span className="truncate">{item.label}</span>
               </div>
               {item.refcat && (
-                <span className="shrink-0 px-1.5 py-0.5 rounded bg-indigo-50 text-indigo-700 font-mono text-[10px] font-semibold border border-indigo-200">
+                <span className="shrink-0 px-1.5 py-0.5 rounded bg-surface-variant text-tertiary font-mono text-[10px] font-semibold border border-outline-variant">
                   RC Oficial
                 </span>
               )}
@@ -279,24 +422,20 @@ export function SearchBar({ onSearchRefcat, onSearchCoords, isLoading = false }:
       )}
 
       {/* Instant Presets Bar */}
-      <div className="mt-2.5 flex items-center flex-wrap gap-1.5 text-xs text-slate-500">
-        <span className="inline-flex items-center text-[11px] font-semibold text-slate-400 mr-1">
-          <Sparkles className="w-3.5 h-3.5 mr-1 text-amber-500" /> Ejemplos:
+      <div className="mt-2.5 flex items-center flex-wrap gap-1.5 text-xs text-on-surface-variant">
+        <span className="inline-flex items-center text-[11px] font-mono text-outline mr-1">
+          <Sparkles className="w-3.5 h-3.5 mr-1 text-secondary" /> Ejemplos:
         </span>
         {SAMPLE_PRESETS.map((preset) => (
           <button
             key={preset.id}
             type="button"
             onClick={() => selectPreset(preset)}
-            className={`px-2.5 py-1 rounded-lg border text-[11px] font-medium transition flex items-center space-x-1 ${
-              preset.isStressed
-                ? 'bg-rose-50 text-rose-700 border-rose-200 hover:bg-rose-100'
-                : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100 hover:border-slate-300'
-            }`}
+            className="px-2.5 py-1 rounded bg-surface-container hover:bg-surface-container-high border border-outline-variant text-[11px] font-mono text-on-surface transition flex items-center space-x-1 cursor-pointer"
           >
             <span>{preset.name}</span>
             {preset.isStressed && (
-              <span className="w-1.5 h-1.5 rounded-full bg-rose-500 ml-1"></span>
+              <span className="w-1.5 h-1.5 rounded-full bg-secondary ml-1" />
             )}
           </button>
         ))}
