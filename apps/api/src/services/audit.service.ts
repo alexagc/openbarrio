@@ -57,6 +57,7 @@ export class AuditService {
         },
         floodRisk: {
           level: 'NONE',
+          returnPeriodYears: null,
           isInPreferentialFlowZone: false,
         },
       };
@@ -133,6 +134,7 @@ export class AuditService {
         },
         floodRisk: {
           level: 'NONE',
+          returnPeriodYears: null,
           isInPreferentialFlowZone: false,
         },
       };
