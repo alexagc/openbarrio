@@ -100,7 +100,7 @@ export function renderAuditCard(report: PropertyAuditReport, webUrl: string): st
           <div class="ob-score-info">
             <h4 class="ob-score-title" style="color: ${style.textColor};">Barrio Score · ${style.badgeLabel}</h4>
             <p class="ob-score-desc" style="color: ${style.textColor};">
-              ${report.neighborhood.municipality} · Percentil de renta top ${Math.max(1, 100 - Math.round(report.neighborhood.percentileInMunicipality))}%
+              ${report.property.address.municipality} · Percentil de renta top ${Math.max(1, 100 - Math.round(report.neighborhood.percentileInMunicipality))}%
             </p>
           </div>
         </div>

@@ -32,13 +32,14 @@ describe('OpenBarrioWidget', () => {
       },
     },
     neighborhood: {
-      censusTractId: '2807901001',
-      municipality: 'Madrid',
+      censusSectionCode: '2807901001',
       averageNetHouseholdIncomeEur: 52000,
+      averageNetPersonIncomeEur: 24000,
       percentileInMunicipality: 88,
+      rankingInCity: { rank: 12, totalSections: 150 },
       demographics: {
-        totalPopulation: 1450,
         medianAge: 46,
+        singlePersonHouseholdPercentage: 28,
       },
     },
     environment: {
