@@ -70,7 +70,7 @@ jobs:
 
       - name: Sync Cloudflare D1 (INE Income SQLite)
         if: ${{ inputs.dry_run != true && secrets.CLOUDFLARE_API_TOKEN != '' }}
-        uses: cloudflare/wrangler-action@v3
+        uses: cloudflare/wrangler-action@v4
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
@@ -78,7 +78,7 @@ jobs:
 
       - name: Sync Cloudflare R2 (PMTiles Vector Boundaries)
         if: ${{ inputs.dry_run != true && secrets.CLOUDFLARE_API_TOKEN != '' }}
-        uses: cloudflare/wrangler-action@v3
+        uses: cloudflare/wrangler-action@v4
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
