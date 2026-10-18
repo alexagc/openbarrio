@@ -6,8 +6,18 @@ on:
     - cron: '0 3 1 1,4,7,10 *'
   workflow_dispatch:
     inputs:
+      all_provinces:
+        description: 'Download all 52 Spanish provinces from INE ADRH (otherwise metropolitan set)'
+        required: false
+        default: false
+        type: boolean
       dry_run:
-        description: 'Dry run only (skip Cloudflare D1/R2 upload)'
+        description: 'Dry run only (skip Cloudflare D1/R2 sync)'
+        required: false
+        default: false
+        type: boolean
+      force_sample:
+        description: 'Force use of rich seed dataset without remote network downloads'
         required: false
         default: false
         type: boolean
@@ -52,10 +62,17 @@ jobs:
         with:
           node-version: 22
 
-      - name: Prepare Sample Data / Ingest Raw Datasets
+      - name: Ingest Public Open Datasets (INE ADRH & Cartography)
         run: |
           mkdir -p packages/etl/data packages/etl/dist
-          python3 packages/etl/src/sample_data.py
+          ARGS=""
+          if [ "${{ inputs.all_provinces }}" = "true" ]; then
+            ARGS="$ARGS --all-provinces"
+          fi
+          if [ "${{ inputs.force_sample }}" = "true" ]; then
+            ARGS="$ARGS --force-sample"
+          fi
+          python3 packages/etl/src/download_datasets.py $ARGS
 
       - name: Run INE ADRH Processing (DuckDB -> D1 SQL)
         run: |
@@ -72,6 +89,7 @@ jobs:
 
       - name: Sync Cloudflare D1 (INE Income SQLite)
         if: inputs.dry_run != true && env.HAS_CF_TOKEN == 'true'
+        continue-on-error: true
         uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
@@ -80,13 +98,14 @@ jobs:
 
       - name: Sync Cloudflare R2 (PMTiles Vector Boundaries)
         if: inputs.dry_run != true && env.HAS_CF_TOKEN == 'true'
+        continue-on-error: true
         uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           command: r2 object put openbarrio-r2/census_tracts.pmtiles --file=packages/etl/dist/census_tracts.pmtiles
 
-      - name: Upload Processed Artifacts
+      - name: Upload Processed Artifacts (SQL & PMTiles)
         uses: actions/upload-artifact@v4
         with:
           name: openbarrio-etl-dist
@@ -94,4 +113,4 @@ jobs:
             packages/etl/dist/ine_adrh.sql
             packages/etl/dist/census_tracts.pmtiles
             packages/etl/dist/census_tracts_simplified.geojson
-          retention-days: 7
+          retention-days: 30
