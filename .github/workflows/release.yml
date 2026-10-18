@@ -1,0 +1,64 @@
+name: OpenBarrio Release Pipeline
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag name to release (e.g. v0.1.0)'
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Build & Publish GitHub Release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node.js 22 LTS
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install dependencies
+        run: pnpm install --no-frozen-lockfile
+
+      - name: Run verification tests
+        run: pnpm test
+
+      - name: Build monorepo packages
+        run: pnpm run build
+
+      - name: Package Chrome Extension ZIP
+        id: package-ext
+        run: |
+          TAG_NAME="${{ github.ref_name }}"
+          if [ -z "$TAG_NAME" ] || [ "$TAG_NAME" = "main" ]; then
+            TAG_NAME="${{ inputs.tag }}"
+          fi
+          ZIP_NAME="openbarrio-extension-${TAG_NAME}.zip"
+          echo "Packaging extension into ${ZIP_NAME}..."
+          (cd apps/extension/dist && zip -r "../../${ZIP_NAME}" .)
+          echo "zip_path=${ZIP_NAME}" >> $GITHUB_OUTPUT
+          echo "tag_name=${TAG_NAME}" >> $GITHUB_OUTPUT
+
+      - name: Create GitHub Release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create "${{ steps.package-ext.outputs.tag_name }}" \
+            "${{ steps.package-ext.outputs.zip_path }}" \
+            --title "OpenBarrio ${{ steps.package-ext.outputs.tag_name }}" \
+            --generate-notes \
+            --verify-tag
