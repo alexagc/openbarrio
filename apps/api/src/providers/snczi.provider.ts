@@ -93,7 +93,7 @@ export class SNCZIProvider implements ISNCZIProvider {
             isInPreferentialFlowZone = true;
           }
 
-          if (periodVal === 10 || layerName.includes('T10')) {
+          if (periodVal === 10 || (layerName.includes('T10') && !layerName.includes('T100'))) {
             minReturnPeriod = minReturnPeriod ? Math.min(minReturnPeriod, 10) : 10;
           } else if (periodVal === 50 || layerName.includes('T50')) {
             minReturnPeriod = minReturnPeriod ? Math.min(minReturnPeriod, 50) : 50;
@@ -109,7 +109,7 @@ export class SNCZIProvider implements ISNCZIProvider {
       if (rawBody.includes('ZI_ZFP') || rawBody.includes('<ZFP>1</ZFP>')) {
         isInPreferentialFlowZone = true;
       }
-      if (rawBody.includes('ZI_T10') || rawBody.includes('<T>10</T>')) {
+      if (rawBody.includes('<T>10</T>') || (rawBody.includes('ZI_T10') && !rawBody.includes('ZI_T100'))) {
         minReturnPeriod = 10;
       } else if (rawBody.includes('ZI_T50') || rawBody.includes('<T>50</T>')) {
         minReturnPeriod = 50;

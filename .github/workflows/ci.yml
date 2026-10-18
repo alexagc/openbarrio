@@ -33,11 +33,11 @@ jobs:
       - name: Check code formatting & linting
         run: pnpm run --if-present lint
 
-      - name: Run unit & integration tests
-        run: pnpm run --if-present test
-
       - name: Validate build
         run: pnpm run --if-present build
+
+      - name: Run unit & integration tests
+        run: pnpm run --if-present test
 
   dependency-review:
     name: Dependency Review & License Audit
