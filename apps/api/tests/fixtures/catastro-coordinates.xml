@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<consulta_coordenadas xmlns="http://www.catastro.meh.es/">
+  <control>
+    <cuprov>1</cuprov>
+    <cumun>1</cumun>
+  </control>
+  <coordenadas>
+    <coord>
+      <pc>
+        <pc1>9872023</pc1>
+        <pc2>VH5797S</pc2>
+      </pc>
+      <ldt>CL GRAN VIA 28 MADRID (MADRID)</ldt>
+      <geo>
+        <xcen>-3.70379</xcen>
+        <ycen>40.42028</ycen>
+        <srs>EPSG:4326</srs>
+      </geo>
+    </coord>
+  </coordenadas>
+</consulta_coordenadas>

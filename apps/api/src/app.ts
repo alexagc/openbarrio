@@ -2,11 +2,22 @@ import Fastify, { FastifyInstance } from 'fastify';
 import cors from '@fastify/cors';
 import swagger from '@fastify/swagger';
 import swaggerUi from '@fastify/swagger-ui';
+import { problemDetailsErrorHandler } from './errors/problem-details.js';
+import { createProviders, ProviderContainer } from './providers/index.js';
+import { v1Routes } from './routes/index.js';
 
-export async function buildApp(): Promise<FastifyInstance> {
+export interface AppOptions {
+  providers?: ProviderContainer;
+  logger?: boolean;
+}
+
+export async function buildApp(options: AppOptions = {}): Promise<FastifyInstance> {
   const app = Fastify({
-    logger: true,
+    logger: options.logger ?? false,
   });
+
+  // RFC 7807 problem details error handler
+  app.setErrorHandler(problemDetailsErrorHandler);
 
   await app.register(cors, {
     origin: true,
@@ -16,9 +27,24 @@ export async function buildApp(): Promise<FastifyInstance> {
     openapi: {
       info: {
         title: 'OpenBarrio Public Due Diligence API',
-        description: 'REST API aggregating Spanish public open data (Catastro, INE, MITECO, MIVAU)',
-        version: '0.1.0',
+        description:
+          'Open-source civic-tech and real estate due diligence platform aggregating official Spanish public open data (Catastro, INE, MITECO, MIVAU)',
+        version: '0.2.0',
+        contact: {
+          name: 'OpenBarrio Project',
+          url: 'https://github.com/alexagc/openbarrio',
+        },
       },
+      tags: [
+        {
+          name: 'Audit',
+          description: 'Comprehensive cadastral, socioeconomic, and environmental property audits',
+        },
+        {
+          name: 'System',
+          description: 'System health and diagnostic probes',
+        },
+      ],
       servers: [
         {
           url: 'http://localhost:3001',
@@ -37,12 +63,30 @@ export async function buildApp(): Promise<FastifyInstance> {
   });
 
   // Health check endpoint
-  app.get('/health', async () => {
-    return {
-      status: 'ok',
-      service: 'openbarrio-api',
-      timestamp: new Date().toISOString(),
-    };
+  app.get(
+    '/health',
+    {
+      schema: {
+        tags: ['System'],
+        description: 'System liveness and service status probe',
+      },
+    },
+    async () => {
+      return {
+        status: 'ok',
+        service: 'openbarrio-api',
+        timestamp: new Date().toISOString(),
+      };
+    }
+  );
+
+  // Initialize providers
+  const providers = options.providers || createProviders();
+
+  // Register API v1 routes
+  await app.register(v1Routes, {
+    prefix: '/api/v1',
+    providers,
   });
 
   return app;

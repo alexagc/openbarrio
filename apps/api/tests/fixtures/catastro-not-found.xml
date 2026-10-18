@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<consulta_dnprc xmlns="http://www.catastro.meh.es/">
+  <lerr>
+    <err>
+      <cod>11</cod>
+      <des>Referencia catastral no encontrada en la base de datos nacional</des>
+    </err>
+  </lerr>
+</consulta_dnprc>
