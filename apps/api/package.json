@@ -19,7 +19,7 @@
   },
   "dependencies": {
     "@hono/node-server": "^1.13.7",
-    "@hono/swagger-ui": "^0.4.1",
+    "@hono/swagger-ui": "^0.6.1",
     "@openbarrio/core": "workspace:*",
     "@sinclair/typebox": "^0.34.4",
     "hono": "^4.6.8"
