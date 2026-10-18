@@ -89,8 +89,8 @@ export class MockCatastroProvider implements ICatastroProvider {
       throw new CadastralNotFoundError(`Lat: ${latitude}, Lon: ${longitude}`);
     }
 
-    // Proximity matching for mock cities
-    if (Math.abs(latitude - 40.42) < 0.2 && Math.abs(longitude - -3.70) < 0.2) {
+    // Proximity matching for mock cities - ONLY exact landmark coordinates (< 15 meters)
+    if (Math.abs(latitude - 40.42028) < 0.00015 && Math.abs(longitude - -3.70379) < 0.00015) {
       const prop = this.propertiesByRef.get('9872023VH5797S0001WX')!;
       return {
         ...prop,
@@ -98,7 +98,7 @@ export class MockCatastroProvider implements ICatastroProvider {
       };
     }
 
-    if (Math.abs(latitude - 41.39) < 0.2 && Math.abs(longitude - 2.16) < 0.2) {
+    if (Math.abs(latitude - 41.39167) < 0.00015 && Math.abs(longitude - 2.16472) < 0.00015) {
       const prop = this.propertiesByRef.get('08019A002000050000AB')!;
       return {
         ...prop,
@@ -106,7 +106,7 @@ export class MockCatastroProvider implements ICatastroProvider {
       };
     }
 
-    if (Math.abs(latitude - 39.47) < 0.2 && Math.abs(longitude - -0.37) < 0.2) {
+    if (Math.abs(latitude - 39.4699) < 0.00015 && Math.abs(longitude - -0.3735) < 0.00015) {
       const prop = this.propertiesByRef.get('4625001VK4722E0001AZ')!;
       return {
         ...prop,
@@ -115,20 +115,47 @@ export class MockCatastroProvider implements ICatastroProvider {
     }
 
     // Deterministic generation for any Spanish coordinate
+    const isCatalunya = latitude >= 40.5 && latitude <= 42.8 && longitude >= 0.2 && longitude <= 3.3;
+    const isValenciana = latitude >= 37.8 && latitude <= 40.8 && longitude >= -1.5 && longitude <= 0.6;
+    const isAndalucia = latitude >= 36.0 && latitude <= 38.7 && longitude >= -7.5 && longitude <= -1.7;
+
+    let city = 'Madrid';
+    let prov = 'Madrid';
+    let cp = '28001';
+    let streets = ['Calle Mayor', 'Calle Alcalá', 'Paseo de la Castellana', 'Calle Atocha', 'Calle Goya'];
+
+    if (isCatalunya) {
+      city = 'Barcelona';
+      prov = 'Barcelona';
+      cp = '08001';
+      streets = ['Carrer Major', 'Rambla de Catalunya', 'Carrer d\'Aragó', 'Carrer de Balmes'];
+    } else if (isValenciana) {
+      city = 'València';
+      prov = 'València';
+      cp = '46001';
+      streets = ['Carrer de la Pau', 'Avinguda del Port', 'Carrer de Sant Vicent'];
+    } else if (isAndalucia) {
+      city = 'Sevilla';
+      prov = 'Sevilla';
+      cp = '41001';
+      streets = ['Calle San Fernando', 'Avenida de la Constitución', 'Calle Asunción'];
+    }
+
     const hash = Math.abs(Math.round(latitude * 1000 + longitude * 1000));
     const year = 1960 + (hash % 60); // 1960 - 2020
     const surface = 65 + (hash % 120);
     const units = 1 + (hash % 30);
-    const ref = `28079A${String(hash).padStart(8, '0')}0001WX`;
+    const street = streets[hash % streets.length];
+    const ref = `${cp.slice(0, 2)}079A${String(hash).padStart(8, '0')}0001WX`;
 
     return {
       cadastralReference: ref,
       address: {
-        street: 'Avenida de la Constitución',
+        street,
         number: `${(hash % 90) + 1}`,
-        postalCode: '28001',
-        municipality: 'Madrid',
-        province: 'Madrid',
+        postalCode: cp,
+        municipality: city,
+        province: prov,
       },
       coordinates: {
         latitude,
