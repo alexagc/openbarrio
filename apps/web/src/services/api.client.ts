@@ -363,7 +363,7 @@ export class OpenBarrioApiClient {
     const environment: EnvironmentalData = {
       noise: {
         dayEveningNightDecibels: 55 + (hash % 16),
-        category: (hash % 16) > 10 ? 'HIGH' : 'MODERATE',
+        category: (hash % 16) > 10 ? 'NOISY' : 'MODERATE',
         predominantSource: 'ROAD_TRAFFIC',
       },
       floodRisk: {
@@ -562,7 +562,7 @@ export function auditDataToReport(audit: RawAuditDataInput): ExtendedAuditReport
   const environment: EnvironmentalData = {
     noise: {
       dayEveningNightDecibels: audit.noiseLden || 58,
-      category: (audit.noiseLden || 58) > 65 ? 'HIGH' : 'MODERATE',
+      category: (audit.noiseLden || 58) > 65 ? 'NOISY' : 'MODERATE',
       predominantSource: 'ROAD_TRAFFIC',
     },
     floodRisk: {
