@@ -20,6 +20,7 @@ The project is structured as a TypeScript monorepo with 100% shared types across
 ```
 openbarrio/
 ├── packages/core/       # Shared TypeScript schemas, DTOs & scoring algorithms
+├── packages/etl/        # Autonomous DuckDB Spatial pipeline for INE ADRH & IGN boundaries
 ├── apps/api/            # Hono Universal REST API (Cloudflare Workers & Node.js) with Swagger docs & RFC 7807 errors
 ├── apps/web/            # Interactive React + MapLibre GL due diligence dashboard
 └── apps/extension/      # Chrome Extension (Manifest V3) for Idealista & Fotocasa
@@ -38,6 +39,7 @@ OpenBarrio enforces a **Zero Local Dependency Policy**:
 
 ## 📋 Documentation & Architecture Rules
 * See [AGENTS.md](file:///AGENTS.md) for universal contributor & AI assistant instructions.
+* See [CHANGELOG.md](file:///CHANGELOG.md) for detailed version history and release notes.
 * See [.agent/rules/](file:///.agent/rules/) for detailed backend, frontend, extension, and testing guidelines.
 
 ---
