@@ -48,9 +48,10 @@ jobs:
             TAG_NAME="${{ inputs.tag }}"
           fi
           ZIP_NAME="openbarrio-extension-${TAG_NAME}.zip"
-          echo "Packaging extension into ${ZIP_NAME}..."
-          (cd apps/extension/dist && zip -r "../../${ZIP_NAME}" .)
-          echo "zip_path=${ZIP_NAME}" >> $GITHUB_OUTPUT
+          ZIP_PATH="${GITHUB_WORKSPACE}/${ZIP_NAME}"
+          echo "Packaging extension into ${ZIP_PATH}..."
+          (cd apps/extension/dist && zip -r "${ZIP_PATH}" .)
+          echo "zip_path=${ZIP_PATH}" >> $GITHUB_OUTPUT
           echo "tag_name=${TAG_NAME}" >> $GITHUB_OUTPUT
 
       - name: Create GitHub Release
