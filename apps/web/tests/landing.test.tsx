@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, screen, fireEvent, act } from '@testing-library/react';
+import { render, screen, fireEvent, act, waitFor } from '@testing-library/react';
 import { App } from '../src/App';
 import { LanguageProvider, useTranslation } from '../src/i18n';
 
@@ -16,6 +16,29 @@ if (typeof window !== 'undefined') {
 vi.mock('../src/components/MapView', () => ({
   MapView: () => <div data-testid="mock-mapview" />,
 }));
+
+vi.mock('../src/services/api.client', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../src/services/api.client')>();
+  return {
+    ...actual,
+    apiClient: {
+      ...actual.apiClient,
+      searchAddress: vi.fn().mockResolvedValue([]),
+      auditByCadastralReference: vi.fn().mockImplementation((refcat: string) => {
+        return Promise.resolve(
+          actual.auditDataToReport({
+            query: 'Passeig de Gràcia 42, Barcelona',
+            refcat: refcat || '08019A023000450001JK',
+            address: "Passeig de Gràcia 42, 08007 Barcelona (L'Eixample)",
+            score: 82,
+            yearBuilt: 1954,
+            surfaceM2: 88,
+          })
+        );
+      }),
+    },
+  };
+});
 
 // Test component to verify useTranslation hook behavior
 const TranslationConsumer = () => {
@@ -216,7 +239,7 @@ describe('Landing Page & i18n Integration', () => {
       expect(screen.getByText(/Calle Alcalá 50, Madrid/i)).toBeTruthy();
     });
 
-    it('should transition to map view showing the exact audited property when clicking openInMap in modal', () => {
+    it('should transition to map view showing the exact audited property when clicking openInMap in modal', async () => {
       render(<App />);
 
       // Click on Barcelona example
@@ -238,7 +261,9 @@ describe('Landing Page & i18n Integration', () => {
       expect(screen.getByText(/Visor Cartográfico Catastral & Auditoría Territorial/i)).toBeTruthy();
 
       // The report displayed should be Barcelona, NOT default Gran Vía Madrid
-      expect(screen.getAllByText(/Passeig de Gràcia 42/i).length).toBeGreaterThan(0);
+      await waitFor(() => {
+        expect(screen.getAllByText(/Passeig de Gràcia 42/i).length).toBeGreaterThan(0);
+      });
       expect(screen.getAllByText(/08019A023000450001JK/i).length).toBeGreaterThan(0);
     });
   });

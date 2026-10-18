@@ -21,6 +21,16 @@ on:
         required: false
         default: false
         type: boolean
+      apply_only:
+        description: 'Skip downloads and apply existing artifact directly to Cloudflare D1/R2'
+        required: false
+        default: false
+        type: boolean
+      artifact_run_id:
+        description: 'Run ID of artifact to download (if apply_only is true, default: 39150455664)'
+        required: false
+        default: '39150455664'
+        type: string
 
 jobs:
   etl:
@@ -33,7 +43,19 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Setup Node.js & pnpm for Wrangler
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node 22 LTS
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install Monorepo Dependencies for Wrangler
+        run: pnpm install --no-frozen-lockfile
+
       - name: Set up Python 3.11
+        if: inputs.apply_only != true
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
@@ -41,11 +63,13 @@ jobs:
           cache-dependency-path: 'packages/etl/requirements.txt'
 
       - name: Install Python dependencies
+        if: inputs.apply_only != true
         run: |
           python -m pip install --upgrade pip
           pip install -r packages/etl/requirements.txt
 
       - name: Install Tippecanoe & GDAL
+        if: inputs.apply_only != true
         run: |
           sudo apt-get update
           sudo apt-get install -y gdal-bin libsqlite3-dev build-essential
@@ -55,15 +79,8 @@ jobs:
           sudo make install
           tippecanoe --version
 
-      - name: Setup Node.js & pnpm for Wrangler
-        uses: pnpm/action-setup@v4
-
-      - name: Setup Node 22 LTS
-        uses: actions/setup-node@v4
-        with:
-          node-version: 22
-
       - name: Ingest Public Open Datasets (INE ADRH & Cartography)
+        if: inputs.apply_only != true
         run: |
           mkdir -p packages/etl/data packages/etl/dist
           ARGS="--all-provinces"
@@ -75,6 +92,7 @@ jobs:
           python3 packages/etl/src/download_datasets.py $ARGS
 
       - name: Run INE ADRH Processing (DuckDB -> D1 SQL)
+        if: inputs.apply_only != true
         run: |
           python3 packages/etl/src/process_ine_adrh.py \
             --input packages/etl/data/ine_adrh_raw.csv \
@@ -82,30 +100,49 @@ jobs:
             --output-db packages/etl/dist/ine_adrh.db
 
       - name: Run IGN Seccionado Censal Processing (DuckDB Spatial -> PMTiles)
+        if: inputs.apply_only != true
         run: |
           python3 packages/etl/src/process_ign_boundaries.py \
             --input packages/etl/data/ign_secciones_censales.geojson \
             --output-pmtiles packages/etl/dist/census_tracts.pmtiles
 
+      - name: Download Processed National Artifacts (Fast Sync)
+        if: inputs.apply_only == true
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          mkdir -p packages/etl/dist
+          TARGET_RUN="${{ inputs.artifact_run_id || '39150455664' }}"
+          echo "Downloading processed artifacts from workflow run $TARGET_RUN..."
+          gh run download "$TARGET_RUN" --dir packages/etl/dist
+          if [ -d "packages/etl/dist/openbarrio-etl-dist" ]; then
+            cp -r packages/etl/dist/openbarrio-etl-dist/* packages/etl/dist/
+          fi
+          echo "Verified downloaded files in packages/etl/dist:"
+          ls -lh packages/etl/dist
+
       - name: Sync Cloudflare D1 (INE Income SQLite)
         if: inputs.dry_run != true && env.HAS_CF_TOKEN == 'true'
-        continue-on-error: true
         uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: d1 execute openbarrio-d1 --file=packages/etl/dist/ine_adrh.sql --remote
+          wranglerVersion: '3.114.17'
+          workingDirectory: apps/api
+          command: d1 execute openbarrio-d1 --file=${{ github.workspace }}/packages/etl/dist/ine_adrh.sql --remote --yes
 
       - name: Sync Cloudflare R2 (PMTiles Vector Boundaries)
         if: inputs.dry_run != true && env.HAS_CF_TOKEN == 'true'
-        continue-on-error: true
         uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: r2 object put openbarrio-r2/census_tracts.pmtiles --file=packages/etl/dist/census_tracts.pmtiles
+          wranglerVersion: '3.114.17'
+          workingDirectory: apps/api
+          command: r2 object put openbarrio-r2/census_tracts.pmtiles --file=${{ github.workspace }}/packages/etl/dist/census_tracts.pmtiles
 
       - name: Upload Processed Artifacts (SQL & PMTiles)
+        if: inputs.apply_only != true
         uses: actions/upload-artifact@v4
         with:
           name: openbarrio-etl-dist
