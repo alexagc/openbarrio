@@ -49,6 +49,26 @@
   font-family: inherit;
 }
 
+/* Stitch Dark MapLibre Popup Customization */
+.stitch-dark-popup .maplibregl-popup-content {
+  background: transparent !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+  border: none !important;
+}
+
+.stitch-dark-popup .maplibregl-popup-tip {
+  border-top-color: #131b2e !important;
+  border-bottom-color: #131b2e !important;
+}
+
+.cadastral-grid {
+  background-size: 32px 32px;
+  background-image: 
+    linear-gradient(to right, rgba(61, 74, 66, 0.25) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(61, 74, 66, 0.25) 1px, transparent 1px);
+}
+
 /* Print Optimization for Due Diligence Dossier */
 @media print {
   @page {
