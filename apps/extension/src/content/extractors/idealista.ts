@@ -149,7 +149,7 @@ export class IdealistaExtractor implements PropertyExtractor {
 
       // Surface
       if (!data.builtSurfaceM2) {
-        const m2Match = text.match(/(\d+[\.,]?\d*)\s*m[²2]/i);
+        const m2Match = text.match(/(\d+[.,]?\d*)\s*m[²2]/i);
         if (m2Match) {
           const m2 = parseFloat(m2Match[1].replace(',', '.'));
           if (!isNaN(m2) && m2 > 0) {

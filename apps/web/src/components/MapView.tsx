@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import maplibregl, { Map as MapLibreMap, Marker, NavigationControl } from 'maplibre-gl';
-import { Layers, MapPin, Maximize2, Sparkles } from 'lucide-react';
+import { Layers, MapPin, Maximize2 } from 'lucide-react';
 
 interface MapViewProps {
   selectedCoords?: { lat: number; lon: number };

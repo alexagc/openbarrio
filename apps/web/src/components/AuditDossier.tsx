@@ -5,14 +5,11 @@ import { PillarCards } from './PillarCard';
 import { RentalModule } from './RentalModule';
 import { HighlightsAndRisks } from './HighlightsAndRisks';
 import {
-  MapPin,
   Printer,
   Copy,
   Check,
   ExternalLink,
-  Building2,
   Calendar,
-  Layers,
   FileCheck,
 } from 'lucide-react';
 

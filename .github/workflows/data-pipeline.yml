@@ -9,7 +9,7 @@ on:
       dry_run:
         description: 'Dry run only (skip Cloudflare D1/R2 upload)'
         required: false
-        default: 'false'
+        default: false
         type: boolean
 
 jobs:
@@ -69,7 +69,7 @@ jobs:
             --output-pmtiles packages/etl/dist/census_tracts.pmtiles
 
       - name: Sync Cloudflare D1 (INE Income SQLite)
-        if: ${{ github.event.inputs.dry_run != 'true' && secrets.CLOUDFLARE_API_TOKEN != '' }}
+        if: ${{ inputs.dry_run != true && secrets.CLOUDFLARE_API_TOKEN != '' }}
         uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
@@ -77,7 +77,7 @@ jobs:
           command: d1 execute openbarrio-d1 --file=packages/etl/dist/ine_adrh.sql --remote
 
       - name: Sync Cloudflare R2 (PMTiles Vector Boundaries)
-        if: ${{ github.event.inputs.dry_run != 'true' && secrets.CLOUDFLARE_API_TOKEN != '' }}
+        if: ${{ inputs.dry_run != true && secrets.CLOUDFLARE_API_TOKEN != '' }}
         uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}

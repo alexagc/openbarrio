@@ -5,11 +5,6 @@ import {
   Volume2,
   Waves,
   Calendar,
-  Users,
-  Shield,
-  Home,
-  CheckCircle2,
-  AlertCircle,
 } from 'lucide-react';
 import {
   CadastralProperty,
