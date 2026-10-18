@@ -16,6 +16,8 @@ jobs:
   etl:
     name: Ingest & Process Public Open Datasets (INE & IGN)
     runs-on: ubuntu-latest
+    env:
+      HAS_CF_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN != '' }}
 
     steps:
       - name: Checkout repository
@@ -69,7 +71,7 @@ jobs:
             --output-pmtiles packages/etl/dist/census_tracts.pmtiles
 
       - name: Sync Cloudflare D1 (INE Income SQLite)
-        if: ${{ inputs.dry_run != true && secrets.CLOUDFLARE_API_TOKEN != '' }}
+        if: inputs.dry_run != true && env.HAS_CF_TOKEN == 'true'
         uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
@@ -77,7 +79,7 @@ jobs:
           command: d1 execute openbarrio-d1 --file=packages/etl/dist/ine_adrh.sql --remote
 
       - name: Sync Cloudflare R2 (PMTiles Vector Boundaries)
-        if: ${{ inputs.dry_run != true && secrets.CLOUDFLARE_API_TOKEN != '' }}
+        if: inputs.dry_run != true && env.HAS_CF_TOKEN == 'true'
         uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
