@@ -1,14 +1,9 @@
-import { FastifyPluginAsync } from 'fastify';
-import { auditRoutes } from './audit.routes.js';
+import { Hono } from 'hono';
+import { createAuditRoutes } from './audit.routes.js';
 import { ProviderContainer } from '../providers/index.js';
 
-export interface V1RoutesOptions {
-  providers: ProviderContainer;
+export function createV1Routes(providers: ProviderContainer): Hono {
+  const v1 = new Hono();
+  v1.route('/audit', createAuditRoutes(providers));
+  return v1;
 }
-
-export const v1Routes: FastifyPluginAsync<V1RoutesOptions> = async (fastify, options) => {
-  await fastify.register(auditRoutes, {
-    prefix: '/audit',
-    providers: options.providers,
-  });
-};

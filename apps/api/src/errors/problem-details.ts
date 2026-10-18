@@ -1,4 +1,4 @@
-import { FastifyError, FastifyReply, FastifyRequest } from 'fastify';
+import type { Context } from 'hono';
 import { ProblemDetails } from '@openbarrio/core';
 
 export class ProblemDetailsException extends Error {
@@ -98,52 +98,29 @@ export class UpstreamProviderError extends ProblemDetailsException {
 }
 
 /**
- * Fastify error handler transforming exceptions and validation failures into RFC 7807 payloads.
+ * Hono error handler transforming exceptions and validation failures into RFC 7807 payloads.
  */
-export function problemDetailsErrorHandler(
-  error: FastifyError | ProblemDetailsException | Error,
-  request: FastifyRequest,
-  reply: FastifyReply
-): void {
-  const instance = request.raw?.url || request.url;
+export function problemDetailsErrorHandler(error: Error, c: Context): Response {
+  let instance: string;
+  try {
+    const url = new URL(c.req.url);
+    instance = url.pathname + url.search;
+  } catch {
+    instance = c.req.path;
+  }
 
   if (error instanceof ProblemDetailsException) {
     const body = error.toJSON();
     if (!body.instance) {
       body.instance = instance;
     }
-    reply
-      .status(error.status)
-      .header('content-type', 'application/problem+json')
-      .send(body);
-    return;
-  }
-
-  // Handle Fastify schema validation errors
-  if ('validation' in error && error.validation) {
-    const invalidParams = error.validation.map((v) => ({
-      name: v.instancePath || (v.params as any)?.missingProperty || 'parameter',
-      reason: v.message || 'Value is invalid',
-    }));
-
-    const problem: ProblemDetails = {
-      type: 'https://openbarrio.org/errors/invalid-parameters',
-      title: 'Invalid Request Parameters',
-      status: 400,
-      detail: error.message,
-      instance,
-      invalidParams,
-    };
-
-    reply
-      .status(400)
-      .header('content-type', 'application/problem+json')
-      .send(problem);
-    return;
+    return c.json(body, error.status as any, {
+      'content-type': 'application/problem+json',
+    });
   }
 
   // Fallback 500 error
-  request.log?.error(error);
+  console.error('Unhandled internal server error:', error);
   const internalProblem: ProblemDetails = {
     type: 'https://openbarrio.org/errors/internal-server-error',
     title: 'Internal Server Error',
@@ -152,8 +129,7 @@ export function problemDetailsErrorHandler(
     instance,
   };
 
-  reply
-    .status(500)
-    .header('content-type', 'application/problem+json')
-    .send(internalProblem);
+  return c.json(internalProblem, 500, {
+    'content-type': 'application/problem+json',
+  });
 }
