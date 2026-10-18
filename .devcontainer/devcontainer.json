@@ -1,0 +1,21 @@
+{
+  "name": "OpenBarrio Cloud Development Container",
+  "image": "mcr.microsoft.com/devcontainers/typescript-node:1-22-bookworm",
+  "features": {
+    "ghcr.io/devcontainers-extra/features/pnpm:2": {
+      "version": "latest"
+    }
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "dbaeumer.vscode-eslint",
+        "esbenp.prettier-vscode",
+        "bradlc.vscode-tailwindcss",
+        "vitest.explorer"
+      ]
+    }
+  },
+  "forwardPorts": [3000, 3001],
+  "postCreateCommand": "pnpm install"
+}
