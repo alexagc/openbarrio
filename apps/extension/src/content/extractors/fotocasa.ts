@@ -8,9 +8,11 @@ export class FotocasaExtractor implements PropertyExtractor {
   readonly portal = 'fotocasa' as const;
 
   canExtract(url: string): boolean {
+    if (!url.includes('fotocasa.es')) return false;
+    if (/\/l(\/|\?|#|$)/i.test(url)) return false;
     return (
-      /fotocasa\.es\/.*?\/(comprar|alquiler)\//i.test(url) ||
-      (url.includes('fotocasa.es') && (url.includes('/comprar/') || url.includes('/alquiler/')))
+      /\/d(\/|\?|#|$)/i.test(url) &&
+      (url.includes('/comprar/') || url.includes('/alquiler/'))
     );
   }
 
