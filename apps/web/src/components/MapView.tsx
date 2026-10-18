@@ -3,7 +3,6 @@ import maplibregl, { Map as MapLibreMap, Marker, Popup } from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import {
   Layers,
-  MapPin,
   Maximize2,
   Loader2,
   ChevronRight,
