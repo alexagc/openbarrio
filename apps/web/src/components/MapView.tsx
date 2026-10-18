@@ -10,7 +10,7 @@ interface MapViewProps {
   propertyAddress?: string;
 }
 
-type BasemapType = 'positron' | 'pnoa-satellite';
+type BasemapType = 'osm' | 'ign-base' | 'pnoa-satellite';
 
 function escapeHtml(str: string): string {
   return str.replace(/[&<>"']/g, (m) => {
@@ -35,7 +35,7 @@ export function MapView({
   const mapRef = useRef<MapLibreMap | null>(null);
   const markerRef = useRef<Marker | null>(null);
 
-  const [activeBasemap, setActiveBasemap] = useState<BasemapType>('positron');
+  const [activeBasemap, setActiveBasemap] = useState<BasemapType>('osm');
   const [showCatastroWms, setShowCatastroWms] = useState<boolean>(true);
   const [currentZoom, setCurrentZoom] = useState<number>(14);
 
@@ -51,17 +51,22 @@ export function MapView({
       style: {
         version: 8,
         sources: {
-          'carto-base': {
+          'osm-base': {
             type: 'raster',
             tiles: [
-              'https://a.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png',
-              'https://b.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png',
-              'https://c.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png',
-              'https://d.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png',
+              'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
             ],
             tileSize: 256,
             attribution:
-              '&copy; <a href="https://carto.com/">CARTO</a> &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+              '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors',
+          },
+          'ign-base': {
+            type: 'raster',
+            tiles: [
+              'https://www.ign.es/wmts/ign-base?service=WMTS&request=GetTile&version=1.0.0&Format=image/png&layer=IGNBaseTodo&style=default&tilematrixset=GoogleMapsCompatible&TileMatrix={z}&TileRow={y}&TileCol={x}',
+            ],
+            tileSize: 256,
+            attribution: '&copy; Instituto Geográfico Nacional (IGN España)',
           },
           'pnoa-base': {
             type: 'raster',
@@ -82,13 +87,23 @@ export function MapView({
         },
         layers: [
           {
-            id: 'carto-layer',
+            id: 'osm-layer',
             type: 'raster',
-            source: 'carto-base',
+            source: 'osm-base',
             minzoom: 0,
             maxzoom: 20,
             layout: {
               visibility: 'visible',
+            },
+          },
+          {
+            id: 'ign-layer',
+            type: 'raster',
+            source: 'ign-base',
+            minzoom: 0,
+            maxzoom: 20,
+            layout: {
+              visibility: 'none',
             },
           },
           {
@@ -160,13 +175,9 @@ export function MapView({
     const map = mapRef.current;
     if (!map || !map.isStyleLoaded()) return;
 
-    if (activeBasemap === 'positron') {
-      map.setLayoutProperty('carto-layer', 'visibility', 'visible');
-      map.setLayoutProperty('pnoa-layer', 'visibility', 'none');
-    } else {
-      map.setLayoutProperty('carto-layer', 'visibility', 'none');
-      map.setLayoutProperty('pnoa-layer', 'visibility', 'visible');
-    }
+    map.setLayoutProperty('osm-layer', 'visibility', activeBasemap === 'osm' ? 'visible' : 'none');
+    map.setLayoutProperty('ign-layer', 'visibility', activeBasemap === 'ign-base' ? 'visible' : 'none');
+    map.setLayoutProperty('pnoa-layer', 'visibility', activeBasemap === 'pnoa-satellite' ? 'visible' : 'none');
   }, [activeBasemap]);
 
   // Update Catastro WMS overlay visibility
@@ -252,14 +263,24 @@ export function MapView({
         {/* Layer Toggle Card */}
         <div className="bg-white/95 backdrop-blur-md p-1.5 rounded-xl shadow-lg border border-slate-200/80 flex items-center space-x-1 text-xs">
           <button
-            onClick={() => setActiveBasemap('positron')}
+            onClick={() => setActiveBasemap('osm')}
             className={`px-2.5 py-1.5 rounded-lg font-medium transition ${
-              activeBasemap === 'positron'
+              activeBasemap === 'osm'
                 ? 'bg-indigo-600 text-white shadow-sm'
                 : 'text-slate-600 hover:bg-slate-100'
             }`}
           >
             Callejero
+          </button>
+          <button
+            onClick={() => setActiveBasemap('ign-base')}
+            className={`px-2.5 py-1.5 rounded-lg font-medium transition ${
+              activeBasemap === 'ign-base'
+                ? 'bg-indigo-600 text-white shadow-sm'
+                : 'text-slate-600 hover:bg-slate-100'
+            }`}
+          >
+            IGN Base
           </button>
           <button
             onClick={() => setActiveBasemap('pnoa-satellite')}

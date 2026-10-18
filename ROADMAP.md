@@ -61,7 +61,7 @@ This document outlines the multi-phase roadmap for **OpenBarrio**, tracking comp
 - [x] Comprehensive unit and route integration tests with Vitest fixtures.
 
 ### Phase 4: Interactive Web Dashboard (Completed ✅)
-- [x] MapLibre GL map engine integrated into `apps/web` with CARTO Positron and IGN PNOA Satellite basemaps.
+- [x] MapLibre GL map engine integrated into `apps/web` with OpenStreetMap, IGN Base, and IGN PNOA Satellite basemaps (100% open, zero API keys required).
 - [x] Cadastral vector parcel rendering and Catastro WMS overlay toggling.
 - [x] Universal property search bar supporting address geocoding, coordinates, and Cadastral Reference (RC).
 - [x] Due diligence dossier visual card with Barrio Score (0-100), pillars breakdown, rental benchmark, and risk radar.
