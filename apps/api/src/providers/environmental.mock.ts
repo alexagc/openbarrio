@@ -1,26 +1,26 @@
 import { EnvironmentalData } from '@openbarrio/core';
-import { IEnvironmentalProvider } from './types.js';
+import { IEnvironmentalProvider, ISICAProvider, ISNCZIProvider } from './types.js';
+import { MockSICAProvider } from './sica.mock.js';
+import { MockSNCZIProvider } from './snczi.mock.js';
 
 export class MockEnvironmentalProvider implements IEnvironmentalProvider {
-  async getEnvironmentalData(latitude: number, longitude: number): Promise<EnvironmentalData> {
-    // Generate realistic acoustic and flood figures
-    // If coordinates are in downtown Madrid / Barcelona Gran Vía, moderate urban soundscape
-    const isMajorAvenue = Math.abs(latitude - 40.420) < 0.005 || Math.abs(latitude - 41.391) < 0.005;
+  private readonly sica: ISICAProvider;
+  private readonly snczi: ISNCZIProvider;
 
-    const noiseDecibels = isMajorAvenue ? 64 : 53;
-    const noiseCategory = isMajorAvenue ? 'MODERATE' : 'QUIET';
+  constructor(options?: { sica?: ISICAProvider; snczi?: ISNCZIProvider }) {
+    this.sica = options?.sica || new MockSICAProvider();
+    this.snczi = options?.snczi || new MockSNCZIProvider();
+  }
+
+  async getEnvironmentalData(latitude: number, longitude: number): Promise<EnvironmentalData> {
+    const [noise, floodRisk] = await Promise.all([
+      this.sica.getNoiseData(latitude, longitude),
+      this.snczi.getFloodRiskData(latitude, longitude),
+    ]);
 
     return {
-      noise: {
-        dayEveningNightDecibels: noiseDecibels,
-        category: noiseCategory,
-        predominantSource: 'ROAD_TRAFFIC',
-      },
-      floodRisk: {
-        level: 'NONE',
-        returnPeriodYears: null,
-        isInPreferentialFlowZone: false,
-      },
+      noise,
+      floodRisk,
     };
   }
 }

@@ -114,4 +114,42 @@ describe('Barrio Scoring Engine', () => {
     expect(score.acousticComfortScore).toBe(80);
     expect(score.climateSafetyScore).toBe(98);
   });
+
+  it('adds due diligence alert when property is in a declared stressed housing zone', () => {
+    const stressedBenchmark = {
+      officialRangeLowerEurM2: 14.5,
+      officialRangeUpperEurM2: 18.2,
+      estimatedMonthlyRentLowerEur: 1740,
+      estimatedMonthlyRentUpperEur: 2184,
+      isStressedHousingZone: true,
+    };
+
+    const score = calculateBarrioScore(
+      mockModernProperty,
+      mockWealthyNeighborhood,
+      mockSafeEnvironment,
+      stressedBenchmark
+    );
+
+    expect(score.keyRisks.some((r) => r.includes('Zona Tensionada'))).toBe(true);
+  });
+
+  it('adds positive highlight when property is outside declared stressed housing zones', () => {
+    const unstressedBenchmark = {
+      officialRangeLowerEurM2: 10.0,
+      officialRangeUpperEurM2: 12.5,
+      estimatedMonthlyRentLowerEur: 1200,
+      estimatedMonthlyRentUpperEur: 1500,
+      isStressedHousingZone: false,
+    };
+
+    const score = calculateBarrioScore(
+      mockModernProperty,
+      mockWealthyNeighborhood,
+      mockSafeEnvironment,
+      unstressedBenchmark
+    );
+
+    expect(score.keyHighlights.some((h) => h.includes('Unrestricted rental market'))).toBe(true);
+  });
 });

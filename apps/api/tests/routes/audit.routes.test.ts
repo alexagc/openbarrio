@@ -49,6 +49,15 @@ describe('Hono Audit Routes Integration', () => {
       expect(report.neighborhood.censusSectionCode).toBe('2807901001');
       expect(report.neighborhood.averageNetHouseholdIncomeEur).toBeGreaterThan(0);
       expect(report.environment.noise).toBeDefined();
+      expect(report.environment.noise.dayEveningNightDecibels).toBeGreaterThan(0);
+      expect(report.environment.floodRisk).toBeDefined();
+      expect(report.environment.floodRisk.level).toBeDefined();
+      expect(report.rentalBenchmark).toBeDefined();
+      expect(report.rentalBenchmark.officialRangeLowerEurM2).toBeGreaterThan(0);
+      expect(report.rentalBenchmark.officialRangeUpperEurM2).toBeGreaterThan(
+        report.rentalBenchmark.officialRangeLowerEurM2
+      );
+      expect(report.rentalBenchmark.isStressedHousingZone).toBe(false);
       expect(report.score.overallScore).toBeGreaterThanOrEqual(0);
       expect(report.score.overallScore).toBeLessThanOrEqual(100);
       expect(report.score.keyHighlights.length).toBeGreaterThan(0);
@@ -89,6 +98,13 @@ describe('Hono Audit Routes Integration', () => {
 
       expect(report.property.cadastralReference).toBe('9872023VH5797S0001WX');
       expect(report.property.building.constructionYear).toBe(1924);
+      expect(report.rentalBenchmark).toBeDefined();
+      expect(report.rentalBenchmark.estimatedMonthlyRentLowerEur).toBeGreaterThan(0);
+      expect(report.rentalBenchmark.estimatedMonthlyRentUpperEur).toBeGreaterThan(
+        report.rentalBenchmark.estimatedMonthlyRentLowerEur
+      );
+      expect(report.environment.floodRisk.level).toBeDefined();
+      expect(report.environment.noise.category).toBeDefined();
       expect(report.score.overallScore).toBeGreaterThanOrEqual(0);
     });
 

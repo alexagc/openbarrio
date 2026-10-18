@@ -1,0 +1,19 @@
+{
+  "type": "FeatureCollection",
+  "totalFeatures": 1,
+  "features": [
+    {
+      "type": "Feature",
+      "id": "SICA_Lden.1049281",
+      "geometry": null,
+      "properties": {
+        "ID": 1049281,
+        "LDEN": 64.2,
+        "FUENTE": "Carreteras",
+        "TRAMO": "Eje Viario Urbano Principal Gran Vía",
+        "AGLOMERACION": "Madrid",
+        "VALOR": 64.2
+      }
+    }
+  ]
+}

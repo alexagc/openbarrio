@@ -71,6 +71,8 @@ export function buildOpenApiSpec(): Record<string, any> {
         get: {
           tags: ['Audit'],
           summary: 'Audit property and neighborhood due diligence by geographic coordinates',
+          description:
+            'Aggregates official data from Catastro, INE income distribution, MITECO SICA noise, MITECO SNCZI flood risk, and MIVAU SERPAVI rental benchmarks',
           parameters: [
             {
               name: 'lat',
@@ -89,7 +91,7 @@ export function buildOpenApiSpec(): Record<string, any> {
           ],
           responses: {
             '200': {
-              description: 'Complete Due Diligence Audit Dossier',
+              description: 'Complete Due Diligence Audit Dossier with rental benchmark and environmental indicators',
             },
             '400': {
               description: 'RFC 7807 Invalid Request Parameters',
@@ -107,6 +109,8 @@ export function buildOpenApiSpec(): Record<string, any> {
         get: {
           tags: ['Audit'],
           summary: 'Audit property and neighborhood due diligence by official Cadastral Reference (RC)',
+          description:
+            'Aggregates official data from Catastro, INE income distribution, MITECO SICA noise, MITECO SNCZI flood risk, and MIVAU SERPAVI rental benchmarks',
           parameters: [
             {
               name: 'refcat',
@@ -118,7 +122,7 @@ export function buildOpenApiSpec(): Record<string, any> {
           ],
           responses: {
             '200': {
-              description: 'Complete Due Diligence Audit Dossier',
+              description: 'Complete Due Diligence Audit Dossier with rental benchmark and environmental indicators',
             },
             '400': {
               description: 'RFC 7807 Invalid Request Parameters',

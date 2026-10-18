@@ -1,7 +1,7 @@
 import { CadastralProperty } from '../types/catastro.js';
 import { CensusTractIncome } from '../types/ine.js';
 import { EnvironmentalData } from '../types/environmental.js';
-import { AuditScoreBreakdown } from '../types/audit.js';
+import { AuditScoreBreakdown, RentalBenchmark } from '../types/audit.js';
 
 export interface ScoringWeights {
   socioeconomic: number;
@@ -24,6 +24,7 @@ export function calculateBarrioScore(
   property: CadastralProperty,
   neighborhood: CensusTractIncome,
   environment?: Partial<EnvironmentalData>,
+  rentalBenchmark?: RentalBenchmark,
   weights: ScoringWeights = DEFAULT_SCORING_WEIGHTS
 ): AuditScoreBreakdown {
   const highlights: string[] = [];
@@ -158,7 +159,18 @@ export function calculateBarrioScore(
 
   const climateSafetyScore = Math.min(100, Math.max(0, floodScore));
 
-  // 5. Composite Barrio Score (0 - 100)
+  // 5. Rental Benchmark & Stressed Housing Zone (MIVAU SERPAVI / Ley 12/2023)
+  if (rentalBenchmark) {
+    if (rentalBenchmark.isStressedHousingZone) {
+      risks.push(
+        'Located in an officially declared Stressed Housing Market Zone (Zona Tensionada) subject to MIVAU statutory rent caps'
+      );
+    } else {
+      highlights.push('Unrestricted rental market territory (outside declared Stressed Housing Zones)');
+    }
+  }
+
+  // 6. Composite Barrio Score (0 - 100)
   const rawOverall =
     socioeconomicScore * weights.socioeconomic +
     buildingHealthScore * weights.buildingHealth +

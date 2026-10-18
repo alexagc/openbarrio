@@ -20,14 +20,17 @@ export class AuditService {
     );
     const neighborhood = await this.providers.ine.getIncomeByCensusSection(censusCode);
 
-    // 3. Fetch environmental data
+    // 3. Fetch environmental data (SICA noise and SNCZI flood risk)
     const environment = await this.providers.environmental.getEnvironmentalData(
       property.coordinates.latitude,
       property.coordinates.longitude
     );
 
-    // 4. Calculate Barrio Due Diligence Score
-    const score = calculateBarrioScore(property, neighborhood, environment);
+    // 4. Calculate MIVAU SERPAVI rental benchmark & check stressed market status
+    const rentalBenchmark = await this.providers.serpavi.getRentalBenchmark(property, censusCode);
+
+    // 5. Calculate Barrio Due Diligence Score
+    const score = calculateBarrioScore(property, neighborhood, environment, rentalBenchmark);
 
     return {
       id: randomUUID(),
@@ -36,6 +39,7 @@ export class AuditService {
       neighborhood,
       environment,
       score,
+      rentalBenchmark,
     };
   }
 
@@ -54,14 +58,17 @@ export class AuditService {
     );
     const neighborhood = await this.providers.ine.getIncomeByCensusSection(censusCode);
 
-    // 3. Fetch environmental data
+    // 3. Fetch environmental data (SICA noise and SNCZI flood risk)
     const environment = await this.providers.environmental.getEnvironmentalData(
       property.coordinates.latitude,
       property.coordinates.longitude
     );
 
-    // 4. Calculate Barrio Due Diligence Score
-    const score = calculateBarrioScore(property, neighborhood, environment);
+    // 4. Calculate MIVAU SERPAVI rental benchmark & check stressed market status
+    const rentalBenchmark = await this.providers.serpavi.getRentalBenchmark(property, censusCode);
+
+    // 5. Calculate Barrio Due Diligence Score
+    const score = calculateBarrioScore(property, neighborhood, environment, rentalBenchmark);
 
     return {
       id: randomUUID(),
@@ -70,6 +77,7 @@ export class AuditService {
       neighborhood,
       environment,
       score,
+      rentalBenchmark,
     };
   }
 }

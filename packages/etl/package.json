@@ -1,0 +1,22 @@
+{
+  "name": "@openbarrio/etl",
+  "version": "0.1.0",
+  "description": "Autonomous ETL data pipeline for INE ADRH and IGN Seccionado Censal using DuckDB Spatial",
+  "private": true,
+  "scripts": {
+    "etl:ine": "python3 src/process_ine_adrh.py",
+    "etl:ign": "python3 src/process_ign_boundaries.py",
+    "etl:sample": "python3 src/sample_data.py"
+  },
+  "keywords": [
+    "duckdb",
+    "spatial",
+    "ine",
+    "ign",
+    "pmtiles",
+    "cloudflare-d1",
+    "cloudflare-r2"
+  ],
+  "author": "Alejandro Gómez Canal",
+  "license": "Apache-2.0"
+}
