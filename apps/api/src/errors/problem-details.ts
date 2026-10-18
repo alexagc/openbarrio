@@ -97,6 +97,18 @@ export class UpstreamProviderError extends ProblemDetailsException {
   }
 }
 
+export class RateLimitExceededError extends ProblemDetailsException {
+  constructor(retryAfterSeconds: number, instance?: string) {
+    super({
+      status: 429,
+      type: 'https://openbarrio.org/errors/rate-limit-exceeded',
+      title: 'Rate Limit Exceeded',
+      detail: `Rate limit exceeded. Please wait ${retryAfterSeconds} second${retryAfterSeconds === 1 ? '' : 's'} before retrying.`,
+      instance,
+    });
+  }
+}
+
 /**
  * Hono error handler transforming exceptions and validation failures into RFC 7807 payloads.
  */

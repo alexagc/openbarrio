@@ -6,6 +6,7 @@ import {
   ISERPAVIProvider,
   IEnvironmentalProvider,
 } from './types.js';
+import { D1Database } from '../types/env.js';
 import { CatastroProvider } from './catastro.provider.js';
 import { MockCatastroProvider } from './catastro.mock.js';
 import { INEProvider } from './ine.provider.js';
@@ -45,13 +46,14 @@ export interface ProviderContainer {
 
 export function createProviders(options?: {
   useMocks?: boolean;
+  db?: D1Database;
   overrides?: Partial<ProviderContainer>;
 }): ProviderContainer {
   const useMocks =
     options?.useMocks ?? (process.env.NODE_ENV === 'test' || process.env.USE_MOCKS !== 'false');
 
   const defaultCatastro = useMocks ? new MockCatastroProvider() : new CatastroProvider();
-  const defaultINE = useMocks ? new MockINEProvider() : new INEProvider();
+  const defaultINE = useMocks ? new MockINEProvider() : new INEProvider({ db: options?.db });
   const defaultSICA = useMocks ? new MockSICAProvider() : new SICAProvider();
   const defaultSNCZI = useMocks ? new MockSNCZIProvider() : new SNCZIProvider();
   const defaultSERPAVI = useMocks ? new MockSERPAVIProvider() : new SERPAVIProvider();

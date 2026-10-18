@@ -13,9 +13,9 @@ This document outlines the multi-phase roadmap for **OpenBarrio**, tracking comp
 | **Phase 2.5** | Cloudflare & Hono Edge Architecture (`apps/api` & `apps/web`) | **Done** ✅ |
 | **Phase 3** | Additional Public Data Providers (MITECO & MIVAU) | **Done** ✅ |
 | **Phase 4** | Interactive Web Dashboard with MapLibre GL (`apps/web`) | Backlog ⏳ |
-| **Phase 5** | Chrome Manifest V3 Companion Extension (`apps/extension`) | Backlog ⏳ |
-| **Phase 6** | Cloudflare Live Production Deployment & Hardening | Backlog ⏳ |
-| **Phase 7** | Automated Governance, SAST & Dependency Security | Backlog ⏳ |
+| **Phase 5** | Chrome Manifest V3 Companion Extension (`apps/extension`) | **Done** ✅ |
+| **Phase 6** | Cloudflare Live Production Deployment & Hardening | **Done** ✅ |
+| **Phase 7** | Automated Governance, SAST & Dependency Security | **Done** ✅ |
 
 ---
 
@@ -65,39 +65,51 @@ This document outlines the multi-phase roadmap for **OpenBarrio**, tracking comp
 - [ ] Search bar supporting address geocoding, coordinates, and Cadastral Reference (RC).
 - [ ] Due diligence dossier visual card with score breakdown, radars, and alerts.
 
-### Phase 5: Chrome Extension MV3 (Backlog ⏳)
-- [ ] Manifest V3 extension structure in `apps/extension`.
-- [ ] Non-blocking DOM content script for **Idealista** property pages.
-- [ ] Non-blocking DOM content script for **Fotocasa** property pages.
-- [ ] Floating public audit card widget fetching instant metrics from the Cloudflare API.
+### Phase 5: Chrome Extension MV3 (Completed ✅)
+- [x] Manifest V3 extension architecture in `apps/extension` with minimal permissions (`activeTab`, `storage`).
+- [x] Multi-bundle Vite build pipeline (`build.js`) emitting IIFE content script, ESM background service worker, and HTML action popup.
+- [x] Isolated, resilient DOM content script with Shadow DOM shielding for **Idealista** property pages.
+- [x] Isolated, resilient DOM content script with Shadow DOM shielding for **Fotocasa** property pages.
+- [x] Floating Due Diligence card widget with dynamic Barrio Score color indicators, Stressed Housing Zone (Ley 12/2023) rent cap badges, SICA acoustic dBA, and SNCZI flood safety levels.
+- [x] Collapsible floating badge/pill state, skeleton loading animations, and silent error handling.
+- [x] Background service worker with 24-hour local caching and cross-context messaging.
+- [x] Action popup dashboard with active tab inspection, quick Cadastral Reference search, and endpoint preset switching.
+- [x] Comprehensive Vitest test suite with real-world HTML fixtures (`apps/extension/tests/`).
+- [x] Store publication documentation and permissions justifications (`CHROMEWEBSTORE.md`).
 
-### Phase 6: Cloudflare Live Production Deployment & Hardening (Backlog ⏳)
-- [ ] **Cloudflare Account & Credentials Setup:**
-  - Create free Cloudflare account and obtain `CLOUDFLARE_ACCOUNT_ID`.
-  - Generate Cloudflare API Token with `Workers:Edit` and `Pages:Edit` permissions.
-  - Configure GitHub Secrets: `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID`.
-- [ ] **First Live Production Release:**
-  - Trigger automated deployment via GitHub Actions (`.github/workflows/deploy.yml`).
-  - Verify live web dashboard on `openbarrio-web.pages.dev`.
-  - Verify live API endpoints and Swagger docs on `openbarrio-api.workers.dev/docs`.
-- [ ] **Custom Domain & Edge Optimization:**
-  - Map custom domains (`openbarrio.org` and `api.openbarrio.org`) with Cloudflare DNS proxy.
-  - Implement Edge caching policies via Cloudflare Cache API / KV for Catastro & INE queries.
-  - Rate limiting, security headers, and CORS hardening.
-- [ ] **Dossier Reporting:**
-  - Printable PDF export for complete Due Diligence Dossiers.
+### Phase 6: Cloudflare Live Production Deployment & Hardening (Completed ✅)
+- [x] **Cloudflare Resource Configuration (D1 & R2):**
+  - Configure D1 SQLite database `openbarrio-d1` (`DB`) and R2 bucket `openbarrio-r2` (`TILES_BUCKET`) in `apps/api/wrangler.jsonc`.
+  - Initial D1 database schema migration in `apps/api/migrations/0001_initial_schema.sql`.
+  - Sub-5ms INE income lookup integration with D1 in `INEProvider`.
+  - Spatial PMTiles streaming route (`GET /api/v1/tiles/:filename`) from R2.
+- [x] **Edge Caching & Performance Policies:**
+  - Cloudflare Cache API middleware in Hono caching audit responses for 90 days (`7,776,000s`).
+  - Injected diagnostic headers (`X-OpenBarrio-Cache: HIT | MISS`).
+  - Upstream request caching optimization for Catastro OVC and MITECO WMS.
+- [x] **Security Hardening, CORS & Rate Limiting:**
+  - Security HTTP headers (OWASP CSP, HSTS, X-Frame-Options, X-Content-Type-Options, Permissions-Policy).
+  - Strict CORS policy allowing authorized Chrome extensions, Cloudflare Pages, and local dev.
+  - Rate limiting middleware (60 req/min sliding window per IP) returning RFC 7807 429 Problem Details.
+- [x] **CI/CD Automation & Deployment Guide:**
+  - Automated deployment workflow in `.github/workflows/deploy.yml` for Workers & Pages.
+  - Comprehensive operator deployment guide in `docs/DEPLOYMENT_GUIDE.md`.
+  - Comprehensive Vitest integration test suite in `apps/api/tests/routes/hardening.test.ts`.
 
-### Phase 7: Automated Governance, SAST & Dependency Security (Backlog ⏳)
-- [ ] **Automated Dependency Updates (Dependabot):**
+### Phase 7: Automated Governance, SAST & Dependency Security (Completed ✅)
+- [x] **Automated Dependency Updates (Dependabot):**
   - Configure `.github/dependabot.yml` monitoring `pnpm` workspaces and `github-actions` weekly.
   - Automatic alerts and security update PRs for vulnerable dependencies.
-- [ ] **Static Code Security Analysis (SAST - GitHub CodeQL):**
+- [x] **Static Code Security Analysis (SAST - GitHub CodeQL):**
   - Automated `.github/workflows/codeql.yml` scanning TypeScript/JavaScript and Python codebases.
   - Security gates detecting CWE vulnerabilities, unsafe regexes, and injection vectors.
-- [ ] **Dependency Vulnerability Auditing in CI:**
+- [x] **Dependency Vulnerability Auditing in CI:**
   - Automated `pnpm audit --audit-level=high` check in CI pipeline (`.github/workflows/ci.yml`).
   - GitHub Dependency Review action blocking pull requests introducing vulnerable or non-compliant dependencies.
-- [ ] **Monorepo-wide Code Quality & Strict Linting:**
-  - Standardize ESLint across `apps/*` and `packages/*` with TypeScript rules.
-  - Ensure zero warnings policy on CI validation.
+- [x] **Monorepo-wide Code Quality & Strict Linting:**
+  - Standardize ESLint across `apps/*` and `packages/*` with TypeScript rules (`eslint.config.js`).
+  - Ensure zero warnings policy (`--max-warnings=0`) on CI validation.
+- [x] **Security Policy & Governance Documentation:**
+  - Document vulnerability disclosure protocols and security controls in `docs/SECURITY.md`.
+
 

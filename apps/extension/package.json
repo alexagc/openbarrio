@@ -1,16 +1,24 @@
 {
   "name": "@openbarrio/extension",
   "version": "0.1.0",
-  "description": "Chrome Extension for OpenBarrio (Idealista & Fotocasa)",
+  "description": "Chrome Manifest V3 Companion Extension for OpenBarrio (Idealista & Fotocasa)",
+  "type": "module",
   "private": true,
   "scripts": {
-    "build": "tsc"
+    "build": "tsc && node build.js",
+    "lint": "eslint . --max-warnings=0",
+    "test": "vitest run"
   },
   "dependencies": {
     "@openbarrio/core": "workspace:*"
   },
   "devDependencies": {
     "@types/chrome": "^0.0.280",
-    "typescript": "^5.6.3"
+    "@types/jsdom": "^21.1.7",
+    "eslint": "^9.14.0",
+    "jsdom": "^25.0.1",
+    "typescript": "^5.6.3",
+    "vite": "^5.4.10",
+    "vitest": "^2.1.3"
   }
 }

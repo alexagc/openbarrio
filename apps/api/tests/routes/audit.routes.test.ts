@@ -1,7 +1,9 @@
-import { describe, it, expect, beforeAll } from 'vitest';
+import { describe, it, expect, beforeAll, beforeEach } from 'vitest';
 import { Hono } from 'hono';
 import { buildApp } from '../../src/app.js';
 import { createProviders } from '../../src/providers/index.js';
+import { resetRateLimiter } from '../../src/middleware/rate-limit.middleware.js';
+import { clearEdgeMemoryCache } from '../../src/middleware/cache.middleware.js';
 
 describe('Hono Audit Routes Integration', () => {
   let app: Hono;
@@ -9,7 +11,12 @@ describe('Hono Audit Routes Integration', () => {
   beforeAll(() => {
     // Explicitly use mock providers for isolated deterministic integration testing
     const providers = createProviders({ useMocks: true });
-    app = buildApp({ providers });
+    app = buildApp({ providers }) as any;
+  });
+
+  beforeEach(() => {
+    resetRateLimiter();
+    clearEdgeMemoryCache();
   });
 
   describe('GET /health', () => {

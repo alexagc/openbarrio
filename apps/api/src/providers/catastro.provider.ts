@@ -29,6 +29,7 @@ export class CatastroProvider implements ICatastroProvider {
       const res = await fetch(url, {
         signal: controller.signal,
         headers: { 'User-Agent': 'OpenBarrio-DueDiligence/0.1' },
+        ...({ cf: { cacheTtl: 7776000, cacheEverything: true } } as any),
       });
       clearTimeout(timer);
 
@@ -65,6 +66,7 @@ export class CatastroProvider implements ICatastroProvider {
       const res = await fetch(url, {
         signal: controller.signal,
         headers: { 'User-Agent': 'OpenBarrio-DueDiligence/0.1' },
+        ...({ cf: { cacheTtl: 7776000, cacheEverything: true } } as any),
       });
       clearTimeout(timer);
 

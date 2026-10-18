@@ -6,7 +6,8 @@
   "scripts": {
     "etl:ine": "python3 src/process_ine_adrh.py",
     "etl:ign": "python3 src/process_ign_boundaries.py",
-    "etl:sample": "python3 src/sample_data.py"
+    "etl:sample": "python3 src/sample_data.py",
+    "lint": "eslint --no-error-on-unmatched-pattern . --max-warnings=0"
   },
   "keywords": [
     "duckdb",

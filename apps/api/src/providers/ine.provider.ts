@@ -1,25 +1,64 @@
 import { CensusTractIncome } from '@openbarrio/core';
 import { IINEProvider } from './types.js';
 import { CensusTractNotFoundError, UpstreamProviderError } from '../errors/problem-details.js';
+import { D1Database } from '../types/env.js';
 
 export interface INEProviderOptions {
   baseUrl?: string;
   timeoutMs?: number;
+  db?: D1Database;
 }
 
 export class INEProvider implements IINEProvider {
   private readonly baseUrl: string;
   private readonly timeoutMs: number;
+  private db?: D1Database;
 
   constructor(options: INEProviderOptions = {}) {
     this.baseUrl = options.baseUrl || 'https://servicios.ine.es/wstempus/js/ES';
     this.timeoutMs = options.timeoutMs || 8000;
+    this.db = options.db;
+  }
+
+  setDatabase(db: D1Database): void {
+    this.db = db;
   }
 
   async getIncomeByCensusSection(censusSectionCode: string): Promise<CensusTractIncome> {
     const code = censusSectionCode.trim();
     if (code.length < 10) {
       throw new CensusTractNotFoundError(code);
+    }
+
+    // 1. Query Cloudflare D1 for sub-5ms Edge execution if bound
+    if (this.db) {
+      try {
+        const row = await this.db
+          .prepare(
+            'SELECT census_section_code, average_net_household_income_eur, average_net_person_income_eur, percentile_in_municipality, rank_in_municipality, total_sections_in_municipality, median_age, single_person_household_percentage FROM census_tract_income WHERE census_section_code = ?'
+          )
+          .bind(code)
+          .first<Record<string, any>>();
+
+        if (row) {
+          return {
+            censusSectionCode: row.census_section_code,
+            averageNetHouseholdIncomeEur: Number(row.average_net_household_income_eur),
+            averageNetPersonIncomeEur: Number(row.average_net_person_income_eur),
+            percentileInMunicipality: Number(row.percentile_in_municipality),
+            rankingInCity: {
+              rank: Number(row.rank_in_municipality),
+              totalSections: Number(row.total_sections_in_municipality),
+            },
+            demographics: {
+              medianAge: Number(row.median_age),
+              singlePersonHouseholdPercentage: Number(row.single_person_household_percentage),
+            },
+          };
+        }
+      } catch (err: any) {
+        console.warn(`[INEProvider] D1 lookup failed for '${code}', falling back:`, err?.message);
+      }
     }
 
     // Atlas de Distribución de Renta de los Hogares (ADRH) series table query

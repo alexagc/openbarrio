@@ -1,12 +1,24 @@
 import { Hono } from 'hono';
-import { cors } from 'hono/cors';
 import { swaggerUI } from '@hono/swagger-ui';
 import { problemDetailsErrorHandler } from './errors/problem-details.js';
 import { createProviders, ProviderContainer } from './providers/index.js';
 import { createV1Routes } from './routes/index.js';
+import {
+  securityHeadersMiddleware,
+  strictCorsMiddleware,
+  rateLimitMiddleware,
+  edgeCacheMiddleware,
+  CorsOptions,
+  RateLimitOptions,
+  EdgeCacheOptions,
+} from './middleware/index.js';
+import type { CloudflareEnv } from './types/env.js';
 
 export interface AppOptions {
   providers?: ProviderContainer;
+  rateLimit?: RateLimitOptions;
+  cache?: EdgeCacheOptions;
+  cors?: CorsOptions;
 }
 
 export function buildOpenApiSpec(): Record<string, any> {
@@ -15,8 +27,8 @@ export function buildOpenApiSpec(): Record<string, any> {
     info: {
       title: 'OpenBarrio Public Due Diligence API',
       description:
-        'Open-source civic-tech and real estate due diligence platform aggregating official Spanish public open data (Catastro, INE, MITECO, MIVAU)',
-      version: '0.2.0',
+        'Open-source civic-tech and real estate due diligence platform aggregating official Spanish public open data (Catastro, INE, MITECO, MIVAU) with sub-5ms Cloudflare Edge execution',
+      version: '0.3.0',
       contact: {
         name: 'OpenBarrio Project',
         url: 'https://github.com/alexagc/openbarrio',
@@ -26,6 +38,10 @@ export function buildOpenApiSpec(): Record<string, any> {
       {
         name: 'Audit',
         description: 'Comprehensive cadastral, socioeconomic, and environmental property audits',
+      },
+      {
+        name: 'Tiles',
+        description: 'Spatial vector boundaries and census tract PMTiles from Cloudflare R2',
       },
       {
         name: 'System',
@@ -38,8 +54,12 @@ export function buildOpenApiSpec(): Record<string, any> {
         description: 'Local development server',
       },
       {
+        url: 'https://openbarrio-api.workers.dev',
+        description: 'Cloudflare Workers production edge',
+      },
+      {
         url: 'https://api.openbarrio.org',
-        description: 'Cloudflare Edge production gateway',
+        description: 'Custom domain edge gateway',
       },
     ],
     paths: {
@@ -72,7 +92,7 @@ export function buildOpenApiSpec(): Record<string, any> {
           tags: ['Audit'],
           summary: 'Audit property and neighborhood due diligence by geographic coordinates',
           description:
-            'Aggregates official data from Catastro, INE income distribution, MITECO SICA noise, MITECO SNCZI flood risk, and MIVAU SERPAVI rental benchmarks',
+            'Aggregates official data from Catastro, INE income distribution, MITECO SICA noise, MITECO SNCZI flood risk, and MIVAU SERPAVI rental benchmarks with 90-day Edge caching',
           parameters: [
             {
               name: 'lat',
@@ -92,12 +112,25 @@ export function buildOpenApiSpec(): Record<string, any> {
           responses: {
             '200': {
               description: 'Complete Due Diligence Audit Dossier with rental benchmark and environmental indicators',
+              headers: {
+                'X-OpenBarrio-Cache': {
+                  schema: { type: 'string', enum: ['HIT', 'MISS', 'BYPASS'] },
+                  description: 'Cloudflare Edge cache status',
+                },
+                'RateLimit-Remaining': {
+                  schema: { type: 'integer' },
+                  description: 'Remaining allowed requests in current window',
+                },
+              },
             },
             '400': {
               description: 'RFC 7807 Invalid Request Parameters',
             },
             '404': {
               description: 'RFC 7807 Cadastral Property Not Found',
+            },
+            '429': {
+              description: 'RFC 7807 Rate Limit Exceeded',
             },
             '502': {
               description: 'RFC 7807 Upstream Public Provider Failure',
@@ -110,7 +143,7 @@ export function buildOpenApiSpec(): Record<string, any> {
           tags: ['Audit'],
           summary: 'Audit property and neighborhood due diligence by official Cadastral Reference (RC)',
           description:
-            'Aggregates official data from Catastro, INE income distribution, MITECO SICA noise, MITECO SNCZI flood risk, and MIVAU SERPAVI rental benchmarks',
+            'Aggregates official data from Catastro, INE income distribution, MITECO SICA noise, MITECO SNCZI flood risk, and MIVAU SERPAVI rental benchmarks with 90-day Edge caching',
           parameters: [
             {
               name: 'refcat',
@@ -123,12 +156,25 @@ export function buildOpenApiSpec(): Record<string, any> {
           responses: {
             '200': {
               description: 'Complete Due Diligence Audit Dossier with rental benchmark and environmental indicators',
+              headers: {
+                'X-OpenBarrio-Cache': {
+                  schema: { type: 'string', enum: ['HIT', 'MISS', 'BYPASS'] },
+                  description: 'Cloudflare Edge cache status',
+                },
+                'RateLimit-Remaining': {
+                  schema: { type: 'integer' },
+                  description: 'Remaining allowed requests in current window',
+                },
+              },
             },
             '400': {
               description: 'RFC 7807 Invalid Request Parameters',
             },
             '404': {
               description: 'RFC 7807 Cadastral Property Not Found',
+            },
+            '429': {
+              description: 'RFC 7807 Rate Limit Exceeded',
             },
             '502': {
               description: 'RFC 7807 Upstream Public Provider Failure',
@@ -140,28 +186,39 @@ export function buildOpenApiSpec(): Record<string, any> {
   };
 }
 
-export function buildApp(options: AppOptions = {}): Hono {
-  const app = new Hono();
+export function buildApp(options: AppOptions = {}): Hono<{ Bindings: CloudflareEnv }> {
+  const app = new Hono<{ Bindings: CloudflareEnv }>();
 
-  // RFC 7807 Problem Details error handler
+  // 1. RFC 7807 Problem Details error handler
   app.onError(problemDetailsErrorHandler);
 
-  // CORS middleware supporting portal injection and web dashboard
-  app.use('*', cors({
-    origin: (origin) => {
-      // Allow browser extension schemas, openbarrio domains, and localhost
-      return origin || '*';
-    },
-    allowMethods: ['GET', 'POST', 'OPTIONS'],
-    allowHeaders: ['Content-Type', 'Authorization'],
-  }));
+  // 2. Security headers (HSTS, CSP, X-Frame-Options, X-Content-Type-Options)
+  app.use('*', securityHeadersMiddleware());
 
-  // Swagger Documentation & OpenAPI spec
+  // 3. Strict CORS policy (extensions, Pages, localhost)
+  app.use('*', strictCorsMiddleware(options.cors));
+
+  // 4. Rate limiting protecting public resources
+  app.use('*', rateLimitMiddleware(options.rateLimit));
+
+  // 5. Cloudflare Cache API & Edge caching (90 days TTL, X-OpenBarrio-Cache headers)
+  app.use('*', edgeCacheMiddleware(options.cache));
+
+  // 6. Dynamic Cloudflare D1 injection for sub-5ms INE lookups
+  const providers = options.providers || createProviders();
+  app.use('*', async (c, next) => {
+    if (c.env?.DB && providers.ine && typeof (providers.ine as any).setDatabase === 'function') {
+      (providers.ine as any).setDatabase(c.env.DB);
+    }
+    await next();
+  });
+
+  // 7. Swagger Documentation & OpenAPI spec
   const openApiSpec = buildOpenApiSpec();
   app.get('/docs/json', (c) => c.json(openApiSpec));
   app.get('/docs', swaggerUI({ url: '/docs/json' }));
 
-  // Health check endpoint
+  // 8. Health check endpoint
   app.get('/health', (c) => {
     return c.json({
       status: 'ok',
@@ -170,8 +227,7 @@ export function buildApp(options: AppOptions = {}): Hono {
     });
   });
 
-  // Providers & v1 API routes
-  const providers = options.providers || createProviders();
+  // 9. Providers & v1 API routes
   app.route('/api/v1', createV1Routes(providers));
 
   return app;

@@ -29,6 +29,9 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile || pnpm install
 
+      - name: Audit dependencies for high/critical vulnerabilities
+        run: pnpm audit --audit-level=high
+
       - name: Check code formatting & linting
         run: pnpm run lint --if-present
 
@@ -37,3 +40,19 @@ jobs:
 
       - name: Validate build
         run: pnpm run build --if-present
+
+  dependency-review:
+    name: Dependency Review & License Audit
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Perform Dependency Review
+        uses: actions/dependency-review-action@v4
+        with:
+          fail-on-severity: high
