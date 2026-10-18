@@ -17,7 +17,7 @@ export class SICAProvider implements ISICAProvider {
 
   constructor(options: SICAProviderOptions = {}) {
     this.wmsBaseUrl =
-      options.wmsBaseUrl || 'https://wms.mapama.gob.es/sig/SICA/wms.aspx';
+      options.wmsBaseUrl || 'https://gis.miteco.gob.es/geoserver/evaluacionambiental/wms';
     this.timeoutMs = options.timeoutMs || 8000;
   }
 
@@ -30,12 +30,14 @@ export class SICAProvider implements ISICAProvider {
     const maxLat = latitude + delta;
     const bbox = `${minLon},${minLat},${maxLon},${maxLat}`;
 
+    const noiseLayers = 'mer_carretera_lden,mer_aglomeracion_lden,mer_ferrocarril_lden,mer_aeropuerto_lden';
+
     const params = new URLSearchParams({
       SERVICE: 'WMS',
       VERSION: '1.3.0',
       REQUEST: 'GetFeatureInfo',
-      LAYERS: 'SICA_Lden_Global',
-      QUERY_LAYERS: 'SICA_Lden_Global',
+      LAYERS: noiseLayers,
+      QUERY_LAYERS: noiseLayers,
       CRS: 'EPSG:4326',
       BBOX: bbox,
       WIDTH: '101',

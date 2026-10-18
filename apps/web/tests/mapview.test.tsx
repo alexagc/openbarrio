@@ -136,6 +136,28 @@ describe('MapView Component (Stitch Civic Precision)', () => {
       fireEvent.click(darkBtn);
       expect(darkBtn).toBeTruthy();
     });
+
+    it('should toggle thematic layers for INE Renta, MITECO Ruido and SNCZI Inundacion', () => {
+      render(
+        <MapView
+          selectedCoords={{ lat: 40.42028, lon: -3.70379 }}
+          onMapClick={vi.fn()}
+        />
+      );
+
+      // Verify checkboxes are rendered and can be clicked
+      const ineCheckbox = screen.getByLabelText(/INE Renta/i) || screen.getByText(/INE Renta/i);
+      expect(ineCheckbox).toBeTruthy();
+      fireEvent.click(ineCheckbox);
+
+      const noiseCheckbox = screen.getByText(/MITECO Ruido/i);
+      expect(noiseCheckbox).toBeTruthy();
+      fireEvent.click(noiseCheckbox);
+
+      const floodCheckbox = screen.getByText(/SNCZI Inundación/i);
+      expect(floodCheckbox).toBeTruthy();
+      fireEvent.click(floodCheckbox);
+    });
   });
 });
 

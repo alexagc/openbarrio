@@ -58,11 +58,7 @@ export class OpenBarrioApiClient {
 
       return await response.json();
     } catch (err) {
-      if (err instanceof ApiError && err.status !== 404) {
-        throw err;
-      }
-
-      // If backend is unreachable or returns 404 for coords (e.g. clicked on street/sidewalk):
+      // If backend is unreachable or fails for any reason (e.g. 502 upstream timeout, 404):
       // Try official Spanish CartoCiudad reverse geocoder to snap to nearest building & refcat
       try {
         const reverseUrl = `https://www.cartociudad.es/geocoder/api/geocoder/reverseGeocode?lat=${encodeURIComponent(

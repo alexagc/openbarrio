@@ -201,20 +201,29 @@ export function MapView({
             tileSize: 256,
             attribution: '&copy; Dirección General del Catastro (España)',
           },
-          // MITECO SICA Noise WMS
+          // INE Secciones Censales WMS (Spanish National Statistics Institute - Census Tracts & Income context)
+          'ine-income-wms': {
+            type: 'raster',
+            tiles: [
+              'https://www.ine.es/geoserver/WMS_INE_SECCIONES_G01/wms?SERVICE=WMS&VERSION=1.3.0&REQUEST=GetMap&FORMAT=image/png&TRANSPARENT=TRUE&LAYERS=Secciones_2024&STYLES=&CRS=EPSG:3857&WIDTH=256&HEIGHT=256&BBOX={bbox-epsg-3857}',
+            ],
+            tileSize: 256,
+            attribution: '&copy; Instituto Nacional de Estadística (INE)',
+          },
+          // MITECO SICA Noise WMS (Strategic Noise Maps / Mapas Estratégicos de Ruido - MER Lden)
           'miteco-sica': {
             type: 'raster',
             tiles: [
-              'https://wms.mapama.gob.es/sig/Biodiversidad/SICA/wms.aspx?SERVICE=WMS&SRS=EPSG:3857&REQUEST=GetMap&FORMAT=image/png&BBOX={bbox-epsg-3857}&WIDTH=256&HEIGHT=256&LAYERS=Ruido_Carreteras&TRANSPARENT=TRUE',
+              'https://gis.miteco.gob.es/geoserver/evaluacionambiental/wms?SERVICE=WMS&VERSION=1.3.0&REQUEST=GetMap&FORMAT=image/png&TRANSPARENT=TRUE&LAYERS=mer_carretera_lden,mer_aglomeracion_lden,mer_ferrocarril_lden,mer_aeropuerto_lden&STYLES=&CRS=EPSG:3857&WIDTH=256&HEIGHT=256&BBOX={bbox-epsg-3857}',
             ],
             tileSize: 256,
-            attribution: '&copy; MITECO SICA',
+            attribution: '&copy; MITECO SICA / MER',
           },
-          // MITECO SNCZI Flood Risk WMS
+          // MITECO SNCZI Flood Risk WMS (Láminas de Inundación Q100, Q500 y Zona de Flujo Preferente ZFP)
           'miteco-snczi': {
             type: 'raster',
             tiles: [
-              'https://wms.mapama.gob.es/sig/Agua/SNCZI/wms.aspx?SERVICE=WMS&SRS=EPSG:3857&REQUEST=GetMap&FORMAT=image/png&BBOX={bbox-epsg-3857}&WIDTH=256&HEIGHT=256&LAYERS=Zonas_Inundables_T100&TRANSPARENT=TRUE',
+              'https://gis.miteco.gob.es/geoserver/agua/wms?SERVICE=WMS&VERSION=1.3.0&REQUEST=GetMap&FORMAT=image/png&TRANSPARENT=TRUE&LAYERS=Zi_laminas_q100,Zi_laminas_q500,ZI_Laminas_ZFP&STYLES=&CRS=EPSG:3857&WIDTH=256&HEIGHT=256&BBOX={bbox-epsg-3857}',
             ],
             tileSize: 256,
             attribution: '&copy; MITECO SNCZI',
@@ -248,27 +257,37 @@ export function MapView({
             maxzoom: 20,
             layout: { visibility: 'none' },
           },
-          // 4. MITECO SNCZI Flood Overlay
+          // 4. INE Secciones Censales / Renta Overlay
+          {
+            id: 'ine-income-layer',
+            type: 'raster',
+            source: 'ine-income-wms',
+            minzoom: 6,
+            maxzoom: 20,
+            paint: { 'raster-opacity': 0.65 },
+            layout: { visibility: 'visible' },
+          },
+          // 5. MITECO SNCZI Flood Overlay
           {
             id: 'snczi-layer',
             type: 'raster',
             source: 'miteco-snczi',
-            minzoom: 8,
+            minzoom: 7,
             maxzoom: 19,
-            paint: { 'raster-opacity': 0.65 },
+            paint: { 'raster-opacity': 0.7 },
             layout: { visibility: 'none' },
           },
-          // 5. MITECO SICA Noise Overlay
+          // 6. MITECO SICA Noise Overlay
           {
             id: 'sica-layer',
             type: 'raster',
             source: 'miteco-sica',
-            minzoom: 10,
+            minzoom: 7,
             maxzoom: 19,
-            paint: { 'raster-opacity': 0.6 },
+            paint: { 'raster-opacity': 0.65 },
             layout: { visibility: 'none' },
           },
-          // 6. Catastro Parcels Official WMS
+          // 7. Catastro Parcels Official WMS
           {
             id: 'catastro-layer',
             type: 'raster',
@@ -345,9 +364,10 @@ export function MapView({
     if (!map || !map.isStyleLoaded()) return;
 
     map.setLayoutProperty('catastro-layer', 'visibility', showCatastroWms ? 'visible' : 'none');
+    map.setLayoutProperty('ine-income-layer', 'visibility', showIneIncome ? 'visible' : 'none');
     map.setLayoutProperty('sica-layer', 'visibility', showMitecoNoise ? 'visible' : 'none');
     map.setLayoutProperty('snczi-layer', 'visibility', showSncziFlood ? 'visible' : 'none');
-  }, [showCatastroWms, showMitecoNoise, showSncziFlood]);
+  }, [showCatastroWms, showIneIncome, showMitecoNoise, showSncziFlood]);
 
   // Toggle 3D Axonometric Tilt
   const toggle3DMode = () => {
@@ -615,10 +635,15 @@ export function MapView({
           </label>
         </div>
 
-        {/* Zoom Hint for Cadastre */}
+        {/* Zoom Hint for Cadastre & Thematic Layers */}
         {showCatastroWms && currentZoom < 13 && (
           <div className="mt-2 bg-amber-500/10 border border-amber-500/30 text-amber-300 text-[10px] font-sans px-2 py-1 rounded">
-            Acércate (Zoom &ge; 13) para activar parcelas oficiales.
+            Acércate (Zoom &ge; 13) para activar parcelas del Catastro.
+          </div>
+        )}
+        {(showMitecoNoise || showSncziFlood || showIneIncome) && currentZoom < 7 && (
+          <div className="mt-1.5 bg-blue-500/10 border border-blue-500/30 text-blue-300 text-[10px] font-sans px-2 py-1 rounded">
+            Acércate (Zoom &ge; 7) para activar capas de renta, ruido o inundación.
           </div>
         )}
       </div>
