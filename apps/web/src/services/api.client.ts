@@ -242,25 +242,26 @@ export class OpenBarrioApiClient {
     const hasExplicitOverrides = Boolean(
       overrides?.address?.street ||
       (overrides?.cadastralReference &&
+        !overrides.cadastralReference.startsWith('0549711VK4704') &&
         !overrides.cadastralReference.startsWith('9872023VH5797S') &&
         !overrides.cadastralReference.startsWith('28900A01200034'))
     );
     const isGranVia =
       !hasExplicitOverrides &&
-      Math.abs(lat - 40.42028) < 0.00015 &&
-      Math.abs(lon - -3.70379) < 0.00015;
+      ((Math.abs(lat - 40.42023) < 0.0002 && Math.abs(lon - -3.70197) < 0.0002) ||
+        (Math.abs(lat - 40.42028) < 0.0002 && Math.abs(lon - -3.70379) < 0.0002));
     const isGracia =
       !hasExplicitOverrides &&
-      Math.abs(lat - 41.39167) < 0.00015 &&
-      Math.abs(lon - 2.16472) < 0.00015;
+      ((Math.abs(lat - 41.39170) < 0.0002 && Math.abs(lon - 2.16495) < 0.0002) ||
+        (Math.abs(lat - 41.39167) < 0.0002 && Math.abs(lon - 2.16472) < 0.0002));
     const isColon =
       !hasExplicitOverrides &&
-      Math.abs(lat - 39.4699) < 0.00015 &&
-      Math.abs(lon - -0.3735) < 0.00015;
+      ((Math.abs(lat - 39.46845) < 0.0002 && Math.abs(lon - -0.37318) < 0.0002) ||
+        (Math.abs(lat - 39.4699) < 0.0002 && Math.abs(lon - -0.3735) < 0.0002));
     const isSierpes =
       !hasExplicitOverrides &&
-      Math.abs(lat - 37.3908) < 0.00015 &&
-      Math.abs(lon - -5.9942) < 0.00015;
+      ((Math.abs(lat - 37.39147) < 0.0002 && Math.abs(lon - -5.99476) < 0.0002) ||
+        (Math.abs(lat - 37.3908) < 0.0002 && Math.abs(lon - -5.9942) < 0.0002));
 
     // Geographic regions in Spain
     const isMadridRegion = lat >= 40.0 && lat <= 41.2 && lon >= -4.5 && lon <= -3.0;
@@ -320,7 +321,7 @@ export class OpenBarrioApiClient {
       street = 'Calle Gran Vía';
       streetNum = '28';
       postalCode = '28013';
-      refcat = '9872023VH5797S0001WX';
+      refcat = '0549711VK4704H';
       year = 1924;
       surface = 31500;
       units = 48;
@@ -333,7 +334,7 @@ export class OpenBarrioApiClient {
       street = 'Passeig de Gràcia';
       streetNum = '43';
       postalCode = '08007';
-      refcat = '08019A002000050000AB';
+      refcat = '0227802DF3802E';
       year = 1904;
       surface = 4300;
       units = 12;
@@ -346,7 +347,7 @@ export class OpenBarrioApiClient {
       street = 'Carrer de Colón';
       streetNum = '15';
       postalCode = '46004';
-      refcat = '4625001VK4722E0001AZ';
+      refcat = '6023512YJ2762C';
       year = 1986;
       surface = 1850;
       units = 22;
@@ -359,7 +360,7 @@ export class OpenBarrioApiClient {
       street = 'Calle Sierpes';
       streetNum = '22';
       postalCode = '41004';
-      refcat = '4190001TG3449S0001AB';
+      refcat = '4927803TG3442F';
       year = 1968;
       surface = 95;
       units = 8;
@@ -439,8 +440,8 @@ export class OpenBarrioApiClient {
     const clean = refcat.trim().toUpperCase();
 
     // Check known mock/sample presets first
-    if (clean.startsWith('08019A00200005') || clean.startsWith('08019A02300045')) {
-      return this.generateDeterministicAudit(41.39167, 2.16472, {
+    if (clean.startsWith('0227802DF3802E') || clean.startsWith('08019A00200005') || clean.startsWith('08019A02300045')) {
+      return this.generateDeterministicAudit(41.39170, 2.16495, {
         cadastralReference: clean,
         address: {
           street: 'Passeig de Gràcia',
@@ -452,8 +453,8 @@ export class OpenBarrioApiClient {
       });
     }
 
-    if (clean.startsWith('4625001VK4722E')) {
-      return this.generateDeterministicAudit(39.4699, -0.3735, {
+    if (clean.startsWith('6023512YJ2762C') || clean.startsWith('4625001VK4722E')) {
+      return this.generateDeterministicAudit(39.46845, -0.37318, {
         cadastralReference: clean,
         address: {
           street: 'Carrer de Colón',
@@ -465,8 +466,8 @@ export class OpenBarrioApiClient {
       });
     }
 
-    if (clean.startsWith('4190001TG3449S') || clean.startsWith('41091A00400012')) {
-      return this.generateDeterministicAudit(37.3908, -5.9942, {
+    if (clean.startsWith('4927803TG3442F') || clean.startsWith('4190001TG3449S') || clean.startsWith('41091A00400012')) {
+      return this.generateDeterministicAudit(37.39147, -5.99476, {
         cadastralReference: clean,
         address: {
           street: 'Calle Sierpes',
@@ -478,8 +479,8 @@ export class OpenBarrioApiClient {
       });
     }
 
-    if (clean.startsWith('9872023VH5797S') || clean.startsWith('28900A01200034')) {
-      return this.generateDeterministicAudit(40.42028, -3.70379, {
+    if (clean.startsWith('0549711VK4704') || clean.startsWith('9872023VH5797S') || clean.startsWith('28900A01200034')) {
+      return this.generateDeterministicAudit(40.42023, -3.70197, {
         cadastralReference: clean,
         address: {
           street: 'Calle Gran Vía',

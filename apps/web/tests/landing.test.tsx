@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, screen, fireEvent, act, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, act, waitFor, within } from '@testing-library/react';
 import { App } from '../src/App';
 import { LanguageProvider, useTranslation } from '../src/i18n';
 
@@ -23,16 +23,30 @@ vi.mock('../src/services/api.client', async (importOriginal) => {
     ...actual,
     apiClient: {
       ...actual.apiClient,
-      searchAddress: vi.fn().mockResolvedValue([]),
+      searchAddress: vi.fn().mockImplementation((query: string) => {
+        if (query.toLowerCase().includes('gràcia') || query.toLowerCase().includes('gracia') || query.toLowerCase().includes('barcelona')) {
+          return Promise.resolve([
+            {
+              label: "Passeig de Gràcia 43, 08007 Barcelona (L'Eixample)",
+              lat: 41.39170,
+              lon: 2.16495,
+              refcat: '0227802DF3802E',
+            },
+          ]);
+        }
+        return Promise.resolve([]);
+      }),
       auditByCoordinates: vi.fn().mockImplementation((lat: number, lon: number) => {
         return Promise.resolve(
           actual.auditDataToReport({
-            query: 'Passeig de Gràcia 42, Barcelona',
-            refcat: '08019A023000450001JK',
-            address: "Passeig de Gràcia 42, 08007 Barcelona (L'Eixample)",
+            query: 'Passeig de Gràcia 43, Barcelona',
+            refcat: '0227802DF3802E',
+            address: "Passeig de Gràcia 43, 08007 Barcelona (L'Eixample)",
             score: 82,
-            yearBuilt: 1954,
+            yearBuilt: 1904,
             surfaceM2: 88,
+            isStressedZone: true,
+            isLive: true,
             coordinates: { lat, lon },
           })
         );
@@ -40,12 +54,14 @@ vi.mock('../src/services/api.client', async (importOriginal) => {
       auditByCadastralReference: vi.fn().mockImplementation((refcat: string) => {
         return Promise.resolve(
           actual.auditDataToReport({
-            query: 'Passeig de Gràcia 42, Barcelona',
-            refcat: refcat || '08019A023000450001JK',
-            address: "Passeig de Gràcia 42, 08007 Barcelona (L'Eixample)",
+            query: 'Passeig de Gràcia 43, Barcelona',
+            refcat: refcat || '0227802DF3802E',
+            address: "Passeig de Gràcia 43, 08007 Barcelona (L'Eixample)",
             score: 82,
-            yearBuilt: 1954,
+            yearBuilt: 1904,
             surfaceM2: 88,
+            isStressedZone: true,
+            isLive: true,
           })
         );
       }),
@@ -147,7 +163,7 @@ describe('Landing Page & i18n Integration', () => {
       expect(screen.getByPlaceholderText(/Introduce dirección completa/i)).toBeTruthy();
       expect(screen.getByText(/Auditar Inmueble/i)).toBeTruthy();
       expect(screen.getByText('Gran Vía 28, Madrid')).toBeTruthy();
-      expect(screen.getByText('Passeig de Gràcia 42, Barcelona')).toBeTruthy();
+      expect(screen.getByText('Passeig de Gràcia 43, Barcelona')).toBeTruthy();
 
       // 3. Four-Pillar Grid
       expect(screen.getByText(/AUDITORÍA INTEGRAL MULTIFUENTE/i)).toBeTruthy();
@@ -209,14 +225,14 @@ describe('Landing Page & i18n Integration', () => {
       expect(screen.getByText(/OpenBarrio Telemetry/i)).toBeTruthy();
     });
 
-    it('should open and close the AuditModal when an example chip is clicked', () => {
+    it('should open and close the AuditModal when an example chip is clicked', async () => {
       render(<App />);
 
       // Modal should not be open initially
       expect(screen.queryByRole('dialog')).toBeNull();
 
       // Click on Barcelona example
-      const barcelonaChip = screen.getByText('Passeig de Gràcia 42, Barcelona');
+      const barcelonaChip = screen.getByText('Passeig de Gràcia 43, Barcelona');
       act(() => {
         fireEvent.click(barcelonaChip);
       });
@@ -224,14 +240,17 @@ describe('Landing Page & i18n Integration', () => {
       // Modal should now be open
       const dialog = screen.getByRole('dialog');
       expect(dialog).toBeTruthy();
-      expect(screen.getByText(/Ficha de Auditoría Territorial/i)).toBeTruthy();
-      expect(screen.getByText(/Passeig de Gràcia 42, 08007 Barcelona/i)).toBeTruthy();
-      expect(screen.getAllByText(/Ref: 08019A023000450001JK/i).length).toBeGreaterThan(0);
-      expect(screen.getAllByText(/82\/100/).length).toBeGreaterThan(0);
-      expect(screen.getByText(/SÍ \(Topes legales aplicables\)/i)).toBeTruthy();
+
+      // Wait for live report hydration
+      await waitFor(() => {
+        expect(within(dialog).getByText(/Passeig de Gràcia 43.*Barcelona/i)).toBeTruthy();
+      });
+      expect(within(dialog).getAllByText(/Ref: 0227802DF3802E/i).length).toBeGreaterThan(0);
+      expect(within(dialog).getAllByText(/82\/100/).length).toBeGreaterThan(0);
+      expect(within(dialog).getByText(/SÍ \(Topes legales aplicables\)/i)).toBeTruthy();
 
       // Close modal
-      const closeButtons = screen.getAllByRole('button', { name: /Cerrar/i });
+      const closeButtons = within(dialog).getAllByRole('button', { name: /Cerrar/i });
       act(() => {
         fireEvent.click(closeButtons[0]);
       });
@@ -254,21 +273,31 @@ describe('Landing Page & i18n Integration', () => {
       });
 
       // Modal opens with custom query
-      expect(screen.getByRole('dialog')).toBeTruthy();
-      expect(screen.getByText(/Calle Alcalá 50, Madrid/i)).toBeTruthy();
+      const dialog = screen.getByRole('dialog');
+      expect(dialog).toBeTruthy();
+      expect(within(dialog).getByText(/Calle Alcalá 50, Madrid/i)).toBeTruthy();
     });
 
     it('should transition to map view showing the exact audited property when clicking openInMap in modal', async () => {
       render(<App />);
 
       // Click on Barcelona example
-      const barcelonaChip = screen.getByText('Passeig de Gràcia 42, Barcelona');
+      const barcelonaChip = screen.getByText('Passeig de Gràcia 43, Barcelona');
       act(() => {
         fireEvent.click(barcelonaChip);
       });
 
+      // Modal should now be open
+      const dialog = screen.getByRole('dialog');
+      expect(dialog).toBeTruthy();
+
+      // Wait for modal live report to be loaded so the button is enabled
+      await waitFor(() => {
+        expect(within(dialog).getByText(/Passeig de Gràcia 43.*Barcelona/i)).toBeTruthy();
+      });
+
       // Click "Localizar en Visor Cartográfico" button in modal
-      const openInMapButton = screen.getByRole('button', { name: /Localizar en Visor Cartográfico/i });
+      const openInMapButton = within(dialog).getByRole('button', { name: /Localizar en Visor Cartográfico/i });
       act(() => {
         fireEvent.click(openInMapButton);
       });
@@ -281,9 +310,9 @@ describe('Landing Page & i18n Integration', () => {
 
       // The report displayed should be Barcelona, NOT default Gran Vía Madrid
       await waitFor(() => {
-        expect(screen.getAllByText(/Passeig de Gràcia 42/i).length).toBeGreaterThan(0);
+        expect(screen.getAllByText(/Passeig de Gràcia 43/i).length).toBeGreaterThan(0);
       });
-      expect(screen.getAllByText(/08019A023000450001JK/i).length).toBeGreaterThan(0);
+      expect(screen.getAllByText(/0227802DF3802E/i).length).toBeGreaterThan(0);
     });
   });
 });

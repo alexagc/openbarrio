@@ -21,62 +21,6 @@ import { ProblemDetails } from '@openbarrio/core';
 import { ArrowLeft, MapPin, Download, Printer } from 'lucide-react';
 import { downloadCadastralGML } from './utils/gml';
 
-const SAMPLE_AUDITS: Record<string, AuditData> = {
-  'gran vía 28, madrid': {
-    query: 'Gran Vía 28, Madrid',
-    refcat: '28900A012000340001LM',
-    address: 'Calle Gran Vía 28, 28013 Madrid (Centro)',
-    score: 88,
-    yearBuilt: 1924,
-    surfaceM2: 120,
-    cadastralUsage: 'Residencial Colectivo',
-    householdIncome: 28500,
-    incomePercentile: 89,
-    noiseLden: 58,
-    noiseLevel: 'Moderado',
-    floodRisk: 'Nulo (T>500a)',
-    rentMinM2: 18.5,
-    rentMaxM2: 24.2,
-    isStressedZone: false,
-    coordinates: { lat: 40.42028, lon: -3.70379 },
-  },
-  'passeig de gràcia 42, barcelona': {
-    query: 'Passeig de Gràcia 42, Barcelona',
-    refcat: '08019A023000450001JK',
-    address: "Passeig de Gràcia 42, 08007 Barcelona (L'Eixample)",
-    score: 82,
-    yearBuilt: 1954,
-    surfaceM2: 88,
-    cadastralUsage: 'Residencial Colectivo',
-    householdIncome: 19240,
-    incomePercentile: 74,
-    noiseLden: 64,
-    noiseLevel: 'Tráfico alto',
-    floodRisk: 'Nulo (T>500a)',
-    rentMinM2: 12.0,
-    rentMaxM2: 16.4,
-    isStressedZone: true,
-    coordinates: { lat: 41.39167, lon: 2.16472 },
-  },
-  'calle sierpes 12, sevilla': {
-    query: 'Calle Sierpes 12, Sevilla',
-    refcat: '41091A004000120001AB',
-    address: 'Calle Sierpes 12, 41004 Sevilla (Casco Antiguo)',
-    score: 78,
-    yearBuilt: 1968,
-    surfaceM2: 95,
-    cadastralUsage: 'Residencial Colectivo',
-    householdIncome: 16800,
-    incomePercentile: 62,
-    noiseLden: 60,
-    noiseLevel: 'Moderado peatonal',
-    floodRisk: 'Nulo (T>500a)',
-    rentMinM2: 10.2,
-    rentMaxM2: 14.1,
-    isStressedZone: false,
-    coordinates: { lat: 37.3908, lon: -5.9942 },
-  },
-};
 
 function generateAuditFallback(
   query: string,
@@ -137,18 +81,30 @@ export function AppContent() {
   ) => {
     const cleanRefcat = query.replace(/[\s\-_.]/g, '').toUpperCase();
     const isRefcat = mode === 'refcat' || /^[0-9A-Z]{14,20}$/.test(cleanRefcat);
-    const normalizedKey = query.toLowerCase().trim();
-    const sample = SAMPLE_AUDITS[normalizedKey];
-    const initialData =
-      sample ||
-      generateAuditFallback(
-        isRefcat ? cleanRefcat : query,
-        isRefcat ? 'refcat' : 'address',
-        coords
-      );
-    setActiveAudit(initialData);
 
-    // Query live API in background to hydrate with official state data
+    // 1. Immediately open modal in loading state - never flash synthetic fake numbers
+    setActiveAudit({
+      query,
+      refcat: isRefcat ? cleanRefcat : 'Consultando...',
+      address: isRefcat ? `Inmueble con RC ${cleanRefcat}` : query,
+      score: 0,
+      yearBuilt: 0,
+      surfaceM2: 0,
+      cadastralUsage: 'Consultando datos oficiales...',
+      householdIncome: 0,
+      incomePercentile: 0,
+      noiseLden: 0,
+      noiseLevel: 'Consultando...',
+      floodRisk: 'Consultando...',
+      rentMinM2: 0,
+      rentMaxM2: 0,
+      isStressedZone: false,
+      coordinates: coords,
+      isLive: false,
+      isLoading: true,
+    });
+
+    // 2. Query live API in background to hydrate with official state data
     (async () => {
       try {
         let liveReport: ExtendedAuditReport | null = null;
@@ -172,12 +128,29 @@ export function AppContent() {
           }
         }
 
-        if (liveReport && !liveReport.isOfflineDemo) {
+        if (!liveReport) {
+          liveReport = apiClient.generateDeterministicAudit(
+            effectiveCoords?.lat ?? 40.42028,
+            effectiveCoords?.lon ?? -3.70379,
+            {
+              cadastralReference: isRefcat ? cleanRefcat : undefined,
+              address: {
+                street: query,
+                number: '1',
+                postalCode: '28001',
+                municipality: 'Madrid',
+                province: 'Madrid',
+              },
+            }
+          );
+        }
+
+        if (liveReport) {
           setReport(liveReport);
           setActiveAudit({
             query,
             refcat: liveReport.property.cadastralReference,
-            address: `${liveReport.property.address.street} ${liveReport.property.address.number}, ${liveReport.property.address.municipality}`,
+            address: `${liveReport.property.address.street} ${liveReport.property.address.number}, ${liveReport.property.address.postalCode ? `${liveReport.property.address.postalCode} ` : ''}${liveReport.property.address.municipality}`,
             score: liveReport.score.overallScore,
             yearBuilt: liveReport.property.building.constructionYear,
             surfaceM2: liveReport.property.building.builtSurfaceM2,
@@ -194,11 +167,22 @@ export function AppContent() {
               lat: liveReport.property.coordinates.latitude,
               lon: liveReport.property.coordinates.longitude,
             },
-            isLive: true,
+            isLive: !liveReport.isOfflineDemo,
+            isLoading: false,
           });
         }
       } catch {
-        // Keep initial fallback if network unreachable
+        // Fallback strictly when network is completely unreachable
+        const fallback = generateAuditFallback(
+          isRefcat ? cleanRefcat : query,
+          isRefcat ? 'refcat' : 'address',
+          coords
+        );
+        setActiveAudit({
+          ...fallback,
+          isLive: false,
+          isLoading: false,
+        });
       }
     })();
   };

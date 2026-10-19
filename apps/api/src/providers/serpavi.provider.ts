@@ -54,11 +54,21 @@ export class SERPAVIProvider implements ISERPAVIProvider {
     cadastralProperty: CadastralProperty,
     censusSectionCode?: string
   ): Promise<RentalBenchmark> {
-    const muniCode =
-      censusSectionCode?.slice(0, 5) ||
-      cadastralProperty.address.postalCode?.slice(0, 2) + '001';
+    const provinceCode =
+      cadastralProperty.address.provinceCode ||
+      cadastralProperty.address.postalCode?.slice(0, 2) ||
+      '28';
 
-    const provinceCode = cadastralProperty.address.postalCode?.slice(0, 2) || '28';
+    let muniCode = censusSectionCode?.slice(0, 5);
+    if (!muniCode && cadastralProperty.address.municipalityCode) {
+      muniCode = `${provinceCode}${cadastralProperty.address.municipalityCode.padStart(3, '0')}`;
+    }
+    if (!muniCode && cadastralProperty.address.municipality?.toLowerCase().includes('barcelona')) {
+      muniCode = '08019';
+    }
+    if (!muniCode) {
+      muniCode = `${provinceCode}001`;
+    }
     const isStressed = this.isStressedZone(muniCode, provinceCode);
 
     // Compute baseline EUR/m2 based on municipality tier
