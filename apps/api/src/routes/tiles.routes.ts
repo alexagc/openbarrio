@@ -81,11 +81,11 @@ export function createTilesRoutes(): Hono<{ Bindings: CloudflareEnv }> {
       });
     }
 
-    const upstream = `https://gis.miteco.gob.es/geoserver/agua/wms?SERVICE=WMS&VERSION=1.3.0&REQUEST=GetMap&FORMAT=image/png&TRANSPARENT=TRUE&LAYERS=Zi_laminas_q100,Zi_laminas_q500,ZI_Laminas_ZFP&STYLES=&CRS=EPSG:3857&WIDTH=${encodeURIComponent(width)}&HEIGHT=${encodeURIComponent(height)}&BBOX=${encodeURIComponent(bbox)}`;
+    const upstream = `https://gis.miteco.gob.es/geoserver/agua/wms?SERVICE=WMS&VERSION=1.3.0&REQUEST=GetMap&FORMAT=image/png&TRANSPARENT=TRUE&LAYERS=Zi_laminas_q10,Zi_laminas_q50,Zi_laminas_q100,Zi_laminas_q500,ZI_Laminas_ZFP&STYLES=&CRS=EPSG:3857&WIDTH=${encodeURIComponent(width)}&HEIGHT=${encodeURIComponent(height)}&BBOX=${encodeURIComponent(bbox)}`;
 
     try {
       const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), 6000);
+      const timer = setTimeout(() => controller.abort(), 10000);
       const res = await fetch(upstream, {
         signal: controller.signal,
         headers: { 'User-Agent': 'OpenBarrio-DueDiligence/0.1' },

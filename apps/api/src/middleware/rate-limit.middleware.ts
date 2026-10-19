@@ -72,7 +72,7 @@ export function rateLimitMiddleware(options: RateLimitOptions = {}): MiddlewareH
     }
 
     const path = c.req.path;
-    if (path === '/health' || path.startsWith('/docs')) {
+    if (path === '/health' || path.startsWith('/docs') || path.includes('/tiles/')) {
       return next();
     }
 

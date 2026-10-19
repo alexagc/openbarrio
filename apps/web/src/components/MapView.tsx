@@ -210,20 +210,20 @@ export function MapView({
             tileSize: 256,
             attribution: '&copy; Instituto Nacional de Estadística (INE)',
           },
-          // MITECO SICA Noise WMS via OpenBarrio CORS Edge proxy
+          // MITECO SICA Noise WMS (Official MITECO GeoServer)
           'miteco-sica': {
             type: 'raster',
             tiles: [
-              `${(import.meta.env.VITE_API_URL || '').replace(/\/$/, '')}/api/v1/tiles/miteco/noise?bbox={bbox-epsg-3857}&width=256&height=256`,
+              'https://gis.miteco.gob.es/geoserver/evaluacionambiental/wms?SERVICE=WMS&VERSION=1.3.0&REQUEST=GetMap&FORMAT=image/png&TRANSPARENT=TRUE&LAYERS=mer_carretera_lden,mer_aglomeracion_lden,mer_ferrocarril_lden,mer_aeropuerto_lden&STYLES=&CRS=EPSG:3857&WIDTH=256&HEIGHT=256&BBOX={bbox-epsg-3857}',
             ],
             tileSize: 256,
             attribution: '&copy; MITECO SICA / MER',
           },
-          // MITECO SNCZI Flood Risk WMS via OpenBarrio CORS Edge proxy
+          // MITECO SNCZI Flood Risk WMS (Official MITECO GeoServer - T=10, 50, 100, 500 & ZFP)
           'miteco-snczi': {
             type: 'raster',
             tiles: [
-              `${(import.meta.env.VITE_API_URL || '').replace(/\/$/, '')}/api/v1/tiles/miteco/flood?bbox={bbox-epsg-3857}&width=256&height=256`,
+              'https://gis.miteco.gob.es/geoserver/agua/wms?SERVICE=WMS&VERSION=1.3.0&REQUEST=GetMap&FORMAT=image/png&TRANSPARENT=TRUE&LAYERS=Zi_laminas_q10,Zi_laminas_q50,Zi_laminas_q100,Zi_laminas_q500,ZI_Laminas_ZFP&STYLES=&CRS=EPSG:3857&WIDTH=256&HEIGHT=256&BBOX={bbox-epsg-3857}',
             ],
             tileSize: 256,
             attribution: '&copy; MITECO SNCZI',
@@ -678,10 +678,24 @@ export function MapView({
               </span>
             </div>
             <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-surface-variant text-outline">
-              {showSncziFlood ? 'T=100/500a' : 'Inactivo'}
+              {showSncziFlood ? 'T=10..500a' : 'Inactivo'}
             </span>
           </label>
         </div>
+
+        {/* Quick navigation to active river basin flood cartography */}
+        {showSncziFlood && (
+          <div className="mt-2 bg-blue-500/10 border border-blue-500/30 text-blue-300 text-[10px] font-sans px-2 py-1.5 rounded flex items-center justify-between gap-1.5">
+            <span>Zona fluvial oficial (Zaragoza · Ebro)</span>
+            <button
+              type="button"
+              onClick={() => mapRef.current?.flyTo({ center: [-0.878, 41.656], zoom: 14, duration: 800 })}
+              className="px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-200 border border-blue-500/40 text-[9px] font-mono hover:bg-blue-500/30 transition shrink-0 cursor-pointer"
+            >
+              Ver Ebro
+            </button>
+          </div>
+        )}
 
         {/* Zoom Hint for Cadastre & Thematic Layers */}
         {showCatastroWms && currentZoom < 12 && (
