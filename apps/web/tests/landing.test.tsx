@@ -45,6 +45,8 @@ vi.mock('../src/services/api.client', async (importOriginal) => {
             score: 82,
             yearBuilt: 1904,
             surfaceM2: 88,
+            isStressedZone: true,
+            isLive: true,
             coordinates: { lat, lon },
           })
         );
@@ -58,6 +60,8 @@ vi.mock('../src/services/api.client', async (importOriginal) => {
             score: 82,
             yearBuilt: 1904,
             surfaceM2: 88,
+            isStressedZone: true,
+            isLive: true,
           })
         );
       }),
