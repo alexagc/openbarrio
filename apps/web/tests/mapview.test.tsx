@@ -180,7 +180,7 @@ describe('MapView Component (Stitch Civic Precision)', () => {
       expect(esriDarkLayer.maxzoom).toBe(22);
     });
 
-    it('should configure ine-income-wms source with official INE ADRH MapServer endpoint', async () => {
+    it('should configure ine-income-wms source with official INE GeoServer WMS endpoint', async () => {
       const maplibreMock = await import('maplibre-gl');
       render(
         <MapView
@@ -193,7 +193,7 @@ describe('MapView Component (Stitch Civic Precision)', () => {
       const lastCallArgs = mapConstructor.mock.calls[mapConstructor.mock.calls.length - 1][0];
       const ineSource = lastCallArgs.style.sources['ine-income-wms'];
       expect(ineSource).toBeTruthy();
-      expect(ineSource.tiles[0]).toContain('ADRH_2023_Renta_media_por_hogar/MapServer/export');
+      expect(ineSource.tiles[0]).toContain('WMS_INE_SECCIONES_G01');
     });
   });
 });
