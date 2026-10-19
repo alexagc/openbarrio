@@ -146,8 +146,11 @@ export class OpenBarrioApiClient {
       return [];
     }
 
-    // Normalize potential portal number + letter without spaces (e.g. "25b" -> "25 B", "14bis" -> "14 bis")
-    const spacedQuery = trimmed.replace(/\b(\d+)([a-zA-Z]+)\b/g, '$1 $2');
+    // Normalize potential portal number + letter with hyphens, slashes, or without spaces
+    // e.g. "44-B" -> "44 B", "44/B" -> "44 B", "25b" -> "25 B", "14bis" -> "14 bis"
+    const spacedQuery = trimmed
+      .replace(/\b(\d+)\s*[-/]\s*([a-zA-Z]+)\b/g, '$1 $2')
+      .replace(/\b(\d+)([a-zA-Z]+)\b/g, '$1 $2');
 
     // 1. Try official Spanish CartoCiudad (IGN) geocoder
     try {
@@ -171,7 +174,17 @@ export class OpenBarrioApiClient {
           .filter((item: any) => item && item.address)
           .map((item: any) => {
             let label = item.address;
-            if (item.extension && !label.includes(item.extension)) {
+            if (item.extension && item.portalNumber) {
+              const hasPortalWithExt = new RegExp(`\\b${item.portalNumber}\\s*${item.extension}\\b`, 'i').test(label);
+              if (!hasPortalWithExt) {
+                const portalRegex = new RegExp(`\\b(${item.portalNumber})\\b`, 'i');
+                if (portalRegex.test(label)) {
+                  label = label.replace(portalRegex, `$1 ${item.extension}`);
+                } else {
+                  label = `${label} ${item.extension}`;
+                }
+              }
+            } else if (item.extension && !new RegExp(`\\b${item.extension}\\b`, 'i').test(label)) {
               label = `${label} ${item.extension}`;
             }
             return {

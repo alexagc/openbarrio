@@ -17,7 +17,7 @@ import { AuditDossier } from './components/AuditDossier';
 import { SkeletonDossier } from './components/SkeletonDossier';
 import { ErrorAlert } from './components/ErrorAlert';
 import { apiClient, ExtendedAuditReport, auditDataToReport } from './services/api.client';
-import { ProblemDetails } from '@openbarrio/core';
+import { ProblemDetails, isCadastralReference } from '@openbarrio/core';
 import { ArrowLeft, MapPin, Download, Printer } from 'lucide-react';
 import { downloadCadastralGML } from './utils/gml';
 
@@ -80,7 +80,7 @@ export function AppContent() {
     coords?: { lat: number; lon: number }
   ) => {
     const cleanRefcat = query.replace(/[\s\-_.]/g, '').toUpperCase();
-    const isRefcat = mode === 'refcat' || /^[0-9A-Z]{14,20}$/.test(cleanRefcat);
+    const isRefcat = mode === 'refcat' || isCadastralReference(query);
 
     // 1. Immediately open modal in loading state - never flash synthetic fake numbers
     setActiveAudit({
@@ -204,11 +204,11 @@ export function AppContent() {
 
       // 2. Refresh live report in background: prefer coords if available to query real parcel
       const cleanRefcat = audit.refcat ? audit.refcat.replace(/[\s\-_.]/g, '').toUpperCase() : '';
-      if (audit.isLive && cleanRefcat && /^[0-9A-Z]{14,20}$/.test(cleanRefcat)) {
+      if (audit.isLive && cleanRefcat && isCadastralReference(cleanRefcat)) {
         loadAuditByRefcat(cleanRefcat, coords);
       } else if (coords) {
         loadAuditByCoords(coords.lat, coords.lon);
-      } else if (cleanRefcat && /^[0-9A-Z]{14,20}$/.test(cleanRefcat)) {
+      } else if (cleanRefcat && isCadastralReference(cleanRefcat)) {
         loadAuditByRefcat(cleanRefcat);
       }
     } else if (!report) {

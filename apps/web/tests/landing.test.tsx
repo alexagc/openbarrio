@@ -278,6 +278,27 @@ describe('Landing Page & i18n Integration', () => {
       expect(within(dialog).getByText(/Calle Alcalá 50, Madrid/i)).toBeTruthy();
     });
 
+    it('should handle multi-letter addresses like "Calle Serrano 44 B" as an address and not misclassify as cadastral reference', () => {
+      render(<App />);
+
+      const searchInput = screen.getByPlaceholderText(/Introduce dirección completa/i);
+      act(() => {
+        fireEvent.change(searchInput, { target: { value: 'Calle Serrano 44 B' } });
+      });
+
+      const auditButton = screen.getByRole('button', { name: /Auditar Inmueble/i });
+      act(() => {
+        fireEvent.click(auditButton);
+      });
+
+      // Modal opens with address query, not as synthetic RefCat
+      const dialog = screen.getByRole('dialog');
+      expect(dialog).toBeTruthy();
+      expect(within(dialog).getByText(/Calle Serrano 44 B/i)).toBeTruthy();
+      // Must NOT display "Inmueble con RC CALLESERRANO44B"
+      expect(within(dialog).queryByText(/Inmueble con RC CALLESERRANO44B/i)).toBeNull();
+    });
+
     it('should transition to map view showing the exact audited property when clicking openInMap in modal', async () => {
       render(<App />);
 

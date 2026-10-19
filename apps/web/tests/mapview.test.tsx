@@ -160,6 +160,42 @@ describe('MapView Component (Stitch Civic Precision)', () => {
       expect(floodCheckbox).toBeTruthy();
       fireEvent.click(floodCheckbox);
     });
+
+    it('should configure esri-dark source with maxzoom 16 and layer with maxzoom 22 for seamless high-zoom overzooming', async () => {
+      const maplibreMock = await import('maplibre-gl');
+      render(
+        <MapView
+          selectedCoords={{ lat: 40.42028, lon: -3.70379 }}
+          onMapClick={vi.fn()}
+        />
+      );
+
+      const mapConstructor = maplibreMock.Map as unknown as ReturnType<typeof vi.fn>;
+      expect(mapConstructor).toHaveBeenCalled();
+      const lastCallArgs = mapConstructor.mock.calls[mapConstructor.mock.calls.length - 1][0];
+      const esriDarkSource = lastCallArgs.style.sources['esri-dark'];
+      expect(esriDarkSource.maxzoom).toBe(16);
+
+      const esriDarkLayer = lastCallArgs.style.layers.find((l: any) => l.id === 'esri-dark-layer');
+      expect(esriDarkLayer.maxzoom).toBe(22);
+    });
+
+    it('should configure ine-income-wms source with official INE ADRH MapServer endpoint', async () => {
+      const maplibreMock = await import('maplibre-gl');
+      render(
+        <MapView
+          selectedCoords={{ lat: 40.42028, lon: -3.70379 }}
+          onMapClick={vi.fn()}
+        />
+      );
+
+      const mapConstructor = maplibreMock.Map as unknown as ReturnType<typeof vi.fn>;
+      const lastCallArgs = mapConstructor.mock.calls[mapConstructor.mock.calls.length - 1][0];
+      const ineSource = lastCallArgs.style.sources['ine-income-wms'];
+      expect(ineSource).toBeTruthy();
+      expect(ineSource.tiles[0]).toContain('ADRH_2023_Renta_media_por_hogar/MapServer/export');
+    });
   });
 });
+
 
