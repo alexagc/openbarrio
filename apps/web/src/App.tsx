@@ -150,7 +150,7 @@ export function AppContent() {
           setActiveAudit({
             query,
             refcat: liveReport.property.cadastralReference,
-            address: `${liveReport.property.address.street} ${liveReport.property.address.number}, ${liveReport.property.address.municipality}`,
+            address: `${liveReport.property.address.street} ${liveReport.property.address.number}, ${liveReport.property.address.postalCode ? `${liveReport.property.address.postalCode} ` : ''}${liveReport.property.address.municipality}`,
             score: liveReport.score.overallScore,
             yearBuilt: liveReport.property.building.constructionYear,
             surfaceM2: liveReport.property.building.builtSurfaceM2,

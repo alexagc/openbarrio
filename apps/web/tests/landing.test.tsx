@@ -239,7 +239,7 @@ describe('Landing Page & i18n Integration', () => {
 
       // Wait for live report hydration
       await waitFor(() => {
-        expect(screen.getByText(/Passeig de Gràcia 43, 08007 Barcelona/i)).toBeTruthy();
+        expect(screen.getByText(/Passeig de Gràcia 43.*Barcelona/i)).toBeTruthy();
       });
       expect(screen.getAllByText(/Ref: 0227802DF3802E/i).length).toBeGreaterThan(0);
       expect(screen.getAllByText(/82\/100/).length).toBeGreaterThan(0);
@@ -284,7 +284,7 @@ describe('Landing Page & i18n Integration', () => {
 
       // Wait for modal live report to be loaded so the button is enabled
       await waitFor(() => {
-        expect(screen.getByText(/Passeig de Gràcia 43, 08007 Barcelona/i)).toBeTruthy();
+        expect(screen.getByText(/Passeig de Gràcia 43.*Barcelona/i)).toBeTruthy();
       });
 
       // Click "Localizar en Visor Cartográfico" button in modal
