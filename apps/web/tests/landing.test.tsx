@@ -23,7 +23,19 @@ vi.mock('../src/services/api.client', async (importOriginal) => {
     ...actual,
     apiClient: {
       ...actual.apiClient,
-      searchAddress: vi.fn().mockResolvedValue([]),
+      searchAddress: vi.fn().mockImplementation((query: string) => {
+        if (query.toLowerCase().includes('gràcia') || query.toLowerCase().includes('gracia') || query.toLowerCase().includes('barcelona')) {
+          return Promise.resolve([
+            {
+              label: "Passeig de Gràcia 43, 08007 Barcelona (L'Eixample)",
+              lat: 41.39170,
+              lon: 2.16495,
+              refcat: '0227802DF3802E',
+            },
+          ]);
+        }
+        return Promise.resolve([]);
+      }),
       auditByCoordinates: vi.fn().mockImplementation((lat: number, lon: number) => {
         return Promise.resolve(
           actual.auditDataToReport({

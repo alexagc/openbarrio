@@ -103,7 +103,15 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onAudit }) => {
   const handleExampleClick = (exampleQuery: string, exampleMode: 'address' | 'refcat' = 'address') => {
     setMode(exampleMode);
     setSearchValue(exampleQuery);
-    onAudit(exampleQuery, exampleMode);
+    let coords: { lat: number; lon: number } | undefined;
+    if (exampleQuery.includes('Gran Vía 28')) {
+      coords = { lat: 40.42023, lon: -3.70197 };
+    } else if (exampleQuery.includes('Gràcia') || exampleQuery.includes('Gracia')) {
+      coords = { lat: 41.39170, lon: 2.16495 };
+    } else if (exampleQuery.includes('Sierpes')) {
+      coords = { lat: 37.39147, lon: -5.99476 };
+    }
+    onAudit(exampleQuery, exampleMode, coords);
   };
 
   return (

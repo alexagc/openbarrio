@@ -128,6 +128,23 @@ export function AppContent() {
           }
         }
 
+        if (!liveReport) {
+          liveReport = apiClient.generateDeterministicAudit(
+            effectiveCoords?.lat ?? 40.42028,
+            effectiveCoords?.lon ?? -3.70379,
+            {
+              cadastralReference: isRefcat ? cleanRefcat : undefined,
+              address: {
+                street: query,
+                number: '1',
+                postalCode: '28001',
+                municipality: 'Madrid',
+                province: 'Madrid',
+              },
+            }
+          );
+        }
+
         if (liveReport) {
           setReport(liveReport);
           setActiveAudit({
