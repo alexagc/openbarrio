@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { ShieldCheck, MapPin, Tag, Search, Zap, BarChart3, Building, Code2 } from 'lucide-react';
+import { isCadastralReference } from '@openbarrio/core';
 import { useTranslation } from '../../i18n';
 import { apiClient } from '../../services/api.client';
 
@@ -76,8 +77,8 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onAudit }) => {
     if (!raw) return;
 
     // Auto-detect cadastral reference format even if submitted in address mode
-    const cleanRefcat = raw.replace(/[\s\-_.]/g, '').toUpperCase();
-    if (/^[0-9A-Z]{14,20}$/.test(cleanRefcat)) {
+    if (isCadastralReference(raw)) {
+      const cleanRefcat = raw.replace(/[\s\-_.]/g, '').toUpperCase();
       onAudit(cleanRefcat, 'refcat');
       return;
     }

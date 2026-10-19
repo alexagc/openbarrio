@@ -150,5 +150,34 @@ describe('OpenBarrioApiClient', () => {
     expect(report.property.coordinates.latitude).not.toBe(40.42028);
     expect(report.property.coordinates.longitude).not.toBe(-3.70379);
   });
+
+  it('normalizes multi-letter address queries and formats extension properly in searchAddress', async () => {
+    const mockCartoData = [
+      {
+        address: 'CALLE SERRANO 44 B, Madrid',
+        lat: 40.42687,
+        lng: -3.68746,
+        portalNumber: 44,
+        extension: 'B',
+        refCatastral: '1755501VK4715F',
+      },
+    ];
+
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce({
+      ok: true,
+      json: async () => mockCartoData,
+    } as Response);
+
+    const results = await client.searchAddress('Calle Serrano 44-B');
+    expect(results).toHaveLength(1);
+    expect(results[0].label).toBe('CALLE SERRANO 44 B, Madrid');
+    expect(results[0].refcat).toBe('1755501VK4715F');
+
+    // Verify the query sent to CartoCiudad was spaced properly
+    expect(fetchSpy).toHaveBeenCalledWith(
+      expect.stringContaining('q=Calle%20Serrano%2044%20B')
+    );
+  });
 });
+
 

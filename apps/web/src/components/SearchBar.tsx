@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Search, MapPin, X, Loader2, Sparkles, Navigation, Copy, Check } from 'lucide-react';
+import { isCadastralReference } from '@openbarrio/core';
 import { apiClient } from '../services/api.client';
 
 export interface SearchPreset {
@@ -106,10 +107,9 @@ export function SearchBar({
   // Debounced address suggestion search with CartoCiudad & Nominatim
   useEffect(() => {
     const trimmed = query.trim();
-    const cleanRefcat = trimmed.replace(/[\s\-_.]/g, '').toUpperCase();
     if (
       trimmed.length < 3 ||
-      /^[0-9A-Z]{14,20}$/.test(cleanRefcat) ||
+      isCadastralReference(trimmed) ||
       /^[-+]?[0-9]*\.?[0-9]+[,\s]+[-+]?[0-9]*\.?[0-9]+$/.test(trimmed) ||
       trimmed.includes('(RC:')
     ) {
@@ -142,9 +142,9 @@ export function SearchBar({
       return;
     }
 
-    // 1. Direct Cadastral reference (14-20 alphanumeric, stripped of spaces, dashes, dots)
-    const cleanRefcat = raw.replace(/[\s\-_.]/g, '').toUpperCase();
-    if (/^[0-9A-Z]{14,20}$/.test(cleanRefcat)) {
+    // 1. Direct Cadastral reference (14 or 20 alphanumeric characters)
+    if (isCadastralReference(raw)) {
+      const cleanRefcat = raw.replace(/[\s\-_.]/g, '').toUpperCase();
       onSearchRefcat(cleanRefcat);
       return;
     }
@@ -181,7 +181,8 @@ export function SearchBar({
           } else {
             onSearchCoords(best.lat, best.lon);
           }
-        } else {
+        } else if (isCadastralReference(raw)) {
+          const cleanRefcat = raw.replace(/[\s\-_.]/g, '').toUpperCase();
           onSearchRefcat(cleanRefcat);
         }
       });
