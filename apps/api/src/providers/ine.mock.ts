@@ -102,25 +102,37 @@ export class MockINEProvider implements IINEProvider {
     provinceCode = '28',
     municipalityCode = '079'
   ): Promise<string> {
-    // Madrid geographic proximity
-    if (Math.abs(latitude - 40.42) < 0.2 && Math.abs(longitude - -3.70) < 0.2) {
+    // Madrid Gran Vía / Sol landmark
+    if (Math.abs(latitude - 40.420) < 0.005 && Math.abs(longitude - -3.703) < 0.005) {
       return '2807901001';
     }
 
-    // Barcelona geographic proximity
-    if (Math.abs(latitude - 41.39) < 0.2 && Math.abs(longitude - 2.16) < 0.2) {
+    // Madrid Salamanca landmark
+    if (Math.abs(latitude - 40.425) < 0.008 && Math.abs(longitude - -3.685) < 0.008) {
+      return '2807904001';
+    }
+
+    // Madrid Vallecas landmark
+    if (Math.abs(latitude - 40.392) < 0.008 && Math.abs(longitude - -3.665) < 0.008) {
+      return '2807913010';
+    }
+
+    // Barcelona Eixample landmark
+    if (Math.abs(latitude - 41.391) < 0.005 && Math.abs(longitude - 2.164) < 0.005) {
       return '0801902005';
     }
 
-    // Valencia geographic proximity
-    if (Math.abs(latitude - 39.47) < 0.2 && Math.abs(longitude - -0.37) < 0.2) {
+    // Valencia Ciutat Vella landmark
+    if (Math.abs(latitude - 39.4699) < 0.005 && Math.abs(longitude - -0.3735) < 0.005) {
       return '4625001002';
     }
 
     const prov = provinceCode.padStart(2, '0').slice(0, 2);
     const mun = municipalityCode.padStart(3, '0').slice(0, 3);
-    const dist = '01';
-    const sec = '001';
+    const latHash = (Math.abs(Math.round(latitude * 500)) % 15) + 1;
+    const lonHash = (Math.abs(Math.round(longitude * 500)) % 50) + 1;
+    const dist = String(latHash).padStart(2, '0');
+    const sec = String(lonHash).padStart(3, '0');
 
     return `${prov}${mun}${dist}${sec}`;
   }

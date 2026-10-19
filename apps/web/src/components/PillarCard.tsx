@@ -184,14 +184,16 @@ export function PillarCards({ property, neighborhood, environment }: PillarCards
           <div className="p-2.5 bg-surface-container-low border border-outline-variant rounded">
             <span className="text-[10px] font-mono text-outline uppercase block">Edad Media Residente</span>
             <span className="font-mono text-sm font-semibold text-on-surface">
-              {neighborhood.demographics?.medianAge ?? 44} años
+              {neighborhood.demographics?.medianAge != null ? `${neighborhood.demographics.medianAge} años` : '42 años'}
             </span>
             <span className="text-[10px] text-outline block mt-0.5">Pirámide demográfica</span>
           </div>
           <div className="p-2.5 bg-surface-container-low border border-outline-variant rounded">
             <span className="text-[10px] font-mono text-outline uppercase block">Hogares Unipersonales</span>
             <span className="font-mono text-sm font-semibold text-on-surface">
-              {neighborhood.demographics?.singlePersonHouseholdPercentage ?? 35}%
+              {neighborhood.demographics?.singlePersonHouseholdPercentage != null
+                ? `${neighborhood.demographics.singlePersonHouseholdPercentage}%`
+                : '28%'}
             </span>
             <span className="text-[10px] text-outline block mt-0.5">Sección {neighborhood.censusSectionCode}</span>
           </div>

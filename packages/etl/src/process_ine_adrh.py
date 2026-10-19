@@ -97,7 +97,9 @@ def process_ine_adrh(input_path: str, output_sql: str, output_db: str = None) ->
                 r.municipality_code,
                 MAX(CASE WHEN r.indicador LIKE '%hogar%' THEN r.val END) AS raw_household,
                 MAX(CASE WHEN r.indicador LIKE '%persona%' THEN r.val END) AS raw_person,
-                MAX(CASE WHEN r.indicador LIKE '%mediana%' THEN r.val END) AS raw_median
+                MAX(CASE WHEN r.indicador LIKE '%mediana%' THEN r.val END) AS raw_median,
+                MAX(CASE WHEN r.indicador LIKE '%edad%' THEN r.val END) AS raw_age,
+                MAX(CASE WHEN r.indicador LIKE '%unipersonal%' THEN r.val END) AS raw_single
             FROM raw_filtered r
             JOIN latest_per_section ly
               ON r.census_section_code = ly.census_section_code
@@ -111,8 +113,8 @@ def process_ine_adrh(input_path: str, output_sql: str, output_db: str = None) ->
                 COALESCE(raw_household, raw_person * 2.2, 32000.0) AS avg_household,
                 COALESCE(raw_person, raw_household / 2.2, 14500.0) AS avg_person,
                 COALESCE(raw_median, raw_household * 0.88, 28000.0) AS median_household,
-                44.0 AS median_age,
-                28.0 AS single_pct
+                COALESCE(raw_age, ROUND(38.0 + LEAST(14.0, GREATEST(0.0, (2.6 - (COALESCE(raw_household, 32000.0) / GREATEST(1000.0, COALESCE(raw_person, 14500.0)))) * 12.0)), 44.0) AS median_age,
+                COALESCE(raw_single, ROUND(18.0 + LEAST(24.0, GREATEST(0.0, (2.5 - (COALESCE(raw_household, 32000.0) / GREATEST(1000.0, COALESCE(raw_person, 14500.0)))) * 20.0)), 28.0) AS single_pct
             FROM pivoted
             WHERE census_section_code IS NOT NULL AND LENGTH(census_section_code) = 10
         ),

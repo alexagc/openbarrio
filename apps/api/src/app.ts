@@ -28,7 +28,7 @@ export function buildOpenApiSpec(): Record<string, any> {
       title: 'OpenBarrio Public Due Diligence API',
       description:
         'Open-source civic-tech and real estate due diligence platform aggregating official Spanish public open data (Catastro, INE, MITECO, MIVAU) with sub-5ms Cloudflare Edge execution',
-      version: '0.2.8',
+      version: '0.2.9',
       contact: {
         name: 'OpenBarrio Project',
         url: 'https://github.com/alexagc/openbarrio',

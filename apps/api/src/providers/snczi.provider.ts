@@ -39,7 +39,7 @@ export class SNCZIProvider implements ISNCZIProvider {
       REQUEST: 'GetFeatureInfo',
       LAYERS: layers,
       QUERY_LAYERS: layers,
-      CRS: 'EPSG:4326',
+      CRS: 'CRS:84',
       BBOX: bbox,
       WIDTH: '101',
       HEIGHT: '101',
@@ -87,19 +87,49 @@ export class SNCZIProvider implements ISNCZIProvider {
         for (const feature of json.features) {
           const layerName = String(feature.layer || feature.id || '').toUpperCase();
           const props = feature.properties || {};
+          const tipoZona = String(props.tipo_zona || props.TIPO_ZONA || '').toUpperCase();
+          const idZona = String(props.id_zona || props.ID_ZONA || '').toUpperCase();
           const periodVal = Number(props.PERIODO || props.T || props.return_period);
 
-          if (layerName.includes('ZFP') || props.ZFP === true || props.ZFP === '1') {
+          if (
+            layerName.includes('ZFP') ||
+            idZona.includes('ZFP') ||
+            props.ZFP === true ||
+            props.ZFP === '1' ||
+            tipoZona.includes('FLUJO PREFERENTE')
+          ) {
             isInPreferentialFlowZone = true;
           }
 
-          if (periodVal === 10 || (layerName.includes('T10') && !layerName.includes('T100'))) {
+          if (
+            periodVal === 10 ||
+            ((layerName.includes('Q10') || layerName.includes('T10') || tipoZona.includes('T10') || tipoZona.includes('Q10')) &&
+             !layerName.includes('100') && !tipoZona.includes('100') && !idZona.includes('100'))
+          ) {
             minReturnPeriod = minReturnPeriod ? Math.min(minReturnPeriod, 10) : 10;
-          } else if (periodVal === 50 || layerName.includes('T50')) {
+          } else if (
+            periodVal === 50 ||
+            layerName.includes('Q50') ||
+            layerName.includes('T50') ||
+            tipoZona.includes('T50') ||
+            tipoZona.includes('Q50')
+          ) {
             minReturnPeriod = minReturnPeriod ? Math.min(minReturnPeriod, 50) : 50;
-          } else if (periodVal === 100 || layerName.includes('T100')) {
+          } else if (
+            periodVal === 100 ||
+            layerName.includes('Q100') ||
+            layerName.includes('T100') ||
+            tipoZona.includes('T100') ||
+            tipoZona.includes('Q100')
+          ) {
             minReturnPeriod = minReturnPeriod ? Math.min(minReturnPeriod, 100) : 100;
-          } else if (periodVal === 500 || layerName.includes('T500')) {
+          } else if (
+            periodVal === 500 ||
+            layerName.includes('Q500') ||
+            layerName.includes('T500') ||
+            tipoZona.includes('T500') ||
+            tipoZona.includes('Q500')
+          ) {
             minReturnPeriod = minReturnPeriod ? Math.min(minReturnPeriod, 500) : 500;
           }
         }

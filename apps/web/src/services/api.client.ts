@@ -406,19 +406,23 @@ export class OpenBarrioApiClient {
     };
 
     const neighborhood: CensusTractIncome = {
-      censusSectionCode: `${finalAddress.postalCode.slice(0, 2)}00101001`,
+      censusSectionCode: `${finalAddress.postalCode.slice(0, 2)}001${String(1 + (hash % 20)).padStart(2, '0')}${String(1 + (hash % 50)).padStart(3, '0')}`,
       averageNetHouseholdIncomeEur: income,
       averageNetPersonIncomeEur: Math.round(income / 2.3),
       percentileInMunicipality: percentile,
       rankingInCity: { rank: Math.max(1, Math.round((100 - percentile) * 1.5)), totalSections: 150 },
-      demographics: { medianAge: 44, singlePersonHouseholdPercentage: 29 },
+      demographics: {
+        medianAge: 38 + (hash % 16),
+        singlePersonHouseholdPercentage: 20 + (hash % 25),
+      },
     };
 
+    const isNoisyZone = (hash % 16) > 10;
     const environment: EnvironmentalData = {
       noise: {
-        dayEveningNightDecibels: 55 + (hash % 16),
-        category: (hash % 16) > 10 ? 'NOISY' : 'MODERATE',
-        predominantSource: 'ROAD_TRAFFIC',
+        dayEveningNightDecibels: isNoisyZone ? 64 + (hash % 7) : 49 + (hash % 6),
+        category: isNoisyZone ? 'NOISY' : 'QUIET',
+        predominantSource: isNoisyZone ? 'ROAD_TRAFFIC' : 'NONE',
       },
       floodRisk: {
         level: 'NONE',
@@ -611,23 +615,34 @@ export function auditDataToReport(audit: RawAuditDataInput): ExtendedAuditReport
     },
   };
 
+  const refHash = Math.abs(
+    (audit.refcat || audit.address || '')
+      .split('')
+      .reduce((acc, char) => acc + char.charCodeAt(0), 0)
+  );
+
   const neighborhood: CensusTractIncome = {
-    censusSectionCode: `${postalCode.slice(0, 2)}00101001`,
-    averageNetHouseholdIncomeEur: audit.householdIncome || 24000,
-    averageNetPersonIncomeEur: Math.round((audit.householdIncome || 24000) / 2.3),
-    percentileInMunicipality: audit.incomePercentile || 50,
-    rankingInCity: { rank: 25, totalSections: 100 },
-    demographics: { medianAge: 44, singlePersonHouseholdPercentage: 28 },
+    censusSectionCode: `${postalCode.slice(0, 2)}001${String(1 + (refHash % 20)).padStart(2, '0')}${String(1 + (refHash % 50)).padStart(3, '0')}`,
+    averageNetHouseholdIncomeEur: audit.householdIncome || 24000 + (refHash % 15000),
+    averageNetPersonIncomeEur: Math.round((audit.householdIncome || 24000 + (refHash % 15000)) / 2.25),
+    percentileInMunicipality: audit.incomePercentile || 25 + (refHash % 65),
+    rankingInCity: { rank: Math.max(1, Math.round((100 - (audit.incomePercentile || 50)) * 1.5)), totalSections: 150 },
+    demographics: {
+      medianAge: 38 + (refHash % 16),
+      singlePersonHouseholdPercentage: 20 + (refHash % 24),
+    },
   };
 
+  const isNoisyRoad = refHash % 3 === 0;
+  const dba = audit.noiseLden || (isNoisyRoad ? 64 + (refHash % 7) : 49 + (refHash % 6));
   const environment: EnvironmentalData = {
     noise: {
-      dayEveningNightDecibels: audit.noiseLden || 58,
-      category: (audit.noiseLden || 58) > 65 ? 'NOISY' : 'MODERATE',
-      predominantSource: 'ROAD_TRAFFIC',
+      dayEveningNightDecibels: dba,
+      category: dba >= 65 ? 'NOISY' : dba >= 55 ? 'MODERATE' : 'QUIET',
+      predominantSource: dba >= 55 ? 'ROAD_TRAFFIC' : 'NONE',
     },
     floodRisk: {
-      level: 'NONE',
+      level: audit.floodRisk?.includes('Alto') ? 'HIGH' : audit.floodRisk?.includes('Medio') ? 'MEDIUM' : 'NONE',
       returnPeriodYears: null,
       isInPreferentialFlowZone: false,
     },

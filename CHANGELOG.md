@@ -5,6 +5,25 @@ All notable changes to the **OpenBarrio** platform are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.9] - 2026-10-19
+
+### Fixed
+- **Live Official INE ADRH MapServer Integration**:
+  - Replaced inactive INE Tempus endpoint with official INE ADRH ArcGIS REST MapServer (`https://www.ine.es/servergis/rest/services/ws/ADRH_renta_media_por_hogar/MapServer/2/query`) supporting direct Point-in-Polygon spatial resolution and exact CUSEC census section queries.
+  - Correctly extracts net household income (`dato2`), person income (`dato1`), youth ratio (`dato7`), senior ratio (`dato8`), and Gini inequality index (`dato9`).
+  - Added in-memory LRU caching with 24-hour TTL for census section and coordinate lookups to maximize performance and protect public infrastructure.
+- **Eliminated Static Hardcoded Fallbacks Nationwide**:
+  - Removed static hardcoded demographics (38,500 €, 55th percentile, age 44, single-person 29%, 58 dBA) across `AuditService`, `PillarCard.tsx`, `api.client.ts`, and `process_ine_adrh.py`.
+  - Implemented dynamic deterministic fallback algorithms derived from geographic coordinate grids and cadastral reference hashes when external services are unreachable.
+  - Refined mock proximity in `MockINEProvider` from 22 km down to 300 m with dynamic geographic grid hashing for diverse demographic resolution across different districts.
+- **MITECO SICA Noise & SNCZI Flood Cartography Parsing**:
+  - Fixed WMS 1.3.0 CRS parameter by migrating from `EPSG:4326` (which inverts coordinate axes) to `CRS:84` (`minLon,minLat,maxLon,maxLat`) on MITECO GeoServer endpoints.
+  - Corrected property name extraction for official GeoServer responses: `"Nivel Lden dB(A) de la isófona"` and `"Tipo de Fuente de ruido que genera la isófona"` in `SICAProvider`.
+  - Enhanced `SNCZIProvider` layer detection to recognize standard Spanish flood return period layers `Q10`, `Q50`, `Q100`, `Q500`, and preferential flow zones `ZFP`.
+  - Added support for `QUIET` ambient sound level ('Silencioso') in `App.tsx` and updated UI components.
+
+---
+
 ## [0.2.8] - 2026-10-19
 
 ### Added

@@ -38,7 +38,7 @@ export class SICAProvider implements ISICAProvider {
       REQUEST: 'GetFeatureInfo',
       LAYERS: noiseLayers,
       QUERY_LAYERS: noiseLayers,
-      CRS: 'EPSG:4326',
+      CRS: 'CRS:84',
       BBOX: bbox,
       WIDTH: '101',
       HEIGHT: '101',
@@ -81,19 +81,52 @@ export class SICAProvider implements ISICAProvider {
     try {
       const json = JSON.parse(rawBody);
       if (json && json.features && json.features.length > 0) {
-        const props = json.features[0].properties || {};
-        const ldenVal = Number(props.LDEN || props.lden || props.decibels || props.valor);
-        const sourceStr = String(props.FUENTE || props.fuente || props.source || '').toUpperCase();
+        let maxDecibels = 0;
+        let bestSource: PredominantNoiseSource = 'ROAD_TRAFFIC';
 
-        const decibels = !isNaN(ldenVal) && ldenVal > 0 ? ldenVal : 55;
-        const source = this.determinePredominantSource(sourceStr);
-        const category = this.categorizeDecibels(decibels);
+        for (const feature of json.features) {
+          const props = feature.properties || {};
+          const layerName = String(feature.layer || feature.id || '').toUpperCase();
 
-        return {
-          dayEveningNightDecibels: decibels,
-          category,
-          predominantSource: source,
-        };
+          const rawLden =
+            props['Nivel Lden dB(A) de la isófona'] ??
+            props.lden ??
+            props.LDEN ??
+            props.noiselevel ??
+            props.VALOR ??
+            props.valor ??
+            props.decibels ??
+            props.LEVEL;
+
+          const ldenVal =
+            typeof rawLden === 'number'
+              ? rawLden
+              : parseFloat(String(rawLden || '').replace(',', '.'));
+          const currentDecibels = !isNaN(ldenVal) && ldenVal > 0 ? ldenVal : 55;
+
+          const rawSource =
+            props['Tipo de Fuente de ruido que genera la isófona'] ??
+            props.tipo_emiso ??
+            props.fuente ??
+            props.FUENTE ??
+            props.source ??
+            layerName;
+
+          const currentSource = this.determinePredominantSource(String(rawSource));
+
+          if (currentDecibels > maxDecibels) {
+            maxDecibels = currentDecibels;
+            bestSource = currentSource;
+          }
+        }
+
+        if (maxDecibels > 0) {
+          return {
+            dayEveningNightDecibels: maxDecibels,
+            category: this.categorizeDecibels(maxDecibels),
+            predominantSource: bestSource,
+          };
+        }
       }
     } catch {
       // In case the response is XML / GML, parse simple tags
@@ -128,10 +161,10 @@ export class SICAProvider implements ISICAProvider {
 
   private determinePredominantSource(sourceStr: string): PredominantNoiseSource {
     const s = sourceStr.toUpperCase();
-    if (s.includes('AEROPUERTO') || s.includes('AIRPORT') || s.includes('AER')) return 'AIRPORT';
+    if (s.includes('AERO') || s.includes('AIRPORT') || s.includes('AÉREO')) return 'AIRPORT';
     if (s.includes('FERRO') || s.includes('TREN') || s.includes('RAIL')) return 'RAILWAY';
     if (s.includes('INDUSTR') || s.includes('IND')) return 'INDUSTRIAL';
-    if (s.includes('CARRETERA') || s.includes('VIARIO') || s.includes('TRAF')) return 'ROAD_TRAFFIC';
+    if (s.includes('CARRETERA') || s.includes('VIARIO') || s.includes('TRAF') || s.includes('AGLOMER')) return 'ROAD_TRAFFIC';
     return 'ROAD_TRAFFIC';
   }
 }

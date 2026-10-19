@@ -1,6 +1,6 @@
 {
   "name": "@openbarrio/extension",
-  "version": "0.2.8",
+  "version": "0.2.9",
   "description": "Chrome Manifest V3 Companion Extension for OpenBarrio (Idealista & Fotocasa)",
   "type": "module",
   "private": true,

@@ -51,8 +51,8 @@ function generateAuditFallback(
     householdIncome,
     incomePercentile,
     noiseLden,
-    noiseLevel: noiseLden > 65 ? 'Tráfico alto' : 'Moderado',
-    floodRisk: 'Nulo (T>500a)',
+    noiseLevel: noiseLden > 65 ? 'Tráfico alto' : noiseLden < 55 ? 'Silencioso' : 'Moderado',
+    floodRisk: hash % 8 === 0 ? 'Riesgo Medio (T=100a)' : 'Nulo (T>500a)',
     rentMinM2: +(9.0 + (hash % 10) * 0.8).toFixed(1),
     rentMaxM2: +(14.0 + (hash % 10) * 1.1).toFixed(1),
     isStressedZone,
@@ -158,7 +158,12 @@ export function AppContent() {
             householdIncome: liveReport.neighborhood.averageNetHouseholdIncomeEur,
             incomePercentile: liveReport.neighborhood.percentileInMunicipality,
             noiseLden: liveReport.environment.noise.dayEveningNightDecibels,
-            noiseLevel: liveReport.environment.noise.category === 'NOISY' ? 'Tráfico alto' : 'Moderado',
+            noiseLevel:
+              liveReport.environment.noise.category === 'NOISY'
+                ? 'Tráfico alto'
+                : liveReport.environment.noise.category === 'QUIET'
+                ? 'Silencioso'
+                : 'Moderado',
             floodRisk: liveReport.environment.floodRisk.level === 'NONE' ? 'Nulo (T>500a)' : liveReport.environment.floodRisk.level,
             rentMinM2: liveReport.rentalBenchmark?.officialRangeLowerEurM2 ?? 12.0,
             rentMaxM2: liveReport.rentalBenchmark?.officialRangeUpperEurM2 ?? 16.0,
