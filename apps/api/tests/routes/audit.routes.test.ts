@@ -163,5 +163,13 @@ describe('Hono Audit Routes Integration', () => {
       expect(response.headers.get('content-type')).toContain('image/png');
       expect(response.headers.get('access-control-allow-origin')).toBe('*');
     });
+
+    it('returns image/png with CORS for INE income ADRH proxy endpoint', async () => {
+      const response = await app.request('/api/v1/tiles/ine/income?bbox=-412554,4926988,-412054,4927488&width=256&height=256');
+
+      expect(response.status).toBe(200);
+      expect(response.headers.get('content-type')).toContain('image/png');
+      expect(response.headers.get('access-control-allow-origin')).toBe('*');
+    });
   });
 });

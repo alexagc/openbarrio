@@ -117,6 +117,58 @@ export function createTilesRoutes(): Hono<{ Bindings: CloudflareEnv }> {
     });
   });
 
+  // GET /tiles/ine/income?bbox=...&width=256&height=256
+  router.get('/ine/income', async (c) => {
+    const bbox = c.req.query('bbox');
+    const width = c.req.query('width') || '256';
+    const height = c.req.query('height') || '256';
+
+    if (!bbox) {
+      return new Response(TRANSPARENT_PNG, {
+        status: 200,
+        headers: {
+          'Content-Type': 'image/png',
+          'Access-Control-Allow-Origin': '*',
+        },
+      });
+    }
+
+    const upstream = `https://www.ine.es/servergis/rest/services/ws/ADRH_renta_media_por_hogar/MapServer/export?bbox=${encodeURIComponent(bbox)}&size=${encodeURIComponent(width)},${encodeURIComponent(height)}&f=image&transparent=true&bboxSR=3857&imageSR=3857`;
+
+    try {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 10000);
+      const res = await fetch(upstream, {
+        signal: controller.signal,
+        headers: { 'User-Agent': 'OpenBarrio-DueDiligence/0.1' },
+      });
+      clearTimeout(timer);
+
+      if (res.ok) {
+        const body = await res.arrayBuffer();
+        return new Response(body, {
+          status: 200,
+          headers: {
+            'Content-Type': 'image/png',
+            'Cache-Control': 'public, max-age=604800, s-maxage=2592000',
+            'Access-Control-Allow-Origin': '*',
+          },
+        });
+      }
+    } catch {
+      // Fall through to transparent tile
+    }
+
+    return new Response(TRANSPARENT_PNG, {
+      status: 200,
+      headers: {
+        'Content-Type': 'image/png',
+        'Cache-Control': 'public, max-age=3600',
+        'Access-Control-Allow-Origin': '*',
+      },
+    });
+  });
+
   // GET /tiles/:filename (e.g. census_tracts.pmtiles)
   router.get('/:filename', async (c) => {
     const filename = c.req.param('filename');

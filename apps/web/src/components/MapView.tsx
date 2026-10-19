@@ -202,14 +202,14 @@ export function MapView({
             tileSize: 256,
             attribution: '&copy; Dirección General del Catastro (España)',
           },
-          // INE Secciones Censales WMS (Spanish National Statistics Institute - Census Tracts & Income context)
+          // INE Atlas de Distribución de Renta de los Hogares (Official INE ADRH Income Choropleth MapServer)
           'ine-income-wms': {
             type: 'raster',
             tiles: [
-              'https://www.ine.es/geoserver/WMS_INE_SECCIONES_G01/wms?SERVICE=WMS&VERSION=1.3.0&REQUEST=GetMap&FORMAT=image/png&TRANSPARENT=TRUE&LAYERS=Secciones_2024&STYLES=SU.VectorStatisticalUnits.Default&CRS=EPSG:3857&WIDTH=256&HEIGHT=256&BBOX={bbox-epsg-3857}',
+              'https://www.ine.es/servergis/rest/services/ws/ADRH_renta_media_por_hogar/MapServer/export?bbox={bbox-epsg-3857}&size=256,256&f=image&transparent=true&bboxSR=3857&imageSR=3857',
             ],
             tileSize: 256,
-            attribution: '&copy; Instituto Nacional de Estadística (INE)',
+            attribution: '&copy; Instituto Nacional de Estadística (INE ADRH)',
           },
           // MITECO SICA Noise WMS (Official MITECO GeoServer)
           'miteco-sica': {
