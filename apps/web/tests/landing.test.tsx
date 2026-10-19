@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, screen, fireEvent, act, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, act, waitFor, within } from '@testing-library/react';
 import { App } from '../src/App';
 import { LanguageProvider, useTranslation } from '../src/i18n';
 
@@ -239,14 +239,14 @@ describe('Landing Page & i18n Integration', () => {
 
       // Wait for live report hydration
       await waitFor(() => {
-        expect(screen.getByText(/Passeig de Gràcia 43.*Barcelona/i)).toBeTruthy();
+        expect(within(dialog).getByText(/Passeig de Gràcia 43.*Barcelona/i)).toBeTruthy();
       });
-      expect(screen.getAllByText(/Ref: 0227802DF3802E/i).length).toBeGreaterThan(0);
-      expect(screen.getAllByText(/82\/100/).length).toBeGreaterThan(0);
-      expect(screen.getByText(/SÍ \(Topes legales aplicables\)/i)).toBeTruthy();
+      expect(within(dialog).getAllByText(/Ref: 0227802DF3802E/i).length).toBeGreaterThan(0);
+      expect(within(dialog).getAllByText(/82\/100/).length).toBeGreaterThan(0);
+      expect(within(dialog).getByText(/SÍ \(Topes legales aplicables\)/i)).toBeTruthy();
 
       // Close modal
-      const closeButtons = screen.getAllByRole('button', { name: /Cerrar/i });
+      const closeButtons = within(dialog).getAllByRole('button', { name: /Cerrar/i });
       act(() => {
         fireEvent.click(closeButtons[0]);
       });
@@ -269,8 +269,9 @@ describe('Landing Page & i18n Integration', () => {
       });
 
       // Modal opens with custom query
-      expect(screen.getByRole('dialog')).toBeTruthy();
-      expect(screen.getByText(/Calle Alcalá 50, Madrid/i)).toBeTruthy();
+      const dialog = screen.getByRole('dialog');
+      expect(dialog).toBeTruthy();
+      expect(within(dialog).getByText(/Calle Alcalá 50, Madrid/i)).toBeTruthy();
     });
 
     it('should transition to map view showing the exact audited property when clicking openInMap in modal', async () => {
@@ -282,13 +283,17 @@ describe('Landing Page & i18n Integration', () => {
         fireEvent.click(barcelonaChip);
       });
 
+      // Modal should now be open
+      const dialog = screen.getByRole('dialog');
+      expect(dialog).toBeTruthy();
+
       // Wait for modal live report to be loaded so the button is enabled
       await waitFor(() => {
-        expect(screen.getByText(/Passeig de Gràcia 43.*Barcelona/i)).toBeTruthy();
+        expect(within(dialog).getByText(/Passeig de Gràcia 43.*Barcelona/i)).toBeTruthy();
       });
 
       // Click "Localizar en Visor Cartográfico" button in modal
-      const openInMapButton = screen.getByRole('button', { name: /Localizar en Visor Cartográfico/i });
+      const openInMapButton = within(dialog).getByRole('button', { name: /Localizar en Visor Cartográfico/i });
       act(() => {
         fireEvent.click(openInMapButton);
       });
