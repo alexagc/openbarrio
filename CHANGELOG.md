@@ -5,6 +5,56 @@ All notable changes to the **OpenBarrio** platform are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.8] - 2026-10-19
+
+### Added
+- **Official INE ADRH Income Choropleth Integration (MapServer & Edge Proxy)**:
+  - Connected the official INE ADRH income choropleth service (`ADRH_renta_media_por_hogar/MapServer/WMSServer`) displaying true multi-color quintiles (5-class graduated income brackets from <= 21.000€ up to > 44.000€) instead of monochrome yellow fill.
+  - Implemented dedicated edge tile proxy `/api/v1/tiles/ine/income` in `apps/api/src/routes/tiles.routes.ts` with Cloudflare Edge Cache API (30-day TTL) and CORS headers (`Access-Control-Allow-Origin: *`) to eliminate mixed-content and cross-origin blocking.
+  - Restored the official INE Secciones Censales administrative boundaries endpoint via GeoServer in `apps/web/src/components/MapView.tsx` with dedicated HUD layer toggles.
+- **MITECO SNCZI Flood Cartography & 5 Return Periods**:
+  - Restored direct WMS tile streaming for Spanish flood risk cartography (`https://wms.mapama.gob.es/sig/Agua/ZI_Laminas/wms.aspx`).
+  - Added full support and interactive UI toggles in `MapView.tsx` for all 5 flood scenarios:
+    - High probability / frequent floods (T=10 years)
+    - Frequent floods (T=50 years)
+    - Medium probability / standard hazard (T=100 years)
+    - Low probability / exceptional events (T=500 years)
+    - Preferential hazard zone (*Zona de Flujo Preferente* - NZP)
+
+### Fixed
+- **Multi-Letter Address Precision & Cadastral Reference Disambiguation**:
+  - Tightened `isCadastralReference` validation in `packages/core/src/validation/cadastral.ts` and `apps/web/src/components/SearchBar.tsx` to prevent street addresses with portal suffixes or multi-letter words (e.g. `Gran Vía 28 B`, `Calle Mayor 14 BIS`) from being misclassified as 14- or 20-character cadastral references.
+  - Normalized multi-letter portal inputs to preserve building extensions and letter suffixes when querying Catastro OVC and CartoCiudad reverse geocoding.
+- **Dark GIS Basemap Overzooming**:
+  - Fixed Esri World Dark Gray Canvas basemap tile cutoff at zoom levels >= 17 by explicitly configuring `maxzoom: 16` on the raster tile source and `maxzoom: 22` on the layer in `MapView.tsx`. MapLibre GL now automatically overzooms cached zoom 16 tiles up to zoom 22 without blank tile errors.
+
+---
+
+## [0.2.7] - 2026-10-19
+
+### Fixed
+- **Search Recommendation Lifecycle & Modal State**:
+  - Eliminated unprompted autocomplete recommendations in `HeroSection.tsx` on initial component mount by initializing search state cleanly and tracking user focus state.
+  - Replaced hardcoded `SAMPLE_AUDITS` mock dictionary with real live loading states in `AuditModal.tsx`.
+  - Added loading skeleton and clear offline demo indicator to `AuditModal.tsx`.
+- **Dynamic INE Census Tract Resolution Nationwide**:
+  - Added `provinceCode` and `municipalityCode` to `CadastralAddressSchema` and extracted `loine cp/cm` in Catastro parser (`parseCatastroDnprcXml`).
+  - Implemented dynamic INE census tract resolution across all 8,131 Spanish municipalities with provincial capital mapping in `INEProvider.ts`.
+  - Updated SERPAVI stressed housing zone detection using resolved municipality codes in `SERPAVIProvider.ts`.
+  - Updated sample presets with real verified Spanish cadastral references across Madrid, Barcelona, Valencia, and Sevilla.
+
+---
+
+## [0.2.6] - 2026-10-19
+
+### Fixed
+- **Catastro Construction Year & Building Specs for Multi-Unit Horizontal Division**:
+  - Enhanced Catastro OVC parser (`parseCatastroDnprcXml` in `apps/api/src/providers/catastro.parser.ts`) to resolve the true building construction year (`anoConstruccion` / `ant`) across horizontal property regimes (divisions in multi-unit buildings).
+  - Prevented individual apartments or renovated commercial units from displaying missing or inaccurate construction years by cascading to parent building parcel metadata.
+  - Updated `AuditDossier.tsx`, `PillarCard.tsx`, and `MapView.tsx` to display verified construction year, surface area, and building conservation status.
+
+---
+
 ## [0.2.5] - 2026-10-18
 
 ### Fixed
