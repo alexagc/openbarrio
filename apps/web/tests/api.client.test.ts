@@ -135,6 +135,7 @@ describe('OpenBarrioApiClient', () => {
     expect(report.isOfflineDemo).toBe(true);
     expect(report.property.coordinates.latitude).toBe(chamberiLat);
     expect(report.property.coordinates.longitude).toBe(chamberiLon);
+    expect(report.property.cadastralReference).not.toBe('0549711VK4704H');
     expect(report.property.cadastralReference).not.toBe('9872023VH5797S0001WX');
     expect(report.property.address.street).not.toBe('Calle Gran Vía');
   });

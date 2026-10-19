@@ -6,6 +6,8 @@ export const CadastralAddressSchema = Type.Object({
   postalCode: Type.String(),
   municipality: Type.String(),
   province: Type.String(),
+  provinceCode: Type.Optional(Type.String({ description: '2-digit INE province code (e.g. "28", "08")' })),
+  municipalityCode: Type.Optional(Type.String({ description: '1 to 3-digit INE municipality code (e.g. "079", "019")' })),
 });
 
 export const CadastralCoordinatesSchema = Type.Object({

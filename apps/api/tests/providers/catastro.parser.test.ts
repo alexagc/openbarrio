@@ -178,6 +178,36 @@ describe('Catastro XML Parser', () => {
     expect(propUnit.building.builtSurfaceM2).toBe(143);
   });
 
+  it('correctly extracts INE province and municipality codes from <loine>', () => {
+    const xmlWithLoine = `
+      <consulta_dnp xmlns="http://www.catastro.meh.es/">
+        <bico>
+          <bi>
+            <idbi><rc><pc1>0227802</pc1><pc2>DF3802E</pc2><car>0001</car><cc1>A</cc1><cc2>B</cc2></rc></idbi>
+            <dt>
+              <loine><cp>08</cp><cm>19</cm></loine>
+              <np>BARCELONA</np>
+              <nm>BARCELONA</nm>
+              <locs>
+                <lous>
+                  <dir><tv>PG</tv><nv>DE GRACIA</nv><pnp>43</pnp></dir>
+                  <dp>08007</dp>
+                </lous>
+              </locs>
+            </dt>
+            <debi><ant>1904</ant></debi>
+          </bi>
+        </bico>
+      </consulta_dnp>
+    `;
+
+    const prop = parseCatastroDnprcXml(xmlWithLoine, '0227802DF3802E0001AB');
+    expect(prop.address.provinceCode).toBe('08');
+    expect(prop.address.municipalityCode).toBe('019');
+    expect(prop.address.postalCode).toBe('08007');
+    expect(prop.building.constructionYear).toBe(1904);
+  });
+
   it('throws CadastralNotFoundError when Catastro returns error XML', () => {
     expect(() => parseCatastroDnprcXml(notFoundXml, 'INVALID_REF')).toThrow(
       CadastralNotFoundError

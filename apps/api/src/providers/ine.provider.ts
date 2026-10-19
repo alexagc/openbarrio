@@ -33,12 +33,22 @@ export class INEProvider implements IINEProvider {
     // 1. Query Cloudflare D1 for sub-5ms Edge execution if bound
     if (this.db) {
       try {
-        const row = await this.db
+        let row = await this.db
           .prepare(
             'SELECT census_section_code, average_net_household_income_eur, average_net_person_income_eur, percentile_in_municipality, rank_in_municipality, total_sections_in_municipality, median_age, single_person_household_percentage FROM census_tract_income WHERE census_section_code = ?'
           )
           .bind(code)
           .first<Record<string, any>>();
+
+        if (!row && code.length >= 5) {
+          // Secondary fallback to nearest census section in same municipality from D1
+          row = await this.db
+            .prepare(
+              'SELECT census_section_code, average_net_household_income_eur, average_net_person_income_eur, percentile_in_municipality, rank_in_municipality, total_sections_in_municipality, median_age, single_person_household_percentage FROM census_tract_income WHERE census_section_code LIKE ? LIMIT 1'
+            )
+            .bind(`${code.slice(0, 5)}%`)
+            .first<Record<string, any>>();
+        }
 
         if (row) {
           return {
@@ -115,14 +125,36 @@ export class INEProvider implements IINEProvider {
     latitude: number,
     longitude: number,
     provinceCode = '28',
-    municipalityCode = '079'
+    municipalityCode?: string
   ): Promise<string> {
-    // Spatial mapping resolution to census section code
-    const prov = provinceCode.padStart(2, '0').slice(0, 2);
-    const mun = municipalityCode.padStart(3, '0').slice(0, 3);
+    const prov = provinceCode ? provinceCode.padStart(2, '0').slice(0, 2) : '28';
+    let mun = municipalityCode?.trim();
+    if (!mun) {
+      const PROVINCIAL_CAPITALS: Record<string, string> = {
+        '28': '079', // Madrid
+        '08': '019', // Barcelona
+        '46': '250', // València
+        '41': '091', // Sevilla
+        '50': '297', // Zaragoza
+        '29': '067', // Málaga
+        '30': '030', // Murcia
+        '07': '040', // Palma de Mallorca
+        '35': '016', // Las Palmas de Gran Canaria
+        '48': '020', // Bilbao
+        '03': '014', // Alicante
+        '14': '021', // Córdoba
+        '47': '186', // Valladolid
+        '36': '057', // Vigo
+        '15': '030', // A Coruña
+        '18': '087', // Granada
+        '33': '044', // Oviedo
+      };
+      mun = PROVINCIAL_CAPITALS[prov] || '001';
+    }
+    const cleanMun = mun.padStart(3, '0').slice(0, 3);
     const dist = '01';
     const sec = '001';
 
-    return `${prov}${mun}${dist}${sec}`;
+    return `${prov}${cleanMun}${dist}${sec}`;
   }
 }

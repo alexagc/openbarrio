@@ -207,6 +207,20 @@ export function parseCatastroDnprcXml(
   const municipality = extractTag(xml, 'nm') || 'Madrid';
   const province = extractTag(xml, 'np') || 'Madrid';
 
+  // Extract INE province and municipality codes from <loine>
+  let provinceCode: string | undefined;
+  let municipalityCode: string | undefined;
+  const loineBlock = extractTag(xml, 'loine');
+  if (loineBlock) {
+    const cp = extractTag(loineBlock, 'cp');
+    const cm = extractTag(loineBlock, 'cm');
+    if (cp) provinceCode = cp.padStart(2, '0');
+    if (cm) municipalityCode = cm.padStart(3, '0');
+  }
+  if (!provinceCode && postalCode.length >= 2) {
+    provinceCode = postalCode.slice(0, 2);
+  }
+
   // Coordinates
   const xcen = parseFloat(extractTag(xml, 'xcen') || '0');
   const ycen = parseFloat(extractTag(xml, 'ycen') || '0');
@@ -269,6 +283,8 @@ export function parseCatastroDnprcXml(
       postalCode,
       municipality,
       province,
+      provinceCode,
+      municipalityCode,
     },
     coordinates: {
       latitude,

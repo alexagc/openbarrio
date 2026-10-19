@@ -10,19 +10,21 @@ interface HeroSectionProps {
 export const HeroSection: React.FC<HeroSectionProps> = ({ onAudit }) => {
   const { t } = useTranslation();
   const [mode, setMode] = useState<'address' | 'refcat'>('address');
-  const [searchValue, setSearchValue] = useState<string>('Gran Vía 28, Madrid');
+  const [searchValue, setSearchValue] = useState<string>('');
   const [suggestions, setSuggestions] = useState<
     Array<{ label: string; lat: number; lon: number; refcat?: string }>
   >([]);
   const [showDropdown, setShowDropdown] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const isFocusedRef = useRef(false);
 
   // Close dropdown on outside click or touch
   useEffect(() => {
     function handleClickOutside(event: MouseEvent | TouchEvent) {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
         setShowDropdown(false);
+        isFocusedRef.current = false;
       }
     }
     document.addEventListener('mousedown', handleClickOutside);
@@ -53,7 +55,9 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onAudit }) => {
       const results = await apiClient.searchAddress(trimmed);
       setSuggestions(results);
       setIsSearching(false);
-      setShowDropdown(results.length > 0);
+      if (isFocusedRef.current && results.length > 0) {
+        setShowDropdown(true);
+      }
     }, 350);
 
     return () => clearTimeout(timer);
@@ -61,11 +65,9 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onAudit }) => {
 
   const handleModeChange = (newMode: 'address' | 'refcat') => {
     setMode(newMode);
-    if (newMode === 'address') {
-      setSearchValue('Gran Vía 28, Madrid');
-    } else {
-      setSearchValue('28900A012000340001LM');
-    }
+    setSearchValue('');
+    setSuggestions([]);
+    setShowDropdown(false);
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -176,7 +178,13 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onAudit }) => {
                 value={searchValue}
                 onChange={(e) => setSearchValue(e.target.value)}
                 onFocus={() => {
+                  isFocusedRef.current = true;
                   if (suggestions.length > 0) setShowDropdown(true);
+                }}
+                onBlur={() => {
+                  setTimeout(() => {
+                    isFocusedRef.current = false;
+                  }, 200);
                 }}
                 placeholder={mode === 'address' ? t('hero.placeholderAddress') : t('hero.placeholderRefcat')}
                 className="w-full pl-10 pr-4 py-2.5 rounded bg-surface-container border border-outline-variant focus:border-primary focus:ring-1 focus:ring-primary text-on-surface font-body text-sm placeholder:text-outline outline-hidden transition-colors"
@@ -246,7 +254,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onAudit }) => {
           </button>
           <button
             type="button"
-            onClick={() => handleExampleClick('Passeig de Gràcia 42, Barcelona')}
+            onClick={() => handleExampleClick('Passeig de Gràcia 43, Barcelona')}
             className="px-2 py-0.5 rounded bg-surface-container border border-outline-variant hover:border-primary text-on-surface font-mono text-xs transition-colors flex items-center gap-1 cursor-pointer"
           >
             <span>{t('hero.example2')}</span>
@@ -254,7 +262,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onAudit }) => {
           </button>
           <button
             type="button"
-            onClick={() => handleExampleClick('Calle Sierpes 12, Sevilla')}
+            onClick={() => handleExampleClick('Calle Sierpes 22, Sevilla')}
             className="px-2 py-0.5 rounded bg-surface-container border border-outline-variant hover:border-primary text-on-surface font-mono text-xs transition-colors cursor-pointer"
           >
             {t('hero.example3')}

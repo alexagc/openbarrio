@@ -24,15 +24,17 @@ export class AuditService {
       const censusCode = await this.providers.ine.resolveCensusSection(
         property.coordinates.latitude,
         property.coordinates.longitude,
-        property.address.postalCode.slice(0, 2)
+        property.address.provinceCode || property.address.postalCode.slice(0, 2),
+        property.address.municipalityCode
       );
       neighborhood = await this.providers.ine.getIncomeByCensusSection(censusCode);
     } catch {
-      const provCode = property.address.postalCode.slice(0, 2);
+      const provCode = property.address.provinceCode || property.address.postalCode.slice(0, 2);
+      const muniCode = property.address.municipalityCode || '001';
       const isHighIncome = ['28', '08', '48', '31', '20'].includes(provCode);
       const avgHousehold = isHighIncome ? 38500 : 27200;
       neighborhood = {
-        censusSectionCode: `${provCode}00101001`,
+        censusSectionCode: `${provCode}${muniCode.padStart(3, '0')}01001`,
         averageNetHouseholdIncomeEur: avgHousehold,
         averageNetPersonIncomeEur: Math.round(avgHousehold / 2.3),
         percentileInMunicipality: 55,
@@ -101,15 +103,17 @@ export class AuditService {
       const censusCode = await this.providers.ine.resolveCensusSection(
         property.coordinates.latitude,
         property.coordinates.longitude,
-        property.address.postalCode.slice(0, 2)
+        property.address.provinceCode || property.address.postalCode.slice(0, 2),
+        property.address.municipalityCode
       );
       neighborhood = await this.providers.ine.getIncomeByCensusSection(censusCode);
     } catch {
-      const provCode = property.address.postalCode.slice(0, 2);
+      const provCode = property.address.provinceCode || property.address.postalCode.slice(0, 2);
+      const muniCode = property.address.municipalityCode || '001';
       const isHighIncome = ['28', '08', '48', '31', '20'].includes(provCode);
       const avgHousehold = isHighIncome ? 38500 : 27200;
       neighborhood = {
-        censusSectionCode: `${provCode}00101001`,
+        censusSectionCode: `${provCode}${muniCode.padStart(3, '0')}01001`,
         averageNetHouseholdIncomeEur: avgHousehold,
         averageNetPersonIncomeEur: Math.round(avgHousehold / 2.3),
         percentileInMunicipality: 55,
