@@ -78,7 +78,6 @@ export interface ICivicConnectivityProvider {
    */
   getConnectivityByCoordinates(latitude: number, longitude: number): Promise<CivicConnectivityData>;
 }
-export type CivicConnectivityProvider = ICivicConnectivityProvider;
 
 export interface IUrbanPlanningProvider {
   /**
@@ -86,7 +85,6 @@ export interface IUrbanPlanningProvider {
    */
   getUrbanPlanning(property: CadastralProperty): Promise<UrbanPlanningData>;
 }
-export type UrbanPlanningProvider = IUrbanPlanningProvider;
 
 export interface IAirQualityProvider {
   /**
@@ -94,4 +92,3 @@ export interface IAirQualityProvider {
    */
   getAirQuality(latitude: number, longitude: number): Promise<AirQualityData | undefined>;
 }
-export type AirQualityProvider = IAirQualityProvider;
