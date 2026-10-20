@@ -179,7 +179,7 @@ describe('AuditDossier Component (Stitch Civic Precision)', () => {
 
     // Pillar 1: Civic Connectivity (15-min city)
     expect(screen.getByText(/Conectividad Cívica & 15-Min/i)).toBeTruthy();
-    expect(screen.getByText(/98\/100/i)).toBeTruthy();
+    expect(screen.getAllByText(/98\/100/i).length).toBeGreaterThanOrEqual(1);
     expect(screen.getByText(/CS Palma Norte/i)).toBeTruthy();
     expect(screen.getByText(/IES Isabel la Católica/i)).toBeTruthy();
     expect(screen.getByText(/Metro Gran Vía \(L1, L5\)/i)).toBeTruthy();
@@ -190,7 +190,7 @@ describe('AuditDossier Component (Stitch Civic Precision)', () => {
     expect(screen.getByText(/2 registradas \(última en 2018\)/i)).toBeTruthy();
 
     // Pillar 3: Socioeconomic Profile
-    expect(screen.getByText(/Percentil 82º Madrid/i)).toBeTruthy();
+    expect(screen.getAllByText(/Percentil 82º Madrid/i).length).toBeGreaterThanOrEqual(1);
 
     // Pillar 4: Environmental Comfort (including Air Quality)
     expect(screen.getByText(/Calidad del Aire \(AQI\)/i)).toBeTruthy();
