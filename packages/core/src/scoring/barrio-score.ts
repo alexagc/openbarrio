@@ -22,6 +22,41 @@ export const DEFAULT_SCORING_WEIGHTS: ScoringWeights = {
 };
 
 /**
+ * Computes the base building health score based on construction year
+ * and Spanish regulatory milestones.
+ */
+function computeBaseBuildingScore(
+  year: number,
+  highlights: string[],
+  risks: string[],
+): number {
+  if (year >= 2007) {
+    // Post Código Técnico de la Edificación (CTE, RD 314/2006)
+    highlights.push(`Built in ${year} under Spanish CTE (Código Técnico de la Edificación) structural, acoustic and thermal safety codes`);
+    return 95;
+  } else if (year >= 1980) {
+    // Post NBE-CT-79 (first thermal insulation standard in Spain)
+    highlights.push(`Built in ${year} following NBE thermal insulation era`);
+    return 80;
+  } else if (year >= 1940) {
+    // Post-war era before formal energy and acoustic efficiency requirements
+    risks.push(
+      `Built in ${year} prior to NBE-CT-79: recommended to inspect mandatory ITE/IEE (Building Technical Inspection) and insulation`
+    );
+    return 55;
+  } else if (year > 0) {
+    // Pre-1940 historic heritage
+    highlights.push(`Historic building constructed in ${year} with heritage character`);
+    risks.push(`Historic structural age: verify ongoing building maintenance fund and structural rehabilitation status`);
+    return 65;
+  } else {
+    // Unbuilt plot, agricultural land, or parcel without recorded building antiquity
+    highlights.push(`Unbuilt parcel or land without recorded building antiquity in Cadastral registry`);
+    return 70;
+  }
+}
+
+/**
  * Calculates the comprehensive Barrio Due Diligence Score (0-100) and multidimensional subscores breakdown.
  * v0.3.0 Architecture: 5 calibrated pillars (connectivity, building, socioeconomic, environmental, urbanPlanning).
  */
@@ -65,32 +100,7 @@ export function calculateBarrioScore(
   // 2. Building Health & Age Dimension (0 - 100)
   // Evaluates building era against Spanish construction standard milestones
   const year = property.building.constructionYear;
-  let buildingScore: number;
-
-  if (year >= 2007) {
-    // Post Código Técnico de la Edificación (CTE, RD 314/2006)
-    buildingScore = 95;
-    highlights.push(`Built in ${year} under Spanish CTE (Código Técnico de la Edificación) structural, acoustic and thermal safety codes`);
-  } else if (year >= 1980) {
-    // Post NBE-CT-79 (first thermal insulation standard in Spain)
-    buildingScore = 80;
-    highlights.push(`Built in ${year} following NBE thermal insulation era`);
-  } else if (year >= 1940) {
-    // Post-war era before formal energy and acoustic efficiency requirements
-    buildingScore = 55;
-    risks.push(
-      `Built in ${year} prior to NBE-CT-79: recommended to inspect mandatory ITE/IEE (Building Technical Inspection) and insulation`
-    );
-  } else if (year > 0) {
-    // Pre-1940 historic heritage
-    buildingScore = 65;
-    highlights.push(`Historic building constructed in ${year} with heritage character`);
-    risks.push(`Historic structural age: verify ongoing building maintenance fund and structural rehabilitation status`);
-  } else {
-    // Unbuilt plot, agricultural land, or parcel without recorded building antiquity
-    buildingScore = 70;
-    highlights.push(`Unbuilt parcel or land without recorded building antiquity in Cadastral registry`);
-  }
+  let buildingScore = computeBaseBuildingScore(year, highlights, risks);
 
   // Renovation bonus from urbanPlanning if recorded
   if (urbanPlanning?.lastRenovationYear && urbanPlanning.lastRenovationYear >= 2000) {
