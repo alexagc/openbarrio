@@ -3,7 +3,6 @@ import {
   Building2,
   Volume2,
   ShieldCheck,
-  Shield,
   CheckCircle2,
   AlertTriangle,
   Compass,
