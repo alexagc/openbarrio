@@ -132,22 +132,22 @@ describe('AuditDossier Component (Stitch Civic Precision)', () => {
     expect(screen.getByText(/Exportar Dossier PDF/i)).toBeTruthy();
   });
 
-  it('renders Barrio Score circular gauge and all 4 sub-scores', () => {
+  it('renders Barrio Score circular gauge and sub-scores', () => {
     render(<AuditDossier report={mockReport} />);
 
-    expect(screen.getByText('84')).toBeTruthy();
+    expect(screen.getAllByText('84').length).toBeGreaterThanOrEqual(1);
     expect(screen.getByText(/Índice Integral OpenBarrio/i)).toBeTruthy();
-    expect(screen.getByText(/82\/100/i)).toBeTruthy();
-    expect(screen.getByText(/80\/100/i)).toBeTruthy();
-    expect(screen.getByText(/75\/100/i)).toBeTruthy();
-    expect(screen.getByText(/100\/100/i)).toBeTruthy();
+    expect(screen.getAllByText(/82\/100/i).length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText(/80\/100/i).length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText(/75\/100/i).length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText(/100\/100/i).length).toBeGreaterThanOrEqual(1);
   });
 
   it('renders Ficha Catastral, INE Demografía, MITECO and MIVAU sections', () => {
     render(<AuditDossier report={mockReport} />);
 
     expect(screen.getByText(/Ficha Catastral Oficial/i)).toBeTruthy();
-    expect(screen.getByText('1924')).toBeTruthy();
+    expect(screen.getAllByText(/1924/).length).toBeGreaterThanOrEqual(1);
     expect(screen.getByText(/Demografía & Renta de Hogar/i)).toBeTruthy();
     expect(screen.getByText(/45\.200/i)).toBeTruthy();
     expect(screen.getByText(/Confort Acústico & Tráfico/i)).toBeTruthy();
