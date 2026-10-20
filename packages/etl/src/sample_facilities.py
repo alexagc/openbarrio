@@ -33,7 +33,6 @@ SAMPLE_CIVIC_FACILITIES = [
         "latitude": 40.4805,
         "longitude": -3.6872,
         "municipality_code": "28079",
-        "postal_code": "28046",
     },
     {
         "id": "fac_mad_hosp_gregorio",
@@ -43,7 +42,6 @@ SAMPLE_CIVIC_FACILITIES = [
         "latitude": 40.4192,
         "longitude": -3.6714,
         "municipality_code": "28079",
-        "postal_code": "28007",
     },
     {
         "id": "fac_mad_hosp_clinico",
@@ -53,7 +51,6 @@ SAMPLE_CIVIC_FACILITIES = [
         "latitude": 40.4402,
         "longitude": -3.7198,
         "municipality_code": "28079",
-        "postal_code": "28040",
     },
     {
         "id": "fac_mad_hosp_12octubre",
@@ -63,7 +60,6 @@ SAMPLE_CIVIC_FACILITIES = [
         "latitude": 40.3780,
         "longitude": -3.6980,
         "municipality_code": "28079",
-        "postal_code": "28041",
     },
     {
         "id": "fac_mad_pc_justicia",
@@ -73,7 +69,6 @@ SAMPLE_CIVIC_FACILITIES = [
         "latitude": 40.4245,
         "longitude": -3.6975,
         "municipality_code": "28079",
-        "postal_code": "28004",
     },
     {
         "id": "fac_mad_pc_palma",
@@ -83,7 +78,6 @@ SAMPLE_CIVIC_FACILITIES = [
         "latitude": 40.4278,
         "longitude": -3.7062,
         "municipality_code": "28079",
-        "postal_code": "28015",
     },
     {
         "id": "fac_mad_pc_cortes",
@@ -93,7 +87,6 @@ SAMPLE_CIVIC_FACILITIES = [
         "latitude": 40.4125,
         "longitude": -3.6935,
         "municipality_code": "28079",
-        "postal_code": "28014",
     },
     {
         "id": "fac_mad_pc_lagasca",
@@ -103,7 +96,6 @@ SAMPLE_CIVIC_FACILITIES = [
         "latitude": 40.4282,
         "longitude": -3.6850,
         "municipality_code": "28079",
-        "postal_code": "28001",
     },
     # Education
     {
@@ -114,7 +106,6 @@ SAMPLE_CIVIC_FACILITIES = [
         "latitude": 40.4276,
         "longitude": -3.7001,
         "municipality_code": "28079",
-        "postal_code": "28004",
     },
     {
         "id": "fac_mad_sch_rufino",
@@ -124,7 +115,6 @@ SAMPLE_CIVIC_FACILITIES = [
         "latitude": 40.4348,
         "longitude": -3.7012,
         "municipality_code": "28079",
-        "postal_code": "28010",
     },
     {
         "id": "fac_mad_sch_piomargall",
@@ -134,7 +124,6 @@ SAMPLE_CIVIC_FACILITIES = [
         "latitude": 40.4225,
         "longitude": -3.7038,
         "municipality_code": "28079",
-        "postal_code": "28004",
     },
     {
         "id": "fac_mad_hs_sanisidro",
@@ -144,7 +133,6 @@ SAMPLE_CIVIC_FACILITIES = [
         "latitude": 40.4128,
         "longitude": -3.7075,
         "municipality_code": "28079",
-        "postal_code": "28005",
     },
     {
         "id": "fac_mad_hs_cervantes",
@@ -154,7 +142,6 @@ SAMPLE_CIVIC_FACILITIES = [
         "latitude": 40.4072,
         "longitude": -3.7025,
         "municipality_code": "28079",
-        "postal_code": "28012",
     },
     {
         "id": "fac_mad_hs_lopedevega",
@@ -164,7 +151,6 @@ SAMPLE_CIVIC_FACILITIES = [
         "latitude": 40.4284,
         "longitude": -3.7067,
         "municipality_code": "28079",
-        "postal_code": "28015",
     },
     # Transit
     {
@@ -175,7 +161,6 @@ SAMPLE_CIVIC_FACILITIES = [
         "latitude": 40.4169,
         "longitude": -3.7035,
         "municipality_code": "28079",
-        "postal_code": "28013",
     },
     {
         "id": "fac_mad_tra_granvia",
@@ -185,7 +170,6 @@ SAMPLE_CIVIC_FACILITIES = [
         "latitude": 40.4201,
         "longitude": -3.7016,
         "municipality_code": "28079",
-        "postal_code": "28013",
     },
     {
         "id": "fac_mad_tra_callao",
@@ -195,7 +179,6 @@ SAMPLE_CIVIC_FACILITIES = [
         "latitude": 40.4200,
         "longitude": -3.7056,
         "municipality_code": "28079",
-        "postal_code": "28013",
     },
     {
         "id": "fac_mad_tra_atocha",
@@ -205,7 +188,6 @@ SAMPLE_CIVIC_FACILITIES = [
         "latitude": 40.4065,
         "longitude": -3.6908,
         "municipality_code": "28079",
-        "postal_code": "28012",
     },
     {
         "id": "fac_mad_tra_chamartin",
@@ -215,7 +197,6 @@ SAMPLE_CIVIC_FACILITIES = [
         "latitude": 40.4720,
         "longitude": -3.6825,
         "municipality_code": "28079",
-        "postal_code": "28036",
     },
     {
         "id": "fac_mad_tra_nuevosmin",
@@ -225,7 +206,6 @@ SAMPLE_CIVIC_FACILITIES = [
         "latitude": 40.4462,
         "longitude": -3.6918,
         "municipality_code": "28079",
-        "postal_code": "28046",
     },
     {
         "id": "fac_mad_tra_moncloa",
@@ -235,7 +215,6 @@ SAMPLE_CIVIC_FACILITIES = [
         "latitude": 40.4352,
         "longitude": -3.7188,
         "municipality_code": "28079",
-        "postal_code": "28008",
     },
     {
         "id": "fac_mad_tra_avamerica",
@@ -245,7 +224,6 @@ SAMPLE_CIVIC_FACILITIES = [
         "latitude": 40.4385,
         "longitude": -3.6762,
         "municipality_code": "28079",
-        "postal_code": "28002",
     },
     # Parks
     {
@@ -256,7 +234,6 @@ SAMPLE_CIVIC_FACILITIES = [
         "latitude": 40.4153,
         "longitude": -3.6845,
         "municipality_code": "28079",
-        "postal_code": "28009",
     },
     {
         "id": "fac_mad_prk_rio",
@@ -266,7 +243,6 @@ SAMPLE_CIVIC_FACILITIES = [
         "latitude": 40.4015,
         "longitude": -3.7125,
         "municipality_code": "28079",
-        "postal_code": "28005",
     },
     {
         "id": "fac_mad_prk_oeste",
@@ -276,7 +252,6 @@ SAMPLE_CIVIC_FACILITIES = [
         "latitude": 40.4315,
         "longitude": -3.7245,
         "municipality_code": "28079",
-        "postal_code": "28008",
     },
     {
         "id": "fac_mad_prk_casadecampo",
@@ -286,7 +261,6 @@ SAMPLE_CIVIC_FACILITIES = [
         "latitude": 40.4215,
         "longitude": -3.7550,
         "municipality_code": "28079",
-        "postal_code": "28011",
     },
     {
         "id": "fac_mad_prk_dehesavilla",
@@ -296,7 +270,6 @@ SAMPLE_CIVIC_FACILITIES = [
         "latitude": 40.4580,
         "longitude": -3.7225,
         "municipality_code": "28079",
-        "postal_code": "28039",
     },
 
     # =========================================================================
@@ -311,7 +284,6 @@ SAMPLE_CIVIC_FACILITIES = [
         "latitude": 41.3892,
         "longitude": 2.1523,
         "municipality_code": "08019",
-        "postal_code": "08036",
     },
     {
         "id": "fac_bcn_hosp_vallhebron",
@@ -321,7 +293,6 @@ SAMPLE_CIVIC_FACILITIES = [
         "latitude": 41.4280,
         "longitude": 2.1435,
         "municipality_code": "08019",
-        "postal_code": "08035",
     },
     {
         "id": "fac_bcn_hosp_santpau",
@@ -331,7 +302,6 @@ SAMPLE_CIVIC_FACILITIES = [
         "latitude": 41.4125,
         "longitude": 2.1745,
         "municipality_code": "08019",
-        "postal_code": "08025",
     },
     {
         "id": "fac_bcn_hosp_delmar",
@@ -341,7 +311,6 @@ SAMPLE_CIVIC_FACILITIES = [
         "latitude": 41.3838,
         "longitude": 2.1932,
         "municipality_code": "08019",
-        "postal_code": "08003",
     },
     {
         "id": "fac_bcn_pc_gotic",
@@ -351,7 +320,6 @@ SAMPLE_CIVIC_FACILITIES = [
         "latitude": 41.3812,
         "longitude": 2.1775,
         "municipality_code": "08019",
-        "postal_code": "08002",
     },
     {
         "id": "fac_bcn_pc_ravalnord",
@@ -361,7 +329,6 @@ SAMPLE_CIVIC_FACILITIES = [
         "latitude": 41.3835,
         "longitude": 2.1678,
         "municipality_code": "08019",
-        "postal_code": "08001",
     },
     {
         "id": "fac_bcn_pc_casp",
@@ -371,7 +338,6 @@ SAMPLE_CIVIC_FACILITIES = [
         "latitude": 41.3932,
         "longitude": 2.1695,
         "municipality_code": "08019",
-        "postal_code": "08010",
     },
     {
         "id": "fac_bcn_pc_sarria",
@@ -381,7 +347,6 @@ SAMPLE_CIVIC_FACILITIES = [
         "latitude": 41.3995,
         "longitude": 2.1225,
         "municipality_code": "08019",
-        "postal_code": "08017",
     },
     # Education
     {
@@ -392,7 +357,6 @@ SAMPLE_CIVIC_FACILITIES = [
         "latitude": 41.3872,
         "longitude": 2.1852,
         "municipality_code": "08019",
-        "postal_code": "08003",
     },
     {
         "id": "fac_bcn_sch_concepcio",
@@ -402,7 +366,6 @@ SAMPLE_CIVIC_FACILITIES = [
         "latitude": 41.3965,
         "longitude": 2.1654,
         "municipality_code": "08019",
-        "postal_code": "08009",
     },
     {
         "id": "fac_bcn_sch_perevila",
@@ -412,7 +375,6 @@ SAMPLE_CIVIC_FACILITIES = [
         "latitude": 41.3915,
         "longitude": 2.1802,
         "municipality_code": "08019",
-        "postal_code": "08018",
     },
     {
         "id": "fac_bcn_hs_jaumebalmes",
@@ -422,7 +384,6 @@ SAMPLE_CIVIC_FACILITIES = [
         "latitude": 41.3934,
         "longitude": 2.1668,
         "municipality_code": "08019",
-        "postal_code": "08008",
     },
     {
         "id": "fac_bcn_hs_milafontanals",
@@ -432,7 +393,6 @@ SAMPLE_CIVIC_FACILITIES = [
         "latitude": 41.3805,
         "longitude": 2.1692,
         "municipality_code": "08019",
-        "postal_code": "08001",
     },
     {
         "id": "fac_bcn_hs_maragall",
@@ -442,7 +402,6 @@ SAMPLE_CIVIC_FACILITIES = [
         "latitude": 41.3925,
         "longitude": 2.1512,
         "municipality_code": "08019",
-        "postal_code": "08036",
     },
     # Transit
     {
@@ -453,7 +412,6 @@ SAMPLE_CIVIC_FACILITIES = [
         "latitude": 41.3870,
         "longitude": 2.1700,
         "municipality_code": "08019",
-        "postal_code": "08002",
     },
     {
         "id": "fac_bcn_tra_pgracia",
@@ -463,7 +421,6 @@ SAMPLE_CIVIC_FACILITIES = [
         "latitude": 41.3922,
         "longitude": 2.1663,
         "municipality_code": "08019",
-        "postal_code": "08007",
     },
     {
         "id": "fac_bcn_tra_diagonal",
@@ -473,7 +430,6 @@ SAMPLE_CIVIC_FACILITIES = [
         "latitude": 41.3975,
         "longitude": 2.1585,
         "municipality_code": "08019",
-        "postal_code": "08008",
     },
     {
         "id": "fac_bcn_tra_sants",
@@ -483,7 +439,6 @@ SAMPLE_CIVIC_FACILITIES = [
         "latitude": 41.3792,
         "longitude": 2.1402,
         "municipality_code": "08019",
-        "postal_code": "08014",
     },
     {
         "id": "fac_bcn_tra_sagrera",
@@ -493,7 +448,6 @@ SAMPLE_CIVIC_FACILITIES = [
         "latitude": 41.4225,
         "longitude": 2.1895,
         "municipality_code": "08019",
-        "postal_code": "08027",
     },
     {
         "id": "fac_bcn_tra_nord",
@@ -503,7 +457,6 @@ SAMPLE_CIVIC_FACILITIES = [
         "latitude": 41.3945,
         "longitude": 2.1825,
         "municipality_code": "08019",
-        "postal_code": "08013",
     },
     # Parks
     {
@@ -514,7 +467,6 @@ SAMPLE_CIVIC_FACILITIES = [
         "latitude": 41.3880,
         "longitude": 2.1874,
         "municipality_code": "08019",
-        "postal_code": "08003",
     },
     {
         "id": "fac_bcn_prk_guell",
@@ -524,7 +476,6 @@ SAMPLE_CIVIC_FACILITIES = [
         "latitude": 41.4145,
         "longitude": 2.1528,
         "municipality_code": "08019",
-        "postal_code": "08024",
     },
     {
         "id": "fac_bcn_prk_montjuic",
@@ -534,7 +485,6 @@ SAMPLE_CIVIC_FACILITIES = [
         "latitude": 41.3665,
         "longitude": 2.1575,
         "municipality_code": "08019",
-        "postal_code": "08038",
     },
     {
         "id": "fac_bcn_prk_collserola",
@@ -544,7 +494,6 @@ SAMPLE_CIVIC_FACILITIES = [
         "latitude": 41.4250,
         "longitude": 2.1150,
         "municipality_code": "08019",
-        "postal_code": "08017",
     },
 
     # =========================================================================
@@ -559,7 +508,6 @@ SAMPLE_CIVIC_FACILITIES = [
         "latitude": 39.4445,
         "longitude": -0.3775,
         "municipality_code": "46250",
-        "postal_code": "46026",
     },
     {
         "id": "fac_vlc_hosp_clinic",
@@ -569,7 +517,6 @@ SAMPLE_CIVIC_FACILITIES = [
         "latitude": 39.4795,
         "longitude": -0.3582,
         "municipality_code": "46250",
-        "postal_code": "46010",
     },
     {
         "id": "fac_vlc_hosp_general",
@@ -579,7 +526,6 @@ SAMPLE_CIVIC_FACILITIES = [
         "latitude": 39.4675,
         "longitude": -0.4042,
         "municipality_code": "46250",
-        "postal_code": "46014",
     },
     {
         "id": "fac_vlc_pc_salvadorpau",
@@ -589,7 +535,6 @@ SAMPLE_CIVIC_FACILITIES = [
         "latitude": 39.4682,
         "longitude": -0.3540,
         "municipality_code": "46250",
-        "postal_code": "46021",
     },
     {
         "id": "fac_vlc_pc_guillemcastro",
@@ -599,7 +544,6 @@ SAMPLE_CIVIC_FACILITIES = [
         "latitude": 39.4715,
         "longitude": -0.3835,
         "municipality_code": "46250",
-        "postal_code": "46001",
     },
     {
         "id": "fac_vlc_pc_ruzafa",
@@ -609,7 +553,6 @@ SAMPLE_CIVIC_FACILITIES = [
         "latitude": 39.4615,
         "longitude": -0.3725,
         "municipality_code": "46250",
-        "postal_code": "46006",
     },
     # Education
     {
@@ -620,7 +563,6 @@ SAMPLE_CIVIC_FACILITIES = [
         "latitude": 39.4745,
         "longitude": -0.3842,
         "municipality_code": "46250",
-        "postal_code": "46008",
     },
     {
         "id": "fac_vlc_sch_teodoro",
@@ -630,7 +572,6 @@ SAMPLE_CIVIC_FACILITIES = [
         "latitude": 39.4720,
         "longitude": -0.3920,
         "municipality_code": "46250",
-        "postal_code": "46008",
     },
     {
         "id": "fac_vlc_hs_lluisvives",
@@ -640,7 +581,6 @@ SAMPLE_CIVIC_FACILITIES = [
         "latitude": 39.4678,
         "longitude": -0.3775,
         "municipality_code": "46250",
-        "postal_code": "46004",
     },
     {
         "id": "fac_vlc_hs_santvicent",
@@ -650,7 +590,6 @@ SAMPLE_CIVIC_FACILITIES = [
         "latitude": 39.4742,
         "longitude": -0.3695,
         "municipality_code": "46250",
-        "postal_code": "46003",
     },
     # Transit
     {
@@ -661,7 +600,6 @@ SAMPLE_CIVIC_FACILITIES = [
         "latitude": 39.4667,
         "longitude": -0.3772,
         "municipality_code": "46250",
-        "postal_code": "46007",
     },
     {
         "id": "fac_vlc_tra_colon",
@@ -671,7 +609,6 @@ SAMPLE_CIVIC_FACILITIES = [
         "latitude": 39.4694,
         "longitude": -0.3712,
         "municipality_code": "46250",
-        "postal_code": "46004",
     },
     {
         "id": "fac_vlc_tra_nord",
@@ -681,7 +618,6 @@ SAMPLE_CIVIC_FACILITIES = [
         "latitude": 39.4662,
         "longitude": -0.3776,
         "municipality_code": "46250",
-        "postal_code": "46007",
     },
     {
         "id": "fac_vlc_tra_joaquinsorolla",
@@ -691,7 +627,6 @@ SAMPLE_CIVIC_FACILITIES = [
         "latitude": 39.4585,
         "longitude": -0.3802,
         "municipality_code": "46250",
-        "postal_code": "46007",
     },
     {
         "id": "fac_vlc_tra_autobusos",
@@ -701,7 +636,6 @@ SAMPLE_CIVIC_FACILITIES = [
         "latitude": 39.4815,
         "longitude": -0.3875,
         "municipality_code": "46250",
-        "postal_code": "46009",
     },
     # Parks
     {
@@ -712,7 +646,6 @@ SAMPLE_CIVIC_FACILITIES = [
         "latitude": 39.4785,
         "longitude": -0.3685,
         "municipality_code": "46250",
-        "postal_code": "46003",
     },
     {
         "id": "fac_vlc_prk_viveros",
@@ -722,7 +655,6 @@ SAMPLE_CIVIC_FACILITIES = [
         "latitude": 39.4805,
         "longitude": -0.3665,
         "municipality_code": "46250",
-        "postal_code": "46010",
     },
     {
         "id": "fac_vlc_prk_cabecera",
@@ -732,7 +664,6 @@ SAMPLE_CIVIC_FACILITIES = [
         "latitude": 39.4755,
         "longitude": -0.4095,
         "municipality_code": "46250",
-        "postal_code": "46015",
     },
 
     # =========================================================================
@@ -747,7 +678,6 @@ SAMPLE_CIVIC_FACILITIES = [
         "latitude": 37.3592,
         "longitude": -5.9785,
         "municipality_code": "41091",
-        "postal_code": "41013",
     },
     {
         "id": "fac_sev_hosp_macarena",
@@ -757,7 +687,6 @@ SAMPLE_CIVIC_FACILITIES = [
         "latitude": 37.4085,
         "longitude": -5.9865,
         "municipality_code": "41091",
-        "postal_code": "41009",
     },
     {
         "id": "fac_sev_pc_alameda",
@@ -767,7 +696,6 @@ SAMPLE_CIVIC_FACILITIES = [
         "latitude": 37.3995,
         "longitude": -5.9925,
         "municipality_code": "41091",
-        "postal_code": "41003",
     },
     {
         "id": "fac_sev_pc_marquesparadas",
@@ -777,7 +705,6 @@ SAMPLE_CIVIC_FACILITIES = [
         "latitude": 37.3910,
         "longitude": -6.0012,
         "municipality_code": "41091",
-        "postal_code": "41001",
     },
     {
         "id": "fac_sev_pc_triana",
@@ -787,7 +714,6 @@ SAMPLE_CIVIC_FACILITIES = [
         "latitude": 37.3820,
         "longitude": -6.0065,
         "municipality_code": "41091",
-        "postal_code": "41010",
     },
     # Education
     {
@@ -798,7 +724,6 @@ SAMPLE_CIVIC_FACILITIES = [
         "latitude": 37.3980,
         "longitude": -5.9905,
         "municipality_code": "41091",
-        "postal_code": "41003",
     },
     {
         "id": "fac_sev_sch_altoscolegios",
@@ -808,7 +733,6 @@ SAMPLE_CIVIC_FACILITIES = [
         "latitude": 37.4045,
         "longitude": -5.9885,
         "municipality_code": "41091",
-        "postal_code": "41009",
     },
     {
         "id": "fac_sev_hs_sanisidoro",
@@ -818,7 +742,6 @@ SAMPLE_CIVIC_FACILITIES = [
         "latitude": 37.3955,
         "longitude": -5.9940,
         "municipality_code": "41091",
-        "postal_code": "41004",
     },
     {
         "id": "fac_sev_hs_becquer",
@@ -828,7 +751,6 @@ SAMPLE_CIVIC_FACILITIES = [
         "latitude": 37.3815,
         "longitude": -6.0085,
         "municipality_code": "41091",
-        "postal_code": "41010",
     },
     # Transit
     {
@@ -839,7 +761,6 @@ SAMPLE_CIVIC_FACILITIES = [
         "latitude": 37.3922,
         "longitude": -5.9754,
         "municipality_code": "41091",
-        "postal_code": "41007",
     },
     {
         "id": "fac_sev_tra_puertajerez",
@@ -849,7 +770,6 @@ SAMPLE_CIVIC_FACILITIES = [
         "latitude": 37.3828,
         "longitude": -5.9930,
         "municipality_code": "41091",
-        "postal_code": "41001",
     },
     {
         "id": "fac_sev_tra_plazanueva",
@@ -859,7 +779,6 @@ SAMPLE_CIVIC_FACILITIES = [
         "latitude": 37.3888,
         "longitude": -5.9954,
         "municipality_code": "41091",
-        "postal_code": "41001",
     },
     {
         "id": "fac_sev_tra_plazadearmas",
@@ -869,7 +788,6 @@ SAMPLE_CIVIC_FACILITIES = [
         "latitude": 37.3915,
         "longitude": -6.0045,
         "municipality_code": "41091",
-        "postal_code": "41001",
     },
     # Parks
     {
@@ -880,7 +798,6 @@ SAMPLE_CIVIC_FACILITIES = [
         "latitude": 37.3752,
         "longitude": -5.9875,
         "municipality_code": "41091",
-        "postal_code": "41013",
     },
     {
         "id": "fac_sev_prk_murillo",
@@ -890,7 +807,6 @@ SAMPLE_CIVIC_FACILITIES = [
         "latitude": 37.3845,
         "longitude": -5.9860,
         "municipality_code": "41091",
-        "postal_code": "41004",
     },
     {
         "id": "fac_sev_prk_alamillo",
@@ -900,7 +816,6 @@ SAMPLE_CIVIC_FACILITIES = [
         "latitude": 37.4195,
         "longitude": -5.9965,
         "municipality_code": "41091",
-        "postal_code": "41092",
     },
 
     # =========================================================================
@@ -914,7 +829,6 @@ SAMPLE_CIVIC_FACILITIES = [
         "latitude": 41.6355,
         "longitude": -0.9002,
         "municipality_code": "50297",
-        "postal_code": "50009",
     },
     {
         "id": "fac_zgz_pc_sanpablo",
@@ -924,7 +838,6 @@ SAMPLE_CIVIC_FACILITIES = [
         "latitude": 41.6558,
         "longitude": -0.8872,
         "municipality_code": "50297",
-        "postal_code": "50003",
     },
     {
         "id": "fac_zgz_sch_costa",
@@ -934,7 +847,6 @@ SAMPLE_CIVIC_FACILITIES = [
         "latitude": 41.6492,
         "longitude": -0.8845,
         "municipality_code": "50297",
-        "postal_code": "50001",
     },
     {
         "id": "fac_zgz_hs_goya",
@@ -944,7 +856,6 @@ SAMPLE_CIVIC_FACILITIES = [
         "latitude": 41.6468,
         "longitude": -0.8895,
         "municipality_code": "50297",
-        "postal_code": "50006",
     },
     {
         "id": "fac_zgz_tra_delicias",
@@ -954,7 +865,6 @@ SAMPLE_CIVIC_FACILITIES = [
         "latitude": 41.6585,
         "longitude": -0.9115,
         "municipality_code": "50297",
-        "postal_code": "50011",
     },
     {
         "id": "fac_zgz_tra_plzaespana",
@@ -964,7 +874,6 @@ SAMPLE_CIVIC_FACILITIES = [
         "latitude": 41.6515,
         "longitude": -0.8812,
         "municipality_code": "50297",
-        "postal_code": "50001",
     },
     {
         "id": "fac_zgz_prk_labordeta",
@@ -974,7 +883,6 @@ SAMPLE_CIVIC_FACILITIES = [
         "latitude": 41.6322,
         "longitude": -0.8955,
         "municipality_code": "50297",
-        "postal_code": "50006",
     },
     {
         "id": "fac_zgz_prk_agua",
@@ -984,7 +892,6 @@ SAMPLE_CIVIC_FACILITIES = [
         "latitude": 41.6705,
         "longitude": -0.9085,
         "municipality_code": "50297",
-        "postal_code": "50018",
     },
 
     # =========================================================================
@@ -998,7 +905,6 @@ SAMPLE_CIVIC_FACILITIES = [
         "latitude": 36.7215,
         "longitude": -4.4372,
         "municipality_code": "29067",
-        "postal_code": "29010",
     },
     {
         "id": "fac_agp_pc_jesuscautivo",
@@ -1008,7 +914,6 @@ SAMPLE_CIVIC_FACILITIES = [
         "latitude": 36.7230,
         "longitude": -4.4285,
         "municipality_code": "29067",
-        "postal_code": "29007",
     },
     {
         "id": "fac_agp_sch_practicas",
@@ -1018,7 +923,6 @@ SAMPLE_CIVIC_FACILITIES = [
         "latitude": 36.7210,
         "longitude": -4.4205,
         "municipality_code": "29067",
-        "postal_code": "29013",
     },
     {
         "id": "fac_agp_hs_vicenteespinel",
@@ -1028,7 +932,6 @@ SAMPLE_CIVIC_FACILITIES = [
         "latitude": 36.7252,
         "longitude": -4.4230,
         "municipality_code": "29067",
-        "postal_code": "29013",
     },
     {
         "id": "fac_agp_tra_mariazambrano",
@@ -1038,7 +941,6 @@ SAMPLE_CIVIC_FACILITIES = [
         "latitude": 36.7118,
         "longitude": -4.4320,
         "municipality_code": "29067",
-        "postal_code": "29002",
     },
     {
         "id": "fac_agp_tra_atarazanas",
@@ -1048,7 +950,6 @@ SAMPLE_CIVIC_FACILITIES = [
         "latitude": 36.7172,
         "longitude": -4.4245,
         "municipality_code": "29067",
-        "postal_code": "29005",
     },
     {
         "id": "fac_agp_prk_parquemalaga",
@@ -1058,7 +959,6 @@ SAMPLE_CIVIC_FACILITIES = [
         "latitude": 36.7195,
         "longitude": -4.4150,
         "municipality_code": "29067",
-        "postal_code": "29015",
     },
     {
         "id": "fac_agp_prk_gibralfaro",
@@ -1068,7 +968,6 @@ SAMPLE_CIVIC_FACILITIES = [
         "latitude": 36.7235,
         "longitude": -4.4110,
         "municipality_code": "29067",
-        "postal_code": "29016",
     },
 
     # =========================================================================
@@ -1082,7 +981,6 @@ SAMPLE_CIVIC_FACILITIES = [
         "latitude": 43.2605,
         "longitude": -2.9525,
         "municipality_code": "48020",
-        "postal_code": "48013",
     },
     {
         "id": "fac_bio_pc_cascoviejo",
@@ -1092,7 +990,6 @@ SAMPLE_CIVIC_FACILITIES = [
         "latitude": 43.2575,
         "longitude": -2.9235,
         "municipality_code": "48020",
-        "postal_code": "48005",
     },
     {
         "id": "fac_bio_sch_cervantes",
@@ -1102,7 +999,6 @@ SAMPLE_CIVIC_FACILITIES = [
         "latitude": 43.2635,
         "longitude": -2.9345,
         "municipality_code": "48020",
-        "postal_code": "48009",
     },
     {
         "id": "fac_bio_hs_unamuno",
@@ -1112,7 +1008,6 @@ SAMPLE_CIVIC_FACILITIES = [
         "latitude": 43.2642,
         "longitude": -2.9405,
         "municipality_code": "48020",
-        "postal_code": "48010",
     },
     {
         "id": "fac_bio_tra_abando",
@@ -1122,7 +1017,6 @@ SAMPLE_CIVIC_FACILITIES = [
         "latitude": 43.2608,
         "longitude": -2.9275,
         "municipality_code": "48020",
-        "postal_code": "48001",
     },
     {
         "id": "fac_bio_tra_cascoviejo",
@@ -1132,7 +1026,6 @@ SAMPLE_CIVIC_FACILITIES = [
         "latitude": 43.2588,
         "longitude": -2.9222,
         "municipality_code": "48020",
-        "postal_code": "48005",
     },
     {
         "id": "fac_bio_prk_casilda",
@@ -1142,7 +1035,6 @@ SAMPLE_CIVIC_FACILITIES = [
         "latitude": 43.2665,
         "longitude": -2.9412,
         "municipality_code": "48020",
-        "postal_code": "48009",
     },
     {
         "id": "fac_bio_prk_etxebarria",
@@ -1152,7 +1044,6 @@ SAMPLE_CIVIC_FACILITIES = [
         "latitude": 43.2605,
         "longitude": -2.9195,
         "municipality_code": "48020",
-        "postal_code": "48005",
     },
 
     # =========================================================================
@@ -1166,7 +1057,6 @@ SAMPLE_CIVIC_FACILITIES = [
         "latitude": 38.3585,
         "longitude": -0.4892,
         "municipality_code": "03014",
-        "postal_code": "03010",
     },
     {
         "id": "fac_alc_pc_sanfernando",
@@ -1176,7 +1066,6 @@ SAMPLE_CIVIC_FACILITIES = [
         "latitude": 38.3475,
         "longitude": -0.4905,
         "municipality_code": "03014",
-        "postal_code": "03005",
     },
     {
         "id": "fac_alc_sch_campoamor",
@@ -1186,7 +1075,6 @@ SAMPLE_CIVIC_FACILITIES = [
         "latitude": 38.3522,
         "longitude": -0.4880,
         "municipality_code": "03014",
-        "postal_code": "03004",
     },
     {
         "id": "fac_alc_hs_jorgejuan",
@@ -1196,7 +1084,6 @@ SAMPLE_CIVIC_FACILITIES = [
         "latitude": 38.3495,
         "longitude": -0.4912,
         "municipality_code": "03014",
-        "postal_code": "03005",
     },
     {
         "id": "fac_alc_tra_terminal",
@@ -1206,7 +1093,6 @@ SAMPLE_CIVIC_FACILITIES = [
         "latitude": 38.3435,
         "longitude": -0.4950,
         "municipality_code": "03014",
-        "postal_code": "03003",
     },
     {
         "id": "fac_alc_tra_luceros",
@@ -1216,7 +1102,6 @@ SAMPLE_CIVIC_FACILITIES = [
         "latitude": 38.3458,
         "longitude": -0.4915,
         "municipality_code": "03014",
-        "postal_code": "03003",
     },
     {
         "id": "fac_alc_prk_canalejas",
@@ -1226,7 +1111,6 @@ SAMPLE_CIVIC_FACILITIES = [
         "latitude": 38.3418,
         "longitude": -0.4875,
         "municipality_code": "03014",
-        "postal_code": "03001",
     },
     {
         "id": "fac_alc_prk_palmeral",
@@ -1236,7 +1120,6 @@ SAMPLE_CIVIC_FACILITIES = [
         "latitude": 38.3245,
         "longitude": -0.5140,
         "municipality_code": "03014",
-        "postal_code": "03008",
     },
 
     # =========================================================================
@@ -1250,7 +1133,6 @@ SAMPLE_CIVIC_FACILITIES = [
         "latitude": 37.8672,
         "longitude": -4.7925,
         "municipality_code": "14021",
-        "postal_code": "14004",
     },
     {
         "id": "fac_odb_pc_centro",
@@ -1260,7 +1142,6 @@ SAMPLE_CIVIC_FACILITIES = [
         "latitude": 37.8865,
         "longitude": -4.7812,
         "municipality_code": "14021",
-        "postal_code": "14001",
     },
     {
         "id": "fac_odb_sch_colon",
@@ -1270,7 +1151,6 @@ SAMPLE_CIVIC_FACILITIES = [
         "latitude": 37.8890,
         "longitude": -4.7795,
         "municipality_code": "14021",
-        "postal_code": "14001",
     },
     {
         "id": "fac_odb_hs_gongora",
@@ -1280,7 +1160,6 @@ SAMPLE_CIVIC_FACILITIES = [
         "latitude": 37.8852,
         "longitude": -4.7830,
         "municipality_code": "14021",
-        "postal_code": "14003",
     },
     {
         "id": "fac_odb_tra_central",
@@ -1290,7 +1169,6 @@ SAMPLE_CIVIC_FACILITIES = [
         "latitude": 37.8885,
         "longitude": -4.7895,
         "municipality_code": "14021",
-        "postal_code": "14011",
     },
     {
         "id": "fac_odb_prk_victoria",
@@ -1300,7 +1178,6 @@ SAMPLE_CIVIC_FACILITIES = [
         "latitude": 37.8845,
         "longitude": -4.7865,
         "municipality_code": "14021",
-        "postal_code": "14008",
     },
 
     # =========================================================================
@@ -1314,7 +1191,6 @@ SAMPLE_CIVIC_FACILITIES = [
         "latitude": 41.6565,
         "longitude": -4.7185,
         "municipality_code": "47186",
-        "postal_code": "47005",
     },
     {
         "id": "fac_vll_pc_ejercito",
@@ -1324,7 +1200,6 @@ SAMPLE_CIVIC_FACILITIES = [
         "latitude": 41.6425,
         "longitude": -4.7295,
         "municipality_code": "47186",
-        "postal_code": "47007",
     },
     {
         "id": "fac_vll_sch_sanfernando",
@@ -1334,7 +1209,6 @@ SAMPLE_CIVIC_FACILITIES = [
         "latitude": 41.6480,
         "longitude": -4.7315,
         "municipality_code": "47186",
-        "postal_code": "47006",
     },
     {
         "id": "fac_vll_hs_zorrilla",
@@ -1344,7 +1218,6 @@ SAMPLE_CIVIC_FACILITIES = [
         "latitude": 41.6535,
         "longitude": -4.7290,
         "municipality_code": "47186",
-        "postal_code": "47006",
     },
     {
         "id": "fac_vll_tra_campogrande",
@@ -1354,7 +1227,6 @@ SAMPLE_CIVIC_FACILITIES = [
         "latitude": 41.6422,
         "longitude": -4.7290,
         "municipality_code": "47186",
-        "postal_code": "47007",
     },
     {
         "id": "fac_vll_prk_campogrande",
@@ -1364,7 +1236,6 @@ SAMPLE_CIVIC_FACILITIES = [
         "latitude": 41.6455,
         "longitude": -4.7285,
         "municipality_code": "47186",
-        "postal_code": "47007",
     },
 
     # =========================================================================
@@ -1378,7 +1249,6 @@ SAMPLE_CIVIC_FACILITIES = [
         "latitude": 42.1950,
         "longitude": -8.7360,
         "municipality_code": "36057",
-        "postal_code": "36312",
     },
     {
         "id": "fac_vgo_pc_rosalia",
@@ -1388,7 +1258,6 @@ SAMPLE_CIVIC_FACILITIES = [
         "latitude": 42.2355,
         "longitude": -8.7212,
         "municipality_code": "36057",
-        "postal_code": "36201",
     },
     {
         "id": "fac_vgo_sch_garciabarbon",
@@ -1398,7 +1267,6 @@ SAMPLE_CIVIC_FACILITIES = [
         "latitude": 42.2385,
         "longitude": -8.7155,
         "municipality_code": "36057",
-        "postal_code": "36201",
     },
     {
         "id": "fac_vgo_hs_santairene",
@@ -1408,7 +1276,6 @@ SAMPLE_CIVIC_FACILITIES = [
         "latitude": 42.2285,
         "longitude": -8.7302,
         "municipality_code": "36057",
-        "postal_code": "36211",
     },
     {
         "id": "fac_vgo_tra_urzaiz",
@@ -1418,7 +1285,6 @@ SAMPLE_CIVIC_FACILITIES = [
         "latitude": 42.2345,
         "longitude": -8.7145,
         "municipality_code": "36057",
-        "postal_code": "36201",
     },
     {
         "id": "fac_vgo_prk_castro",
@@ -1428,7 +1294,6 @@ SAMPLE_CIVIC_FACILITIES = [
         "latitude": 42.2320,
         "longitude": -8.7265,
         "municipality_code": "36057",
-        "postal_code": "36203",
     },
 
     # =========================================================================
@@ -1442,7 +1307,6 @@ SAMPLE_CIVIC_FACILITIES = [
         "latitude": 43.5245,
         "longitude": -5.6185,
         "municipality_code": "33024",
-        "postal_code": "33394",
     },
     {
         "id": "fac_gij_pc_puertavilla",
@@ -1452,7 +1316,6 @@ SAMPLE_CIVIC_FACILITIES = [
         "latitude": 43.5385,
         "longitude": -5.6635,
         "municipality_code": "33024",
-        "postal_code": "33206",
     },
     {
         "id": "fac_gij_sch_jovellanos",
@@ -1462,7 +1325,6 @@ SAMPLE_CIVIC_FACILITIES = [
         "latitude": 43.5395,
         "longitude": -5.6605,
         "municipality_code": "33024",
-        "postal_code": "33205",
     },
     {
         "id": "fac_gij_hs_jovellanos",
@@ -1472,7 +1334,6 @@ SAMPLE_CIVIC_FACILITIES = [
         "latitude": 43.5352,
         "longitude": -5.6580,
         "municipality_code": "33024",
-        "postal_code": "33201",
     },
     {
         "id": "fac_gij_tra_sanzcrespo",
@@ -1482,7 +1343,6 @@ SAMPLE_CIVIC_FACILITIES = [
         "latitude": 43.5372,
         "longitude": -5.6730,
         "municipality_code": "33024",
-        "postal_code": "33207",
     },
     {
         "id": "fac_gij_prk_isabelcatolica",
@@ -1492,7 +1352,6 @@ SAMPLE_CIVIC_FACILITIES = [
         "latitude": 43.5365,
         "longitude": -5.6425,
         "municipality_code": "33024",
-        "postal_code": "33203",
     },
 
     # =========================================================================
@@ -1506,7 +1365,6 @@ SAMPLE_CIVIC_FACILITIES = [
         "latitude": 39.6085,
         "longitude": 2.6455,
         "municipality_code": "07040",
-        "postal_code": "07120",
     },
     {
         "id": "fac_pmi_pc_emilidarder",
@@ -1516,7 +1374,6 @@ SAMPLE_CIVIC_FACILITIES = [
         "latitude": 39.5825,
         "longitude": 2.6515,
         "municipality_code": "07040",
-        "postal_code": "07004",
     },
     {
         "id": "fac_pmi_sch_jaumei",
@@ -1526,7 +1383,6 @@ SAMPLE_CIVIC_FACILITIES = [
         "latitude": 39.5780,
         "longitude": 2.6565,
         "municipality_code": "07040",
-        "postal_code": "07005",
     },
     {
         "id": "fac_pmi_hs_ramonllull",
@@ -1536,7 +1392,6 @@ SAMPLE_CIVIC_FACILITIES = [
         "latitude": 39.5752,
         "longitude": 2.6530,
         "municipality_code": "07040",
-        "postal_code": "07003",
     },
     {
         "id": "fac_pmi_tra_intermodal",
@@ -1546,7 +1401,6 @@ SAMPLE_CIVIC_FACILITIES = [
         "latitude": 39.5755,
         "longitude": 2.6540,
         "municipality_code": "07040",
-        "postal_code": "07002",
     },
     {
         "id": "fac_pmi_prk_estacions",
@@ -1556,7 +1410,6 @@ SAMPLE_CIVIC_FACILITIES = [
         "latitude": 39.5765,
         "longitude": 2.6555,
         "municipality_code": "07040",
-        "postal_code": "07002",
     },
     {
         "id": "fac_pmi_prk_mar",
@@ -1566,7 +1419,6 @@ SAMPLE_CIVIC_FACILITIES = [
         "latitude": 39.5665,
         "longitude": 2.6480,
         "municipality_code": "07040",
-        "postal_code": "07001",
     },
 
     # =========================================================================
@@ -1580,7 +1432,6 @@ SAMPLE_CIVIC_FACILITIES = [
         "latitude": 28.1255,
         "longitude": -15.4485,
         "municipality_code": "35016",
-        "postal_code": "35010",
     },
     {
         "id": "fac_lpa_pc_triana",
@@ -1590,7 +1441,6 @@ SAMPLE_CIVIC_FACILITIES = [
         "latitude": 28.1065,
         "longitude": -15.4175,
         "municipality_code": "35016",
-        "postal_code": "35002",
     },
     {
         "id": "fac_lpa_sch_iberia",
@@ -1600,7 +1450,6 @@ SAMPLE_CIVIC_FACILITIES = [
         "latitude": 28.1095,
         "longitude": -15.4190,
         "municipality_code": "35016",
-        "postal_code": "35003",
     },
     {
         "id": "fac_lpa_hs_perezgaldos",
@@ -1610,7 +1459,6 @@ SAMPLE_CIVIC_FACILITIES = [
         "latitude": 28.1085,
         "longitude": -15.4215,
         "municipality_code": "35016",
-        "postal_code": "35003",
     },
     {
         "id": "fac_lpa_tra_santelmo",
@@ -1620,7 +1468,6 @@ SAMPLE_CIVIC_FACILITIES = [
         "latitude": 28.1080,
         "longitude": -15.4150,
         "municipality_code": "35016",
-        "postal_code": "35002",
     },
     {
         "id": "fac_lpa_prk_doramas",
@@ -1630,7 +1477,6 @@ SAMPLE_CIVIC_FACILITIES = [
         "latitude": 28.1215,
         "longitude": -15.4255,
         "municipality_code": "35016",
-        "postal_code": "35005",
     },
 
     # =========================================================================
@@ -1644,7 +1490,6 @@ SAMPLE_CIVIC_FACILITIES = [
         "latitude": 28.4485,
         "longitude": -16.2915,
         "municipality_code": "38038",
-        "postal_code": "38010",
     },
     {
         "id": "fac_tfn_pc_weyler",
@@ -1654,7 +1499,6 @@ SAMPLE_CIVIC_FACILITIES = [
         "latitude": 28.4682,
         "longitude": -16.2555,
         "municipality_code": "38038",
-        "postal_code": "38003",
     },
     {
         "id": "fac_tfn_sch_isabelcatolica",
@@ -1664,7 +1508,6 @@ SAMPLE_CIVIC_FACILITIES = [
         "latitude": 28.4665,
         "longitude": -16.2520,
         "municipality_code": "38038",
-        "postal_code": "38003",
     },
     {
         "id": "fac_tfn_hs_andresbello",
@@ -1674,7 +1517,6 @@ SAMPLE_CIVIC_FACILITIES = [
         "latitude": 28.4615,
         "longitude": -16.2625,
         "municipality_code": "38038",
-        "postal_code": "38007",
     },
     {
         "id": "fac_tfn_tra_intercambiador",
@@ -1684,7 +1526,6 @@ SAMPLE_CIVIC_FACILITIES = [
         "latitude": 28.4575,
         "longitude": -16.2560,
         "municipality_code": "38038",
-        "postal_code": "38003",
     },
     {
         "id": "fac_tfn_prk_garciasanabria",
@@ -1694,7 +1535,6 @@ SAMPLE_CIVIC_FACILITIES = [
         "latitude": 28.4725,
         "longitude": -16.2535,
         "municipality_code": "38038",
-        "postal_code": "38004",
     },
 
     # =========================================================================
@@ -1708,7 +1548,6 @@ SAMPLE_CIVIC_FACILITIES = [
         "latitude": 37.9825,
         "longitude": -1.1245,
         "municipality_code": "30030",
-        "postal_code": "30003",
     },
     {
         "id": "fac_mur_pc_sanandres",
@@ -1718,7 +1557,6 @@ SAMPLE_CIVIC_FACILITIES = [
         "latitude": 37.9855,
         "longitude": -1.1365,
         "municipality_code": "30030",
-        "postal_code": "30005",
     },
     {
         "id": "fac_mur_sch_cierva",
@@ -1728,7 +1566,6 @@ SAMPLE_CIVIC_FACILITIES = [
         "latitude": 37.9860,
         "longitude": -1.1290,
         "municipality_code": "30030",
-        "postal_code": "30001",
     },
     {
         "id": "fac_mur_hs_cascales",
@@ -1738,7 +1575,6 @@ SAMPLE_CIVIC_FACILITIES = [
         "latitude": 37.9840,
         "longitude": -1.1275,
         "municipality_code": "30030",
-        "postal_code": "30001",
     },
     {
         "id": "fac_mur_tra_carmen",
@@ -1748,7 +1584,6 @@ SAMPLE_CIVIC_FACILITIES = [
         "latitude": 37.9745,
         "longitude": -1.1310,
         "municipality_code": "30030",
-        "postal_code": "30002",
     },
     {
         "id": "fac_mur_prk_floridablanca",
@@ -1758,7 +1593,6 @@ SAMPLE_CIVIC_FACILITIES = [
         "latitude": 37.9795,
         "longitude": -1.1305,
         "municipality_code": "30030",
-        "postal_code": "30002",
     },
 
     # =========================================================================
@@ -1772,7 +1606,6 @@ SAMPLE_CIVIC_FACILITIES = [
         "latitude": 37.1915,
         "longitude": -3.6110,
         "municipality_code": "18087",
-        "postal_code": "18014",
     },
     {
         "id": "fac_grx_pc_grancapitan",
@@ -1782,7 +1615,6 @@ SAMPLE_CIVIC_FACILITIES = [
         "latitude": 37.1795,
         "longitude": -3.6055,
         "municipality_code": "18087",
-        "postal_code": "18002",
     },
     {
         "id": "fac_grx_sch_gomezmoreno",
@@ -1792,7 +1624,6 @@ SAMPLE_CIVIC_FACILITIES = [
         "latitude": 37.1820,
         "longitude": -3.5935,
         "municipality_code": "18087",
-        "postal_code": "18010",
     },
     {
         "id": "fac_grx_hs_padremanjon",
@@ -1802,7 +1633,6 @@ SAMPLE_CIVIC_FACILITIES = [
         "latitude": 37.1865,
         "longitude": -3.6040,
         "municipality_code": "18087",
-        "postal_code": "18012",
     },
     {
         "id": "fac_grx_tra_ferrocarril",
@@ -1812,7 +1642,6 @@ SAMPLE_CIVIC_FACILITIES = [
         "latitude": 37.1845,
         "longitude": -3.6095,
         "municipality_code": "18087",
-        "postal_code": "18014",
     },
     {
         "id": "fac_grx_prk_garcialorca",
@@ -1822,7 +1651,6 @@ SAMPLE_CIVIC_FACILITIES = [
         "latitude": 37.1685,
         "longitude": -3.6105,
         "municipality_code": "18087",
-        "postal_code": "18004",
     },
 
     # =========================================================================
@@ -1836,7 +1664,6 @@ SAMPLE_CIVIC_FACILITIES = [
         "latitude": 43.2985,
         "longitude": -1.9745,
         "municipality_code": "20069",
-        "postal_code": "20014",
     },
     {
         "id": "fac_eas_pc_partevieja",
@@ -1846,7 +1673,6 @@ SAMPLE_CIVIC_FACILITIES = [
         "latitude": 43.3235,
         "longitude": -1.9845,
         "municipality_code": "20069",
-        "postal_code": "20003",
     },
     {
         "id": "fac_eas_sch_amaraberri",
@@ -1856,7 +1682,6 @@ SAMPLE_CIVIC_FACILITIES = [
         "latitude": 43.3075,
         "longitude": -1.9785,
         "municipality_code": "20069",
-        "postal_code": "20011",
     },
     {
         "id": "fac_eas_hs_usandizaga",
@@ -1866,7 +1691,6 @@ SAMPLE_CIVIC_FACILITIES = [
         "latitude": 43.3140,
         "longitude": -1.9785,
         "municipality_code": "20069",
-        "postal_code": "20011",
     },
     {
         "id": "fac_eas_tra_donostia",
@@ -1876,7 +1700,6 @@ SAMPLE_CIVIC_FACILITIES = [
         "latitude": 43.3175,
         "longitude": -1.9775,
         "municipality_code": "20069",
-        "postal_code": "20012",
     },
     {
         "id": "fac_eas_prk_cristinaenea",
@@ -1886,7 +1709,6 @@ SAMPLE_CIVIC_FACILITIES = [
         "latitude": 43.3155,
         "longitude": -1.9745,
         "municipality_code": "20069",
-        "postal_code": "20012",
     },
 
     # =========================================================================
@@ -1900,7 +1722,6 @@ SAMPLE_CIVIC_FACILITIES = [
         "latitude": 43.3445,
         "longitude": -8.3965,
         "municipality_code": "15030",
-        "postal_code": "15006",
     },
     {
         "id": "fac_lcg_pc_sanjose",
@@ -1910,7 +1731,6 @@ SAMPLE_CIVIC_FACILITIES = [
         "latitude": 43.3715,
         "longitude": -8.4025,
         "municipality_code": "15030",
-        "postal_code": "15001",
     },
     {
         "id": "fac_lcg_sch_emiliapardo",
@@ -1920,7 +1740,6 @@ SAMPLE_CIVIC_FACILITIES = [
         "latitude": 43.3615,
         "longitude": -8.4110,
         "municipality_code": "15030",
-        "postal_code": "15004",
     },
     {
         "id": "fac_lcg_hs_eusebioguarda",
@@ -1930,7 +1749,6 @@ SAMPLE_CIVIC_FACILITIES = [
         "latitude": 43.3685,
         "longitude": -8.4065,
         "municipality_code": "15030",
-        "postal_code": "15004",
     },
     {
         "id": "fac_lcg_tra_sancristobal",
@@ -1940,7 +1758,6 @@ SAMPLE_CIVIC_FACILITIES = [
         "latitude": 43.3525,
         "longitude": -8.4095,
         "municipality_code": "15030",
-        "postal_code": "15007",
     },
     {
         "id": "fac_lcg_prk_mendeznunez",
@@ -1950,7 +1767,6 @@ SAMPLE_CIVIC_FACILITIES = [
         "latitude": 43.3685,
         "longitude": -8.4035,
         "municipality_code": "15030",
-        "postal_code": "15003",
     },
 
     # =========================================================================
@@ -1964,7 +1780,6 @@ SAMPLE_CIVIC_FACILITIES = [
         "latitude": 43.4555,
         "longitude": -3.8325,
         "municipality_code": "39075",
-        "postal_code": "39008",
     },
     {
         "id": "fac_sdr_pc_centro",
@@ -1974,7 +1789,6 @@ SAMPLE_CIVIC_FACILITIES = [
         "latitude": 43.4625,
         "longitude": -3.8115,
         "municipality_code": "39075",
-        "postal_code": "39001",
     },
     {
         "id": "fac_sdr_sch_dionisio",
@@ -1984,7 +1798,6 @@ SAMPLE_CIVIC_FACILITIES = [
         "latitude": 43.4605,
         "longitude": -3.8235,
         "municipality_code": "39075",
-        "postal_code": "39007",
     },
     {
         "id": "fac_sdr_hs_santaclara",
@@ -1994,7 +1807,6 @@ SAMPLE_CIVIC_FACILITIES = [
         "latitude": 43.4655,
         "longitude": -3.8125,
         "municipality_code": "39075",
-        "postal_code": "39001",
     },
     {
         "id": "fac_sdr_tra_terminal",
@@ -2004,7 +1816,6 @@ SAMPLE_CIVIC_FACILITIES = [
         "latitude": 43.4595,
         "longitude": -3.8130,
         "municipality_code": "39075",
-        "postal_code": "39002",
     },
     {
         "id": "fac_sdr_prk_magdalena",
@@ -2014,7 +1825,6 @@ SAMPLE_CIVIC_FACILITIES = [
         "latitude": 43.4695,
         "longitude": -3.7665,
         "municipality_code": "39075",
-        "postal_code": "39005",
     },
 
     # =========================================================================
@@ -2028,7 +1838,6 @@ SAMPLE_CIVIC_FACILITIES = [
         "latitude": 42.8075,
         "longitude": -1.6665,
         "municipality_code": "31201",
-        "postal_code": "31008",
     },
     {
         "id": "fac_pna_pc_cascoviejo",
@@ -2038,7 +1847,6 @@ SAMPLE_CIVIC_FACILITIES = [
         "latitude": 42.8185,
         "longitude": -1.6445,
         "municipality_code": "31201",
-        "postal_code": "31001",
     },
     {
         "id": "fac_pna_sch_sanfrancisco",
@@ -2048,7 +1856,6 @@ SAMPLE_CIVIC_FACILITIES = [
         "latitude": 42.8190,
         "longitude": -1.6465,
         "municipality_code": "31201",
-        "postal_code": "31001",
     },
     {
         "id": "fac_pna_hs_plazadelacruz",
@@ -2058,7 +1865,6 @@ SAMPLE_CIVIC_FACILITIES = [
         "latitude": 42.8125,
         "longitude": -1.6425,
         "municipality_code": "31201",
-        "postal_code": "31004",
     },
     {
         "id": "fac_pna_tra_estacion",
@@ -2068,7 +1874,6 @@ SAMPLE_CIVIC_FACILITIES = [
         "latitude": 42.8275,
         "longitude": -1.6615,
         "municipality_code": "31201",
-        "postal_code": "31012",
     },
     {
         "id": "fac_pna_prk_ciudadela",
@@ -2078,7 +1883,6 @@ SAMPLE_CIVIC_FACILITIES = [
         "latitude": 42.8125,
         "longitude": -1.6505,
         "municipality_code": "31201",
-        "postal_code": "31007",
     },
 
     # =========================================================================
@@ -2092,7 +1896,6 @@ SAMPLE_CIVIC_FACILITIES = [
         "latitude": 42.8565,
         "longitude": -2.6885,
         "municipality_code": "01059",
-        "postal_code": "01009",
     },
     {
         "id": "fac_vit_pc_olaguibel",
@@ -2102,7 +1905,6 @@ SAMPLE_CIVIC_FACILITIES = [
         "latitude": 42.8465,
         "longitude": -2.6685,
         "municipality_code": "01059",
-        "postal_code": "01004",
     },
     {
         "id": "fac_vit_sch_ramonbajo",
@@ -2112,7 +1914,6 @@ SAMPLE_CIVIC_FACILITIES = [
         "latitude": 42.8495,
         "longitude": -2.6710,
         "municipality_code": "01059",
-        "postal_code": "01001",
     },
     {
         "id": "fac_vit_hs_federicobaraibar",
@@ -2122,7 +1923,6 @@ SAMPLE_CIVIC_FACILITIES = [
         "latitude": 42.8445,
         "longitude": -2.6625,
         "municipality_code": "01059",
-        "postal_code": "01003",
     },
     {
         "id": "fac_vit_tra_renfe",
@@ -2132,7 +1932,6 @@ SAMPLE_CIVIC_FACILITIES = [
         "latitude": 42.8415,
         "longitude": -2.6730,
         "municipality_code": "01059",
-        "postal_code": "01005",
     },
     {
         "id": "fac_vit_tra_angulema",
@@ -2142,7 +1941,6 @@ SAMPLE_CIVIC_FACILITIES = [
         "latitude": 42.8445,
         "longitude": -2.6695,
         "municipality_code": "01059",
-        "postal_code": "01004",
     },
     {
         "id": "fac_vit_prk_florida",
@@ -2152,7 +1950,6 @@ SAMPLE_CIVIC_FACILITIES = [
         "latitude": 42.8445,
         "longitude": -2.6755,
         "municipality_code": "01059",
-        "postal_code": "01005",
     },
     {
         "id": "fac_vit_prk_salburua",
@@ -2162,7 +1959,6 @@ SAMPLE_CIVIC_FACILITIES = [
         "latitude": 42.8545,
         "longitude": -2.6455,
         "municipality_code": "01059",
-        "postal_code": "01013",
     },
 ]
 
@@ -2178,7 +1974,7 @@ def generate_sample_facilities_csv(output_path: str, facilities: list[dict] = No
         facilities = SAMPLE_CIVIC_FACILITIES
 
     os.makedirs(os.path.dirname(os.path.abspath(output_path)), exist_ok=True)
-    fieldnames = ["id", "type", "subtype", "name", "latitude", "longitude", "municipality_code", "postal_code"]
+    fieldnames = ["id", "type", "subtype", "name", "latitude", "longitude", "municipality_code"]
 
     with open(output_path, "w", newline="", encoding="utf-8") as f:
         writer = csv.DictWriter(f, fieldnames=fieldnames)

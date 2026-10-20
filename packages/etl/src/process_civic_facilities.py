@@ -203,18 +203,6 @@ def normalize_facility(raw: dict, index: int = 0) -> dict | None:
     if len(municipality_code) > 5:
         municipality_code = municipality_code[:5]
 
-    # Resolve postal code
-    postal_raw = (
-        raw.get("postal_code")
-        or raw.get("codigo_postal")
-        or raw.get("cp")
-        or raw.get("zip_code")
-        or ""
-    )
-    postal_code = str(postal_raw).strip().zfill(5) if postal_raw else None
-    if postal_code and (len(postal_code) != 5 or not postal_code.isdigit()):
-        postal_code = None
-
     # Resolve type
     raw_type = (
         raw.get("type")
@@ -279,7 +267,6 @@ def normalize_facility(raw: dict, index: int = 0) -> dict | None:
         "latitude": round(latitude, 6),
         "longitude": round(longitude, 6),
         "municipality_code": municipality_code,
-        "postal_code": postal_code,
     }
 
 
@@ -352,16 +339,10 @@ def generate_sql_insert_script(facilities: list[dict]) -> str:
         lat = f"{fac['latitude']:.6f}"
         lon = f"{fac['longitude']:.6f}"
         muni = fac["municipality_code"].replace("'", "''")
-        if fac.get("postal_code"):
-            postal_val = fac["postal_code"].replace("'", "''")
-            postal = f"'{postal_val}'"
-        else:
-            postal = "NULL"
-
         stmt = (
             f"INSERT OR IGNORE INTO civic_facilities "
             f"(id, type, subtype, name, latitude, longitude, municipality_code, postal_code) "
-            f"VALUES ('{fac_id}', '{fac_type}', {fac_subtype}, '{fac_name}', {lat}, {lon}, '{muni}', {postal});"
+            f"VALUES ('{fac_id}', '{fac_type}', {fac_subtype}, '{fac_name}', {lat}, {lon}, '{muni}', NULL);"
         )
         lines.append(stmt)
 
@@ -385,7 +366,7 @@ def export_to_sqlite(facilities: list[dict], db_path: str):
     insert_sql = """
     INSERT OR IGNORE INTO civic_facilities
     (id, type, subtype, name, latitude, longitude, municipality_code, postal_code)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?);
+    VALUES (?, ?, ?, ?, ?, ?, ?, NULL);
     """
 
     rows = [
@@ -397,7 +378,6 @@ def export_to_sqlite(facilities: list[dict], db_path: str):
             f["latitude"],
             f["longitude"],
             f["municipality_code"],
-            f.get("postal_code"),
         )
         for f in facilities
     ]
