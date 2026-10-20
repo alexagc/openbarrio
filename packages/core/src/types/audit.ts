@@ -2,9 +2,21 @@ import { Type, Static } from '@sinclair/typebox';
 import { CadastralPropertySchema } from './catastro.js';
 import { CensusTractIncomeSchema } from './ine.js';
 import { EnvironmentalDataSchema } from './environmental.js';
+import { CivicConnectivityDataSchema } from './connectivity.js';
+import { UrbanPlanningDataSchema } from './urban-planning.js';
+
+export const AuditSubscoresSchema = Type.Object({
+  building: Type.Number({ minimum: 0, maximum: 100, description: 'Building antiquity, CTE era and structural specs (0-100)' }),
+  connectivity: Type.Number({ minimum: 0, maximum: 100, description: '15-minute city walkability to health, school, transit, parks (0-100)' }),
+  environmental: Type.Number({ minimum: 0, maximum: 100, description: 'Combined acoustic comfort, flood safety and air quality (0-100)' }),
+  socioeconomic: Type.Number({ minimum: 0, maximum: 100, description: 'Census tract income and municipal standing (0-100)' }),
+  urbanPlanning: Type.Number({ minimum: 0, maximum: 100, description: 'SIU land classification, legal zoning and rent cap status (0-100)' }),
+});
 
 export const AuditScoreBreakdownSchema = Type.Object({
   overallScore: Type.Number({ minimum: 0, maximum: 100, description: 'Weighted composite Barrio Score (0-100)' }),
+  subscores: AuditSubscoresSchema,
+  // Transitional backward-compatibility aliases:
   socioeconomicScore: Type.Number({ minimum: 0, maximum: 100, description: 'Socioeconomic standing score (0-100)' }),
   buildingHealthScore: Type.Number({ minimum: 0, maximum: 100, description: 'Building age, construction regulations and physical health (0-100)' }),
   acousticComfortScore: Type.Number({ minimum: 0, maximum: 100, description: 'Acoustic comfort rating (0-100)' }),
@@ -27,10 +39,13 @@ export const PropertyAuditReportSchema = Type.Object({
   property: CadastralPropertySchema,
   neighborhood: CensusTractIncomeSchema,
   environment: EnvironmentalDataSchema,
+  connectivity: Type.Optional(CivicConnectivityDataSchema),
+  urbanPlanning: Type.Optional(UrbanPlanningDataSchema),
   score: AuditScoreBreakdownSchema,
   rentalBenchmark: Type.Optional(RentalBenchmarkSchema),
 });
 
+export type AuditSubscores = Static<typeof AuditSubscoresSchema>;
 export type AuditScoreBreakdown = Static<typeof AuditScoreBreakdownSchema>;
 export type RentalBenchmark = Static<typeof RentalBenchmarkSchema>;
 export type PropertyAuditReport = Static<typeof PropertyAuditReportSchema>;

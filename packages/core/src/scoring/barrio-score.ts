@@ -1,30 +1,37 @@
 import { CadastralProperty } from '../types/catastro.js';
 import { CensusTractIncome } from '../types/ine.js';
 import { EnvironmentalData } from '../types/environmental.js';
+import { CivicConnectivityData } from '../types/connectivity.js';
+import { UrbanPlanningData } from '../types/urban-planning.js';
 import { AuditScoreBreakdown, RentalBenchmark } from '../types/audit.js';
 
 export interface ScoringWeights {
+  connectivity: number;
+  building: number;
   socioeconomic: number;
-  buildingHealth: number;
-  acousticComfort: number;
-  climateSafety: number;
+  environmental: number;
+  urbanPlanning: number;
 }
 
 export const DEFAULT_SCORING_WEIGHTS: ScoringWeights = {
-  socioeconomic: 0.30,
-  buildingHealth: 0.30,
-  acousticComfort: 0.20,
-  climateSafety: 0.20,
+  connectivity: 0.25,
+  building: 0.25,
+  socioeconomic: 0.20,
+  environmental: 0.15,
+  urbanPlanning: 0.15,
 };
 
 /**
- * Calculates the comprehensive Barrio Due Diligence Score (0-100) and multidimensional breakdown.
+ * Calculates the comprehensive Barrio Due Diligence Score (0-100) and multidimensional subscores breakdown.
+ * v0.3.0 Architecture: 5 calibrated pillars (connectivity, building, socioeconomic, environmental, urbanPlanning).
  */
 export function calculateBarrioScore(
   property: CadastralProperty,
   neighborhood: CensusTractIncome,
   environment?: Partial<EnvironmentalData>,
   rentalBenchmark?: RentalBenchmark,
+  connectivity?: Partial<CivicConnectivityData>,
+  urbanPlanning?: Partial<UrbanPlanningData>,
   weights: ScoringWeights = DEFAULT_SCORING_WEIGHTS
 ): AuditScoreBreakdown {
   const highlights: string[] = [];
@@ -34,7 +41,7 @@ export function calculateBarrioScore(
   // Evaluates census section income percentile and absolute net household revenue
   const percentile = neighborhood.percentileInMunicipality;
   const householdIncome = neighborhood.averageNetHouseholdIncomeEur;
-  
+
   // Reference benchmark: Spanish median household income ~33,000 EUR
   const incomeScoreFactor = Math.min(100, Math.max(0, (householdIncome / 33000) * 50));
   const socioeconomicScore = Math.round(
@@ -85,6 +92,12 @@ export function calculateBarrioScore(
     highlights.push(`Unbuilt parcel or land without recorded building antiquity in Cadastral registry`);
   }
 
+  // Renovation bonus from urbanPlanning if recorded
+  if (urbanPlanning?.lastRenovationYear && urbanPlanning.lastRenovationYear >= 2000) {
+    buildingScore = Math.min(95, buildingScore + 15);
+    highlights.push(`Documented major structural renovation in ${urbanPlanning.lastRenovationYear}`);
+  }
+
   // Density adjustment
   if (property.building.unitsCount > 100) {
     buildingScore = Math.max(20, buildingScore - 5);
@@ -100,8 +113,59 @@ export function calculateBarrioScore(
 
   const buildingHealthScore = Math.min(100, Math.max(0, buildingScore));
 
-  // 3. Acoustic Comfort Dimension (0 - 100)
-  // Evaluates strategic noise mapping (SICA Lden levels)
+  // 3. Civic Connectivity 15-Minute Dimension (0 - 100)
+  let connectivityScore = 70;
+
+  if (connectivity?.walkScore15Min !== undefined) {
+    connectivityScore = Math.min(100, Math.max(0, connectivity.walkScore15Min));
+    if (connectivityScore >= 80) {
+      highlights.push(
+        `Outstanding 15-minute civic connectivity (WalkScore ${connectivityScore}/100) with comprehensive public amenities within short walking radius`
+      );
+    } else if (connectivityScore < 50) {
+      risks.push(
+        `Limited 15-minute civic walkability (WalkScore ${connectivityScore}/100): essential services exceed comfortable pedestrian distance`
+      );
+    }
+
+    if (connectivity.nearestHealthcare) {
+      const h = connectivity.nearestHealthcare;
+      if (h.distanceMeters <= 800) {
+        highlights.push(`Proximity to healthcare: ${h.name} (${Math.round(h.distanceMeters)}m, ~${Math.round(h.walkTimeMinutes)} min walk)`);
+      }
+    }
+    if (connectivity.nearestTransit) {
+      const t = connectivity.nearestTransit;
+      if (t.distanceMeters <= 600) {
+        highlights.push(`Rapid transit access: ${t.name} (${Math.round(t.distanceMeters)}m, ~${Math.round(t.walkTimeMinutes)} min walk)`);
+      }
+    }
+    if (connectivity.nearestEducation) {
+      const e = connectivity.nearestEducation;
+      if (e.distanceMeters <= 600) {
+        highlights.push(`Educational institution nearby: ${e.name} (${Math.round(e.distanceMeters)}m)`);
+      }
+    }
+    if (connectivity.nearestPark) {
+      const p = connectivity.nearestPark;
+      if (p.distanceMeters <= 700) {
+        highlights.push(`Public green space nearby: ${p.name} (${Math.round(p.distanceMeters)}m)`);
+      }
+    }
+  } else {
+    // Baseline walkability estimation from urban fabric
+    if (property.building.hasCommercialGroundFloor) {
+      connectivityScore = 75;
+      highlights.push(`Active street front with commercial ground floor services enhancing local walkability`);
+    } else if (property.building.unitsCount >= 10) {
+      connectivityScore = 70;
+    } else {
+      connectivityScore = 65;
+    }
+  }
+
+  // 4. Environmental Dimension (0 - 100)
+  // Combines acoustic comfort (SICA), flood safety (SNCZI), and air quality (AQI)
   let acousticScore = 80; // Baseline assumption if unmeasured
   const noise = environment?.noise;
 
@@ -128,8 +192,6 @@ export function calculateBarrioScore(
 
   const acousticComfortScore = Math.min(100, Math.max(0, acousticScore));
 
-  // 4. Climate & Flood Safety Dimension (0 - 100)
-  // Evaluates MITECO SNCZI flood risk mapping
   let floodScore = 98;
   const flood = environment?.floodRisk;
 
@@ -163,28 +225,121 @@ export function calculateBarrioScore(
 
   const climateSafetyScore = Math.min(100, Math.max(0, floodScore));
 
-  // 5. Rental Benchmark & Stressed Housing Zone (MIVAU SERPAVI / Ley 12/2023)
-  if (rentalBenchmark) {
-    if (rentalBenchmark.isStressedHousingZone) {
+  // Air Quality (AQI) evaluation
+  let airQualityScore: number | null = null;
+  const aqi = environment?.airQuality;
+  if (aqi) {
+    switch (aqi.category) {
+      case 'GOOD':
+        airQualityScore = 100;
+        highlights.push(`Excellent air quality recorded at station ${aqi.stationName} (AQI ${aqi.aqiIndex})`);
+        break;
+      case 'FAIR':
+        airQualityScore = 85;
+        highlights.push(`Good air quality recorded at station ${aqi.stationName} (AQI ${aqi.aqiIndex})`);
+        break;
+      case 'MODERATE':
+        airQualityScore = 65;
+        break;
+      case 'POOR':
+        airQualityScore = 40;
+        risks.push(`Poor air quality recorded at station ${aqi.stationName} (AQI ${aqi.aqiIndex})`);
+        break;
+      case 'VERY_POOR':
+        airQualityScore = 20;
+        risks.push(`Hazardous air quality advisory at station ${aqi.stationName} (AQI ${aqi.aqiIndex})`);
+        break;
+    }
+  }
+
+  let environmentalScore: number;
+  if (airQualityScore !== null) {
+    environmentalScore = Math.round(acousticComfortScore * 0.50 + climateSafetyScore * 0.35 + airQualityScore * 0.15);
+  } else {
+    environmentalScore = Math.round(acousticComfortScore * 0.55 + climateSafetyScore * 0.45);
+  }
+  environmentalScore = Math.min(100, Math.max(0, environmentalScore));
+
+  // 5. Urban Planning & Legal Dimension (0 - 100)
+  let urbanScore = 85;
+
+  if (urbanPlanning) {
+    switch (urbanPlanning.landClassification) {
+      case 'URBAN_CONSOLIDATED':
+        urbanScore = 95;
+        highlights.push('Consolidated urban land (Suelo Urbano Consolidado) with completed civic infrastructure and road network');
+        break;
+      case 'URBAN_UNCONSOLIDATED':
+        urbanScore = 75;
+        risks.push('Unconsolidated urban land: development charges or pending municipal urbanization actions may apply');
+        break;
+      case 'DEVELOPABLE':
+        urbanScore = 70;
+        highlights.push('Developable land (Suelo Urbanizable) slated for urban growth');
+        break;
+      case 'RUSTIC_COMMON':
+        urbanScore = 50;
+        risks.push('Rustic land (Suelo Rústico Común): strict municipal building and use restrictions apply');
+        break;
+      case 'RUSTIC_PROTECTED':
+        urbanScore = 30;
+        risks.push('Protected rustic land (Suelo Rústico Protegido) subject to special environmental, agricultural or landscape preservation laws');
+        break;
+      case 'UNKNOWN':
+      default:
+        urbanScore = 80;
+        break;
+    }
+
+    if (urbanPlanning.isProtectedLand) {
+      urbanScore = Math.max(20, urbanScore - 20);
+      risks.push('Parcel intersects with an officially cataloged environmental, heritage or scenic protection zone');
+    }
+
+    if (urbanPlanning.isStressedHousingZone) {
       risks.push(
         'Located in an officially declared Stressed Housing Market Zone (Zona Tensionada) subject to MIVAU statutory rent caps'
       );
-    } else {
+    }
+  } else {
+    urbanScore = property.building.builtSurfaceM2 > 0 ? 85 : 70;
+    highlights.push('Standard urban classification verified via municipal cadastral register');
+  }
+
+  const urbanPlanningScore = Math.min(100, Math.max(0, urbanScore));
+
+  // 6. Rental Benchmark (SERPAVI / Ley 12/2023)
+  if (rentalBenchmark) {
+    if (rentalBenchmark.isStressedHousingZone && !urbanPlanning?.isStressedHousingZone) {
+      risks.push(
+        'Located in an officially declared Stressed Housing Market Zone (Zona Tensionada) subject to MIVAU statutory rent caps'
+      );
+    } else if (!rentalBenchmark.isStressedHousingZone && !urbanPlanning) {
       highlights.push('Unrestricted rental market territory (outside declared Stressed Housing Zones)');
     }
   }
 
-  // 6. Composite Barrio Score (0 - 100)
+  // 7. Composite Multi-Score Calculation (0 - 100)
+  // Calibrated weights: 25% connectivity, 25% building, 20% socioeconomic, 15% environmental, 15% urbanPlanning
   const rawOverall =
+    connectivityScore * weights.connectivity +
+    buildingHealthScore * weights.building +
     socioeconomicScore * weights.socioeconomic +
-    buildingHealthScore * weights.buildingHealth +
-    acousticComfortScore * weights.acousticComfort +
-    climateSafetyScore * weights.climateSafety;
+    environmentalScore * weights.environmental +
+    urbanPlanningScore * weights.urbanPlanning;
 
   const overallScore = Math.round(Math.min(100, Math.max(0, rawOverall)));
 
   return {
     overallScore,
+    subscores: {
+      building: buildingHealthScore,
+      connectivity: connectivityScore,
+      environmental: environmentalScore,
+      socioeconomic: socioeconomicScore,
+      urbanPlanning: urbanPlanningScore,
+    },
+    // Backward-compatibility aliases
     socioeconomicScore,
     buildingHealthScore,
     acousticComfortScore,
