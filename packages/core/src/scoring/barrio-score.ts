@@ -65,7 +65,7 @@ export function calculateBarrioScore(
   // 2. Building Health & Age Dimension (0 - 100)
   // Evaluates building era against Spanish construction standard milestones
   const year = property.building.constructionYear;
-  let buildingScore = 70;
+  let buildingScore: number;
 
   if (year >= 2007) {
     // Post Código Técnico de la Edificación (CTE, RD 314/2006)

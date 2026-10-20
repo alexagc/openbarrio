@@ -24,13 +24,6 @@ import json
 import os
 import sys
 
-# Try importing duckdb if available
-try:
-    import duckdb
-    HAS_DUCKDB = True
-except ImportError:
-    HAS_DUCKDB = False
-
 # Import sample facilities seed generator
 try:
     from sample_facilities import get_sample_facilities
@@ -474,6 +467,7 @@ def process_civic_facilities(
     for sql_path in output_sql_paths:
         os.makedirs(os.path.dirname(os.path.abspath(sql_path)), exist_ok=True)
         with open(sql_path, "w", encoding="utf-8") as f:
+            # codeql[py/clear-text-storage-sensitive-data] Public civic facilities data contains no sensitive credentials or personal private information
             f.write(sql_content)
         print(f"Exported D1 SQL script to: {sql_path} ({len(sql_content.splitlines())} lines).")
 
