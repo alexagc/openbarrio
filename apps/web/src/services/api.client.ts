@@ -6,6 +6,8 @@ import {
   CensusTractIncome,
   EnvironmentalData,
   RentalBenchmark,
+  CivicConnectivityData,
+  UrbanPlanningData,
 } from '@openbarrio/core';
 
 export class ApiError extends Error {
@@ -429,6 +431,14 @@ export class OpenBarrioApiClient {
         returnPeriodYears: null,
         isInPreferentialFlowZone: false,
       },
+      airQuality: {
+        aqiIndex: 28 + (hash % 18),
+        category: 'GOOD',
+        stationName: `${finalAddress.municipality} Centro`,
+        no2MicrogramsM3: 22,
+        pm25MicrogramsM3: 9,
+        pm10MicrogramsM3: 16,
+      },
     };
 
     const rentalBenchmark: RentalBenchmark = {
@@ -439,7 +449,61 @@ export class OpenBarrioApiClient {
       isStressedHousingZone: isStressed,
     };
 
-    const score = calculateBarrioScore(property, neighborhood, environment, rentalBenchmark);
+    const walkScore = isGranVia ? 98 : isGracia ? 96 : isColon ? 92 : isSierpes ? 90 : Math.min(95, 65 + (hash % 30));
+    const connectivity: CivicConnectivityData = {
+      walkScore15Min: walkScore,
+      facilitiesWithin15MinCount: isGranVia ? 44 : isGracia ? 39 : 22 + (hash % 20),
+      nearestHealthcare: {
+        id: 'cap-' + finalAddress.postalCode,
+        type: 'healthcare',
+        subtype: 'primary_care',
+        name: isGranVia ? 'CS Palma Norte' : isGracia ? 'CAP Eixample Dreta' : `CAP ${finalAddress.municipality}`,
+        distanceMeters: isGranVia ? 320 : isGracia ? 380 : 250 + (hash % 350),
+        walkTimeMinutes: +( (isGranVia ? 320 : isGracia ? 380 : 250 + (hash % 350)) / 75 ).toFixed(1),
+      },
+      nearestEducation: {
+        id: 'esc-' + finalAddress.postalCode,
+        type: 'education',
+        subtype: 'school',
+        name: isGranVia ? 'IES Isabel la Católica' : isGracia ? 'Escola Pia Diputació' : `Colegio Público ${finalAddress.municipality}`,
+        distanceMeters: isGranVia ? 450 : isGracia ? 310 : 300 + (hash % 300),
+        walkTimeMinutes: +( (isGranVia ? 450 : isGracia ? 310 : 300 + (hash % 300)) / 75 ).toFixed(1),
+      },
+      nearestTransit: {
+        id: 'transit-' + finalAddress.postalCode,
+        type: 'transit',
+        subtype: 'metro',
+        name: isGranVia ? 'Metro Gran Vía (L1, L5)' : isGracia ? 'Passeig de Gràcia (L2, L3, L4)' : `Metro / Bus ${finalAddress.street.split(' ').slice(-1)[0]}`,
+        distanceMeters: isGranVia ? 80 : isGracia ? 120 : 150 + (hash % 250),
+        walkTimeMinutes: +( (isGranVia ? 80 : isGracia ? 120 : 150 + (hash % 250)) / 75 ).toFixed(1),
+      },
+      nearestPark: {
+        id: 'park-' + finalAddress.postalCode,
+        type: 'park',
+        subtype: 'urban_park',
+        name: isGranVia ? 'Jardines de Sabatini' : isGracia ? 'Jardins de la Torre de les Aigües' : `Parque ${finalAddress.municipality}`,
+        distanceMeters: isGranVia ? 750 : isGracia ? 520 : 350 + (hash % 350),
+        walkTimeMinutes: +( (isGranVia ? 750 : isGracia ? 520 : 350 + (hash % 350)) / 75 ).toFixed(1),
+      },
+    };
+
+    const urbanPlanning: UrbanPlanningData = {
+      landClassification: 'URBAN_CONSOLIDATED',
+      zoningCode: isGranVia ? 'NZ-1 (Casco Central)' : isGracia ? '13b (Eixample Cerdà)' : 'NZ-Residencial',
+      isProtectedLand: isGracia ? true : false,
+      declaredRenovationsCount: year < 1980 ? 2 : 0,
+      lastRenovationYear: year < 1980 ? 2018 : null,
+      isStressedHousingZone: isStressed,
+    };
+
+    const score = calculateBarrioScore(
+      property,
+      neighborhood,
+      environment,
+      rentalBenchmark,
+      connectivity,
+      urbanPlanning
+    );
 
     return {
       id: 'demo-audit-' + Math.random().toString(36).substring(2, 9),
@@ -447,6 +511,8 @@ export class OpenBarrioApiClient {
       property,
       neighborhood,
       environment,
+      connectivity,
+      urbanPlanning,
       score,
       rentalBenchmark,
       isOfflineDemo: true,
@@ -541,6 +607,60 @@ export class OpenBarrioApiClient {
 }
 
 export const apiClient = new OpenBarrioApiClient();
+
+/**
+ * Standalone mock report generator for tests, previews, and offline development.
+ * Fully populates all 5 pillars: connectivity, building, socioeconomic, environmental, and urban planning.
+ */
+export function generateMockReport(preset?: string): ExtendedAuditReport {
+  if (preset === 'barcelona' || preset?.toLowerCase().includes('gracia')) {
+    return apiClient.generateDeterministicAudit(41.39170, 2.16495, {
+      cadastralReference: '0227802DF3802E0001JK',
+      address: {
+        street: 'Passeig de Gràcia',
+        number: '43',
+        postalCode: '08007',
+        municipality: 'Barcelona',
+        province: 'Barcelona',
+      },
+    });
+  }
+  if (preset === 'valencia' || preset?.toLowerCase().includes('colon')) {
+    return apiClient.generateDeterministicAudit(39.46845, -0.37318, {
+      cadastralReference: '6023512YJ2762C0001LK',
+      address: {
+        street: 'Carrer de Colón',
+        number: '15',
+        postalCode: '46004',
+        municipality: 'València',
+        province: 'València',
+      },
+    });
+  }
+  if (preset === 'sevilla' || preset?.toLowerCase().includes('sierpes')) {
+    return apiClient.generateDeterministicAudit(37.39147, -5.99476, {
+      cadastralReference: '4927803TG3442F0001MN',
+      address: {
+        street: 'Calle Sierpes',
+        number: '22',
+        postalCode: '41004',
+        municipality: 'Sevilla',
+        province: 'Sevilla',
+      },
+    });
+  }
+  // Default: Madrid Gran Vía 28
+  return apiClient.generateDeterministicAudit(40.42023, -3.70197, {
+    cadastralReference: '9872023VH5797S0001WX',
+    address: {
+      street: 'Gran Vía',
+      number: '28',
+      postalCode: '28013',
+      municipality: 'Madrid',
+      province: 'Madrid',
+    },
+  });
+}
 
 export interface RawAuditDataInput {
   query?: string;
@@ -646,6 +766,60 @@ export function auditDataToReport(audit: RawAuditDataInput): ExtendedAuditReport
       returnPeriodYears: null,
       isInPreferentialFlowZone: false,
     },
+    airQuality: {
+      aqiIndex: 30 + (refHash % 15),
+      category: 'GOOD',
+      stationName: `${municipality} Centro`,
+      no2MicrogramsM3: 20,
+      pm25MicrogramsM3: 8,
+      pm10MicrogramsM3: 15,
+    },
+  };
+
+  const connectivity: CivicConnectivityData = {
+    walkScore15Min: 85,
+    facilitiesWithin15MinCount: 28,
+    nearestHealthcare: {
+      id: 'modal-cap',
+      type: 'healthcare',
+      subtype: 'primary_care',
+      name: 'Centro de Salud (CAP)',
+      distanceMeters: 380,
+      walkTimeMinutes: 4.8,
+    },
+    nearestEducation: {
+      id: 'modal-esc',
+      type: 'education',
+      subtype: 'school',
+      name: 'Colegio Público / IES',
+      distanceMeters: 410,
+      walkTimeMinutes: 5.2,
+    },
+    nearestTransit: {
+      id: 'modal-transit',
+      type: 'transit',
+      subtype: 'metro',
+      name: 'Metro / Cercanías',
+      distanceMeters: 180,
+      walkTimeMinutes: 2.3,
+    },
+    nearestPark: {
+      id: 'modal-park',
+      type: 'park',
+      subtype: 'urban_park',
+      name: 'Parque Público / Zona Verde',
+      distanceMeters: 460,
+      walkTimeMinutes: 5.9,
+    },
+  };
+
+  const urbanPlanning: UrbanPlanningData = {
+    landClassification: 'URBAN_CONSOLIDATED',
+    zoningCode: 'NZ-Residencial',
+    isProtectedLand: false,
+    declaredRenovationsCount: (typeof audit.yearBuilt === 'number' && audit.yearBuilt > 0 && audit.yearBuilt < 1980) ? 2 : 0,
+    lastRenovationYear: (typeof audit.yearBuilt === 'number' && audit.yearBuilt > 0 && audit.yearBuilt < 1980) ? 2016 : null,
+    isStressedHousingZone: isStressed,
   };
 
   const rentalBenchmark: RentalBenchmark = {
@@ -656,7 +830,7 @@ export function auditDataToReport(audit: RawAuditDataInput): ExtendedAuditReport
     isStressedHousingZone: isStressed,
   };
 
-  const score = calculateBarrioScore(property, neighborhood, environment, rentalBenchmark);
+  const score = calculateBarrioScore(property, neighborhood, environment, rentalBenchmark, connectivity, urbanPlanning);
   if (audit.score !== undefined) {
     score.overallScore = audit.score;
   }
@@ -667,6 +841,8 @@ export function auditDataToReport(audit: RawAuditDataInput): ExtendedAuditReport
     property,
     neighborhood,
     environment,
+    connectivity,
+    urbanPlanning,
     score,
     rentalBenchmark,
     isOfflineDemo: audit.isLive ? false : true,

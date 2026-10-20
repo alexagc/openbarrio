@@ -1,5 +1,6 @@
-import { AuditScoreBreakdown } from '@openbarrio/core';
-import { ShieldCheck, AlertTriangle, ShieldAlert } from 'lucide-react';
+import { AuditScoreBreakdown, AuditSubscores } from '@openbarrio/core';
+import { ShieldCheck, AlertTriangle, ShieldAlert, Compass } from 'lucide-react';
+import { RadarChart } from './RadarChart';
 
 interface ScoreGaugeProps {
   score: AuditScoreBreakdown;
@@ -35,9 +36,18 @@ export function ScoreGauge({ score, cityOrProvince = 'España', percentile = 89 
   // Calculate circumference: 2 * Math.PI * 15.9155 ~= 100
   const strokeDashoffset = 100 - overallScore;
 
+  // Resolve subscores with resilient fallback for backward compatibility
+  const subscores: AuditSubscores = score.subscores ?? {
+    building: score.buildingHealthScore ?? 75,
+    connectivity: 75,
+    environmental: Math.round(((score.acousticComfortScore ?? 75) + (score.climateSafetyScore ?? 100)) / 2),
+    socioeconomic: score.socioeconomicScore ?? 80,
+    urbanPlanning: 75,
+  };
+
   return (
     <div className="p-space-lg bg-surface">
-      <div className="flex items-center justify-between mb-3">
+      <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
         <h2 className="font-title-md text-title-md text-on-surface flex items-center gap-2 font-bold">
           <Icon className="w-4 h-4 text-primary" />
           <span>Índice Integral OpenBarrio</span>
@@ -47,10 +57,10 @@ export function ScoreGauge({ score, cityOrProvince = 'España', percentile = 89 
         </span>
       </div>
 
-      <div className="grid grid-cols-12 gap-4 items-center bg-surface-container-low p-space-md rounded border border-outline-variant">
-        {/* Circular Gauge */}
-        <div className="col-span-12 sm:col-span-4 flex flex-col items-center justify-center sm:border-r border-outline-variant/60 sm:pr-2 pb-2 sm:pb-0">
-          <div className="relative w-24 h-24 flex items-center justify-center">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-center bg-surface-container-low p-space-md rounded-xl border border-outline-variant shadow-sm">
+        {/* Left Column: Circular Gauge (0-100) */}
+        <div className="lg:col-span-3 flex flex-col items-center justify-center lg:border-r border-outline-variant/60 lg:pr-3 pb-3 lg:pb-0">
+          <div className="relative w-28 h-28 flex items-center justify-center">
             <svg className="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
               <path
                 className="text-surface-variant"
@@ -77,13 +87,16 @@ export function ScoreGauge({ score, cityOrProvince = 'España', percentile = 89 
               <span className="text-[9px] font-mono text-outline uppercase">/100</span>
             </div>
           </div>
-          <span className="text-[10px] font-mono text-center text-outline mt-1">
+          <span className="text-[10px] font-mono text-center text-outline mt-1.5 font-medium">
             Percentil {percentile}º {cityOrProvince}
+          </span>
+          <span className="text-[9px] font-mono text-center text-primary/80 mt-0.5">
+            5 Dimensiones Cívicas
           </span>
         </div>
 
-        {/* 4 Sub-score Progress Bars */}
-        <div className="col-span-12 sm:col-span-8 space-y-2">
+        {/* Middle Column: Pillar Progress Bars */}
+        <div className="lg:col-span-4 space-y-2 lg:border-r border-outline-variant/60 lg:pr-3">
           {/* Sub-score 1: INE */}
           <div>
             <div className="flex justify-between text-body-sm mb-0.5 font-mono text-[11px]">
@@ -139,6 +152,35 @@ export function ScoreGauge({ score, cityOrProvince = 'España', percentile = 89 
               />
             </div>
           </div>
+
+          {/* Sub-score 5: Civic Connectivity 15-min */}
+          <div>
+            <div className="flex justify-between text-body-sm mb-0.5 font-mono text-[11px]">
+              <span className="text-on-surface-variant font-sans flex items-center gap-1">
+                <Compass className="w-3 h-3 text-tertiary" />
+                Conectividad (15-min)
+              </span>
+              <span className="text-tertiary font-semibold">{subscores.connectivity}/100</span>
+            </div>
+            <div className="w-full h-1.5 bg-surface-variant rounded-full overflow-hidden">
+              <div
+                className="h-full bg-tertiary rounded-full transition-all duration-700"
+                style={{ width: `${subscores.connectivity}%` }}
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Right Column: 5-Axis SVG Radar Chart */}
+        <div className="lg:col-span-5 flex flex-col items-center justify-center">
+          <div className="text-[10px] font-mono text-outline uppercase tracking-wider mb-1 flex items-center gap-1">
+            <span>Pentágono de Balance Territorial</span>
+          </div>
+          <RadarChart
+            subscores={subscores}
+            overallScore={overallScore}
+            className="w-full"
+          />
         </div>
       </div>
     </div>

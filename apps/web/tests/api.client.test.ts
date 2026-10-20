@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { OpenBarrioApiClient, ApiError } from '../src/services/api.client';
+import { OpenBarrioApiClient, ApiError, generateMockReport } from '../src/services/api.client';
 
 describe('OpenBarrioApiClient', () => {
   let client: OpenBarrioApiClient;
@@ -57,6 +57,13 @@ describe('OpenBarrioApiClient', () => {
       },
       score: {
         overallScore: 84,
+        subscores: {
+          building: 70,
+          connectivity: 95,
+          environmental: 85,
+          socioeconomic: 90,
+          urbanPlanning: 88,
+        },
         socioeconomicScore: 90,
         buildingHealthScore: 70,
         acousticComfortScore: 85,
@@ -113,6 +120,10 @@ describe('OpenBarrioApiClient', () => {
     expect(report.property.address.municipality).toBe('Madrid');
     expect(report.score.overallScore).toBeGreaterThan(0);
     expect(report.score.overallScore).toBeLessThanOrEqual(100);
+    expect(report.connectivity).toBeDefined();
+    expect(report.connectivity?.walkScore15Min).toBeGreaterThan(0);
+    expect(report.urbanPlanning).toBeDefined();
+    expect(report.score.subscores).toBeDefined();
   });
 
   it('correctly marks Barcelona property as Stressed Housing Zone in fallback mode', async () => {
@@ -123,6 +134,7 @@ describe('OpenBarrioApiClient', () => {
     expect(report.isOfflineDemo).toBe(true);
     expect(report.property.address.municipality).toBe('Barcelona');
     expect(report.rentalBenchmark?.isStressedHousingZone).toBe(true);
+    expect(report.urbanPlanning?.isStressedHousingZone).toBe(true);
   });
 
   it('generates distinct coordinates and refcat when clicking other points without snapping to Gran Vía', async () => {
@@ -149,6 +161,9 @@ describe('OpenBarrioApiClient', () => {
     expect(report.property.address.street).not.toBe('Calle Gran Vía');
     expect(report.property.coordinates.latitude).not.toBe(40.42028);
     expect(report.property.coordinates.longitude).not.toBe(-3.70379);
+    expect(report.connectivity).toBeDefined();
+    expect(report.urbanPlanning).toBeDefined();
+    expect(report.score.subscores.connectivity).toBeDefined();
   });
 
   it('normalizes multi-letter address queries and formats extension properly in searchAddress', async () => {
@@ -178,6 +193,21 @@ describe('OpenBarrioApiClient', () => {
       expect.stringContaining('q=Calle%20Serrano%2044%20B')
     );
   });
+
+  it('generateMockReport generates complete 5-pillar dossier reports seamlessly', () => {
+    const madridReport = generateMockReport('madrid');
+    expect(madridReport.property.address.municipality).toBe('Madrid');
+    expect(madridReport.connectivity).toBeDefined();
+    expect(madridReport.urbanPlanning).toBeDefined();
+    expect(madridReport.score.subscores.building).toBeGreaterThan(0);
+    expect(madridReport.score.subscores.connectivity).toBeGreaterThan(0);
+    expect(madridReport.score.subscores.environmental).toBeGreaterThan(0);
+    expect(madridReport.score.subscores.socioeconomic).toBeGreaterThan(0);
+    expect(madridReport.score.subscores.urbanPlanning).toBeGreaterThan(0);
+
+    const bcnReport = generateMockReport('barcelona');
+    expect(bcnReport.property.address.municipality).toBe('Barcelona');
+    expect(bcnReport.rentalBenchmark?.isStressedHousingZone).toBe(true);
+    expect(bcnReport.urbanPlanning?.isStressedHousingZone).toBe(true);
+  });
 });
-
-

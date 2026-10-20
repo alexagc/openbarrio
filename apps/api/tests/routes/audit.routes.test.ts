@@ -59,14 +59,37 @@ describe('Hono Audit Routes Integration', () => {
       expect(report.environment.noise.dayEveningNightDecibels).toBeGreaterThan(0);
       expect(report.environment.floodRisk).toBeDefined();
       expect(report.environment.floodRisk.level).toBeDefined();
+      expect(report.environment.airQuality).toBeDefined();
+      expect(report.environment.airQuality.aqiIndex).toBeGreaterThan(0);
       expect(report.rentalBenchmark).toBeDefined();
       expect(report.rentalBenchmark.officialRangeLowerEurM2).toBeGreaterThan(0);
       expect(report.rentalBenchmark.officialRangeUpperEurM2).toBeGreaterThan(
         report.rentalBenchmark.officialRangeLowerEurM2
       );
       expect(report.rentalBenchmark.isStressedHousingZone).toBe(false);
+
+      // v0.3.0 15-Minute Civic Connectivity
+      expect(report.connectivity).toBeDefined();
+      expect(report.connectivity.walkScore15Min).toBeGreaterThanOrEqual(0);
+      expect(report.connectivity.walkScore15Min).toBeLessThanOrEqual(100);
+      expect(report.connectivity.facilitiesWithin15MinCount).toBeGreaterThan(0);
+      expect(report.connectivity.nearestTransit).toBeDefined();
+      expect(report.connectivity.nearestHealthcare).toBeDefined();
+
+      // v0.3.0 Urban Planning
+      expect(report.urbanPlanning).toBeDefined();
+      expect(report.urbanPlanning.landClassification).toBe('URBAN_CONSOLIDATED');
+      expect(report.urbanPlanning.isStressedHousingZone).toBe(false);
+
+      // v0.3.0 5-Pillar Barrio Score & Subscores
       expect(report.score.overallScore).toBeGreaterThanOrEqual(0);
       expect(report.score.overallScore).toBeLessThanOrEqual(100);
+      expect(report.score.subscores).toBeDefined();
+      expect(report.score.subscores.building).toBeGreaterThanOrEqual(0);
+      expect(report.score.subscores.connectivity).toBeGreaterThanOrEqual(0);
+      expect(report.score.subscores.environmental).toBeGreaterThanOrEqual(0);
+      expect(report.score.subscores.socioeconomic).toBeGreaterThanOrEqual(0);
+      expect(report.score.subscores.urbanPlanning).toBeGreaterThanOrEqual(0);
       expect(report.score.keyHighlights.length).toBeGreaterThan(0);
     });
 
@@ -112,7 +135,34 @@ describe('Hono Audit Routes Integration', () => {
       );
       expect(report.environment.floodRisk.level).toBeDefined();
       expect(report.environment.noise.category).toBeDefined();
+
+      // v0.3.0 connectivity & urban planning verification
+      expect(report.connectivity).toBeDefined();
+      expect(report.connectivity.walkScore15Min).toBeGreaterThanOrEqual(0);
+      expect(report.urbanPlanning).toBeDefined();
+      expect(report.urbanPlanning.landClassification).toBe('URBAN_CONSOLIDATED');
+
+      // v0.3.0 5 calibrated subscores
       expect(report.score.overallScore).toBeGreaterThanOrEqual(0);
+      expect(report.score.subscores).toBeDefined();
+      expect(report.score.subscores.building).toBeGreaterThanOrEqual(0);
+      expect(report.score.subscores.connectivity).toBeGreaterThanOrEqual(0);
+      expect(report.score.subscores.environmental).toBeGreaterThanOrEqual(0);
+      expect(report.score.subscores.socioeconomic).toBeGreaterThanOrEqual(0);
+      expect(report.score.subscores.urbanPlanning).toBeGreaterThanOrEqual(0);
+    });
+
+    it('returns 200 with complete report for Barcelona stressed housing zone', async () => {
+      const response = await app.request('/api/v1/audit/refcat/08019A002000050000AB');
+
+      expect(response.status).toBe(200);
+      const report = await response.json();
+
+      expect(report.property.address.municipality).toBe('Barcelona');
+      expect(report.urbanPlanning.isStressedHousingZone).toBe(true);
+      expect(report.rentalBenchmark.isStressedHousingZone).toBe(true);
+      expect(report.connectivity.walkScore15Min).toBeGreaterThan(50);
+      expect(report.score.subscores.connectivity).toBeGreaterThan(0);
     });
 
     it('returns 200 with complete report when refcat contains spaces or hyphens', async () => {
@@ -149,7 +199,9 @@ describe('Hono Audit Routes Integration', () => {
 
   describe('GET /api/v1/tiles/miteco', () => {
     it('returns image/png with CORS for MITECO noise proxy endpoint', async () => {
-      const response = await app.request('/api/v1/tiles/miteco/noise?bbox=-412554,4926988,-412054,4927488&width=256&height=256');
+      const response = await app.request(
+        '/api/v1/tiles/miteco/noise?bbox=-412554,4926988,-412054,4927488&width=256&height=256'
+      );
 
       expect(response.status).toBe(200);
       expect(response.headers.get('content-type')).toContain('image/png');
@@ -157,7 +209,9 @@ describe('Hono Audit Routes Integration', () => {
     });
 
     it('returns image/png with CORS for MITECO flood proxy endpoint', async () => {
-      const response = await app.request('/api/v1/tiles/miteco/flood?bbox=-412554,4926988,-412054,4927488&width=256&height=256');
+      const response = await app.request(
+        '/api/v1/tiles/miteco/flood?bbox=-412554,4926988,-412054,4927488&width=256&height=256'
+      );
 
       expect(response.status).toBe(200);
       expect(response.headers.get('content-type')).toContain('image/png');
@@ -165,7 +219,9 @@ describe('Hono Audit Routes Integration', () => {
     });
 
     it('returns image/png with CORS for INE income ADRH proxy endpoint', async () => {
-      const response = await app.request('/api/v1/tiles/ine/income?bbox=-412554,4926988,-412054,4927488&width=256&height=256');
+      const response = await app.request(
+        '/api/v1/tiles/ine/income?bbox=-412554,4926988,-412054,4927488&width=256&height=256'
+      );
 
       expect(response.status).toBe(200);
       expect(response.headers.get('content-type')).toContain('image/png');

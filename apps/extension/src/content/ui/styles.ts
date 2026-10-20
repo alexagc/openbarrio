@@ -58,18 +58,17 @@ export const WIDGET_STYLES = `
   font-size: 13px;
   font-weight: 700;
   color: #0f172a;
-  letter-spacing: -0.01em;
 }
 
 .ob-badge-official {
   font-size: 10px;
   font-weight: 600;
-  color: #4338ca;
-  background: #e0e7ff;
-  padding: 2px 6px;
+  color: #059669;
+  background: #ecfdf5;
+  border: 1px solid #a7f3d0;
+  padding: 1px 6px;
   border-radius: 9999px;
   text-transform: uppercase;
-  letter-spacing: 0.03em;
 }
 
 .ob-actions {
@@ -81,16 +80,16 @@ export const WIDGET_STYLES = `
 .ob-btn-icon {
   background: transparent;
   border: none;
-  cursor: pointer;
   color: #64748b;
-  padding: 4px;
+  width: 24px;
+  height: 24px;
   border-radius: 6px;
+  cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 14px;
-  line-height: 1;
-  transition: all 0.15s ease;
+  font-size: 13px;
+  transition: background 0.15s ease, color 0.15s ease;
 }
 
 .ob-btn-icon:hover {
@@ -99,59 +98,66 @@ export const WIDGET_STYLES = `
 }
 
 .ob-body {
-  padding: 14px 16px;
+  padding: 16px;
 }
 
-/* Score Section */
+/* Main Score Banner */
 .ob-score-banner {
   display: flex;
   align-items: center;
   gap: 14px;
-  padding: 12px;
+  padding: 12px 14px;
   border-radius: 12px;
-  margin-bottom: 12px;
-  border: 1px solid;
+  border-width: 1px;
+  border-style: solid;
+  margin-bottom: 14px;
 }
 
 .ob-score-circle {
   width: 52px;
   height: 52px;
   border-radius: 50%;
+  border-width: 4px;
+  border-style: solid;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  font-weight: 800;
   flex-shrink: 0;
-  border: 2px solid;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
 }
 
 .ob-score-number {
-  font-size: 20px;
+  font-size: 18px;
+  font-weight: 800;
   line-height: 1;
 }
 
 .ob-score-max {
-  font-size: 9px;
-  font-weight: 600;
-  opacity: 0.8;
+  font-size: 8px;
+  font-weight: 700;
+  opacity: 0.7;
   margin-top: 1px;
 }
 
 .ob-score-info {
   flex: 1;
+  min-width: 0;
 }
 
 .ob-score-title {
   font-size: 13px;
   font-weight: 700;
   margin: 0 0 2px 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .ob-score-desc {
   font-size: 11px;
-  opacity: 0.85;
   margin: 0;
+  opacity: 0.85;
   line-height: 1.3;
 }
 
@@ -219,6 +225,34 @@ export const WIDGET_STYLES = `
   font-size: 12px;
   font-weight: 700;
   color: #0f172a;
+}
+
+/* Connectivity Telemetry Chips */
+.ob-connectivity-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-bottom: 12px;
+}
+
+.ob-telemetry-chip {
+  font-size: 10px;
+  font-weight: 500;
+  padding: 3px 7px;
+  border-radius: 6px;
+  background: #f8fafc;
+  color: #334155;
+  border: 1px solid #e2e8f0;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.ob-telemetry-chip.highlight {
+  background: #f0fdf4;
+  color: #166534;
+  border-color: #bbf7d0;
+  font-weight: 700;
 }
 
 /* CTA Footer */

@@ -5,6 +5,8 @@ import {
   CensusTractIncome,
   EnvironmentalData,
   RentalBenchmark,
+  CivicConnectivityData,
+  UrbanPlanningData,
   calculateBarrioScore,
 } from '@openbarrio/core';
 import { ProviderContainer } from '../providers/index.js';
@@ -19,35 +21,7 @@ export class AuditService {
     // 1. Fetch cadastral property data from Catastro (primary anchor)
     const property = await this.providers.catastro.getByCoordinates(latitude, longitude);
 
-    // 2. Resolve and fetch INE census tract income
-    const neighborhood = await this.resolveNeighborhood(property);
-
-    // 3. Fetch environmental data (SICA noise and SNCZI flood risk)
-    const environment = await this.resolveEnvironment(property);
-
-    // 4. Calculate MIVAU SERPAVI rental benchmark & check stressed market status
-    let rentalBenchmark: RentalBenchmark | undefined;
-    try {
-      rentalBenchmark = await this.providers.serpavi.getRentalBenchmark(
-        property,
-        neighborhood.censusSectionCode
-      );
-    } catch {
-      rentalBenchmark = undefined;
-    }
-
-    // 5. Calculate Barrio Due Diligence Score
-    const score = calculateBarrioScore(property, neighborhood, environment, rentalBenchmark);
-
-    return {
-      id: randomUUID(),
-      generatedAt: new Date().toISOString(),
-      property,
-      neighborhood,
-      environment,
-      score,
-      rentalBenchmark,
-    };
+    return this.generateReportForProperty(property);
   }
 
   /**
@@ -57,13 +31,24 @@ export class AuditService {
     // 1. Fetch cadastral property data from Catastro (primary anchor)
     const property = await this.providers.catastro.getByCadastralReference(refcat);
 
-    // 2. Resolve and fetch INE census tract income
-    const neighborhood = await this.resolveNeighborhood(property);
+    return this.generateReportForProperty(property);
+  }
 
-    // 3. Fetch environmental data (SICA noise and SNCZI flood risk)
-    const environment = await this.resolveEnvironment(property);
+  private async generateReportForProperty(
+    property: CadastralProperty
+  ): Promise<PropertyAuditReport> {
+    const lat = property.coordinates.latitude;
+    const lon = property.coordinates.longitude;
 
-    // 4. Calculate MIVAU SERPAVI rental benchmark & check stressed market status
+    // 2. Fetch parallel provider metrics
+    const [neighborhood, environment, connectivity, urbanPlanning] = await Promise.all([
+      this.resolveNeighborhood(property),
+      this.resolveEnvironment(property),
+      this.resolveConnectivity(lat, lon),
+      this.resolveUrbanPlanning(property),
+    ]);
+
+    // 3. Calculate MIVAU SERPAVI rental benchmark & check stressed market status
     let rentalBenchmark: RentalBenchmark | undefined;
     try {
       rentalBenchmark = await this.providers.serpavi.getRentalBenchmark(
@@ -74,8 +59,15 @@ export class AuditService {
       rentalBenchmark = undefined;
     }
 
-    // 5. Calculate Barrio Due Diligence Score
-    const score = calculateBarrioScore(property, neighborhood, environment, rentalBenchmark);
+    // 4. Calculate Barrio Due Diligence Score (5 calibrated pillars)
+    const score = calculateBarrioScore(
+      property,
+      neighborhood,
+      environment,
+      rentalBenchmark,
+      connectivity,
+      urbanPlanning
+    );
 
     return {
       id: randomUUID(),
@@ -83,6 +75,8 @@ export class AuditService {
       property,
       neighborhood,
       environment,
+      connectivity,
+      urbanPlanning,
       score,
       rentalBenchmark,
     };
@@ -99,7 +93,8 @@ export class AuditService {
       return await this.providers.ine.getIncomeByCensusSection(censusCode);
     } catch {
       // Dynamic deterministic calculation if INE upstream is temporarily unreachable
-      const provCode = property.address.provinceCode || property.address.postalCode.slice(0, 2) || '28';
+      const provCode =
+        property.address.provinceCode || property.address.postalCode.slice(0, 2) || '28';
       const muniCode = property.address.municipalityCode || '001';
       const coordHash = Math.abs(
         Math.round(property.coordinates.latitude * 1000 + property.coordinates.longitude * 1000)
@@ -113,7 +108,9 @@ export class AuditService {
       const singlePct = 20 + (coordHash % 25);
 
       return {
-        censusSectionCode: `${provCode}${muniCode.padStart(3, '0')}${String(1 + (coordHash % 15)).padStart(2, '0')}${String(1 + (coordHash % 40)).padStart(3, '0')}`,
+        censusSectionCode: `${provCode}${muniCode.padStart(3, '0')}${String(
+          1 + (coordHash % 15)
+        ).padStart(2, '0')}${String(1 + (coordHash % 40)).padStart(3, '0')}`,
         averageNetHouseholdIncomeEur: avgHousehold,
         averageNetPersonIncomeEur: Math.round(avgHousehold / 2.25),
         percentileInMunicipality: percentile,
@@ -130,8 +127,9 @@ export class AuditService {
   }
 
   private async resolveEnvironment(property: CadastralProperty): Promise<EnvironmentalData> {
+    let envData: EnvironmentalData;
     try {
-      return await this.providers.environmental.getEnvironmentalData(
+      envData = await this.providers.environmental.getEnvironmentalData(
         property.coordinates.latitude,
         property.coordinates.longitude
       );
@@ -142,7 +140,7 @@ export class AuditService {
       );
       const isMajorRoad = coordHash % 4 === 0;
       const decibels = isMajorRoad ? 63 + (coordHash % 5) : 48 + (coordHash % 5);
-      return {
+      envData = {
         noise: {
           dayEveningNightDecibels: decibels,
           category: decibels >= 65 ? 'NOISY' : decibels >= 55 ? 'MODERATE' : 'QUIET',
@@ -154,6 +152,48 @@ export class AuditService {
           isInPreferentialFlowZone: false,
         },
       };
+    }
+
+    // Attach air quality if not already present
+    if (!envData.airQuality && this.providers.airQuality) {
+      try {
+        const airQuality = await this.providers.airQuality.getAirQuality(
+          property.coordinates.latitude,
+          property.coordinates.longitude
+        );
+        if (airQuality) {
+          envData.airQuality = airQuality;
+        }
+      } catch (err: any) {
+        console.warn(`[AuditService] Air quality query failed:`, err?.message);
+      }
+    }
+
+    return envData;
+  }
+
+  private async resolveConnectivity(
+    latitude: number,
+    longitude: number
+  ): Promise<CivicConnectivityData | undefined> {
+    if (!this.providers.connectivity) return undefined;
+    try {
+      return await this.providers.connectivity.getConnectivityByCoordinates(latitude, longitude);
+    } catch (err: any) {
+      console.warn(`[AuditService] Civic connectivity query failed:`, err?.message);
+      return undefined;
+    }
+  }
+
+  private async resolveUrbanPlanning(
+    property: CadastralProperty
+  ): Promise<UrbanPlanningData | undefined> {
+    if (!this.providers.urbanPlanning) return undefined;
+    try {
+      return await this.providers.urbanPlanning.getUrbanPlanning(property);
+    } catch (err: any) {
+      console.warn(`[AuditService] Urban planning query failed:`, err?.message);
+      return undefined;
     }
   }
 }

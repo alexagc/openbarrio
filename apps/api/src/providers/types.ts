@@ -5,6 +5,9 @@ import {
   NoiseData,
   FloodRiskData,
   RentalBenchmark,
+  CivicConnectivityData,
+  UrbanPlanningData,
+  AirQualityData,
 } from '@openbarrio/core';
 
 export interface ICatastroProvider {
@@ -63,8 +66,32 @@ export interface ISERPAVIProvider {
 
 export interface IEnvironmentalProvider {
   /**
-   * Retrieve acoustic noise and flood hazard data for geographic coordinates.
+   * Retrieve acoustic noise, flood hazard, and air quality data for geographic coordinates.
    */
   getEnvironmentalData(latitude: number, longitude: number): Promise<EnvironmentalData>;
 }
 
+export interface ICivicConnectivityProvider {
+  /**
+   * Retrieve 15-minute city walkability, proximity to amenities (health, education, transit, parks),
+   * and overall walk score.
+   */
+  getConnectivityByCoordinates(latitude: number, longitude: number): Promise<CivicConnectivityData>;
+}
+export type CivicConnectivityProvider = ICivicConnectivityProvider;
+
+export interface IUrbanPlanningProvider {
+  /**
+   * Retrieve urban planning data, land classification, zoning codes, and renovation history.
+   */
+  getUrbanPlanning(property: CadastralProperty): Promise<UrbanPlanningData>;
+}
+export type UrbanPlanningProvider = IUrbanPlanningProvider;
+
+export interface IAirQualityProvider {
+  /**
+   * Retrieve official European Air Quality Index (AQI) and pollutant concentrations from nearest station.
+   */
+  getAirQuality(latitude: number, longitude: number): Promise<AirQualityData | undefined>;
+}
+export type AirQualityProvider = IAirQualityProvider;

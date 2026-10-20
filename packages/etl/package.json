@@ -1,12 +1,14 @@
 {
   "name": "@openbarrio/etl",
-  "version": "0.2.9",
+  "version": "0.3.0",
   "description": "Autonomous ETL data pipeline for INE ADRH and IGN Seccionado Censal using DuckDB Spatial",
   "private": true,
   "scripts": {
     "etl:download": "python3 src/download_datasets.py",
     "etl:ine": "python3 src/process_ine_adrh.py",
     "etl:ign": "python3 src/process_ign_boundaries.py",
+    "etl:facilities": "python3 src/process_civic_facilities.py",
+    "process:facilities": "python src/process_civic_facilities.py",
     "etl:sample": "python3 src/sample_data.py",
     "etl:all": "python3 src/download_datasets.py && python3 src/process_ine_adrh.py && python3 src/process_ign_boundaries.py",
     "lint": "eslint --no-error-on-unmatched-pattern . --max-warnings=0"

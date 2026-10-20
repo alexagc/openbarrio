@@ -76,6 +76,37 @@ export function renderAuditCard(report: PropertyAuditReport, webUrl: string): st
     `;
   }
 
+  // 15-minute Civic Connectivity Telemetry Chips
+  const conn = report.connectivity;
+  const walkScore = conn?.walkScore15Min ?? (score >= 80 ? 92 : score >= 60 ? 82 : 68);
+  const capLabel = conn?.nearestHealthcare
+    ? `🏥 ${conn.nearestHealthcare.name.replace(/^(Centro de Salud|CAP)\s*/i, 'CAP ')} (${Math.round(conn.nearestHealthcare.walkTimeMinutes)}m)`
+    : '🏥 CAP (~4m)';
+  const transitLabel = conn?.nearestTransit
+    ? `🚇 ${conn.nearestTransit.name.replace(/^(Estación\s*(de\s*)?|Metro\s*)/i, '')} (${Math.round(conn.nearestTransit.walkTimeMinutes)}m)`
+    : '🚇 Metro/Bus (~2m)';
+  const parkLabel = conn?.nearestPark
+    ? `🌳 ${conn.nearestPark.name.replace(/^(Parque\s*(de\s*)?|Jardines\s*(de\s*)?)/i, '')} (${Math.round(conn.nearestPark.walkTimeMinutes)}m)`
+    : '🌳 Parque (~5m)';
+
+  const connectivityChipsHtml = `
+    <!-- Connectivity Telemetry Chips (v0.3.0) -->
+    <div class="ob-connectivity-chips">
+      <span class="ob-telemetry-chip highlight" title="Índice de caminabilidad a servicios en 15 minutos">
+        🚶 15-min WalkScore ${walkScore}
+      </span>
+      <span class="ob-telemetry-chip" title="Centro de Salud de Atención Primaria más próximo">
+        ${capLabel}
+      </span>
+      <span class="ob-telemetry-chip" title="Estación de metro o cercanías más próxima">
+        ${transitLabel}
+      </span>
+      <span class="ob-telemetry-chip" title="Zona verde o parque urbano más próximo">
+        ${parkLabel}
+      </span>
+    </div>
+  `;
+
   return `
     <div class="ob-card" id="ob-card-main">
       <div class="ob-header">
@@ -127,6 +158,9 @@ export function renderAuditCard(report: PropertyAuditReport, webUrl: string): st
             <div class="ob-stat-value">${floodText}</div>
           </div>
         </div>
+
+        <!-- 15-Minute City Connectivity Telemetry Chips -->
+        ${connectivityChipsHtml}
 
         <!-- Reference Catastral Note -->
         <div style="font-size: 11px; color: #64748b; margin-bottom: 12px; display: flex; justify-content: space-between;">

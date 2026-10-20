@@ -3,12 +3,18 @@ import { EnvironmentalProvider } from '../../src/providers/environmental.provide
 import { MockEnvironmentalProvider } from '../../src/providers/environmental.mock.js';
 import { MockSICAProvider } from '../../src/providers/sica.mock.js';
 import { MockSNCZIProvider } from '../../src/providers/snczi.mock.js';
+import { MockAirQualityProvider } from '../../src/providers/air-quality.provider.js';
 
 describe('Composite Environmental Provider', () => {
-  it('combines SICA noise and SNCZI flood data in parallel', async () => {
+  it('combines SICA noise, SNCZI flood, and air quality data in parallel', async () => {
     const sicaMock = new MockSICAProvider();
     const sncziMock = new MockSNCZIProvider();
-    const provider = new EnvironmentalProvider({ sica: sicaMock, snczi: sncziMock });
+    const airMock = new MockAirQualityProvider();
+    const provider = new EnvironmentalProvider({
+      sica: sicaMock,
+      snczi: sncziMock,
+      airQuality: airMock,
+    });
 
     // Madrid Gran Vía coordinates
     const env = await provider.getEnvironmentalData(40.42028, -3.70379);
@@ -20,6 +26,9 @@ describe('Composite Environmental Provider', () => {
     expect(env.floodRisk.level).toBe('NONE');
     expect(env.floodRisk.returnPeriodYears).toBeNull();
     expect(env.floodRisk.isInPreferentialFlowZone).toBe(false);
+
+    expect(env.airQuality).toBeDefined();
+    expect(env.airQuality?.category).toBe('GOOD');
   });
 
   it('works seamlessly with MockEnvironmentalProvider', async () => {
