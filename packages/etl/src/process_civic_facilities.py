@@ -349,12 +349,21 @@ def generate_sql_insert_script(facilities: list[dict]) -> str:
     for fac in facilities:
         fac_id = fac["id"].replace("'", "''")
         fac_type = fac["type"].replace("'", "''")
-        fac_subtype = f"'{fac['subtype'].replace(\"'\", \"''\")}'" if fac.get("subtype") else "NULL"
+        if fac.get("subtype"):
+            subtype_val = fac["subtype"].replace("'", "''")
+            fac_subtype = f"'{subtype_val}'"
+        else:
+            fac_subtype = "NULL"
+
         fac_name = fac["name"].replace("'", "''")
         lat = f"{fac['latitude']:.6f}"
         lon = f"{fac['longitude']:.6f}"
         muni = fac["municipality_code"].replace("'", "''")
-        postal = f"'{fac['postal_code'].replace(\"'\", \"''\")}'" if fac.get("postal_code") else "NULL"
+        if fac.get("postal_code"):
+            postal_val = fac["postal_code"].replace("'", "''")
+            postal = f"'{postal_val}'"
+        else:
+            postal = "NULL"
 
         stmt = (
             f"INSERT OR IGNORE INTO civic_facilities "

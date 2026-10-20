@@ -114,7 +114,7 @@ export function calculateBarrioScore(
   const buildingHealthScore = Math.min(100, Math.max(0, buildingScore));
 
   // 3. Civic Connectivity 15-Minute Dimension (0 - 100)
-  let connectivityScore = 70;
+  let connectivityScore: number;
 
   if (connectivity?.walkScore15Min !== undefined) {
     connectivityScore = Math.min(100, Math.max(0, connectivity.walkScore15Min));
@@ -261,7 +261,7 @@ export function calculateBarrioScore(
   environmentalScore = Math.min(100, Math.max(0, environmentalScore));
 
   // 5. Urban Planning & Legal Dimension (0 - 100)
-  let urbanScore = 85;
+  let urbanScore: number;
 
   if (urbanPlanning) {
     switch (urbanPlanning.landClassification) {

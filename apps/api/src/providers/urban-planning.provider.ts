@@ -29,9 +29,9 @@ export class UrbanPlanningProvider implements IUrbanPlanningProvider {
     const constrYear = property.building.constructionYear;
 
     // 1. Land classification evaluation
-    let landClassification: LandClassification = 'URBAN_CONSOLIDATED';
-    let isProtectedLand = false;
-    let zoningCode = 'NZ-3';
+    let landClassification: LandClassification;
+    let isProtectedLand: boolean;
+    let zoningCode: string;
 
     if (
       refcat.includes('RUSTIC_PROTECTED') ||
@@ -115,9 +115,9 @@ export class MockUrbanPlanningProvider implements IUrbanPlanningProvider {
     const constrYear = property.building.constructionYear;
     const primaryUse = (property.building.primaryUse || '').toLowerCase();
 
-    let landClassification: LandClassification = 'URBAN_CONSOLIDATED';
-    let isProtectedLand = false;
-    let zoningCode = 'NZ-3';
+    let landClassification: LandClassification;
+    let isProtectedLand: boolean;
+    let zoningCode: string;
 
     if (
       refcat.includes('RUSTIC_PROTECTED') ||

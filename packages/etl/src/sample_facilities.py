@@ -16,7 +16,6 @@ and 15-minute civic connectivity walkability lookups.
 import csv
 import json
 import os
-import sys
 
 DATA_DIR = os.path.join(os.path.dirname(__file__), "..", "data")
 DIST_DIR = os.path.join(os.path.dirname(__file__), "..", "dist")
