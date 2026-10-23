@@ -1,6 +1,6 @@
 import { CensusTractIncome } from '@openbarrio/core';
 import { IINEProvider } from './types.js';
-import { CensusTractNotFoundError, UpstreamProviderError } from '../errors/problem-details.js';
+import { CensusTractNotFoundError } from '../errors/problem-details.js';
 import { D1Database } from '../types/env.js';
 
 export interface INEProviderOptions {

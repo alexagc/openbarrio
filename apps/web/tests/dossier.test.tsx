@@ -44,9 +44,68 @@ describe('AuditDossier Component (Stitch Civic Precision)', () => {
         returnPeriodYears: null,
         isInPreferentialFlowZone: false,
       },
+      airQuality: {
+        aqiIndex: 25,
+        category: 'GOOD',
+        stationName: 'Madrid Plaza del Carmen',
+        no2MicrogramsM3: 20,
+        pm25MicrogramsM3: 8,
+        pm10MicrogramsM3: 14,
+      },
+    },
+    connectivity: {
+      walkScore15Min: 98,
+      facilitiesWithin15MinCount: 42,
+      nearestHealthcare: {
+        id: 'cs-palma',
+        type: 'healthcare',
+        subtype: 'primary_care',
+        name: 'CS Palma Norte',
+        distanceMeters: 320,
+        walkTimeMinutes: 4.2,
+      },
+      nearestEducation: {
+        id: 'ies-isabel',
+        type: 'education',
+        subtype: 'school',
+        name: 'IES Isabel la Católica',
+        distanceMeters: 450,
+        walkTimeMinutes: 5.8,
+      },
+      nearestTransit: {
+        id: 'metro-granvia',
+        type: 'transit',
+        subtype: 'metro',
+        name: 'Metro Gran Vía (L1, L5)',
+        distanceMeters: 80,
+        walkTimeMinutes: 1.1,
+      },
+      nearestPark: {
+        id: 'park-sabatini',
+        type: 'park',
+        subtype: 'urban_park',
+        name: 'Jardines de Sabatini',
+        distanceMeters: 750,
+        walkTimeMinutes: 9.8,
+      },
+    },
+    urbanPlanning: {
+      landClassification: 'URBAN_CONSOLIDATED',
+      zoningCode: 'NZ-1 (Casco Central)',
+      isProtectedLand: false,
+      declaredRenovationsCount: 2,
+      lastRenovationYear: 2018,
+      isStressedHousingZone: false,
     },
     score: {
       overallScore: 84,
+      subscores: {
+        building: 80,
+        connectivity: 98,
+        environmental: 85,
+        socioeconomic: 82,
+        urbanPlanning: 92,
+      },
       socioeconomicScore: 82,
       buildingHealthScore: 80,
       acousticComfortScore: 75,
@@ -73,22 +132,22 @@ describe('AuditDossier Component (Stitch Civic Precision)', () => {
     expect(screen.getByText(/Exportar Dossier PDF/i)).toBeTruthy();
   });
 
-  it('renders Barrio Score circular gauge and all 4 sub-scores', () => {
+  it('renders Barrio Score circular gauge and sub-scores', () => {
     render(<AuditDossier report={mockReport} />);
 
-    expect(screen.getByText('84')).toBeTruthy();
+    expect(screen.getAllByText('84').length).toBeGreaterThanOrEqual(1);
     expect(screen.getByText(/Índice Integral OpenBarrio/i)).toBeTruthy();
-    expect(screen.getByText(/82\/100/i)).toBeTruthy();
-    expect(screen.getByText(/80\/100/i)).toBeTruthy();
-    expect(screen.getByText(/75\/100/i)).toBeTruthy();
-    expect(screen.getByText(/100\/100/i)).toBeTruthy();
+    expect(screen.getAllByText(/82\/100/i).length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText(/80\/100/i).length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText(/75\/100/i).length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText(/100\/100/i).length).toBeGreaterThanOrEqual(1);
   });
 
   it('renders Ficha Catastral, INE Demografía, MITECO and MIVAU sections', () => {
     render(<AuditDossier report={mockReport} />);
 
     expect(screen.getByText(/Ficha Catastral Oficial/i)).toBeTruthy();
-    expect(screen.getByText('1924')).toBeTruthy();
+    expect(screen.getAllByText(/1924/).length).toBeGreaterThanOrEqual(1);
     expect(screen.getByText(/Demografía & Renta de Hogar/i)).toBeTruthy();
     expect(screen.getByText(/45\.200/i)).toBeTruthy();
     expect(screen.getByText(/Confort Acústico & Tráfico/i)).toBeTruthy();
@@ -105,5 +164,41 @@ describe('AuditDossier Component (Stitch Civic Precision)', () => {
     expect(screen.getByText(/ITE Favorable \(2021\)/i)).toBeTruthy();
     expect(screen.getByText(/Aislamiento acústico exigido 38 dBA/i)).toBeTruthy();
     expect(screen.getByText(/Expediente: MAD-AUD-2026-9872023V/i)).toBeTruthy();
+  });
+
+  it('renders 5-axis SVG Radar Chart within Hero Bento cell', () => {
+    render(<AuditDossier report={mockReport} />);
+
+    const radarSvg = screen.getByRole('img', { name: /5-axis Barrio Due Diligence Radar Chart/i });
+    expect(radarSvg).toBeTruthy();
+    expect(screen.getByText(/Pentágono de Balance Territorial/i)).toBeTruthy();
+  });
+
+  it('renders all 5 Dedicated Bento Pillar cards including Civic Connectivity and Urban Planning', () => {
+    render(<AuditDossier report={mockReport} />);
+
+    // Pillar 1: Civic Connectivity (15-min city)
+    expect(screen.getByText(/Conectividad Cívica & 15-Min/i)).toBeTruthy();
+    expect(screen.getAllByText(/98\/100/i).length).toBeGreaterThanOrEqual(1);
+    expect(screen.getByText(/CS Palma Norte/i)).toBeTruthy();
+    expect(screen.getByText(/IES Isabel la Católica/i)).toBeTruthy();
+    expect(screen.getByText(/Metro Gran Vía \(L1, L5\)/i)).toBeTruthy();
+    expect(screen.getByText(/Jardines de Sabatini/i)).toBeTruthy();
+
+    // Pillar 2: Building Health
+    expect(screen.getByText(/CTE \(Código Técnico RD 314\/2006\)|Pre-normativa/i)).toBeTruthy();
+    expect(screen.getByText(/2 registradas \(última en 2018\)/i)).toBeTruthy();
+
+    // Pillar 3: Socioeconomic Profile
+    expect(screen.getAllByText(/Percentil 82º Madrid/i).length).toBeGreaterThanOrEqual(1);
+
+    // Pillar 4: Environmental Comfort (including Air Quality)
+    expect(screen.getByText(/Calidad del Aire \(AQI\)/i)).toBeTruthy();
+    expect(screen.getByText(/25 AQI · Buena/i)).toBeTruthy();
+
+    // Pillar 5: Urban Planning & Legal
+    expect(screen.getByText(/Planeamiento Urbanístico & Régimen Legal/i)).toBeTruthy();
+    expect(screen.getByText(/Suelo Urbano Consolidado \(SUC\)/i)).toBeTruthy();
+    expect(screen.getByText(/NZ-1 \(Casco Central\)/i)).toBeTruthy();
   });
 });

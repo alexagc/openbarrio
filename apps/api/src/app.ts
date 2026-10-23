@@ -28,7 +28,7 @@ export function buildOpenApiSpec(): Record<string, any> {
       title: 'OpenBarrio Public Due Diligence API',
       description:
         'Open-source civic-tech and real estate due diligence platform aggregating official Spanish public open data (Catastro, INE, MITECO, MIVAU) with sub-5ms Cloudflare Edge execution',
-      version: '0.2.9',
+      version: '0.3.0',
       contact: {
         name: 'OpenBarrio Project',
         url: 'https://github.com/alexagc/openbarrio',
@@ -92,7 +92,7 @@ export function buildOpenApiSpec(): Record<string, any> {
           tags: ['Audit'],
           summary: 'Audit property and neighborhood due diligence by geographic coordinates',
           description:
-            'Aggregates official data from Catastro, INE income distribution, MITECO SICA noise, MITECO SNCZI flood risk, and MIVAU SERPAVI rental benchmarks with 90-day Edge caching',
+            'Aggregates official data from Catastro, INE income distribution, MITECO SICA noise, MITECO SNCZI flood risk, MITECO air quality, 15-minute civic connectivity, urban planning zoning, and MIVAU SERPAVI rental benchmarks with 90-day Edge caching',
           parameters: [
             {
               name: 'lat',
@@ -111,7 +111,7 @@ export function buildOpenApiSpec(): Record<string, any> {
           ],
           responses: {
             '200': {
-              description: 'Complete Due Diligence Audit Dossier with rental benchmark and environmental indicators',
+              description: 'Complete Due Diligence Audit Dossier with 5-pillar scores, rental benchmark, connectivity, and environmental indicators',
               headers: {
                 'X-OpenBarrio-Cache': {
                   schema: { type: 'string', enum: ['HIT', 'MISS', 'BYPASS'] },
@@ -143,7 +143,7 @@ export function buildOpenApiSpec(): Record<string, any> {
           tags: ['Audit'],
           summary: 'Audit property and neighborhood due diligence by official Cadastral Reference (RC)',
           description:
-            'Aggregates official data from Catastro, INE income distribution, MITECO SICA noise, MITECO SNCZI flood risk, and MIVAU SERPAVI rental benchmarks with 90-day Edge caching',
+            'Aggregates official data from Catastro, INE income distribution, MITECO SICA noise, MITECO SNCZI flood risk, MITECO air quality, 15-minute civic connectivity, urban planning zoning, and MIVAU SERPAVI rental benchmarks with 90-day Edge caching',
           parameters: [
             {
               name: 'refcat',
@@ -155,7 +155,7 @@ export function buildOpenApiSpec(): Record<string, any> {
           ],
           responses: {
             '200': {
-              description: 'Complete Due Diligence Audit Dossier with rental benchmark and environmental indicators',
+              description: 'Complete Due Diligence Audit Dossier with 5-pillar scores, rental benchmark, connectivity, and environmental indicators',
               headers: {
                 'X-OpenBarrio-Cache': {
                   schema: { type: 'string', enum: ['HIT', 'MISS', 'BYPASS'] },
@@ -204,11 +204,18 @@ export function buildApp(options: AppOptions = {}): Hono<{ Bindings: CloudflareE
   // 5. Cloudflare Cache API & Edge caching (90 days TTL, X-OpenBarrio-Cache headers)
   app.use('*', edgeCacheMiddleware(options.cache));
 
-  // 6. Dynamic Cloudflare D1 injection for sub-5ms INE lookups
+  // 6. Dynamic Cloudflare D1 injection for sub-5ms INE and civic facilities lookups
   const providers = options.providers || createProviders();
   app.use('*', async (c, next) => {
     if (c.env?.DB && providers.ine && typeof (providers.ine as any).setDatabase === 'function') {
       (providers.ine as any).setDatabase(c.env.DB);
+    }
+    if (
+      c.env?.DB &&
+      providers.connectivity &&
+      typeof (providers.connectivity as any).setDatabase === 'function'
+    ) {
+      (providers.connectivity as any).setDatabase(c.env.DB);
     }
     await next();
   });

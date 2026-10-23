@@ -25,7 +25,17 @@ export function AuditDossier({ report }: AuditDossierProps) {
   const [copied, setCopied] = useState(false);
   const [bookmarked, setBookmarked] = useState(false);
 
-  const { property, neighborhood, environment, score, rentalBenchmark, generatedAt } = report;
+  const {
+    property,
+    neighborhood,
+    environment,
+    score,
+    rentalBenchmark,
+    connectivity,
+    urbanPlanning,
+    generatedAt,
+  } = report;
+
   const fullAddress = `${property.address.street} ${property.address.number}, ${property.address.postalCode} ${property.address.municipality}`;
   const formattedDate = new Date(generatedAt).toLocaleDateString('es-ES', {
     day: '2-digit',
@@ -176,7 +186,7 @@ export function AuditDossier({ report }: AuditDossierProps) {
         </div>
       </div>
 
-      {/* 2. HERO BARRIO SCORE CARD */}
+      {/* 2. HERO BENTO CELL: BARRIO SCORE + 5-AXIS RADAR */}
       <div className="page-break-inside-avoid">
         <ScoreGauge
           score={score}
@@ -185,12 +195,15 @@ export function AuditDossier({ report }: AuditDossierProps) {
         />
       </div>
 
-      {/* 3. FOUR PILLARS BREAKDOWN */}
-      <div className="page-break-inside-avoid">
+      {/* 3. BENTO GRID: 5 DEDICATED PILLARS */}
+      <div className="page-break-inside-avoid p-space-lg">
         <PillarCards
           property={property}
           neighborhood={neighborhood}
           environment={environment}
+          connectivity={connectivity}
+          urbanPlanning={urbanPlanning}
+          rentalBenchmark={rentalBenchmark}
         />
       </div>
 

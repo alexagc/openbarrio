@@ -71,6 +71,13 @@ describe('downloadCadastralGML Utility', () => {
       },
       score: {
         overallScore: 84,
+        subscores: {
+          building: 80,
+          connectivity: 85,
+          environmental: 85,
+          socioeconomic: 90,
+          urbanPlanning: 80,
+        },
         socioeconomicScore: 90,
         buildingHealthScore: 80,
         acousticComfortScore: 75,
