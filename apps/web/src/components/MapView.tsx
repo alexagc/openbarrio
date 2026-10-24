@@ -30,6 +30,7 @@ import {
   getMapLightConfig,
   generate3dBuildingFootprints,
   calculateBuildingShadowPolygon,
+  getCardinalOrientation,
 } from '../utils/solar';
 
 export interface MapViewProps {
@@ -179,6 +180,21 @@ export function MapView({
   const [currentBearing, setCurrentBearing] = useState<number>(0);
   const [currentPitch, setCurrentPitch] = useState<number>(0);
   const [isSolarHudOpen, setIsSolarHudOpen] = useState<boolean>(true);
+  const [currentSolarAzimuth, setCurrentSolarAzimuth] = useState<number>(214);
+  const [currentSolarAltitude, setCurrentSolarAltitude] = useState<number>(38.2);
+
+  const is3DModeRef = useRef<boolean>(is3DMode);
+  useEffect(() => {
+    is3DModeRef.current = is3DMode;
+  }, [is3DMode]);
+
+  const cachedCadastralGeometryRef = useRef<{
+    refcat: string;
+    polygon: number[][][];
+    floors: number;
+    height: number;
+  } | null>(null);
+
   const currentSolarRef = useRef<{
     azimuth: number;
     altitude: number;
@@ -206,6 +222,8 @@ export function MapView({
       timeMinutes: number;
     }) => {
       currentSolarRef.current = solar;
+      setCurrentSolarAzimuth(solar.azimuth);
+      setCurrentSolarAltitude(solar.altitude);
       const map = mapRef.current;
       if (!map) return;
       try {
@@ -614,6 +632,8 @@ export function MapView({
     map.getCanvas().style.cursor = 'crosshair';
 
     map.on('click', (e: MapMouseEvent) => {
+      // In 3D mode, do not trigger coordinate re-selection on orbital navigation clicks
+      if (is3DModeRef.current) return;
       const lat = parseFloat(e.lngLat.lat.toFixed(6));
       const lon = parseFloat(e.lngLat.lng.toFixed(6));
       onMapClickRef.current(lat, lon);
@@ -709,12 +729,14 @@ export function MapView({
       map.easeTo({
         pitch: 55,
         bearing: -15,
+        offset: [0, -80],
         duration: 1000,
       });
     } else {
       map.easeTo({
         pitch: 0,
         bearing: 0,
+        offset: [0, 0],
         duration: 800,
       });
     }
@@ -834,8 +856,17 @@ export function MapView({
       }
     };
 
-    // Fast initial draw with fallback
-    updateExtrusion();
+    // If we have cached geometry for this refcat, use it immediately
+    if (refcat && cachedCadastralGeometryRef.current?.refcat === refcat) {
+      const cached = cachedCadastralGeometryRef.current;
+      updateExtrusion(cached.polygon, cached.floors, cached.height);
+      return;
+    }
+
+    // Only draw fallback if no coordinates or polygon exist yet
+    if (!currentBuildingCoordsRef.current) {
+      updateExtrusion();
+    }
 
     // Query official Catastro WFS geometry if cadastral reference is available
     if (refcat) {
@@ -844,6 +875,12 @@ export function MapView({
         .then((geom) => {
           if (!isSubscribed) return;
           if (geom && geom.geometry && geom.geometry.coordinates) {
+            cachedCadastralGeometryRef.current = {
+              refcat,
+              polygon: geom.geometry.coordinates,
+              floors: geom.properties.numberOfFloors,
+              height: geom.properties.height,
+            };
             updateExtrusion(
               geom.geometry.coordinates,
               geom.properties.numberOfFloors,
@@ -859,7 +896,7 @@ export function MapView({
     return () => {
       isSubscribed = false;
     };
-  }, [selectedCoords, mapCenter.lat, mapCenter.lon, report, propertyName]);
+  }, [selectedCoords?.lat, selectedCoords?.lon, report?.property.cadastralReference, propertyName]);
 
   const handleZoomIn = () => {
     mapRef.current?.zoomIn({ duration: 300 });
@@ -1037,7 +1074,7 @@ export function MapView({
         const source = map.getSource('walking-isochrones') as maplibregl.GeoJSONSource;
         if (!source || typeof source.setData !== 'function') return;
 
-        if (!showIsochrones || !selectedCoords) {
+        if (!showIsochrones || is3DMode || !selectedCoords) {
           source.setData({ type: 'FeatureCollection', features: [] });
           return;
         }
@@ -1088,7 +1125,7 @@ export function MapView({
         map.off('styledata', updateIsochrones);
       }
     };
-  }, [selectedCoords, showIsochrones]);
+  }, [selectedCoords, showIsochrones, is3DMode]);
 
   // Synchronize Civic Amenities POI Markers on Isochrones
   useEffect(() => {
@@ -1101,7 +1138,7 @@ export function MapView({
     }
     amenityMarkersRef.current = [];
 
-    if (!showIsochrones || !selectedCoords || !report?.connectivity) return;
+    if (!showIsochrones || is3DMode || !selectedCoords || !report?.connectivity) return;
 
     const conn = report.connectivity;
     const { lat, lon } = selectedCoords;
@@ -1229,7 +1266,7 @@ export function MapView({
     return () => {
       for (const m of newMarkers) m.remove();
     };
-  }, [selectedCoords, showIsochrones, report]);
+  }, [selectedCoords, showIsochrones, is3DMode, report]);
 
   return (
     <div className="relative w-full h-full min-h-[480px] rounded-xl overflow-hidden border border-outline-variant shadow-2xl bg-surface-container-lowest cadastral-grid select-none">
@@ -1564,13 +1601,36 @@ export function MapView({
           <div
             className="relative w-12 h-12 rounded-full border border-outline-variant bg-surface-container flex items-center justify-center cursor-pointer transition-transform hover:scale-105"
             onClick={handleResetNorth}
-            title="Alinear al Norte (0°)"
+            title={
+              is3DMode
+                ? `Alinear al Norte · Sol: ${Math.round(currentSolarAzimuth)}° (${getCardinalOrientation(currentSolarAzimuth)})`
+                : 'Alinear al Norte (0°)'
+            }
             aria-label="Alinear al Norte (0°)"
           >
             <div className="absolute inset-1 rounded-full border border-dashed border-outline-variant/60" />
+
+            {/* Sun Direction Ray & Icon (Shown in 3D Mode) */}
+            {is3DMode && (
+              <div
+                className="absolute inset-0 flex items-center justify-center pointer-events-none transition-transform duration-100"
+                style={{
+                  transform: `rotate(${((currentSolarAzimuth - currentBearing + 360) % 360)}deg)`,
+                }}
+                title={`Sol: Azimut ${Math.round(currentSolarAzimuth)}° · Elevación ${currentSolarAltitude.toFixed(1)}°`}
+              >
+                {/* Sun icon at perimeter */}
+                <div className="absolute -top-2 flex flex-col items-center">
+                  <span className="text-[11px] filter drop-shadow-[0_0_4px_#f59e0b]">☀️</span>
+                </div>
+                {/* Ray line pointing from Sun to Center */}
+                <div className="h-4 w-0.5 bg-gradient-to-b from-amber-400 to-transparent" />
+              </div>
+            )}
+
             {/* Arrow pointing to True North (-currentBearing deg rotation) */}
             <div
-              className="w-1 h-8 flex flex-col justify-between items-center origin-center transition-transform duration-150"
+              className="w-1 h-8 flex flex-col justify-between items-center origin-center transition-transform duration-150 pointer-events-none"
               style={{ transform: `rotate(${-currentBearing}deg)` }}
             >
               <span className="text-[9px] text-rose-500 font-bold font-mono leading-none">N</span>

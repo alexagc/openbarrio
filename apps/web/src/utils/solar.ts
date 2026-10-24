@@ -342,6 +342,62 @@ export function generate3dBuildingFootprints(
 }
 
 /**
+ * Computes the 2D convex hull of a set of [lon, lat] points using
+ * Andrew's Monotone Chain algorithm (O(N log N)).
+ * Produces a closed, non-self-intersecting linear ring.
+ */
+export function compute2DConvexHull(points: number[][]): number[][] {
+  if (points.length <= 2) {
+    if (points.length === 0) return [];
+    return [...points, [points[0][0], points[0][1]]];
+  }
+
+  // Cross product of OA and OB vectors: (A.x - O.x)*(B.y - O.y) - (A.y - O.y)*(B.x - O.x)
+  const cross = (o: number[], a: number[], b: number[]) =>
+    (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0]);
+
+  // Sort unique points lexicographically by lon, then lat
+  const uniqueMap = new Map<string, number[]>();
+  for (const pt of points) {
+    uniqueMap.set(`${pt[0].toFixed(7)},${pt[1].toFixed(7)}`, pt);
+  }
+  const pts = Array.from(uniqueMap.values()).sort((a, b) =>
+    a[0] === b[0] ? a[1] - b[1] : a[0] - b[0]
+  );
+
+  if (pts.length <= 2) {
+    return [...pts, [pts[0][0], pts[0][1]]];
+  }
+
+  // Build lower hull
+  const lower: number[][] = [];
+  for (const p of pts) {
+    while (lower.length >= 2 && cross(lower[lower.length - 2], lower[lower.length - 1], p) <= 0) {
+      lower.pop();
+    }
+    lower.push(p);
+  }
+
+  // Build upper hull
+  const upper: number[][] = [];
+  for (let i = pts.length - 1; i >= 0; i--) {
+    const p = pts[i];
+    while (upper.length >= 2 && cross(upper[upper.length - 2], upper[upper.length - 1], p) <= 0) {
+      upper.pop();
+    }
+    upper.push(p);
+  }
+
+  // Remove duplicate end-points and concatenate
+  lower.pop();
+  upper.pop();
+  const hull = lower.concat(upper);
+  // Ensure closed ring
+  hull.push([hull[0][0], hull[0][1]]);
+  return hull;
+}
+
+/**
  * Calculates a dynamic projected ground-shadow polygon GeoJSON based on
  * the building height, solar azimuth, and solar elevation angle.
  */
@@ -383,19 +439,9 @@ export function calculateBuildingShadowPolygon(
     Number((lat + dLat).toFixed(6)),
   ]);
 
-  // Combine base and projected points into a convex bounding hull or union polygon
-  // For realistic visual effect: base ring + shifted ring + closing segments
-  const shadowPolyCoords: number[][] = [];
-  for (let i = 0; i < baseRing.length; i++) {
-    shadowPolyCoords.push(baseRing[i]);
-  }
-  for (let i = projectedRoofRing.length - 1; i >= 0; i--) {
-    shadowPolyCoords.push(projectedRoofRing[i]);
-  }
-  // Ensure closed ring
-  if (shadowPolyCoords.length > 0) {
-    shadowPolyCoords.push(shadowPolyCoords[0]);
-  }
+  // Compute clean, non-self-intersecting 2D convex hull of base and projected roof
+  const allPoints = [...baseRing, ...projectedRoofRing];
+  const shadowPolyCoords = compute2DConvexHull(allPoints);
 
   return {
     type: 'FeatureCollection' as const,

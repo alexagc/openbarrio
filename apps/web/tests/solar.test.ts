@@ -5,6 +5,8 @@ import {
   getCardinalOrientation,
   createDateForSeasonAndTime,
   SEASON_CONFIG,
+  compute2DConvexHull,
+  calculateBuildingShadowPolygon,
 } from '../src/utils/solar';
 
 describe('Solar Astronomical Engine (OpenBarrio Civic Precision)', () => {
@@ -90,6 +92,44 @@ describe('Solar Astronomical Engine (OpenBarrio Civic Precision)', () => {
       expect(SEASON_CONFIG.winter.month).toBe(11); // December
       expect(SEASON_CONFIG.equinox.month).toBe(2); // March
       expect(SEASON_CONFIG.summer.month).toBe(5); // June
+    });
+  });
+
+  describe('Convex Hull & Dynamic Ground Shadows', () => {
+    it('computes a closed 2D convex hull for arbitrary points', () => {
+      const square = [
+        [0, 0],
+        [1, 0],
+        [1, 1],
+        [0, 1],
+        [0.5, 0.5], // interior point
+      ];
+      const hull = compute2DConvexHull(square);
+      // Hull should exclude interior point and close the ring
+      expect(hull.length).toBe(5);
+      expect(hull[0]).toEqual(hull[hull.length - 1]);
+    });
+
+    it('calculates dynamic ground shadow projected opposite to sun', () => {
+      const buildingPoly = [
+        [
+          [-3.70379, 40.42028],
+          [-3.70359, 40.42028],
+          [-3.70359, 40.42048],
+          [-3.70379, 40.42048],
+          [-3.70379, 40.42028],
+        ],
+      ];
+
+      // Sun at azimuth 180° (South), altitude 45°
+      // Shadow should be cast to North (azimuth 0° / 360°)
+      const shadow = calculateBuildingShadowPolygon(buildingPoly, 40, 180, 45);
+      expect(shadow.features.length).toBe(1);
+      const ring = shadow.features[0].geometry.coordinates[0];
+      expect(ring.length).toBeGreaterThan(4);
+      expect(ring[0]).toEqual(ring[ring.length - 1]);
+      // Shadow length for 40m at 45° elevation is ~40m
+      expect(shadow.features[0].properties.lengthMeters).toBe(40);
     });
   });
 });

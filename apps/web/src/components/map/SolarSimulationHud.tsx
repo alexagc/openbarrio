@@ -124,21 +124,21 @@ export function SolarSimulationHud({
   return (
     <div
       data-testid="solar-simulation-hud"
-      className="absolute bottom-12 sm:bottom-10 left-0 right-0 z-40 px-3 sm:px-4 pointer-events-none"
+      className="absolute bottom-2 sm:bottom-3 left-2 right-2 sm:left-auto sm:right-auto sm:w-[680px] sm:left-1/2 sm:-translate-x-1/2 z-40 pointer-events-none"
     >
-      <div className="max-w-3xl mx-auto bg-surface-container/95 border border-outline-variant rounded-xl shadow-2xl backdrop-blur-xl p-3 sm:p-3.5 pointer-events-auto flex flex-col gap-2.5 text-on-surface animate-in slide-in-from-bottom-3 duration-200">
+      <div className="bg-surface-container/95 border border-outline-variant rounded-xl shadow-2xl backdrop-blur-xl p-2.5 sm:p-3 pointer-events-auto flex flex-col gap-2 text-on-surface animate-in slide-in-from-bottom-3 duration-200">
         {/* Header Row: Astronomical Engine Status & Live Vector */}
-        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-outline-variant/60 pb-2.5">
-          <div className="flex items-center gap-2.5">
-            <span className="relative flex h-3 w-3">
+        <div className="flex flex-wrap items-center justify-between gap-1.5 border-b border-outline-variant/60 pb-1.5">
+          <div className="flex items-center gap-2">
+            <span className="relative flex h-2.5 w-2.5">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-secondary opacity-75" />
-              <span className="relative inline-flex rounded-full h-3 w-3 bg-secondary" />
+              <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-secondary" />
             </span>
             <div className="flex items-center gap-1.5 flex-wrap">
-              <span className="font-headline font-bold text-sm sm:text-base text-on-surface tracking-tight">
+              <span className="font-headline font-bold text-xs sm:text-sm text-on-surface tracking-tight">
                 SIMULADOR SOLAR & SOMBRAS
               </span>
-              <span className="hidden sm:inline font-mono text-[10px] text-outline uppercase tracking-widest pl-2 border-l border-outline-variant">
+              <span className="hidden sm:inline font-mono text-[9px] text-outline uppercase tracking-widest pl-2 border-l border-outline-variant">
                 Cálculo Astronómico Algorítmico
               </span>
             </div>
