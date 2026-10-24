@@ -59,6 +59,10 @@ def process_ign_boundaries(input_path: str, output_geojson: str, output_pmtiles:
     print("Connecting to DuckDB and loading spatial extension...")
     con = duckdb.connect()
     con.execute("INSTALL spatial; LOAD spatial;")
+    try:
+        con.execute("SET geometry_always_xy = true;")
+    except Exception:
+        pass
 
     print(f"Loading boundary features from: {actual_input}")
     con.execute(f"CREATE TABLE raw_boundaries AS SELECT * FROM ST_Read('{actual_input}');")
