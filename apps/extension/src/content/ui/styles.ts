@@ -110,7 +110,7 @@ export const WIDGET_STYLES = `
   border-radius: 12px;
   border-width: 1px;
   border-style: solid;
-  margin-bottom: 14px;
+  margin-bottom: 10px;
 }
 
 .ob-score-circle {
@@ -159,6 +159,36 @@ export const WIDGET_STYLES = `
   margin: 0;
   opacity: 0.85;
   line-height: 1.3;
+}
+
+/* Unit Switcher Pill (Horizontal Division) */
+.ob-unit-pill-link {
+  text-decoration: none;
+  display: block;
+  margin-bottom: 10px;
+}
+
+.ob-unit-pill {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background: #f1f5f9;
+  border: 1px solid #cbd5e1;
+  border-radius: 9999px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #334155;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  text-align: center;
+}
+
+.ob-unit-pill:hover {
+  background: #e2e8f0;
+  border-color: #94a3b8;
+  color: #0f172a;
 }
 
 /* Stressed Housing Alert */
@@ -227,18 +257,55 @@ export const WIDGET_STYLES = `
   color: #0f172a;
 }
 
+/* 5-Axis Mini-Radar & Telemetry Section */
+.ob-radar-telemetry-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.ob-mini-radar-container {
+  flex-shrink: 0;
+  width: 120px;
+  height: 120px;
+  background: #0b1326;
+  border: 1px solid #1e293b;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  box-shadow: 0 4px 12px rgba(11, 19, 38, 0.2);
+}
+
+.ob-mini-radar {
+  width: 120px;
+  height: 120px;
+  display: block;
+}
+
+.ob-mini-radar polygon {
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.ob-mini-radar circle {
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
 /* Connectivity Telemetry Chips */
 .ob-connectivity-chips {
   display: flex;
-  flex-wrap: wrap;
+  flex-direction: column;
   gap: 5px;
-  margin-bottom: 12px;
+  flex: 1;
+  min-width: 0;
 }
 
 .ob-telemetry-chip {
   font-size: 10px;
   font-weight: 500;
-  padding: 3px 7px;
+  padding: 4px 7px;
   border-radius: 6px;
   background: #f8fafc;
   color: #334155;
@@ -246,6 +313,9 @@ export const WIDGET_STYLES = `
   display: inline-flex;
   align-items: center;
   gap: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .ob-telemetry-chip.highlight {
