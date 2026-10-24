@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useMemo } from 'react';
+﻿import { useEffect, useRef, useState, useMemo } from 'react';
 import * as maplibregl from 'maplibre-gl';
 import type { Map as MapLibreMap, Marker, MapMouseEvent } from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
@@ -30,6 +30,7 @@ export interface MapViewProps {
   error?: string | null;
   onDismissError?: () => void;
   onViewReport?: () => void;
+  onOpenUnitPicker?: () => void;
 }
 
 export type BasemapType = 'dark-gis' | 'pnoa-satellite' | 'ign-base';
@@ -134,6 +135,7 @@ export function MapView({
   error = null,
   onDismissError,
   onViewReport,
+  onOpenUnitPicker,
 }: MapViewProps) {
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<MapLibreMap | null>(null);
@@ -627,7 +629,13 @@ export function MapView({
             <span class="text-on-surface font-semibold">${yearBuilt}</span>
           </div>
         </div>
-        <p class="mt-2 text-[9px] text-primary/80 font-sans text-center">Click en el mapa para auditar otro punto</p>
+                <div class="mt-2 pt-1.5 border-t border-outline-variant/40 flex items-center justify-between gap-1">
+          <span class="text-[9px] text-secondary font-semibold">Inmuebles:</span>
+          <button id="ob-popup-open-units" type="button" class="px-2 py-0.5 rounded bg-primary text-on-primary text-[9px] font-bold cursor-pointer hover:bg-primary-container">
+            Ver unidades ▾
+          </button>
+        </div>
+        <p class="mt-1 text-[8px] text-outline font-sans text-center">Click en el mapa para auditar otro punto</p>
       </div>
     `;
 
@@ -641,6 +649,18 @@ export function MapView({
       .setLngLat([lon, lat])
       .setPopup(popup)
       .addTo(map);
+
+    popup.on('open', () => {
+      const btn = document.getElementById('ob-popup-open-units');
+      if (btn) {
+        btn.onclick = (e) => {
+          e.stopPropagation();
+          if (onOpenUnitPicker) {
+            onOpenUnitPicker();
+          }
+        };
+      }
+    });
 
     markerRef.current = marker;
     marker.togglePopup();

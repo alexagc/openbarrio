@@ -51,7 +51,7 @@ vi.mock('../src/services/api.client', async (importOriginal) => {
           })
         );
       }),
-      auditByCadastralReference: vi.fn().mockImplementation((refcat: string) => {
+      auditByCadastralReference: vi.fn().mockImplementation((refcat: string, fallbackCoords?: { lat: number; lon: number }) => {
         return Promise.resolve(
           actual.auditDataToReport({
             query: 'Passeig de Gràcia 43, Barcelona',
@@ -62,6 +62,7 @@ vi.mock('../src/services/api.client', async (importOriginal) => {
             surfaceM2: 88,
             isStressedZone: true,
             isLive: true,
+            coordinates: fallbackCoords || { lat: 41.39170, lon: 2.16495 },
           })
         );
       }),

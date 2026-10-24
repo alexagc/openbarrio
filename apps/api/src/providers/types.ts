@@ -20,7 +20,10 @@ export interface ICatastroProvider {
   /**
    * Look up cadastral property details by 14- or 20-character cadastral reference (RC).
    */
-  getByCadastralReference(refcat: string): Promise<CadastralProperty>;
+  getByCadastralReference(
+    refcat: string,
+    fallbackCoords?: CadastralCoordinates
+  ): Promise<CadastralProperty>;
 
   /**
    * Look up horizontal division units for a given 14- or 20-character cadastral reference.

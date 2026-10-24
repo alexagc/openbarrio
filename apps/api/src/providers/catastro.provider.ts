@@ -106,7 +106,8 @@ export class CatastroProvider implements ICatastroProvider {
     let resolvedCoords: CadastralCoordinates | undefined = fallbackCoords;
     if (!resolvedCoords) {
       try {
-        const cpmrcUrl = `${this.coordenadasBaseUrl}/Consulta_CPMRC?Provincia=&Municipio=&SRS=EPSG:4326&RC=${encodeURIComponent(cleanRef)}`;
+        const parcelRef = cleanRef.slice(0, 14);
+        const cpmrcUrl = `${this.coordenadasBaseUrl}/Consulta_CPMRC?Provincia=&Municipio=&SRS=EPSG:4326&RC=${encodeURIComponent(parcelRef)}`;
         const controller = new AbortController();
         const timer = setTimeout(() => controller.abort(), this.timeoutMs);
         const cpmrcRes = await fetch(cpmrcUrl, {

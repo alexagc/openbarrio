@@ -38,10 +38,16 @@ export interface AuditData {
 interface AuditModalProps {
   data: AuditData | null;
   onClose: () => void;
-  onOpenMap?: (audit: AuditData) => void;
+  onOpenMap?: (audit: AuditData, targetTab?: 'map' | 'dossier') => void;
+  onOpenUnitPicker?: () => void;
 }
 
-export const AuditModal: React.FC<AuditModalProps> = ({ data, onClose, onOpenMap }) => {
+export const AuditModal: React.FC<AuditModalProps> = ({
+  data,
+  onClose,
+  onOpenMap,
+  onOpenUnitPicker,
+}) => {
   const { t } = useTranslation();
 
   if (!data) return null;
@@ -144,7 +150,7 @@ export const AuditModal: React.FC<AuditModalProps> = ({ data, onClose, onOpenMap
         ) : (
           <>
             {/* Barrio Score Banner */}
-            <div className="p-4 rounded-lg bg-surface-container-low border border-outline-variant flex items-center justify-between mb-6">
+            <div className="p-4 rounded-lg bg-surface-container-low border border-outline-variant flex items-center justify-between mb-4">
               <div>
                 <span className="font-mono text-xs text-outline uppercase tracking-wider block">
                   {t('auditPreview.civicIndex')}
@@ -162,137 +168,166 @@ export const AuditModal: React.FC<AuditModalProps> = ({ data, onClose, onOpenMap
               </div>
             </div>
 
-        {/* 4 Pillars Breakdown Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
-          {/* Pillar 1: Catastro */}
-          <div className="p-3.5 rounded-lg bg-surface-container-low border border-outline-variant">
-            <div className="flex items-center gap-2 mb-2">
-              <Building2 className="w-4 h-4 text-primary" />
-              <span className="font-headline text-xs font-semibold text-on-surface">
-                {t('auditPreview.pillarCatastro')}
-              </span>
-            </div>
-            <div className="space-y-1 font-body text-xs text-on-surface-variant">
-              <div className="flex justify-between">
-                <span>{t('auditPreview.yearBuilt')}:</span>
-                <strong className="text-on-surface font-mono">{data.yearBuilt}</strong>
-              </div>
-              <div className="flex justify-between">
-                <span>{t('auditPreview.constructedArea')}:</span>
-                <strong className="text-on-surface font-mono">{data.surfaceM2} m²</strong>
-              </div>
-              <div className="flex justify-between">
-                <span>{t('auditPreview.cadastralUsage')}:</span>
-                <strong className="text-on-surface">{data.cadastralUsage}</strong>
-              </div>
-            </div>
-          </div>
-
-          {/* Pillar 2: INE */}
-          <div className="p-3.5 rounded-lg bg-surface-container-low border border-outline-variant">
-            <div className="flex items-center gap-2 mb-2">
-              <BarChart3 className="w-4 h-4 text-tertiary" />
-              <span className="font-headline text-xs font-semibold text-on-surface">
-                {t('auditPreview.pillarIne')}
-              </span>
-            </div>
-            <div className="space-y-1 font-body text-xs text-on-surface-variant">
-              <div className="flex justify-between">
-                <span>{t('auditPreview.householdIncome')}:</span>
-                <strong className="text-on-surface font-mono">
-                  {data.householdIncome.toLocaleString('es-ES')} €
-                </strong>
-              </div>
-              <div className="flex justify-between">
-                <span>{t('auditPreview.incomePercentile')}:</span>
-                <strong className="text-tertiary font-mono">{data.incomePercentile}%</strong>
-              </div>
-            </div>
-          </div>
-
-          {/* Pillar 3: Ruido & SNCZI */}
-          <div className="p-3.5 rounded-lg bg-surface-container-low border border-outline-variant">
-            <div className="flex items-center gap-2 mb-2">
-              <Volume2 className="w-4 h-4 text-secondary" />
-              <span className="font-headline text-xs font-semibold text-on-surface">
-                {t('auditPreview.pillarAcoustic')}
-              </span>
-            </div>
-            <div className="space-y-1 font-body text-xs text-on-surface-variant">
-              <div className="flex justify-between">
-                <span>{t('auditPreview.noiseLevel')}:</span>
-                <strong className="text-secondary font-mono">{data.noiseLden} dB(A) ({data.noiseLevel})</strong>
-              </div>
-              <div className="flex justify-between">
-                <span>{t('auditPreview.floodRisk')}:</span>
-                <strong className="text-primary">{data.floodRisk}</strong>
-              </div>
-            </div>
-          </div>
-
-          {/* Pillar 4: SERPAVI */}
-          <div className="p-3.5 rounded-lg bg-surface-container-low border border-outline-variant">
-            <div className="flex items-center gap-2 mb-2">
-              <Scale className="w-4 h-4 text-primary" />
-              <span className="font-headline text-xs font-semibold text-on-surface">
-                {t('auditPreview.pillarRental')}
-              </span>
-            </div>
-            <div className="space-y-1 font-body text-xs text-on-surface-variant">
-              <div className="flex justify-between">
-                <span>{t('auditPreview.stressedZone')}:</span>
-                <strong
-                  className={`flex items-center gap-1 font-semibold ${
-                    data.isStressedZone ? 'text-secondary' : 'text-primary'
-                  }`}
+            {/* Horizontal Division Units Banner */}
+            {onOpenUnitPicker && (
+              <div className="mb-4 p-3 rounded-lg bg-surface-container-high border border-primary/40 flex items-center justify-between gap-3 shadow-xs">
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <div className="w-8 h-8 rounded-lg bg-primary/20 text-primary flex items-center justify-center shrink-0 border border-primary/30">
+                    <Building2 className="w-4 h-4" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="font-headline text-xs font-bold text-on-surface truncate">
+                      División Horizontal e Inmuebles
+                    </p>
+                    <p className="font-body text-[11px] text-on-surface-variant truncate">
+                      Audita tu piso o local específico con sus m² privativos
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    onClose();
+                    onOpenUnitPicker();
+                  }}
+                  className="px-3 py-1.5 rounded bg-primary text-on-primary hover:bg-primary-container font-headline text-xs font-bold transition-all shadow-xs shrink-0 cursor-pointer flex items-center gap-1"
                 >
-                  {data.isStressedZone ? (
-                    <>
-                      <AlertTriangle className="w-3.5 h-3.5" />
-                      {t('auditPreview.isStressedYes')}
-                    </>
-                  ) : (
-                    <>
-                      <CheckCircle2 className="w-3.5 h-3.5" />
-                      {t('auditPreview.isStressedNo')}
-                    </>
-                  )}
-                </strong>
+                  <span>Ver inmuebles ▾</span>
+                </button>
               </div>
-              <div className="flex justify-between">
-                <span>{t('auditPreview.rentalIndex')}:</span>
-                <strong className="text-on-surface font-mono">
-                  {data.rentMinM2} - {data.rentMaxM2} €/m²
-                </strong>
+            )}
+
+            {/* 4 Pillars Breakdown Grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+              {/* Pillar 1: Catastro */}
+              <div className="p-3.5 rounded-lg bg-surface-container-low border border-outline-variant">
+                <div className="flex items-center gap-2 mb-2">
+                  <Building2 className="w-4 h-4 text-primary" />
+                  <span className="font-headline text-xs font-semibold text-on-surface">
+                    {t('auditPreview.pillarCatastro')}
+                  </span>
+                </div>
+                <div className="space-y-1 font-body text-xs text-on-surface-variant">
+                  <div className="flex justify-between">
+                    <span>{t('auditPreview.yearBuilt')}:</span>
+                    <strong className="text-on-surface font-mono">{data.yearBuilt}</strong>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>{t('auditPreview.constructedArea')}:</span>
+                    <strong className="text-on-surface font-mono">{data.surfaceM2} m²</strong>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>{t('auditPreview.cadastralUsage')}:</span>
+                    <strong className="text-on-surface">{data.cadastralUsage}</strong>
+                  </div>
+                </div>
+              </div>
+
+              {/* Pillar 2: INE */}
+              <div className="p-3.5 rounded-lg bg-surface-container-low border border-outline-variant">
+                <div className="flex items-center gap-2 mb-2">
+                  <BarChart3 className="w-4 h-4 text-tertiary" />
+                  <span className="font-headline text-xs font-semibold text-on-surface">
+                    {t('auditPreview.pillarIne')}
+                  </span>
+                </div>
+                <div className="space-y-1 font-body text-xs text-on-surface-variant">
+                  <div className="flex justify-between">
+                    <span>{t('auditPreview.householdIncome')}:</span>
+                    <strong className="text-on-surface font-mono">
+                      {data.householdIncome.toLocaleString('es-ES')} €
+                    </strong>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>{t('auditPreview.incomePercentile')}:</span>
+                    <strong className="text-tertiary font-mono">{data.incomePercentile}%</strong>
+                  </div>
+                </div>
+              </div>
+
+              {/* Pillar 3: Ruido & SNCZI */}
+              <div className="p-3.5 rounded-lg bg-surface-container-low border border-outline-variant">
+                <div className="flex items-center gap-2 mb-2">
+                  <Volume2 className="w-4 h-4 text-secondary" />
+                  <span className="font-headline text-xs font-semibold text-on-surface">
+                    {t('auditPreview.pillarAcoustic')}
+                  </span>
+                </div>
+                <div className="space-y-1 font-body text-xs text-on-surface-variant">
+                  <div className="flex justify-between">
+                    <span>{t('auditPreview.noiseLevel')}:</span>
+                    <strong className="text-secondary font-mono">{data.noiseLden} dB(A) ({data.noiseLevel})</strong>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>{t('auditPreview.floodRisk')}:</span>
+                    <strong className="text-primary">{data.floodRisk}</strong>
+                  </div>
+                </div>
+              </div>
+
+              {/* Pillar 4: SERPAVI */}
+              <div className="p-3.5 rounded-lg bg-surface-container-low border border-outline-variant">
+                <div className="flex items-center gap-2 mb-2">
+                  <Scale className="w-4 h-4 text-primary" />
+                  <span className="font-headline text-xs font-semibold text-on-surface">
+                    {t('auditPreview.pillarRental')}
+                  </span>
+                </div>
+                <div className="space-y-1 font-body text-xs text-on-surface-variant">
+                  <div className="flex justify-between">
+                    <span>{t('auditPreview.stressedZone')}:</span>
+                    <strong
+                      className={`flex items-center gap-1 font-semibold ${
+                        data.isStressedZone ? 'text-secondary' : 'text-primary'
+                      }`}
+                    >
+                      {data.isStressedZone ? (
+                        <>
+                          <AlertTriangle className="w-3.5 h-3.5" />
+                          {t('auditPreview.isStressedYes')}
+                        </>
+                      ) : (
+                        <>
+                          <CheckCircle2 className="w-3.5 h-3.5" />
+                          {t('auditPreview.isStressedNo')}
+                        </>
+                      )}
+                    </strong>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>{t('auditPreview.rentalIndex')}:</span>
+                    <strong className="text-on-surface font-mono">
+                      {data.rentMinM2} - {data.rentMaxM2} €/m²
+                    </strong>
+                  </div>
+                </div>
               </div>
             </div>
-          </div>
-        </div>
 
-        {/* Upstream Direct Links */}
-        <div className="pt-4 border-t border-outline-variant mb-6 flex flex-wrap items-center justify-between gap-3 font-body text-xs text-on-surface-variant">
-          <span className="font-mono text-outline">{t('auditPreview.sourceLinks')}:</span>
-          <div className="flex items-center gap-3">
-            <a
-              href={getCatastroUrl(data.refcat)}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-primary hover:underline flex items-center gap-1"
-            >
-              <span>Catastro OVC</span>
-              <ExternalLink className="w-3 h-3" />
-            </a>
-            <a
-              href="https://www.ine.es/experimental/atlas/atlas.htm"
-              target="_blank"
-              rel="noreferrer"
-              className="text-tertiary hover:underline flex items-center gap-1"
-            >
-              <span>INE ADRH</span>
-              <ExternalLink className="w-3 h-3" />
-            </a>
-          </div>
-        </div>
+            {/* Upstream Direct Links */}
+            <div className="pt-4 border-t border-outline-variant mb-6 flex flex-wrap items-center justify-between gap-3 font-body text-xs text-on-surface-variant">
+              <span className="font-mono text-outline">{t('auditPreview.sourceLinks')}:</span>
+              <div className="flex items-center gap-3">
+                <a
+                  href={getCatastroUrl(data.refcat)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-primary hover:underline flex items-center gap-1"
+                >
+                  <span>Catastro OVC</span>
+                  <ExternalLink className="w-3 h-3" />
+                </a>
+                <a
+                  href="https://www.ine.es/experimental/atlas/atlas.htm"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-tertiary hover:underline flex items-center gap-1"
+                >
+                  <span>INE ADRH</span>
+                  <ExternalLink className="w-3 h-3" />
+                </a>
+              </div>
+            </div>
           </>
         )}
 
@@ -311,7 +346,22 @@ export const AuditModal: React.FC<AuditModalProps> = ({ data, onClose, onOpenMap
             onClick={() => {
               const current = data;
               onClose();
-              if (onOpenMap && current) onOpenMap(current);
+              if (onOpenMap && current) onOpenMap(current, 'dossier');
+            }}
+            className={`w-full sm:w-auto px-3.5 py-2 rounded bg-surface-container-high border border-primary/40 text-primary font-body text-xs font-semibold hover:bg-surface-variant transition-colors flex items-center justify-center gap-1.5 shadow-xs cursor-pointer ${
+              data.isLoading ? 'opacity-50 cursor-not-allowed' : ''
+            }`}
+          >
+            <Building2 className="w-3.5 h-3.5" />
+            <span>Ver Dossier</span>
+          </button>
+          <button
+            type="button"
+            disabled={data.isLoading}
+            onClick={() => {
+              const current = data;
+              onClose();
+              if (onOpenMap && current) onOpenMap(current, 'map');
             }}
             className={`w-full sm:w-auto px-4 py-2 rounded bg-primary text-on-primary font-body text-xs font-semibold hover:bg-primary-fixed transition-colors flex items-center justify-center gap-1.5 shadow-xs cursor-pointer ${
               data.isLoading ? 'opacity-50 cursor-not-allowed' : ''
