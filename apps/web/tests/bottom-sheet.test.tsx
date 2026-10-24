@@ -1,9 +1,28 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, beforeAll } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { CadastralBottomSheet } from '../src/components/CadastralBottomSheet';
 import { ExtendedAuditReport } from '../src/services/api.client';
 
 describe('CadastralBottomSheet Component (Phase 11C)', () => {
+  beforeAll(() => {
+    // JSDOM does not provide PointerEvent or pointer capture methods
+    if (typeof window.PointerEvent === 'undefined') {
+      class MockPointerEvent extends MouseEvent {
+        pointerId: number;
+        constructor(type: string, params: PointerEventInit = {}) {
+          super(type, params);
+          this.pointerId = params.pointerId ?? 0;
+        }
+      }
+      window.PointerEvent = MockPointerEvent as unknown as typeof PointerEvent;
+    }
+    if (!Element.prototype.setPointerCapture) {
+      Element.prototype.setPointerCapture = vi.fn();
+    }
+    if (!Element.prototype.releasePointerCapture) {
+      Element.prototype.releasePointerCapture = vi.fn();
+    }
+  });
   const mockReport: ExtendedAuditReport = {
     id: '28900A001000120001XY-AUDIT',
     generatedAt: '2026-10-24T12:00:00.000Z',

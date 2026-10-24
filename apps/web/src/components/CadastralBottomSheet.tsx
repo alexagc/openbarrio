@@ -88,9 +88,9 @@ export function CadastralBottomSheet({
 
   // Native Pointer Drag Gestures with 60fps translation and pointer capture
   const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
-    if (e.button !== 0) return;
+    if (e.button !== undefined && e.button !== 0) return;
     isDraggingRef.current = true;
-    startYRef.current = e.clientY;
+    startYRef.current = e.clientY ?? 0;
     setDragDeltaY(0);
     try {
       e.currentTarget.setPointerCapture?.(e.pointerId);
@@ -101,7 +101,8 @@ export function CadastralBottomSheet({
 
   const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
     if (!isDraggingRef.current) return;
-    const delta = e.clientY - startYRef.current;
+    const clientY = e.clientY ?? startYRef.current;
+    const delta = clientY - startYRef.current;
     setDragDeltaY(delta);
   };
 
@@ -114,7 +115,8 @@ export function CadastralBottomSheet({
       // Ignore
     }
 
-    const delta = e.clientY - startYRef.current;
+    const clientY = e.clientY ?? startYRef.current;
+    const delta = clientY - startYRef.current;
     setDragDeltaY(0);
 
     const THRESHOLD = 35;
