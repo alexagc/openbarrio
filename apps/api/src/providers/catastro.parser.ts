@@ -305,7 +305,9 @@ export function parseCatastroDnprcXml(
   const cc2 = extractTag(xml, 'cc2') || '';
 
   let fullRc = `${pc1}${pc2}${car}${cc1}${cc2}`.trim();
-  if (!fullRc || fullRc.length < 14) {
+  if (queriedRefcat && queriedRefcat.length === 14) {
+    fullRc = queriedRefcat;
+  } else if (!fullRc || fullRc.length < 14) {
     fullRc = queriedRefcat || 'UNKNOWN_REFCAT';
   }
 
@@ -313,6 +315,10 @@ export function parseCatastroDnprcXml(
   const tv = extractTag(xml, 'tv') || '';
   const nv = extractTag(xml, 'nv') || '';
   let number = extractTag(xml, 'pnp') || '';
+  const plp = extractTag(xml, 'plp') || '';
+  if (number && plp) {
+    number = `${number} ${plp}`;
+  }
   const ldt = extractTag(xml, 'ldt') || '';
 
   if (!number) {
