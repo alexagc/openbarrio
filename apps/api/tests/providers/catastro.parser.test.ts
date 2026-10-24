@@ -296,4 +296,67 @@ describe('Catastro XML Parser', () => {
     expect(prop.unit?.builtSurfaceM2).toBe(84);
     expect(prop.unit?.participationCoefficient).toBe(2.45);
   });
+
+  it('correctly targets preferred portal letter in multi-portal parcels (e.g. Arroyo Bueno 2F vs 2I)', () => {
+    const multiPortalXml = `
+      <consulta_dnp xmlns="http://www.catastro.meh.es/">
+        <control><cudnp>3</cudnp></control>
+        <lrcdnp>
+          <rcdnp>
+            <rc><pc1>0269303</pc1><pc2>VK4606G</pc2><car>0001</car><cc1>E</cc1><cc2>K</cc2></rc>
+            <dt><locs><lous><lourb><dir><tv>CL</tv><nv>ARROYO BUENO</nv><pnp>2</pnp><plp>I</plp></dir></lourb></lous></dt>
+            <luso>Almacen-Estacionamiento</luso>
+          </rcdnp>
+          <rcdnp>
+            <rc><pc1>0269303</pc1><pc2>VK4606G</pc2><car>0050</car><cc1>A</cc1><cc2>B</cc2></rc>
+            <dt><locs><lous><lourb><dir><tv>CL</tv><nv>ARROYO BUENO</nv><pnp>2</pnp><plp>E</plp></dir></lourb></lous></dt>
+            <luso>Residencial</luso>
+          </rcdnp>
+          <rcdnp>
+            <rc><pc1>0269303</pc1><pc2>VK4606G</pc2><car>0069</car><cc1>U</cc1><cc2>X</cc2></rc>
+            <dt><locs><lous><lourb><dir><tv>CL</tv><nv>ARROYO BUENO</nv><pnp>2</pnp><plp>F</plp></dir></lourb></lous></dt>
+            <luso>Residencial</luso>
+          </rcdnp>
+        </lrcdnp>
+      </consulta_dnp>
+    `;
+
+    // Without preferredPortal, defaults to residential unit
+    const defaultSummary = parseMultiUnitParcelSummary(multiPortalXml);
+    expect(defaultSummary.totalUnits).toBe(3);
+
+    // With preferredPortal = 'F', targets unit 0069UX in Portal F
+    const portalFSummary = parseMultiUnitParcelSummary(multiPortalXml, 'F');
+    expect(portalFSummary.primaryUnitRef).toBe('0269303VK4606G0069UX');
+
+    // With preferredPortal = 'I', targets unit in Portal I
+    const portalISummary = parseMultiUnitParcelSummary(multiPortalXml, 'I');
+    expect(portalISummary.primaryUnitRef).toBe('0269303VK4606G0001EK');
+  });
+
+  it('extracts portal letter (plp) into block in parseCadastralUnitsXml', () => {
+    const multiPortalXml = `
+      <consulta_dnp xmlns="http://www.catastro.meh.es/">
+        <control><cudnp>2</cudnp></control>
+        <lrcdnp>
+          <rcdnp>
+            <rc><pc1>0269303</pc1><pc2>VK4606G</pc2><car>0001</car><cc1>E</cc1><cc2>K</cc2></rc>
+            <dt><locs><lous><lourb><dir><tv>CL</tv><nv>ARROYO BUENO</nv><pnp>2</pnp><plp>I</plp></dir><loint><pt>01</pt><pu>A</pu></loint></lourb></lous></dt>
+            <luso>Residencial</luso>
+            <sfc>75</sfc>
+          </rcdnp>
+          <rcdnp>
+            <rc><pc1>0269303</pc1><pc2>VK4606G</pc2><car>0069</car><cc1>U</cc1><cc2>X</cc2></rc>
+            <dt><locs><lous><lourb><dir><tv>CL</tv><nv>ARROYO BUENO</nv><pnp>2</pnp><plp>F</plp></dir><loint><pt>00</pt><pu>A</pu></loint></lourb></lous></dt>
+            <luso>Residencial</luso>
+            <sfc>101</sfc>
+          </rcdnp>
+        </lrcdnp>
+      </consulta_dnp>
+    `;
+
+    const result = parseCadastralUnitsXml(multiPortalXml, '0269303VK4606G');
+    expect(result.units[0].block).toBe('I');
+    expect(result.units[1].block).toBe('F');
+  });
 });

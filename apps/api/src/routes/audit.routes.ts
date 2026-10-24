@@ -103,8 +103,9 @@ export function createAuditRoutes(providers: ProviderContainer): Hono {
       );
     }
 
-    const latParam = c.req.query('lat');
+        const latParam = c.req.query('lat');
     const lonParam = c.req.query('lon');
+    const portalParam = c.req.query('portal') || c.req.query('plp');
     let fallbackCoords: { latitude: number; longitude: number; srs: 'EPSG:4326' } | undefined;
     if (latParam && lonParam) {
       const lat = parseFloat(latParam);
@@ -116,7 +117,8 @@ export function createAuditRoutes(providers: ProviderContainer): Hono {
 
     const report: PropertyAuditReport = await auditService.auditByCadastralReference(
       cleanRefcat,
-      fallbackCoords
+      fallbackCoords,
+      portalParam
     );
     return c.json(report, 200);
   });

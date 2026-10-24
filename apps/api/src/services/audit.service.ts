@@ -29,12 +29,13 @@ export class AuditService {
   /**
    * Generates a full due diligence audit report by official Spanish cadastral reference.
    */
-  async auditByCadastralReference(
+    async auditByCadastralReference(
     refcat: string,
-    fallbackCoords?: CadastralCoordinates
+    fallbackCoords?: CadastralCoordinates,
+    preferredPortal?: string
   ): Promise<PropertyAuditReport> {
     // 1. Fetch cadastral property data from Catastro (primary anchor)
-    const property = await this.providers.catastro.getByCadastralReference(refcat, fallbackCoords);
+    const property = await this.providers.catastro.getByCadastralReference(refcat, fallbackCoords, preferredPortal);
 
     return this.generateReportForProperty(property);
   }

@@ -5,6 +5,43 @@ All notable changes to the **OpenBarrio** platform are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.0] - 2026-10-24
+
+### Added
+- **Mobile Full-Bleed Map Viewport & Touch FAB Toolbar (`apps/web`)**:
+  - Replaced desktop floating box layer switcher with compact Touch FAB (>= 44x44px) and dynamic layer counter badge.
+  - Added floating GPS "Locate Me" (`navigator.geolocation.getCurrentPosition`), North/Compass reset bearing/pitch control, and zoom pair controls.
+  - Added real-time ETRS89 UTM Zone 30N geodetic telemetry HUD pill at top-left (`UTM 30N: X, Y · Z m s.n.m.`) with pulsating signal dot.
+  - Slide-over mobile layers drawer with basemap toggles (Dark GIS, Satélite, IGN), official thematic layers, and opacity sliders.
+- **Mobile Expandable Cadastral Due Diligence Bottom Sheet (`apps/web`)**:
+  - Implemented thumb-driven bottom sheet (`CadastralBottomSheet.tsx`) using native Pointer events (`onPointerDown`, `onPointerMove`, `onPointerUp`, `setPointerCapture`) and `touch-action: none`.
+  - 3 ergonomic snap points:
+    - `peek` (~140px): Tactile drag handle, address, score gauge pill, copyable cadastral reference chip, and horizontal telemetry micro-pills scroller.
+    - `half` (`50dvh`): Reveals peek header plus 5-pillar bento risk indicators grid.
+    - `full` (`88dvh`): Unlocks full due diligence dossier with SERPAVI rental cap banner (Ley 12/2023), Horizontal Division trigger button, official PDF export CTA, and institutional Catastro OVC seal.
+- **Mobile Bottom Navigation Bar & Dynamic Viewport (`apps/web`)**:
+  - Fixed 4-destination navigation bar (`Mapa`, `Informe`, `Capas`, `Buscar`) adhering to Stitch Shell Border Ban (prohibits `border-t`, uses tonal elevation and `safe-area-inset-bottom`).
+  - Dynamic viewport hardening (`100dvh`) to prevent address bar jumping.
+  - iOS Safari auto-zoom prevention: font-size >= 16px on mobile inputs.
+  - Full two-way state synchronization between bottom navigation destinations and bottom sheet snap points.
+- **Tablet Adaptive Split Workspace (`apps/web`)**:
+  - 52% GIS Spatial Canvas / 48% Due Diligence Audit Dossier side-by-side layout for iPad and 768px-1024px tablet viewports (`md:`/`lg:`).
+  - Responsive header without horizontal overflow on portrait tablet orientation.
+- **Comprehensive Unit Test Suites**:
+  - `bottom-sheet.test.tsx`: 9 test scenarios verifying pointer drag gestures, snap transitions, copy feedback, and unit picker invocation.
+  - `mobile-bottom-nav.test.tsx`: Verifying 4 destinations, active indicator dot, layer badge, safe area insets, and border ban compliance.
+  - `tablet-workspace.test.tsx`: Verifying 52/48 split workspace layout, navigation synchronization, and dynamic 100dvh viewport.
+  - `mapview.test.tsx`: Verifying touch FAB toolbar, ETRS89 UTM HUD pill, GPS geolocation pan, compass reset, and mobile layer drawer.
+
+### Fixed
+- **Multi-Portal Disambiguation & 20-Digit Dwelling Unit Precision (`apps/api` & `apps/web`)**:
+  - Added `preferredPortal` (`plp` query param) parsing to disambiguate complex multi-portal parcels sharing identical street numbers (e.g. Arroyo Bueno 2F vs 2I).
+  - Extracted portal letter (`<plp>`) into `block` in `parseCadastralUnitsXml`.
+  - Prioritized residential units over storage and parking when extracting parcel primary unit summary.
+  - Fixed coordinate resolution when auditing individual 20-digit dwelling units, preventing fallback drift.
+
+---
+
 ## [0.2.9] - 2026-10-19
 
 ### Fixed

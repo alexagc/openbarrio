@@ -210,4 +210,48 @@ describe('OpenBarrioApiClient', () => {
     expect(bcnReport.rentalBenchmark?.isStressedHousingZone).toBe(true);
     expect(bcnReport.urbanPlanning?.isStressedHousingZone).toBe(true);
   });
+
+  it('correctly ranks exact portal candidate (Arroyo Bueno 2F) to top position over other towns or portals', async () => {
+    const mockCartoData = [
+      {
+        address: 'ARROYO FUEN DEL CEPO 2, Barrio de Abajo (Albentosa)',
+        tip_via: 'ARROYO',
+        lat: 40.04776,
+        lng: -0.75313,
+        portalNumber: 2,
+        extension: null,
+        refCatastral: '1756501XK9315N',
+      },
+      {
+        address: 'CALLE ARROYO BUENO 2 F, Madrid',
+        tip_via: 'CALLE',
+        lat: 40.34881,
+        lng: -3.70450,
+        portalNumber: 2,
+        extension: 'F',
+        refCatastral: '0269303VK4606G',
+      },
+      {
+        address: 'CALLE ARROYO BUENO 2 I, Madrid',
+        tip_via: 'CALLE',
+        lat: 40.34877,
+        lng: -3.70501,
+        portalNumber: 2,
+        extension: 'I',
+        refCatastral: '0269303VK4606G',
+      },
+    ];
+
+    vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce({
+      ok: true,
+      json: async () => mockCartoData,
+    } as Response);
+
+    const results = await client.searchAddress('arroyo bueno 2F');
+    expect(results.length).toBeGreaterThan(0);
+    // Arroyo Bueno 2 F must be ranked #1
+    expect(results[0].label).toBe('CALLE ARROYO BUENO 2 F, Madrid');
+    expect(results[0].refcat).toBe('0269303VK4606G');
+    expect(results[0].portal).toBe('F');
+  });
 });

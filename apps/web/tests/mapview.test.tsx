@@ -1,4 +1,4 @@
-﻿import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { MapView, wgs84ToUtm30n } from '../src/components/MapView';
 
@@ -18,7 +18,9 @@ vi.mock('maplibre-gl', () => {
     getZoom: vi.fn().mockReturnValue(15),
     getCenter: vi.fn().mockReturnValue({ lat: 40.42028, lng: -3.70379 }),
     setLayoutProperty: vi.fn(),
+    setPaintProperty: vi.fn(),
     getLayer: vi.fn().mockReturnValue({}),
+    getSource: vi.fn().mockReturnValue({ setData: vi.fn() }),
     isStyleLoaded: vi.fn().mockReturnValue(true),
   };
 
@@ -197,6 +199,156 @@ describe('MapView Component (Stitch Civic Precision)', () => {
       expect(ineSource.tiles[0]).toContain('ADRH_renta_media_por_hogar/MapServer/export');
     });
   });
+
+  describe('Phase 11B: Mobile Full-Bleed Map Viewport & Touch FAB Toolbar', () => {
+    it('should render the mobile Touch FAB toolbar with Layers FAB, badge, Compass, GPS button, and Zoom controls', () => {
+      render(
+        <MapView
+          selectedCoords={{ lat: 40.42028, lon: -3.70379 }}
+          onMapClick={vi.fn()}
+        />
+      );
+
+      // Verify Touch FAB Toolbar
+      const fabToolbar = screen.getByTestId('mobile-fab-toolbar');
+      expect(fabToolbar).toBeTruthy();
+
+      // Layers FAB with badge showing active layers (default 3: Catastro, INE, Isochrones)
+      const layersFab = screen.getByTestId('mobile-fab-layers');
+      expect(layersFab).toBeTruthy();
+      const badge = screen.getByTestId('mobile-layers-badge');
+      expect(badge.textContent).toBe('3');
+
+      // Compass FAB with "N" text
+      const compassFab = screen.getByTestId('mobile-fab-compass');
+      expect(compassFab).toBeTruthy();
+      expect(compassFab.textContent).toContain('N');
+
+      // GPS Locate Me FAB
+      const locateFab = screen.getByTestId('mobile-fab-locate');
+      expect(locateFab).toBeTruthy();
+
+      // Zoom Pair (+ / -)
+      expect(screen.getByTestId('mobile-fab-zoom-in')).toBeTruthy();
+      expect(screen.getByTestId('mobile-fab-zoom-out')).toBeTruthy();
+    });
+
+    it('should render the floating ETRS89 UTM Zone 30N real-time telemetry HUD pill at top-left on mobile', () => {
+      render(
+        <MapView
+          selectedCoords={{ lat: 40.42028, lon: -3.70379 }}
+          onMapClick={vi.fn()}
+        />
+      );
+
+      const mobileUtmHud = screen.getByTestId('mobile-utm-hud');
+      expect(mobileUtmHud).toBeTruthy();
+      expect(mobileUtmHud.textContent).toMatch(/UTM 30N:\s*\d+,\s*\d+\s*·\s*\d+m s\.n\.m\./);
+    });
+
+    it('should call navigator.geolocation.getCurrentPosition, pan the map, and trigger onMapClick when GPS Locate Me button is clicked', async () => {
+      const mockOnMapClick = vi.fn();
+      const mockGetCurrentPosition = vi.fn((success) => {
+        success({
+          coords: {
+            latitude: 40.415363,
+            longitude: -3.707398,
+            accuracy: 10,
+          },
+        });
+      });
+
+      const originalGeolocation = global.navigator.geolocation;
+      Object.defineProperty(global.navigator, 'geolocation', {
+        value: {
+          getCurrentPosition: mockGetCurrentPosition,
+        },
+        writable: true,
+        configurable: true,
+      });
+
+      render(
+        <MapView
+          selectedCoords={{ lat: 40.42028, lon: -3.70379 }}
+          onMapClick={mockOnMapClick}
+        />
+      );
+
+      const locateFab = screen.getByTestId('mobile-fab-locate');
+      fireEvent.click(locateFab);
+
+      expect(mockGetCurrentPosition).toHaveBeenCalled();
+      expect(mockOnMapClick).toHaveBeenCalledWith(40.415363, -3.707398);
+
+      // Restore geolocation
+      Object.defineProperty(global.navigator, 'geolocation', {
+        value: originalGeolocation,
+        writable: true,
+        configurable: true,
+      });
+    });
+
+    it('should toggle mobile layers drawer when clicking mobile Layers FAB and close it on backdrop or close button', () => {
+      const onToggleMobileLayers = vi.fn();
+      const { rerender } = render(
+        <MapView
+          selectedCoords={{ lat: 40.42028, lon: -3.70379 }}
+          onMapClick={vi.fn()}
+          onToggleMobileLayers={onToggleMobileLayers}
+        />
+      );
+
+      // Initially closed
+      expect(screen.queryByTestId('mobile-layers-drawer')).toBeNull();
+
+      // Click Layers FAB to open
+      const layersFab = screen.getByTestId('mobile-fab-layers');
+      fireEvent.click(layersFab);
+      expect(onToggleMobileLayers).toHaveBeenCalledWith(true);
+
+      // Rerender with drawer open (controlled mode)
+      rerender(
+        <MapView
+          selectedCoords={{ lat: 40.42028, lon: -3.70379 }}
+          onMapClick={vi.fn()}
+          isMobileLayersOpen={true}
+          onToggleMobileLayers={onToggleMobileLayers}
+        />
+      );
+
+      const drawer = screen.getByTestId('mobile-layers-drawer');
+      expect(drawer).toBeTruthy();
+      expect(screen.getByText('Mapas Base')).toBeTruthy();
+      expect(screen.getByText('Capas Temáticas Oficiales')).toBeTruthy();
+      expect(screen.getByText('Catastro WMS')).toBeTruthy();
+      expect(screen.getByText('IGN Topográfico')).toBeTruthy();
+
+      // Verify close button
+      const closeBtn = screen.getByTestId('mobile-layers-close');
+      fireEvent.click(closeBtn);
+      expect(onToggleMobileLayers).toHaveBeenCalledWith(false);
+
+      // Click backdrop also closes
+      const backdrop = screen.getByTestId('mobile-layers-backdrop');
+      fireEvent.click(backdrop);
+      expect(onToggleMobileLayers).toHaveBeenCalledWith(false);
+    });
+
+    it('should reset north and pitch when clicking mobile compass FAB', async () => {
+      const maplibreMock = await import('maplibre-gl');
+      render(
+        <MapView
+          selectedCoords={{ lat: 40.42028, lon: -3.70379 }}
+          onMapClick={vi.fn()}
+        />
+      );
+
+      const compassFab = screen.getByTestId('mobile-fab-compass');
+      fireEvent.click(compassFab);
+
+      const mapConstructor = maplibreMock.Map as unknown as ReturnType<typeof vi.fn>;
+      const mapInstance = mapConstructor.mock.results[0]?.value;
+      expect(mapInstance.resetNorthPitch).toHaveBeenCalled();
+    });
+  });
 });
-
-

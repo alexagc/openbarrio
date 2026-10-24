@@ -55,7 +55,7 @@ export const SAMPLE_PRESETS: SearchPreset[] = [
 ];
 
 interface SearchBarProps {
-  onSearchRefcat: (refcat: string, coords?: { lat: number; lon: number }) => void;
+  onSearchRefcat: (refcat: string, coords?: { lat: number; lon: number }, portal?: string) => void;
   onSearchCoords: (lat: number, lon: number) => void;
   isLoading?: boolean;
   variant?: 'standard' | 'topbar';
@@ -74,7 +74,7 @@ export function SearchBar({
   const [query, setQuery] = useState(activeAddress ? `${activeAddress} (RC: ${activeRefcat || ''})` : '');
   const [copiedRc, setCopiedRc] = useState(false);
   const [suggestions, setSuggestions] = useState<
-    Array<{ label: string; lat: number; lon: number; refcat?: string }>
+    Array<{ label: string; lat: number; lon: number; refcat?: string; portal?: string }>
   >([]);
   const [isSearchingSuggestions, setIsSearchingSuggestions] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
@@ -160,12 +160,13 @@ export function SearchBar({
       }
     }
 
-    // 3. Fallback: match first suggestion or query geocoder immediately
+        // 3. Fallback: match first suggestion or query geocoder immediately
     if (suggestions.length > 0) {
       const best = suggestions[0];
       const coords = { lat: best.lat, lon: best.lon };
+      const portal = best.portal || (best.label.match(/\b\d+\s*([a-zA-Z])\b/) || [])[1];
       if (best.refcat) {
-        onSearchRefcat(best.refcat, coords);
+        onSearchRefcat(best.refcat, coords, portal);
       } else {
         onSearchCoords(best.lat, best.lon);
       }
@@ -176,8 +177,9 @@ export function SearchBar({
         if (results.length > 0) {
           const best = results[0];
           const coords = { lat: best.lat, lon: best.lon };
+          const portal = best.portal || (best.label.match(/\b\d+\s*([a-zA-Z])\b/) || [])[1];
           if (best.refcat) {
-            onSearchRefcat(best.refcat, coords);
+            onSearchRefcat(best.refcat, coords, portal);
           } else {
             onSearchCoords(best.lat, best.lon);
           }
@@ -251,7 +253,7 @@ export function SearchBar({
               if (suggestions.length > 0) setShowDropdown(true);
             }}
             placeholder="Buscar dirección, refcat o coordenadas..."
-            className="bg-transparent border-0 p-0 text-on-surface font-mono text-xs w-full focus:outline-none focus:ring-0 truncate placeholder:text-outline"
+            className="bg-transparent border-0 p-0 text-on-surface font-mono text-[16px] md:text-xs w-full focus:outline-none focus:ring-0 truncate placeholder:text-outline"
           />
 
           {query && (
@@ -263,7 +265,7 @@ export function SearchBar({
                 setShowDropdown(false);
               }}
               className="text-outline hover:text-on-surface p-0.5 mr-1"
-              title="Borrar texto"
+              title="Limpiar"
             >
               <X className="w-3.5 h-3.5" />
             </button>
@@ -306,22 +308,23 @@ export function SearchBar({
                 onClick={() => {
                   setQuery(item.label);
                   setShowDropdown(false);
-                  const coords = { lat: item.lat, lon: item.lon };
-                  if (item.refcat) {
-                    onSearchRefcat(item.refcat, coords);
-                  } else {
-                    onSearchCoords(item.lat, item.lon);
-                  }
+                                      const coords = { lat: item.lat, lon: item.lon };
+                    const portal = item.portal || (item.label.match(/\b\d+\s*([a-zA-Z])\b/) || [])[1];
+                    if (item.refcat) {
+                      onSearchRefcat(item.refcat, coords, portal);
+                    } else {
+                      onSearchCoords(item.lat, item.lon);
+                    }
                 }}
-                className="w-full text-left px-3 py-2 text-xs font-mono text-on-surface hover:bg-surface-container-high border-b border-outline-variant/40 last:border-0 flex items-center justify-between space-x-2 transition cursor-pointer"
+                className="w-full text-left px-3 py-2 text-xs text-on-surface hover:bg-surface-container-high border-b border-outline-variant/40 last:border-0 flex items-center justify-between space-x-2 transition cursor-pointer"
               >
                 <div className="flex items-start space-x-2 min-w-0">
                   <MapPin className="w-3.5 h-3.5 text-primary flex-shrink-0 mt-0.5" />
-                  <span className="truncate">{item.label}</span>
+                  <span className="truncate font-sans">{item.label}</span>
                 </div>
                 {item.refcat && (
-                  <span className="shrink-0 px-1.5 py-0.5 rounded bg-surface-variant text-tertiary font-mono text-[9px] border border-outline-variant">
-                    RC Oficial
+                  <span className="shrink-0 px-1.5 py-0.5 rounded bg-surface-variant text-tertiary font-mono text-[9px] font-semibold border border-outline-variant">
+                    RC
                   </span>
                 )}
               </button>
@@ -332,10 +335,10 @@ export function SearchBar({
     );
   }
 
-  // STANDARD LANDING VARIANT
+  // STANDARD HERO VARIANT (Full width search with submit CTA)
   return (
-    <div className="w-full relative" ref={dropdownRef}>
-      <form onSubmit={handleSubmit} className="relative flex items-center">
+    <div className="w-full max-w-2xl mx-auto relative" ref={dropdownRef}>
+      <form onSubmit={handleSubmit} className="relative flex items-center w-full">
         <div className="relative flex-1">
           <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
             {isLoading ? (
@@ -352,7 +355,7 @@ export function SearchBar({
               if (suggestions.length > 0) setShowDropdown(true);
             }}
             placeholder="Introduce Referencia Catastral (14-20 car.), coordenadas o dirección..."
-            className="w-full pl-11 pr-24 py-3 bg-surface-container border border-outline-variant rounded text-sm text-on-surface placeholder:text-outline focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary shadow-sm transition"
+            className="w-full pl-11 pr-24 py-3 bg-surface-container border border-outline-variant rounded text-[16px] md:text-sm text-on-surface placeholder:text-outline focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary shadow-sm transition"
           />
 
           <div className="absolute inset-y-0 right-0 pr-2 flex items-center space-x-1">
@@ -406,12 +409,13 @@ export function SearchBar({
               onClick={() => {
                 setQuery(item.label);
                 setShowDropdown(false);
-                const coords = { lat: item.lat, lon: item.lon };
-                if (item.refcat) {
-                  onSearchRefcat(item.refcat, coords);
-                } else {
-                  onSearchCoords(item.lat, item.lon);
-                }
+                                    const coords = { lat: item.lat, lon: item.lon };
+                    const portal = item.portal || (item.label.match(/\b\d+\s*([a-zA-Z])\b/) || [])[1];
+                    if (item.refcat) {
+                      onSearchRefcat(item.refcat, coords, portal);
+                    } else {
+                      onSearchCoords(item.lat, item.lon);
+                    }
               }}
               className="w-full text-left px-3.5 py-2.5 text-xs text-on-surface hover:bg-surface-container-high border-b border-outline-variant/40 last:border-0 flex items-center justify-between space-x-2 transition cursor-pointer"
             >

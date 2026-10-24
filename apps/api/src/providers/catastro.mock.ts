@@ -182,7 +182,8 @@ export class MockCatastroProvider implements ICatastroProvider {
 
   async getByCadastralReference(
     refcat: string,
-    fallbackCoords?: CadastralCoordinates
+    fallbackCoords?: CadastralCoordinates,
+    _preferredPortal?: string
   ): Promise<CadastralProperty> {
     const normalized = refcat.trim().toUpperCase();
 

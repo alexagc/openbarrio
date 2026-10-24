@@ -69,6 +69,34 @@
     linear-gradient(to bottom, rgba(61, 74, 66, 0.25) 1px, transparent 1px);
 }
 
+/* Dynamic Viewport (100dvh) Support for iOS Safari & Android Chrome address bar toggles */
+.h-dvh {
+  height: 100vh;
+  height: 100dvh;
+}
+
+.min-h-dvh {
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+
+/* iOS Safari form auto-zoom prevention: ensure text size >= 16px on mobile inputs */
+@media (max-width: 768px) {
+  input[type="text"],
+  input[type="search"],
+  input[type="number"],
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
+}
+
+/* Accessible touch target utility (>= 44x44px per Apple HIG & WCAG 2.5.5) */
+.touch-target {
+  min-height: 44px;
+  min-width: 44px;
+}
+
 /* Print Optimization for Due Diligence Dossier */
 @media print {
   @page {
