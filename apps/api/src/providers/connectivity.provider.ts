@@ -170,6 +170,22 @@ export class D1CivicConnectivityProvider implements ICivicConnectivityProvider {
     const eduDist = 280 + (hash % 400);
     const parkDist = 320 + (hash % 500);
 
+    const toCoord = (distMeters: number, bearingDeg: number) => {
+      const rad = (bearingDeg * Math.PI) / 180;
+      const dKm = distMeters / 1000;
+      const dLat = (dKm / 110.574) * Math.cos(rad);
+      const dLon = (dKm / (111.32 * Math.cos((latitude * Math.PI) / 180))) * Math.sin(rad);
+      return {
+        latitude: Number((latitude + dLat).toFixed(6)),
+        longitude: Number((longitude + dLon).toFixed(6)),
+      };
+    };
+
+    const cTransit = toCoord(transitDist, 45);
+    const cHealth = toCoord(healthDist, 315);
+    const cEdu = toCoord(eduDist, 225);
+    const cPark = toCoord(parkDist, 135);
+
     const syntheticFacilities: CivicFacility[] = [
       {
         id: `syn-trans-${hash}`,
@@ -178,6 +194,8 @@ export class D1CivicConnectivityProvider implements ICivicConnectivityProvider {
         name: 'Parada de Transporte Público',
         distanceMeters: transitDist,
         walkTimeMinutes: calculateWalkTimeMinutes(transitDist),
+        latitude: cTransit.latitude,
+        longitude: cTransit.longitude,
       },
       {
         id: `syn-health-${hash}`,
@@ -186,6 +204,8 @@ export class D1CivicConnectivityProvider implements ICivicConnectivityProvider {
         name: 'Centro de Salud Municipal',
         distanceMeters: healthDist,
         walkTimeMinutes: calculateWalkTimeMinutes(healthDist),
+        latitude: cHealth.latitude,
+        longitude: cHealth.longitude,
       },
       {
         id: `syn-edu-${hash}`,
@@ -194,6 +214,8 @@ export class D1CivicConnectivityProvider implements ICivicConnectivityProvider {
         name: 'Colegio Público de Educación Infantil y Primaria',
         distanceMeters: eduDist,
         walkTimeMinutes: calculateWalkTimeMinutes(eduDist),
+        latitude: cEdu.latitude,
+        longitude: cEdu.longitude,
       },
       {
         id: `syn-park-${hash}`,
@@ -202,6 +224,8 @@ export class D1CivicConnectivityProvider implements ICivicConnectivityProvider {
         name: 'Parque Público Municipal',
         distanceMeters: parkDist,
         walkTimeMinutes: calculateWalkTimeMinutes(parkDist),
+        latitude: cPark.latitude,
+        longitude: cPark.longitude,
       },
     ];
 
@@ -251,6 +275,8 @@ export class D1CivicConnectivityProvider implements ICivicConnectivityProvider {
         name: String(r.name),
         distanceMeters,
         walkTimeMinutes: calculateWalkTimeMinutes(distanceMeters),
+        latitude: Number(r.latitude),
+        longitude: Number(r.longitude),
       };
     });
 
@@ -594,6 +620,8 @@ export class MockCivicConnectivityProvider implements ICivicConnectivityProvider
         name: f.name,
         distanceMeters,
         walkTimeMinutes: calculateWalkTimeMinutes(distanceMeters),
+        latitude: f.latitude,
+        longitude: f.longitude,
       };
     });
 
@@ -613,6 +641,22 @@ export class MockCivicConnectivityProvider implements ICivicConnectivityProvider
     const eduDist = 280 + (hash % 400);
     const parkDist = 320 + (hash % 500);
 
+    const toCoord = (distMeters: number, bearingDeg: number) => {
+      const rad = (bearingDeg * Math.PI) / 180;
+      const dKm = distMeters / 1000;
+      const dLat = (dKm / 110.574) * Math.cos(rad);
+      const dLon = (dKm / (111.32 * Math.cos((latitude * Math.PI) / 180))) * Math.sin(rad);
+      return {
+        latitude: Number((latitude + dLat).toFixed(6)),
+        longitude: Number((longitude + dLon).toFixed(6)),
+      };
+    };
+
+    const cTransit = toCoord(transitDist, 45);
+    const cHealth = toCoord(healthDist, 315);
+    const cEdu = toCoord(eduDist, 225);
+    const cPark = toCoord(parkDist, 135);
+
     const syntheticFacilities: CivicFacility[] = [
       {
         id: `syn-trans-${hash}`,
@@ -621,6 +665,8 @@ export class MockCivicConnectivityProvider implements ICivicConnectivityProvider
         name: 'Parada de Transporte Público',
         distanceMeters: transitDist,
         walkTimeMinutes: calculateWalkTimeMinutes(transitDist),
+        latitude: cTransit.latitude,
+        longitude: cTransit.longitude,
       },
       {
         id: `syn-health-${hash}`,
@@ -629,6 +675,8 @@ export class MockCivicConnectivityProvider implements ICivicConnectivityProvider
         name: 'Centro de Salud Municipal',
         distanceMeters: healthDist,
         walkTimeMinutes: calculateWalkTimeMinutes(healthDist),
+        latitude: cHealth.latitude,
+        longitude: cHealth.longitude,
       },
       {
         id: `syn-edu-${hash}`,
@@ -637,6 +685,8 @@ export class MockCivicConnectivityProvider implements ICivicConnectivityProvider
         name: 'Colegio Público de Educación Infantil y Primaria',
         distanceMeters: eduDist,
         walkTimeMinutes: calculateWalkTimeMinutes(eduDist),
+        latitude: cEdu.latitude,
+        longitude: cEdu.longitude,
       },
       {
         id: `syn-park-${hash}`,
@@ -645,6 +695,8 @@ export class MockCivicConnectivityProvider implements ICivicConnectivityProvider
         name: 'Parque Público Municipal',
         distanceMeters: parkDist,
         walkTimeMinutes: calculateWalkTimeMinutes(parkDist),
+        latitude: cPark.latitude,
+        longitude: cPark.longitude,
       },
     ];
 

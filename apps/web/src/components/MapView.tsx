@@ -1041,14 +1041,20 @@ export function MapView({
     for (const item of amenitiesList) {
       const fac = item.facility!;
       // Minimum visual clearance on map is 160m so amenities never overlap with the central parcel marker
-      const dMeters = Math.max(160, Math.min(1300, fac.distanceMeters));
-      const rad = (item.bearing * Math.PI) / 180;
-      const dKm = dMeters / 1000;
-      const dLat = (dKm / 110.574) * Math.cos(rad);
-      const dLon = (dKm / (111.32 * Math.cos((lat * Math.PI) / 180))) * Math.sin(rad);
-
-      const fLat = lat + dLat;
-      const fLon = lon + dLon;
+      let fLat: number;
+      let fLon: number;
+      if (fac.latitude && fac.longitude && (fac.latitude !== lat || fac.longitude !== lon)) {
+        fLat = fac.latitude;
+        fLon = fac.longitude;
+      } else {
+        const dMeters = Math.max(160, Math.min(1300, fac.distanceMeters));
+        const rad = (item.bearing * Math.PI) / 180;
+        const dKm = dMeters / 1000;
+        const dLat = (dKm / 110.574) * Math.cos(rad);
+        const dLon = (dKm / (111.32 * Math.cos((lat * Math.PI) / 180))) * Math.sin(rad);
+        fLat = lat + dLat;
+        fLon = lon + dLon;
+      }
 
       const el = document.createElement('div');
       el.className = 'group relative w-7 h-7 flex items-center justify-center cursor-pointer select-none';

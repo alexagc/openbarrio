@@ -14,6 +14,8 @@ export const CivicFacilitySchema = Type.Object({
   name: Type.String(),
   distanceMeters: Type.Number({ minimum: 0, description: 'Geodesic distance from parcel centroid' }),
   walkTimeMinutes: Type.Number({ minimum: 0, description: 'Estimated walk time based on 4.5 km/h walking speed' }),
+  latitude: Type.Optional(Type.Number({ description: 'WGS84 latitude coordinate' })),
+  longitude: Type.Optional(Type.Number({ description: 'WGS84 longitude coordinate' })),
 });
 
 export const CivicConnectivityDataSchema = Type.Object({
