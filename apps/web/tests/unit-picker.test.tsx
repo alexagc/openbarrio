@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { UnitPickerModal } from '../src/components/UnitPickerModal';
-import { CadastralUnitsResponse, CadastralUnit } from '@openbarrio/core';
+import { CadastralUnitsResponse } from '@openbarrio/core';
 
 describe('UnitPickerModal Component', () => {
   const mockUnitsResponse: CadastralUnitsResponse = {

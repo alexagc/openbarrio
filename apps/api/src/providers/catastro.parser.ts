@@ -166,11 +166,11 @@ export function parseCadastralUnitsXml(
     // Fallback parsing from descriptive text <ldt>
     const ldt = extractTag(rcdnp, 'ldt') || '';
     if (!floor && ldt) {
-      const matchPl = ldt.match(/(?:Pl|Planta)[:\s]*([0-9A-Za-z\-+]+)/i);
+      const matchPl = ldt.match(/(?:Pl|Planta)[:\s]*([0-9A-Za-z+-]+)/i);
       if (matchPl) floor = matchPl[1];
     }
     if (!door && ldt) {
-      const matchPt = ldt.match(/(?:Pt|Pta|Puerta)[:\s]*([0-9A-Za-z\-]+)/i);
+      const matchPt = ldt.match(/(?:Pt|Pta|Puerta)[:\s]*([0-9A-Za-z-]+)/i);
       if (matchPt) door = matchPt[1];
     }
 
@@ -403,11 +403,11 @@ export function parseCatastroDnprcXml(
     const block = extractTag(loint, 'bl') || extractTag(xml, 'bl') || undefined;
 
     if (!floor && ldt) {
-      const matchPl = ldt.match(/(?:Pl|Planta)[:\s]*([0-9A-Za-z\-+]+)/i);
+      const matchPl = ldt.match(/(?:Pl|Planta)[:\s]*([0-9A-Za-z+-]+)/i);
       if (matchPl) floor = matchPl[1];
     }
     if (!door && ldt) {
-      const matchPt = ldt.match(/(?:Pt|Pta|Puerta)[:\s]*([0-9A-Za-z\-]+)/i);
+      const matchPt = ldt.match(/(?:Pt|Pta|Puerta)[:\s]*([0-9A-Za-z-]+)/i);
       if (matchPt) door = matchPt[1];
     }
 

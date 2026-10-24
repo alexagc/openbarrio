@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { PropertyAuditReport } from '@openbarrio/core';
 import { computeAuditSha256, buildCatastroVerificationUrl } from '../utils/cryptoSeal';
-import { Shield, CheckCircle, FileText, QrCode } from 'lucide-react';
+import { Shield } from 'lucide-react';
 
 interface CertifiedPdfReportProps {
   report: PropertyAuditReport;
@@ -21,7 +21,7 @@ export function CertifiedPdfReport({ report }: CertifiedPdfReportProps) {
     };
   }, [report]);
 
-  const { property, neighborhood, environment, score, rentalBenchmark, connectivity, urbanPlanning } = report;
+  const { property, score, rentalBenchmark, connectivity } = report;
   const unit = property.unit;
 
   // Generate SVG QR matrix pattern

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ChevronUp, ChevronDown, Layers, MapPin, Volume2, Droplets, TrendingUp, Footprints } from 'lucide-react';
+import { ChevronUp, ChevronDown, Layers, Volume2, Droplets, TrendingUp, Footprints } from 'lucide-react';
 
 export interface ActiveLayersState {
   cadastre: boolean;

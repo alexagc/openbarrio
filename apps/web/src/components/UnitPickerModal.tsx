@@ -10,7 +10,6 @@ import {
   Check,
   ChevronRight,
   Layers,
-  Sparkles,
 } from 'lucide-react';
 
 interface UnitPickerModalProps {
