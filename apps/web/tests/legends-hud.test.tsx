@@ -21,25 +21,26 @@ describe('CartographicLegendsHud Component', () => {
 
     expect(screen.getByText('Leyenda Cartográfica')).toBeDefined();
     expect(screen.getByText('Renta Neta Hogar (INE ADRH)')).toBeDefined();
-    expect(screen.getByText(/< 20k/)).toBeDefined();
-    expect(screen.getByText(/> 45k/)).toBeDefined();
+    expect(screen.getByText('<25k')).toBeDefined();
+    expect(screen.getByText('>60k €')).toBeDefined();
   });
 
   it('renders legend when noise layer is active with dBA thresholds', () => {
     render(<CartographicLegendsHud activeLayers={{ ...defaultInactiveLayers, noise: true }} />);
 
-    expect(screen.getByText('Ruido Ambiental (MITECO SICA)')).toBeDefined();
-    expect(screen.getByText(/< 55 dB/)).toBeDefined();
-    expect(screen.getByText(/> 75 dB/)).toBeDefined();
+    expect(screen.getByText('Ruido SICA (Lden dBA)')).toBeDefined();
+    expect(screen.getByText('<55')).toBeDefined();
+    expect(screen.getByText('>75')).toBeDefined();
   });
 
   it('renders legend when flood risk layer is active with T=10, T=100, T=500', () => {
     render(<CartographicLegendsHud activeLayers={{ ...defaultInactiveLayers, flood: true }} />);
 
-    expect(screen.getByText('Inundabilidad (MITECO SNCZI)')).toBeDefined();
-    expect(screen.getByText(/Alta \(T=10\)/)).toBeDefined();
-    expect(screen.getByText(/Media \(T=100\)/)).toBeDefined();
-    expect(screen.getByText(/Baja \(T=500\)/)).toBeDefined();
+    expect(screen.getByText('Riesgo Inundación (SNCZI)')).toBeDefined();
+    expect(screen.getByText('Zona Flujo Preferente (ZFP)')).toBeDefined();
+    expect(screen.getByText('Alta Probabilidad (T=10 años)')).toBeDefined();
+    expect(screen.getByText('Media Probabilidad (T=100 años)')).toBeDefined();
+    expect(screen.getByText('Baja Probabilidad (T=500 años)')).toBeDefined();
   });
 
   it('renders legend when walking isochrones layer is active with 5, 10, 15 min circles', () => {
