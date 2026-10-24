@@ -1,4 +1,4 @@
-import { CadastralProperty, CadastralUnitsResponse } from '@openbarrio/core';
+import { CadastralProperty, CadastralUnitsResponse, CadastralCoordinates } from '@openbarrio/core';
 import { ICatastroProvider } from './types.js';
 import {
   parseCatastroCoordinatesXml,
@@ -96,13 +96,13 @@ export class CatastroProvider implements ICatastroProvider {
 
   async getByCadastralReference(
     refcat: string,
-    fallbackCoords?: { latitude: number; longitude: number }
+    fallbackCoords?: CadastralCoordinates
   ): Promise<CadastralProperty> {
     const cleanRef = refcat.replace(/[\s\-_.]/g, '').toUpperCase();
     const dnprcUrl = `${this.callejeroBaseUrl}/Consulta_DNPRC?Provincia=&Municipio=&RC=${encodeURIComponent(cleanRef)}`;
 
     // If coordinates are not passed, query Consulta_CPMRC to get the exact parcel centroid coordinates
-    let resolvedCoords = fallbackCoords;
+    let resolvedCoords: CadastralCoordinates | undefined = fallbackCoords;
     if (!resolvedCoords) {
       try {
         const cpmrcUrl = `${this.coordenadasBaseUrl}/Consulta_CPMRC?Provincia=&Municipio=&SRS=EPSG:4326&RC=${encodeURIComponent(cleanRef)}`;

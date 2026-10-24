@@ -23,7 +23,7 @@ export class MockEnvironmentalProvider implements IEnvironmentalProvider {
       this.sica.getNoiseData(latitude, longitude),
       this.snczi.getFloodRiskData(latitude, longitude),
       this.airQuality
-        ? this.airQuality.getAirQuality(latitude, longitude).catch(() => undefined)
+        ? this.airQuality.getAirQualityData(latitude, longitude).catch(() => undefined)
         : Promise.resolve(undefined),
     ]);
 
