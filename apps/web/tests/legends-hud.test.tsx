@@ -46,24 +46,24 @@ describe('CartographicLegendsHud Component', () => {
     render(<CartographicLegendsHud activeLayers={{ ...defaultInactiveLayers, isochrones: true }} />);
 
     expect(screen.getByText('Isocronas Peatonales')).toBeDefined();
-    expect(screen.getByText(/5 min a pie/)).toBeDefined();
-    expect(screen.getByText(/10 min a pie/)).toBeDefined();
-    expect(screen.getByText(/15 min a pie/)).toBeDefined();
+    expect(screen.getByText('5 min a pie (400 m)')).toBeDefined();
+    expect(screen.getByText('10 min a pie (800 m)')).toBeDefined();
+    expect(screen.getByText('15 min a pie (1.200 m)')).toBeDefined();
   });
 
   it('toggles collapse state when header toggle button is clicked', () => {
     render(<CartographicLegendsHud activeLayers={{ ...defaultInactiveLayers, isochrones: true }} />);
 
     const toggleButton = screen.getByLabelText('Colapsar leyendas');
-    expect(screen.getByText(/5 min a pie/)).toBeDefined();
+    expect(screen.getByText('5 min a pie (400 m)')).toBeDefined();
 
     // Click collapse
     fireEvent.click(toggleButton);
-    expect(screen.queryByText(/5 min a pie/)).toBeNull();
+    expect(screen.queryByText('5 min a pie (400 m)')).toBeNull();
 
     // Click expand
     const expandButton = screen.getByLabelText('Expandir leyendas');
     fireEvent.click(expandButton);
-    expect(screen.getByText(/5 min a pie/)).toBeDefined();
+    expect(screen.getByText('5 min a pie (400 m)')).toBeDefined();
   });
 });
