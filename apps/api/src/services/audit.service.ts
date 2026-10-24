@@ -47,6 +47,13 @@ export class AuditService {
     return this.providers.catastro.getUnitsByCadastralReference(refcat);
   }
 
+  /**
+   * Retrieves official building/parcel geometry from Catastro WFS for 3D extrusion.
+   */
+  async getCadastralGeometry(refcat: string) {
+    return this.providers.catastro.getGeometryByCadastralReference(refcat);
+  }
+
   private async generateReportForProperty(
     property: CadastralProperty
   ): Promise<PropertyAuditReport> {

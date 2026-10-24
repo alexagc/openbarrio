@@ -292,19 +292,32 @@ export function getMapLightConfig(altitude: number, azimuth: number): MapLightCo
 }
 
 /**
- * Generates GeoJSON FeatureCollection of 3D building volumetric footprints
- * for the target audited parcel and surrounding contextual urban blocks (LoD2).
+ * Generates GeoJSON FeatureCollection of 3D building volumetric footprint
+ * for the target audited parcel using either exact coordinates or realistic dimensions.
  */
 export function generate3dBuildingFootprints(
   centerLat: number,
   centerLon: number,
   targetFloors = 14,
   targetHeight = 44.8,
-  targetName = 'Gran Vía 28'
+  targetName = 'Gran Vía 28',
+  customPolygon?: number[][][]
 ) {
-  const dLat = 0.00035; // ~38m
-  const dLon = 0.00045; // ~38m
-  const gap = 0.0002;
+  let coordinates: number[][][];
+
+  if (customPolygon && customPolygon.length > 0 && customPolygon[0].length >= 4) {
+    coordinates = customPolygon;
+  } else {
+    const dLat = 0.00020;
+    const dLon = 0.00025;
+    coordinates = [[
+      [centerLon - dLon, centerLat - dLat],
+      [centerLon + dLon, centerLat - dLat],
+      [centerLon + dLon, centerLat + dLat],
+      [centerLon - dLon, centerLat + dLat],
+      [centerLon - dLon, centerLat - dLat],
+    ]];
+  }
 
   // Central target audited building
   const targetFeature = {
@@ -318,82 +331,12 @@ export function generate3dBuildingFootprints(
     },
     geometry: {
       type: 'Polygon' as const,
-      coordinates: [[
-        [centerLon - dLon, centerLat - dLat],
-        [centerLon + dLon, centerLat - dLat],
-        [centerLon + dLon, centerLat + dLat],
-        [centerLon - dLon, centerLat + dLat],
-        [centerLon - dLon, centerLat - dLat],
-      ]],
+      coordinates,
     },
   };
 
-  // Surrounding 4 contextual urban parcels (LoD2 simulation)
-  const surroundingFeatures = [
-    // North-West
-    {
-      type: 'Feature' as const,
-      properties: { id: 'b-nw', isTarget: false, numberOfFloors: 7, height: 26 },
-      geometry: {
-        type: 'Polygon' as const,
-        coordinates: [[
-          [centerLon - dLon * 2.8 - gap, centerLat + gap],
-          [centerLon - gap, centerLat + gap],
-          [centerLon - gap, centerLat + dLat * 2.4 + gap],
-          [centerLon - dLon * 2.8 - gap, centerLat + dLat * 2.4 + gap],
-          [centerLon - dLon * 2.8 - gap, centerLat + gap],
-        ]],
-      },
-    },
-    // North-East
-    {
-      type: 'Feature' as const,
-      properties: { id: 'b-ne', isTarget: false, numberOfFloors: 8, height: 29 },
-      geometry: {
-        type: 'Polygon' as const,
-        coordinates: [[
-          [centerLon + gap, centerLat + gap],
-          [centerLon + dLon * 2.8 + gap, centerLat + gap],
-          [centerLon + dLon * 2.8 + gap, centerLat + dLat * 2.4 + gap],
-          [centerLon + gap, centerLat + dLat * 2.4 + gap],
-          [centerLon + gap, centerLat + gap],
-        ]],
-      },
-    },
-    // South-West
-    {
-      type: 'Feature' as const,
-      properties: { id: 'b-sw', isTarget: false, numberOfFloors: 6, height: 22 },
-      geometry: {
-        type: 'Polygon' as const,
-        coordinates: [[
-          [centerLon - dLon * 2.8 - gap, centerLat - dLat * 2.4 - gap],
-          [centerLon - gap, centerLat - dLat * 2.4 - gap],
-          [centerLon - gap, centerLat - gap],
-          [centerLon - dLon * 2.8 - gap, centerLat - gap],
-          [centerLon - dLon * 2.8 - gap, centerLat - dLat * 2.4 - gap],
-        ]],
-      },
-    },
-    // South-East
-    {
-      type: 'Feature' as const,
-      properties: { id: 'b-se', isTarget: false, numberOfFloors: 5, height: 18 },
-      geometry: {
-        type: 'Polygon' as const,
-        coordinates: [[
-          [centerLon + gap, centerLat - dLat * 2.4 - gap],
-          [centerLon + dLon * 2.8 + gap, centerLat - dLat * 2.4 - gap],
-          [centerLon + dLon * 2.8 + gap, centerLat - gap],
-          [centerLon + gap, centerLat - gap],
-          [centerLon + gap, centerLat - dLat * 2.4 - gap],
-        ]],
-      },
-    },
-  ];
-
   return {
     type: 'FeatureCollection' as const,
-    features: [targetFeature, ...surroundingFeatures],
+    features: [targetFeature],
   };
 }

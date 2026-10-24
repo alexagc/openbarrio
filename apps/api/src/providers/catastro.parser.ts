@@ -496,3 +496,57 @@ export function parseCatastroDnprcXml(
     unit,
   };
 }
+
+/**
+ * Parses GML from Catastro WFS (wfsBU / wfsCP) into a GeoJSON Polygon CadastralGeometry.
+ * In GML 3.2 EPSG:4326 posList, coordinates are formatted as lat lon pairs.
+ * GeoJSON requires [lon, lat] pairs.
+ */
+export function parseCatastroWfsGeometryXml(
+  xml: string,
+  _refcat?: string,
+  _geometryType?: 'building' | 'parcel'
+): { coordinates: number[][][]; numberOfFloors?: number; areaM2?: number } | null {
+  const posListMatch = xml.match(/<gml:posList[^>]*>([\s\S]*?)<\/gml:posList>/i);
+  if (!posListMatch || !posListMatch[1].trim()) {
+    return null;
+  }
+
+  const rawValues = posListMatch[1].trim().split(/\s+/).map((v) => parseFloat(v));
+  if (rawValues.length < 6) {
+    return null;
+  }
+
+  const ring: number[][] = [];
+  for (let i = 0; i < rawValues.length - 1; i += 2) {
+    const lat = rawValues[i];
+    const lon = rawValues[i + 1];
+    if (!isNaN(lat) && !isNaN(lon)) {
+      ring.push([Number(lon.toFixed(6)), Number(lat.toFixed(6))]);
+    }
+  }
+
+  if (ring.length < 3) {
+    return null;
+  }
+
+  // Ensure ring is closed
+  const first = ring[0];
+  const last = ring[ring.length - 1];
+  if (first[0] !== last[0] || first[1] !== last[1]) {
+    ring.push([first[0], first[1]]);
+  }
+
+  const areaStr = extractTag(xml, 'bu-ext2d:value') || extractTag(xml, 'cp:areaValue');
+  const areaM2 = areaStr ? parseFloat(areaStr) : undefined;
+
+  const floorsStr = extractTag(xml, 'bu-ext2d:numberOfFloorsAboveGround');
+  const numberOfFloors = floorsStr && !isNaN(parseInt(floorsStr, 10)) ? parseInt(floorsStr, 10) : undefined;
+
+  return {
+    coordinates: [ring],
+    numberOfFloors,
+    areaM2,
+  };
+}
+

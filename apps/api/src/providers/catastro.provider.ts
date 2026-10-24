@@ -1,4 +1,9 @@
-import { CadastralProperty, CadastralUnitsResponse, CadastralCoordinates } from '@openbarrio/core';
+import {
+  CadastralProperty,
+  CadastralUnitsResponse,
+  CadastralCoordinates,
+  CadastralGeometry,
+} from '@openbarrio/core';
 import { ICatastroProvider } from './types.js';
 import {
   parseCatastroCoordinatesXml,
@@ -7,6 +12,7 @@ import {
   parseCadastralUnitsXml,
   isMultiUnitParcelXml,
   parseMultiUnitParcelSummary,
+  parseCatastroWfsGeometryXml,
 } from './catastro.parser.js';
 import { UpstreamProviderError } from '../errors/problem-details.js';
 
@@ -245,5 +251,118 @@ export class CatastroProvider implements ICatastroProvider {
     }
 
     return parseCadastralUnitsXml(xmlText, parcelRef);
+  }
+
+  async getGeometryByCadastralReference(refcat: string): Promise<CadastralGeometry> {
+    const cleanRef = refcat.replace(/[\s\-_.]/g, '').toUpperCase();
+    const parcelRef = cleanRef.slice(0, 14);
+
+    // 1. Try Building footprint (wfsBU)
+    const buUrl = `https://ovc.catastro.meh.es/INSPIRE/wfsBU.aspx?service=WFS&version=2.0.0&request=GetFeature&STOREDQUERIE_ID=GetBuildingByParcel&refcat=${encodeURIComponent(parcelRef)}&srsname=EPSG::4326`;
+    try {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), this.timeoutMs);
+      const res = await fetch(buUrl, {
+        signal: controller.signal,
+        headers: { 'User-Agent': 'OpenBarrio-DueDiligence/0.1' },
+        ...({ cf: { cacheTtl: 7776000, cacheEverything: true } } as any),
+      });
+      clearTimeout(timer);
+
+      if (res.ok) {
+        const xml = await res.text();
+        const parsed = parseCatastroWfsGeometryXml(xml, parcelRef, 'building');
+        if (parsed) {
+          const floors = parsed.numberOfFloors || 4;
+          const height = floors * 3.2;
+          return {
+            cadastralReference: cleanRef,
+            type: 'building',
+            geometry: {
+              type: 'Polygon',
+              coordinates: parsed.coordinates,
+            },
+            properties: {
+              numberOfFloors: floors,
+              height: Number(height.toFixed(1)),
+              areaM2: parsed.areaM2,
+            },
+          };
+        }
+      }
+    } catch {
+      // Continue to parcel boundary fallback
+    }
+
+    // 2. Try Cadastral Parcel boundary (wfsCP)
+    const cpUrl = `https://ovc.catastro.meh.es/INSPIRE/wfsCP.aspx?service=WFS&version=2.0.0&request=GetFeature&STOREDQUERIE_ID=GetParcel&refcat=${encodeURIComponent(parcelRef)}&srsname=EPSG::4326`;
+    try {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), this.timeoutMs);
+      const res = await fetch(cpUrl, {
+        signal: controller.signal,
+        headers: { 'User-Agent': 'OpenBarrio-DueDiligence/0.1' },
+        ...({ cf: { cacheTtl: 7776000, cacheEverything: true } } as any),
+      });
+      clearTimeout(timer);
+
+      if (res.ok) {
+        const xml = await res.text();
+        const parsed = parseCatastroWfsGeometryXml(xml, parcelRef, 'parcel');
+        if (parsed) {
+          return {
+            cadastralReference: cleanRef,
+            type: 'parcel',
+            geometry: {
+              type: 'Polygon',
+              coordinates: parsed.coordinates,
+            },
+            properties: {
+              numberOfFloors: 3,
+              height: 9.6,
+              areaM2: parsed.areaM2,
+            },
+          };
+        }
+      }
+    } catch {
+      // Continue to deterministic fallback
+    }
+
+    // 3. Fallback: Query coordinates from Catastro to generate realistic parcel box
+    let centerLat = 40.42028;
+    let centerLon = -3.70379;
+    try {
+      const prop = await this.getByCadastralReference(cleanRef);
+      centerLat = prop.coordinates.latitude;
+      centerLon = prop.coordinates.longitude;
+    } catch {
+      // keep default center
+    }
+
+    const dLat = 0.00020;
+    const dLon = 0.00025;
+    const coords = [
+      [
+        [Number((centerLon - dLon).toFixed(6)), Number((centerLat - dLat).toFixed(6))],
+        [Number((centerLon + dLon).toFixed(6)), Number((centerLat - dLat).toFixed(6))],
+        [Number((centerLon + dLon).toFixed(6)), Number((centerLat + dLat).toFixed(6))],
+        [Number((centerLon - dLon).toFixed(6)), Number((centerLat + dLat).toFixed(6))],
+        [Number((centerLon - dLon).toFixed(6)), Number((centerLat - dLat).toFixed(6))],
+      ],
+    ];
+
+    return {
+      cadastralReference: cleanRef,
+      type: 'fallback',
+      geometry: {
+        type: 'Polygon',
+        coordinates: coords,
+      },
+      properties: {
+        numberOfFloors: 4,
+        height: 12.8,
+      },
+    };
   }
 }

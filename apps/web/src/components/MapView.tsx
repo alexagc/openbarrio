@@ -22,7 +22,7 @@ import {
   Sun,
   Box,
 } from 'lucide-react';
-import { ExtendedAuditReport } from '../services/api.client';
+import { ExtendedAuditReport, apiClient } from '../services/api.client';
 import { CartographicLegendsHud } from './CartographicLegendsHud';
 import { SolarSimulationHud } from './map/SolarSimulationHud';
 import {
@@ -732,8 +732,10 @@ export function MapView({
     const map = mapRef.current;
     if (!map) return;
 
+    let isSubscribed = true;
     const lat = selectedCoords?.lat ?? mapCenter.lat;
     const lon = selectedCoords?.lon ?? mapCenter.lon;
+    const refcat = report?.property.cadastralReference;
     const floors = report?.property.building?.unitsCount
       ? Math.min(18, Math.max(4, Math.round(report.property.building.unitsCount / 2)))
       : 14;
@@ -742,14 +744,51 @@ export function MapView({
       : 44.8;
     const name = propertyName || 'Edificio en Auditoría';
 
-    try {
-      const source = map.getSource('building-3d-source');
-      if (source && typeof (source as any).setData === 'function') {
-        (source as any).setData(generate3dBuildingFootprints(lat, lon, floors, height, name));
+    const updateExtrusion = (customPolygon?: number[][][], overrideFloors?: number, overrideHeight?: number) => {
+      try {
+        const source = map.getSource('building-3d-source');
+        if (source && typeof (source as any).setData === 'function') {
+          (source as any).setData(
+            generate3dBuildingFootprints(
+              lat,
+              lon,
+              overrideFloors ?? floors,
+              overrideHeight ?? height,
+              name,
+              customPolygon
+            )
+          );
+        }
+      } catch {
+        // Ignore during initialization
       }
-    } catch {
-      // Ignore during initialization
+    };
+
+    // Fast initial draw with fallback
+    updateExtrusion();
+
+    // Query official Catastro WFS geometry if cadastral reference is available
+    if (refcat) {
+      apiClient
+        .getCadastralGeometry(refcat)
+        .then((geom) => {
+          if (!isSubscribed) return;
+          if (geom && geom.geometry && geom.geometry.coordinates) {
+            updateExtrusion(
+              geom.geometry.coordinates,
+              geom.properties.numberOfFloors,
+              geom.properties.height
+            );
+          }
+        })
+        .catch(() => {
+          // Keep existing polygon on error
+        });
     }
+
+    return () => {
+      isSubscribed = false;
+    };
   }, [selectedCoords, mapCenter.lat, mapCenter.lon, report, propertyName]);
 
   const handleZoomIn = () => {
