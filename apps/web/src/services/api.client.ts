@@ -364,7 +364,7 @@ export class OpenBarrioApiClient {
         withCoords.sort((a, b) => b.score - a.score);
 
         if (withCoords.length > 0) {
-          return withCoords.slice(0, 6).map(({ score, ...rest }) => rest);
+          return withCoords.slice(0, 6).map(({ score: _score, ...rest }) => rest);
         }
       }
     } catch {
