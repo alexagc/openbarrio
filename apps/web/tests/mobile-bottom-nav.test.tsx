@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
-import { MobileBottomNav, MobileNavDestination } from '../src/components/MobileBottomNav';
+import { MobileBottomNav } from '../src/components/MobileBottomNav';
 
 describe('MobileBottomNav Component (Stitch Civic Precision Phase 11D)', () => {
   it('renders all 4 primary mobile navigation destinations', () => {

@@ -51,7 +51,7 @@ describe('Tablet Adaptive Split Workspace & Mobile Synchronization (Phase 11E)',
   });
 
   it('synchronizes MobileBottomNav destinations with bottom sheet and workspace', () => {
-    const { container } = render(<App />);
+    render(<App />);
 
     // Mobile bottom nav should be rendered
     const mobileNav = screen.getByRole('navigation', { name: /navegación móvil inferior/i });

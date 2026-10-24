@@ -191,7 +191,6 @@ export class OpenBarrioApiClient {
       return this.generateDeterministicAuditFromRefcat(normalized, fallbackCoords);
     }
   }
-  }
 
   /**
    * Retrieves horizontal division cadastral units for a given cadastral reference.
