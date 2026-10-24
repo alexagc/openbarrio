@@ -27,7 +27,7 @@ vi.mock('../src/components/MapView', () => ({
 
 describe('Tablet Adaptive Split Workspace & Mobile Synchronization (Phase 11E)', () => {
   beforeEach(() => {
-    window.history.pushState({}, '', '/?view=map');
+    window.history.pushState({}, '', '/map');
   });
 
   it('renders the 52/48 tablet adaptive split workspace classes', () => {
