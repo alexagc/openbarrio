@@ -5,8 +5,7 @@ import { CadastralUnitsResponse } from '@openbarrio/core';
 
 describe('UnitPickerModal Component', () => {
   const mockUnitsResponse: CadastralUnitsResponse = {
-    cadastralReference: '9872023VH5797S',
-    address: 'Gran Vía 28, Madrid',
+    parcelCadastralReference: '9872023VH5797S',
     totalUnits: 3,
     units: [
       {

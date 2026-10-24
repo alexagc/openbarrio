@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { PropertyAuditReport } from '@openbarrio/core';
 import { computeAuditSha256, buildCatastroVerificationUrl } from '../utils/cryptoSeal';
 import { Shield } from 'lucide-react';

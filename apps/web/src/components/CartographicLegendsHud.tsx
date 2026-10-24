@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { ChevronUp, ChevronDown, Layers, Volume2, Droplets, TrendingUp, Footprints } from 'lucide-react';
 
 export interface ActiveLayersState {

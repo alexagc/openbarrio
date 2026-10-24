@@ -5,17 +5,21 @@ describe('useUrlSync & parseUrlState', () => {
   const originalLocation = window.location;
 
   beforeEach(() => {
-    // Reset window.location mock
-    delete (window as any).location;
-    window.location = {
-      pathname: '/',
-      search: '',
-      href: 'http://localhost/',
-    } as any;
+    Object.defineProperty(window, 'location', {
+      writable: true,
+      value: {
+        pathname: '/',
+        search: '',
+        href: 'http://localhost/',
+      },
+    });
   });
 
   afterEach(() => {
-    window.location = originalLocation;
+    Object.defineProperty(window, 'location', {
+      writable: true,
+      value: originalLocation,
+    });
   });
 
   it('parses default landing state when path is root and has no params', () => {
