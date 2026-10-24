@@ -556,7 +556,9 @@ export function AppContent() {
               }}
               onOpenUnitPicker={handleOpenUnitPicker}
               isMobileLayersOpen={isMobileLayersOpen}
-              onToggleMobileLayers={setIsMobileLayersOpen}
+              onToggleMobileLayers={(open) =>
+                setIsMobileLayersOpen((prev) => (typeof open === 'boolean' ? open : !prev))
+              }
             />
 
             {/* Mobile Expandable Due Diligence Bottom Sheet (< md) */}
