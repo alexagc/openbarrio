@@ -91,6 +91,7 @@ export class CatastroProvider implements ICatastroProvider {
     return this.getByCadastralReference(cadastralReference, {
       latitude: resLat || latitude,
       longitude: resLon || longitude,
+      srs: 'EPSG:4326',
     });
   }
 
