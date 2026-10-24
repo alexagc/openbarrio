@@ -18,6 +18,8 @@ import { SkeletonDossier } from './components/SkeletonDossier';
 import { ErrorAlert } from './components/ErrorAlert';
 import { UnitPickerModal } from './components/UnitPickerModal';
 import { CertifiedPdfReport } from './components/CertifiedPdfReport';
+import { MobileBottomNav, MobileNavDestination } from './components/MobileBottomNav';
+import { CadastralBottomSheet, SheetSnapPoint } from './components/CadastralBottomSheet';
 import { useUrlSync, parseUrlState } from './hooks/useUrlSync';
 import { apiClient, ExtendedAuditReport, auditDataToReport } from './services/api.client';
 import { ProblemDetails, isCadastralReference, CadastralUnitsResponse } from '@openbarrio/core';
@@ -69,6 +71,15 @@ export function AppContent() {
   const [activeTab, setActiveTab] = useState<'dossier' | 'map'>(initialUrlState.activeTab);
   const [activeAudit, setActiveAudit] = useState<AuditData | null>(null);
 
+  // Mobile Navigation & Bottom Sheet Synchronized State (Phase 11D & 11E)
+  const [mobileNavDestination, setMobileNavDestination] = useState<MobileNavDestination>(
+    initialUrlState.activeTab === 'dossier' ? 'report' : 'map'
+  );
+  const [sheetSnapPoint, setSheetSnapPoint] = useState<SheetSnapPoint>(
+    initialUrlState.activeTab === 'dossier' ? 'full' : 'peek'
+  );
+  const [isMobileLayersOpen, setIsMobileLayersOpen] = useState<boolean>(false);
+
   // MapLibre Interactive State
   const [report, setReport] = useState<ExtendedAuditReport | null>(null);
   const [selectedCoords, setSelectedCoords] = useState<{ lat: number; lon: number }>(
@@ -96,6 +107,13 @@ export function AppContent() {
     (newState) => {
       setViewMode(newState.viewMode);
       setActiveTab(newState.activeTab);
+      if (newState.activeTab === 'dossier') {
+        setSheetSnapPoint('full');
+        setMobileNavDestination('report');
+      } else {
+        setSheetSnapPoint('peek');
+        setMobileNavDestination('map');
+      }
       if (newState.refcat) {
         loadAuditByRefcat(newState.refcat, newState.coords);
       } else if (newState.coords) {
@@ -171,12 +189,13 @@ export function AppContent() {
           liveReport = await apiClient.auditByCoordinates(effectiveCoords.lat, effectiveCoords.lon);
         } else {
           // If address was submitted without prior coords, geocode it via searchAddress
-          const results = await apiClient.searchAddress(query);
+                    const results = await apiClient.searchAddress(query);
           if (results.length > 0) {
             const best = results[0];
             effectiveCoords = { lat: best.lat, lon: best.lon };
+            const portal = best.portal || (best.label.match(/\b\d+\s*([a-zA-Z])\b/) || [])[1];
             if (best.refcat) {
-              liveReport = await apiClient.auditByCadastralReference(best.refcat, effectiveCoords);
+              liveReport = await apiClient.auditByCadastralReference(best.refcat, effectiveCoords, portal);
             } else {
               liveReport = await apiClient.auditByCoordinates(best.lat, best.lon);
             }
@@ -254,6 +273,8 @@ export function AppContent() {
   const handleOpenMap = (audit?: AuditData, targetTab: 'map' | 'dossier' = 'dossier') => {
     setViewMode('map');
     setActiveTab(targetTab);
+    setMobileNavDestination(targetTab === 'dossier' ? 'report' : 'map');
+    setSheetSnapPoint(targetTab === 'dossier' ? 'full' : 'peek');
     setError(null);
 
     if (audit) {
@@ -301,7 +322,11 @@ export function AppContent() {
     }
   };
 
-  const loadAuditByRefcat = async (refcat: string, fallbackCoords?: { lat: number; lon: number }) => {
+    const loadAuditByRefcat = async (
+    refcat: string,
+    fallbackCoords?: { lat: number; lon: number },
+    portal?: string
+  ) => {
     setIsLoading(true);
     const cleanRefcat = refcat.replace(/[\s\-_.]/g, '').toUpperCase();
     if (fallbackCoords) {
@@ -309,7 +334,7 @@ export function AppContent() {
     }
 
     try {
-      const data = await apiClient.auditByCadastralReference(cleanRefcat, fallbackCoords);
+      const data = await apiClient.auditByCadastralReference(cleanRefcat, fallbackCoords, portal);
       if (
         fallbackCoords &&
         data.property.coordinates.latitude === 40.4168 &&
@@ -357,6 +382,41 @@ export function AppContent() {
     loadAuditByRefcat(sample.refcat);
   };
 
+  // Synchronized Mobile Navigation & Bottom Sheet Controller (Phase 11D & 11E)
+  const handleSelectMobileDestination = (dest: MobileNavDestination) => {
+    setMobileNavDestination(dest);
+    if (dest === 'map') {
+      setSheetSnapPoint('peek');
+      setIsMobileLayersOpen(false);
+      setActiveTab('map');
+    } else if (dest === 'report') {
+      setSheetSnapPoint('full');
+      setIsMobileLayersOpen(false);
+      setActiveTab('dossier');
+    } else if (dest === 'layers') {
+      setIsMobileLayersOpen((prev) => !prev);
+    } else if (dest === 'search') {
+      setIsMobileLayersOpen(false);
+      const searchInput = document.querySelector<HTMLInputElement>(
+        'input[placeholder*="Buscar"], input[type="text"]'
+      );
+      if (searchInput) {
+        searchInput.focus();
+      }
+    }
+  };
+
+  const handleSheetSnapChange = (snap: SheetSnapPoint) => {
+    setSheetSnapPoint(snap);
+    if (snap === 'full') {
+      setMobileNavDestination('report');
+      setActiveTab('dossier');
+    } else {
+      setMobileNavDestination('map');
+      setActiveTab('map');
+    }
+  };
+
   // If map view is active, render the full interactive Stitch Civic Precision workspace
   if (viewMode === 'map') {
     const activeAddress = report
@@ -368,14 +428,14 @@ export function AppContent() {
       : 'Madrid Centro / Sol';
 
     return (
-      <div className="h-screen bg-background text-on-surface antialiased overflow-hidden flex flex-col select-none">
+      <div className="h-screen h-[100dvh] bg-background text-on-surface antialiased overflow-hidden flex flex-col select-none">
         {/* ================= TOP NAVIGATION BAR (Stitch Civic Precision) ================= */}
-        <header className="w-full px-space-lg flex items-center justify-between gap-space-md border-b border-outline-variant bg-surface-container top-0 z-50 h-14 shadow-sm shrink-0 no-print">
-          {/* Left: Brand Cluster & Return Button */}
-          <div className="flex items-center gap-space-md min-w-[280px]">
+        <header className="w-full px-space-md sm:px-space-lg flex items-center justify-between gap-2 sm:gap-space-md border-b border-outline-variant bg-surface-container top-0 z-50 h-14 shadow-sm shrink-0 no-print">
+          {/* Left: Brand Cluster & Return Button (Responsive without horizontal overflow on tablet portrait) */}
+          <div className="flex items-center gap-2 sm:gap-space-md min-w-0 sm:min-w-[200px] md:min-w-[220px]">
             <button
               onClick={() => setViewMode('landing')}
-              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded bg-surface-container-high border border-outline-variant hover:border-primary text-on-surface hover:text-primary transition-colors text-xs font-semibold cursor-pointer shrink-0"
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded bg-surface-container-high border border-outline-variant hover:border-primary text-on-surface hover:text-primary transition-colors text-xs font-semibold cursor-pointer shrink-0 min-h-[36px]"
               type="button"
               title="Volver a la portada de OpenBarrio"
             >
@@ -383,17 +443,17 @@ export function AppContent() {
               <span className="hidden sm:inline">Portada</span>
             </button>
 
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded bg-surface-container-high border border-outline-variant flex items-center justify-center relative shadow-inner">
+            <div className="flex items-center gap-2 min-w-0">
+              <div className="w-8 h-8 rounded bg-surface-container-high border border-outline-variant flex items-center justify-center relative shadow-inner shrink-0">
                 <span className="font-headline font-bold text-primary tracking-tight text-sm">OB</span>
                 <span className="w-2 h-2 rounded-full bg-primary absolute -top-0.5 -right-0.5 ring-2 ring-surface-container" />
               </div>
-              <div className="flex flex-col">
+              <div className="flex flex-col min-w-0">
                 <span className="font-headline font-bold text-primary tracking-tight flex items-center gap-2 leading-none text-sm">
                   OpenBarrio
                 </span>
-                <span className="font-mono text-[9px] text-on-surface-variant font-medium tracking-wider uppercase mt-0.5 truncate max-w-[200px]">
-                  Visor Cartográfico Catastral & Auditoría Territorial
+                <span className="font-mono text-[9px] text-on-surface-variant font-medium tracking-wider uppercase mt-0.5 truncate hidden sm:inline max-w-[160px] md:max-w-[200px]">
+                  Visor Cartográfico Catastral
                 </span>
               </div>
             </div>
@@ -424,30 +484,8 @@ export function AppContent() {
             />
           </div>
 
-          {/* Right: Actions & Location Cluster */}
-          <div className="flex items-center gap-2">
-            {/* Mobile Tab Toggle (Informe vs Mapa) */}
-            <div className="flex lg:hidden bg-surface-container-high p-0.5 rounded border border-outline-variant text-xs font-semibold">
-              <button
-                type="button"
-                onClick={() => setActiveTab('dossier')}
-                className={`px-2.5 py-1 rounded transition text-xs ${
-                  activeTab === 'dossier' ? 'bg-primary text-on-primary shadow-xs' : 'text-on-surface-variant'
-                }`}
-              >
-                Informe
-              </button>
-              <button
-                type="button"
-                onClick={() => setActiveTab('map')}
-                className={`px-2.5 py-1 rounded transition text-xs ${
-                  activeTab === 'map' ? 'bg-primary text-on-primary shadow-xs' : 'text-on-surface-variant'
-                }`}
-              >
-                Mapa
-              </button>
-            </div>
-
+          {/* Right: Actions & Location Cluster (Touch-friendly ≥36px) */}
+          <div className="flex items-center gap-2 shrink-0">
             <div className="hidden xl:flex items-center gap-1.5 px-2 py-1 rounded bg-surface-container-high border border-outline-variant text-on-surface-variant text-xs font-mono">
               <MapPin className="w-3.5 h-3.5 text-tertiary" />
               <span>{activeLocation}</span>
@@ -457,18 +495,18 @@ export function AppContent() {
               <button
                 type="button"
                 onClick={() => downloadCadastralGML(report)}
-                className="hidden sm:flex bg-surface-container-low hover:bg-surface-container-high text-on-surface border border-outline-variant text-xs font-mono px-3 py-1.5 rounded items-center gap-1.5 transition-colors cursor-pointer"
+                className="hidden lg:flex bg-surface-container-low hover:bg-surface-container-high text-on-surface border border-outline-variant text-xs font-mono px-3 py-1.5 rounded items-center gap-1.5 transition-colors cursor-pointer min-h-[36px]"
                 title="Descargar archivo GML INSPIRE oficial de la parcela"
               >
                 <Download className="w-3.5 h-3.5 text-primary" />
-                <span>Descargar GML</span>
+                <span className="hidden xl:inline">Descargar GML</span>
               </button>
             )}
 
             <button
               type="button"
               onClick={() => window.print()}
-              className="bg-inverse-primary hover:bg-primary-container text-white text-xs font-semibold px-3 py-1.5 rounded flex items-center gap-1.5 transition-colors shadow-sm cursor-pointer"
+              className="bg-inverse-primary hover:bg-primary-container text-white text-xs font-semibold px-3 py-1.5 rounded flex items-center gap-1.5 transition-colors shadow-sm cursor-pointer min-h-[36px]"
               title="Exportar informe de due diligence en formato PDF"
             >
               <Printer className="w-3.5 h-3.5" />
@@ -489,14 +527,10 @@ export function AppContent() {
           />
         </div>
 
-        {/* ================= SPLIT SCREEN WORKSPACE ================= */}
-        <main className="flex-1 flex flex-col lg:flex-row overflow-hidden w-full relative">
-          {/* LEFT: GIS VECTOR MAP (60% Desktop) */}
-          <section
-            className={`w-full lg:w-[60%] h-full relative bg-surface-container-lowest overflow-hidden flex flex-col border-r border-outline-variant cadastral-grid no-print ${
-              activeTab === 'dossier' ? 'hidden lg:flex' : 'flex'
-            }`}
-          >
+        {/* ================= TABLET ADAPTIVE SPLIT WORKSPACE (Phase 11E: 52% Map / 48% Dossier on md/lg) ================= */}
+        <main className="flex-1 flex flex-col md:flex-row overflow-hidden w-full relative">
+          {/* LEFT: GIS SPATIAL CANVAS (Full-bleed on mobile <md, 52% on tablet md/lg, 60% on desktop xl+) */}
+          <section className="w-full md:w-[52%] xl:w-[60%] h-full relative bg-surface-container-lowest overflow-hidden flex flex-col md:border-r border-outline-variant cadastral-grid no-print">
             <MapView
               selectedCoords={selectedCoords}
               onMapClick={handleMapClick}
@@ -515,17 +549,31 @@ export function AppContent() {
               isLoading={isLoading}
               error={error?.message}
               onDismissError={() => setError(null)}
-              onViewReport={() => setActiveTab('dossier')}
+              onViewReport={() => {
+                setActiveTab('dossier');
+                setSheetSnapPoint('full');
+                setMobileNavDestination('report');
+              }}
               onOpenUnitPicker={handleOpenUnitPicker}
+              isMobileLayersOpen={isMobileLayersOpen}
+              onToggleMobileLayers={setIsMobileLayersOpen}
             />
+
+            {/* Mobile Expandable Due Diligence Bottom Sheet (< md) */}
+            <div className="md:hidden">
+              <CadastralBottomSheet
+                report={report}
+                isLoading={isLoading}
+                snapPoint={sheetSnapPoint}
+                onSnapChange={handleSheetSnapChange}
+                onOpenUnitPicker={handleOpenUnitPicker}
+                onExportPdf={() => window.print()}
+              />
+            </div>
           </section>
 
-          {/* RIGHT: PROPERTY AUDIT DOSSIER PANEL (40% Desktop) */}
-          <section
-            className={`w-full lg:w-[40%] h-full bg-surface overflow-y-auto flex flex-col ${
-              activeTab === 'map' ? 'hidden lg:flex' : 'flex'
-            }`}
-          >
+          {/* RIGHT: PROPERTY AUDIT DOSSIER PANEL (48% on tablet md/lg, 40% on desktop xl+, hidden on mobile where bottom sheet handles it) */}
+          <section className="hidden md:flex md:w-[48%] xl:w-[40%] h-full bg-surface overflow-y-auto flex-col">
             {error ? (
               <div className="p-4">
                 <ErrorAlert
@@ -556,6 +604,13 @@ export function AppContent() {
             )}
           </section>
         </main>
+
+        {/* Mobile Bottom Navigation Bar (< md, fixed bottom, tonal elevation, no border-t) */}
+        <MobileBottomNav
+          activeDestination={mobileNavDestination}
+          onSelectDestination={handleSelectMobileDestination}
+          layersCount={3}
+        />
 
         {/* Horizontal Division Unit Picker Modal (Phase 10B) */}
         <UnitPickerModal
@@ -595,7 +650,7 @@ export function AppContent() {
 
   // Default: Civic Precision Landing Page
   return (
-    <div className="min-h-screen flex flex-col bg-background text-on-surface">
+    <div className="min-h-screen min-h-[100dvh] flex flex-col bg-background text-on-surface">
       <Header onOpenMap={handleOpenMap} />
 
       <main className="flex-1 flex flex-col">
@@ -635,6 +690,8 @@ export function AppContent() {
         onSelectUnit={(unit) => {
           setViewMode('map');
           setActiveTab('dossier');
+          setSheetSnapPoint('full');
+          setMobileNavDestination('report');
           const currentCoords = selectedCoords || (report ? {
             lat: report.property.coordinates.latitude,
             lon: report.property.coordinates.longitude,
@@ -645,6 +702,8 @@ export function AppContent() {
           if (report) {
             setViewMode('map');
             setActiveTab('dossier');
+            setSheetSnapPoint('full');
+            setMobileNavDestination('report');
             const currentCoords = selectedCoords || {
               lat: report.property.coordinates.latitude,
               lon: report.property.coordinates.longitude,

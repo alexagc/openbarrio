@@ -1,4 +1,4 @@
-﻿import {
+import {
   CadastralProperty,
   CadastralCoordinates,
   CadastralUnitsResponse,
@@ -23,7 +23,8 @@ export interface ICatastroProvider {
    */
   getByCadastralReference(
     refcat: string,
-    fallbackCoords?: CadastralCoordinates
+    fallbackCoords?: CadastralCoordinates,
+    preferredPortal?: string
   ): Promise<CadastralProperty>;
 
   /**

@@ -59,11 +59,12 @@ export function UnitPickerModal({
       // Search query (floor, door, full refcat, staircase)
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase().trim();
-        const fullLabel = `planta ${u.floor} puerta ${u.door} ${u.floor} ${u.door} ${u.floor}${u.door} ${u.floor}-${u.door}`.toLowerCase();
+                const fullLabel = `portal ${u.block || ''} bloque ${u.block || ''} ${u.block || ''} planta ${u.floor} puerta ${u.door} ${u.floor} ${u.door} ${u.floor}${u.door} ${u.floor}-${u.door}`.toLowerCase();
         const matchLabel = fullLabel.includes(q);
         const matchRef = q.length >= 4 && u.cadastralReference.toLowerCase().includes(q);
         const matchStair = (u.staircase || '').toLowerCase().includes(q);
-        return matchLabel || matchRef || matchStair;
+        const matchBlock = (u.block || '').toLowerCase() === q;
+        return matchLabel || matchRef || matchStair || matchBlock;
       }
 
       return true;
@@ -249,7 +250,12 @@ export function UnitPickerModal({
                       >
                         <div className="flex items-start justify-between gap-1">
                           <div>
-                            <div className="text-sm font-bold font-headline text-on-surface flex items-center gap-1.5">
+                                                        <div className="text-sm font-bold font-headline text-on-surface flex items-center gap-1.5">
+                              {u.block && (
+                                <span className="text-[10px] font-mono font-semibold px-1.5 py-0.5 rounded bg-surface-variant text-tertiary">
+                                  Portal {u.block}
+                                </span>
+                              )}
                               <span>Planta {u.floor} · Puerta {u.door}</span>
                               {u.staircase && (
                                 <span className="text-[10px] font-mono text-outline font-normal">

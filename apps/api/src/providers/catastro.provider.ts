@@ -87,18 +87,57 @@ export class CatastroProvider implements ICatastroProvider {
       }
     }
 
+        // Snap to the exact portal number & letter via CartoCiudad IGN geocoder (e.g. 2 F vs 2 I)
+    let targetPortal: string | undefined;
+    try {
+      const cartoUrl = `https://www.cartociudad.es/geocoder/api/geocoder/reverseGeocode?lat=${latitude}&lon=${longitude}`;
+      const cartoRes = await fetch(cartoUrl);
+      if (cartoRes.ok) {
+        const cartoData = (await cartoRes.json()) as any;
+        if (cartoData?.extension) {
+          targetPortal = String(cartoData.extension).trim().toUpperCase();
+        }
+        if (typeof cartoData?.lat === 'number' && typeof cartoData?.lng === 'number') {
+          resLat = cartoData.lat;
+          resLon = cartoData.lng;
+        }
+      }
+    } catch {
+      // Non-critical: continue
+    }
+
     // Fetch detailed property attributes using the cadastral reference obtained
-    return this.getByCadastralReference(cadastralReference, {
-      latitude: resLat || latitude,
-      longitude: resLon || longitude,
-      srs: 'EPSG:4326',
-    });
+    return this.getByCadastralReference(
+      cadastralReference,
+      {
+        latitude: resLat || latitude,
+        longitude: resLon || longitude,
+        srs: 'EPSG:4326',
+      },
+      targetPortal
+    );
   }
 
-  async getByCadastralReference(
+    async getByCadastralReference(
     refcat: string,
-    fallbackCoords?: CadastralCoordinates
+    fallbackCoords?: CadastralCoordinates,
+    preferredPortal?: string
   ): Promise<CadastralProperty> {
+    let activePortal = preferredPortal;
+    if (!activePortal && fallbackCoords) {
+      try {
+        const cartoUrl = `https://www.cartociudad.es/geocoder/api/geocoder/reverseGeocode?lat=${fallbackCoords.latitude}&lon=${fallbackCoords.longitude}`;
+        const cartoRes = await fetch(cartoUrl);
+        if (cartoRes.ok) {
+          const cartoData = (await cartoRes.json()) as any;
+          if (cartoData?.extension) {
+            activePortal = String(cartoData.extension).trim().toUpperCase();
+          }
+        }
+      } catch {
+        // Non-critical: continue
+      }
+    }
     const cleanRef = refcat.replace(/[\s\-_.]/g, '').toUpperCase();
     const dnprcUrl = `${this.callejeroBaseUrl}/Consulta_DNPRC?Provincia=&Municipio=&RC=${encodeURIComponent(cleanRef)}`;
 
@@ -151,7 +190,7 @@ export class CatastroProvider implements ICatastroProvider {
 
     // If parcel has horizontal division (<lrcdnp>), fetch primary unit to extract official building year and specs
     if (isMultiUnitParcelXml(xmlText)) {
-      const summary = parseMultiUnitParcelSummary(xmlText);
+      const summary = parseMultiUnitParcelSummary(xmlText, activePortal);
       if (summary.primaryUnitRef) {
         try {
           const unitUrl = `${this.callejeroBaseUrl}/Consulta_DNPRC?Provincia=&Municipio=&RC=${encodeURIComponent(summary.primaryUnitRef)}`;

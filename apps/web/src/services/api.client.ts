@@ -1,4 +1,4 @@
-﻿import {
+import {
   PropertyAuditReport,
   ProblemDetails,
   calculateBarrioScore,
@@ -112,14 +112,24 @@ export class OpenBarrioApiClient {
   /**
    * Audits property by Spanish Cadastral Reference (14 or 20 characters).
    */
-  async auditByCadastralReference(
+    async auditByCadastralReference(
     refcat: string,
-    fallbackCoords?: { lat: number; lon: number }
+    fallbackCoords?: { lat: number; lon: number },
+    portal?: string
   ): Promise<ExtendedAuditReport> {
     const normalized = refcat.replace(/[\s\-_.]/g, '').toUpperCase();
     let url = `${this.baseUrl}/api/v1/audit/refcat/${encodeURIComponent(normalized)}`;
+    const params = new URLSearchParams();
     if (fallbackCoords) {
-      url += `?lat=${encodeURIComponent(fallbackCoords.lat)}&lon=${encodeURIComponent(fallbackCoords.lon)}`;
+      params.append('lat', String(fallbackCoords.lat));
+      params.append('lon', String(fallbackCoords.lon));
+    }
+    if (portal) {
+      params.append('portal', portal);
+    }
+    const queryString = params.toString();
+    if (queryString) {
+      url += `?${queryString}`;
     }
 
     try {
@@ -139,9 +149,48 @@ export class OpenBarrioApiClient {
       if (err instanceof ApiError) {
         throw err;
       }
+      // Offline fallback: try CartoCiudad reverse geocode if fallbackCoords present
+      if (fallbackCoords) {
+        try {
+          const revUrl = `https://www.cartociudad.es/geocoder/api/geocoder/reverseGeocode?lat=${encodeURIComponent(
+            fallbackCoords.lat
+          )}&lon=${encodeURIComponent(fallbackCoords.lon)}`;
+          const revRes = await fetch(revUrl);
+          if (revRes.ok) {
+            const revData = await revRes.json();
+            if (revData && revData.address) {
+              const streetType = revData.tip_via ? `${revData.tip_via} ` : '';
+              const streetName = `${streetType}${revData.address}`.trim();
+              let portalNumber = revData.portalNumber ? String(revData.portalNumber) : '1';
+              const effectiveExt = portal || revData.extension;
+              if (effectiveExt) {
+                portalNumber = `${portalNumber} ${effectiveExt}`.trim();
+              }
+              const postalCode = revData.postalCode || '28001';
+              const municipality = revData.muni || revData.poblacion || 'Madrid';
+              const province = revData.province || municipality;
+
+              return this.generateDeterministicAudit(fallbackCoords.lat, fallbackCoords.lon, {
+                cadastralReference: normalized,
+                address: {
+                  street: streetName,
+                  number: portalNumber,
+                  postalCode,
+                  municipality,
+                  province,
+                },
+              });
+            }
+          }
+        } catch {
+          // Fall through
+        }
+      }
+
       console.warn('API backend unreachable. Falling back to local deterministic audit generator.', err);
       return this.generateDeterministicAuditFromRefcat(normalized, fallbackCoords);
     }
+  }
   }
 
   /**
@@ -204,13 +253,142 @@ export class OpenBarrioApiClient {
    * Searches for address suggestions using CartoCiudad (official IGN Spanish geocoder)
    * with fallback to OpenStreetMap Nominatim. Supports portal numbers with letters/suffixes.
    */
-  async searchAddress(
+    async searchAddress(
     query: string
-  ): Promise<Array<{ label: string; lat: number; lon: number; refcat?: string }>> {
+  ): Promise<Array<{ label: string; lat: number; lon: number; refcat?: string; portal?: string }>> {
     const trimmed = query.trim();
     if (!trimmed || trimmed.length < 3) {
       return [];
     }
+
+    // Normalize potential portal number + letter with hyphens, slashes, or without spaces
+    // e.g. "44-B" -> "44 B", "44/B" -> "44 B", "25b" -> "25 B", "14bis" -> "14 bis", "2F" -> "2 F"
+    const spacedQuery = trimmed
+      .replace(/\b(\d+)\s*[-/]\s*([a-zA-Z]+)\b/g, '$1 $2')
+      .replace(/\b(\d+)([a-zA-Z]+)\b/g, '$1 $2');
+
+    // Extract target portal number and letter from query (e.g. "2" and "F" from "arroyo bueno 2 F")
+    const portalMatch = spacedQuery.match(/\b(\d+)\s+([a-zA-Z])\b/i);
+    const targetPortalNum = portalMatch ? parseInt(portalMatch[1], 10) : undefined;
+    const targetPortalExt = portalMatch ? portalMatch[2].toUpperCase() : undefined;
+
+    const normalize = (s: string) =>
+      s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
+
+    const queryTokens = normalize(spacedQuery).split(/\s+/).filter(Boolean);
+    const queryStreetPart = normalize(spacedQuery.replace(/\b\d+.*$/, '')).trim();
+
+    // 1. Try official Spanish CartoCiudad (IGN) geocoder
+    try {
+      // First try with spaced query, fallback to trimmed
+      let cartoUrl = `https://www.cartociudad.es/geocoder/api/geocoder/candidates?q=${encodeURIComponent(
+        spacedQuery
+      )}&limit=15`;
+      let cartoRes = await fetch(cartoUrl);
+      let cartoData = cartoRes.ok ? await cartoRes.json() : null;
+
+      if ((!Array.isArray(cartoData) || cartoData.length === 0) && spacedQuery !== trimmed) {
+        cartoUrl = `https://www.cartociudad.es/geocoder/api/geocoder/candidates?q=${encodeURIComponent(
+          trimmed
+        )}&limit=15`;
+        cartoRes = await fetch(cartoUrl);
+        cartoData = cartoRes.ok ? await cartoRes.json() : null;
+      }
+
+      if (Array.isArray(cartoData) && cartoData.length > 0) {
+        const valid = cartoData
+          .filter((item: any) => item && item.address)
+          .map((item: any) => {
+            let label = item.address;
+            const ext = item.extension ? String(item.extension).trim().toUpperCase() : undefined;
+            if (ext && item.portalNumber) {
+              const hasPortalWithExt = new RegExp(`\\b${item.portalNumber}\\s*${ext}\\b`, 'i').test(label);
+              if (!hasPortalWithExt) {
+                const portalRegex = new RegExp(`\\b(${item.portalNumber})\\b`, 'i');
+                if (portalRegex.test(label)) {
+                  label = label.replace(portalRegex, `$1 ${ext}`);
+                } else {
+                  label = `${label} ${ext}`;
+                }
+              }
+            } else if (ext && !new RegExp(`\\b${ext}\\b`, 'i').test(label)) {
+              label = `${label} ${ext}`;
+            }
+
+            // Calculate relevance score against search query
+            const fullText = normalize(
+              `${item.tip_via || ''} ${item.address || ''} ${label} ${item.muni || ''} ${item.poblacion || ''} ${item.province || ''}`
+            );
+            let score = 0;
+
+            for (const token of queryTokens) {
+              if (fullText.includes(token)) {
+                score += 50;
+              }
+            }
+
+            // Exact street sequence match (e.g. "arroyo bueno")
+            if (queryStreetPart && queryStreetPart.length >= 3 && fullText.includes(queryStreetPart)) {
+              score += 200;
+            }
+
+            // Portal number match
+            if (targetPortalNum !== undefined && item.portalNumber === targetPortalNum) {
+              score += 150;
+            }
+
+            // Portal letter / extension match
+            if (targetPortalExt !== undefined) {
+              if (ext === targetPortalExt) {
+                score += 500; // Exact portal letter match!
+              } else if (ext && ext !== targetPortalExt) {
+                score -= 100;
+              }
+            }
+
+            return {
+              label,
+              lat: typeof item.lat === 'number' && item.lat !== 0 ? item.lat : undefined,
+              lon: typeof item.lng === 'number' && item.lng !== 0 ? item.lng : undefined,
+              refcat: item.refCatastral || undefined,
+              portal: ext,
+              score,
+            };
+          });
+
+        const withCoords = valid.filter(
+          (v: any): v is { label: string; lat: number; lon: number; refcat?: string; portal?: string; score: number } =>
+            typeof v.lat === 'number' && typeof v.lon === 'number'
+        );
+
+        // Sort descending by relevance score
+        withCoords.sort((a, b) => b.score - a.score);
+
+        if (withCoords.length > 0) {
+          return withCoords.slice(0, 6).map(({ score, ...rest }) => rest);
+        }
+      }
+    } catch {
+      // CartoCiudad failed or network issue, fallback to Nominatim
+    }
+
+    // 2. Fallback to OpenStreetMap Nominatim
+    try {
+      const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(
+        spacedQuery
+      )}&countrycodes=es&format=json&limit=8&addressdetails=1`;
+      const res = await fetch(url);
+      if (!res.ok) return [];
+      const data = await res.json();
+      return (data || []).map((item: any) => ({
+        label: item.display_name,
+        lat: parseFloat(item.lat),
+        lon: parseFloat(item.lon),
+      })).slice(0, 6);
+    } catch {
+      return [];
+    }
+  }
 
     // Normalize potential portal number + letter with hyphens, slashes, or without spaces
     // e.g. "44-B" -> "44 B", "44/B" -> "44 B", "25b" -> "25 B", "14bis" -> "14 bis"

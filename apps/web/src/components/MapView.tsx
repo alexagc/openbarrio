@@ -1,4 +1,4 @@
-﻿import { useEffect, useRef, useState, useMemo } from 'react';
+import { useEffect, useRef, useState, useMemo } from 'react';
 import * as maplibregl from 'maplibre-gl';
 import type { Map as MapLibreMap, Marker, MapMouseEvent } from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
@@ -16,6 +16,7 @@ import {
   Waves,
   TrendingUp,
   Footprints,
+  Navigation,
 } from 'lucide-react';
 import { ExtendedAuditReport } from '../services/api.client';
 import { CartographicLegendsHud } from './CartographicLegendsHud';
@@ -31,6 +32,8 @@ export interface MapViewProps {
   onDismissError?: () => void;
   onViewReport?: () => void;
   onOpenUnitPicker?: () => void;
+  isMobileLayersOpen?: boolean;
+  onToggleMobileLayers?: (open?: boolean) => void;
 }
 
 export type BasemapType = 'dark-gis' | 'pnoa-satellite' | 'ign-base';
@@ -136,6 +139,8 @@ export function MapView({
   onDismissError,
   onViewReport,
   onOpenUnitPicker,
+  isMobileLayersOpen,
+  onToggleMobileLayers,
 }: MapViewProps) {
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<MapLibreMap | null>(null);
@@ -156,6 +161,33 @@ export function MapView({
   const [showIsochrones, setShowIsochrones] = useState<boolean>(true);
   const [is3DMode, setIs3DMode] = useState<boolean>(false);
   const [currentZoom, setCurrentZoom] = useState<number>(15);
+
+  // Mobile drawer / sheet state (Phase 11B)
+  const [internalMobileLayersOpen, setInternalMobileLayersOpen] = useState<boolean>(false);
+  const isLayersSheetOpen =
+    isMobileLayersOpen !== undefined ? isMobileLayersOpen : internalMobileLayersOpen;
+
+  const toggleMobileLayers = (open?: boolean) => {
+    const next = open !== undefined ? open : !isLayersSheetOpen;
+    setInternalMobileLayersOpen(next);
+    onToggleMobileLayers?.(next);
+  };
+
+  // Layer opacity states (for mobile sliders and interactive adjustments)
+  const [catastroOpacity, setCatastroOpacity] = useState<number>(0.95);
+  const [ineOpacity, setIneOpacity] = useState<number>(0.75);
+  const [noiseOpacity, setNoiseOpacity] = useState<number>(0.75);
+  const [floodOpacity, setFloodOpacity] = useState<number>(0.75);
+
+  // Mobile GPS Locate Me state
+  const [isLocating, setIsLocating] = useState<boolean>(false);
+
+  // Active thematic layers count for mobile FAB badge
+  const activeThematicLayersCount = useMemo(() => {
+    return [showCatastroWms, showIneIncome, showMitecoNoise, showSncziFlood, showIsochrones].filter(
+      Boolean
+    ).length;
+  }, [showCatastroWms, showIneIncome, showMitecoNoise, showSncziFlood, showIsochrones]);
 
   // Real-time spatial telemetry state
   const [mapCenter, setMapCenter] = useState<{ lat: number; lon: number }>({
@@ -557,6 +589,59 @@ export function MapView({
     setIs3DMode(false);
   };
 
+  // Dynamically synchronize opacity changes
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+    try {
+      if (typeof map.setPaintProperty === 'function') {
+        const getL =
+          typeof map.getLayer === 'function' ? (id: string) => Boolean(map.getLayer(id)) : () => true;
+        if (getL('catastro-layer')) {
+          map.setPaintProperty('catastro-layer', 'raster-opacity', catastroOpacity);
+        }
+        if (getL('ine-income-layer')) {
+          map.setPaintProperty('ine-income-layer', 'raster-opacity', ineOpacity);
+        }
+        if (getL('sica-layer')) {
+          map.setPaintProperty('sica-layer', 'raster-opacity', noiseOpacity);
+        }
+        if (getL('snczi-layer')) {
+          map.setPaintProperty('snczi-layer', 'raster-opacity', floodOpacity);
+        }
+      }
+    } catch {
+      // Gracefully ignore during style transitions
+    }
+  }, [catastroOpacity, ineOpacity, noiseOpacity, floodOpacity]);
+
+  // GPS Locate Me handler (Phase 11B)
+  const handleLocateMe = () => {
+    if (typeof navigator === 'undefined' || !navigator.geolocation) {
+      return;
+    }
+    setIsLocating(true);
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setIsLocating(false);
+        const lat = parseFloat(pos.coords.latitude.toFixed(6));
+        const lon = parseFloat(pos.coords.longitude.toFixed(6));
+        mapRef.current?.flyTo({
+          center: [lon, lat],
+          zoom: 16,
+          essential: true,
+          duration: 1000,
+        });
+        onMapClickRef.current(lat, lon);
+      },
+      (err) => {
+        setIsLocating(false);
+        console.warn('Geolocation error:', err.message);
+      },
+      { enableHighAccuracy: true, timeout: 8000, maximumAge: 30000 }
+    );
+  };
+
   // Update Marker & Target Parcel Flag when coordinates change
   useEffect(() => {
     const map = mapRef.current;
@@ -636,7 +721,7 @@ export function MapView({
             <span class="text-on-surface font-semibold">${yearBuilt}</span>
           </div>
         </div>
-                <div class="mt-2 pt-1.5 border-t border-outline-variant/40 flex items-center justify-between gap-1">
+        <div class="mt-2 pt-1.5 border-t border-outline-variant/40 flex items-center justify-between gap-1">
           <span class="text-[9px] text-secondary font-semibold">Inmuebles:</span>
           <button id="ob-popup-open-units" type="button" class="px-2 py-0.5 rounded bg-primary text-on-primary text-[9px] font-bold cursor-pointer hover:bg-primary-container">
             Ver unidades ▾
@@ -659,15 +744,15 @@ export function MapView({
 
     if (typeof (popup as any).on === 'function') {
       (popup as any).on('open', () => {
-      const btn = document.getElementById('ob-popup-open-units');
-      if (btn) {
-        btn.onclick = (e) => {
-          e.stopPropagation();
-          if (onOpenUnitPicker) {
-            onOpenUnitPicker();
-          }
-        };
-      }
+        const btn = document.getElementById('ob-popup-open-units');
+        if (btn) {
+          btn.onclick = (e) => {
+            e.stopPropagation();
+            if (onOpenUnitPicker) {
+              onOpenUnitPicker();
+            }
+          };
+        }
       });
     }
 
@@ -880,10 +965,23 @@ export function MapView({
       {/* MapLibre WebGL Canvas Container */}
       <div ref={mapContainerRef} className="absolute inset-0 w-full h-full" />
 
-      {/* ================= FLOATING HUD: LAYER SWITCHER WIDGET (Top-Left) ================= */}
+      {/* ================= MOBILE ETRS89 UTM HUD PILL (Top-Left) ================= */}
+      <div
+        className="block lg:hidden absolute top-3 left-3 z-20 no-print pointer-events-none"
+        data-testid="mobile-utm-hud"
+      >
+        <div className="bg-surface-container-low/95 backdrop-blur-sm border border-outline-variant px-3 py-1.5 rounded-full text-[10px] font-mono text-on-surface flex items-center gap-2 shadow-lg max-w-[calc(100vw-130px)] truncate">
+          <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse shrink-0" />
+          <span className="truncate">
+            {`UTM 30N: ${utmCoords.x}, ${utmCoords.y} · ${estimatedElevation}m s.n.m.`}
+          </span>
+        </div>
+      </div>
+
+      {/* ================= FLOATING HUD: LAYER SWITCHER WIDGET (Top-Left, Desktop) ================= */}
       <div
         onClick={(e) => e.stopPropagation()}
-        className="absolute top-3 left-3 z-20 bg-surface-container-low/95 backdrop-blur-md border border-outline-variant rounded p-2.5 shadow-2xl w-64 text-on-surface no-print"
+        className="hidden lg:block absolute top-3 left-3 z-20 bg-surface-container-low/95 backdrop-blur-md border border-outline-variant rounded p-2.5 shadow-2xl w-64 text-on-surface no-print"
       >
         {/* HUD Title Bar */}
         <div className="flex items-center justify-between border-b border-outline-variant/60 pb-1.5 mb-2">
@@ -1067,10 +1165,92 @@ export function MapView({
         )}
       </div>
 
-      {/* ================= FLOATING MAP CONTROLS: ZOOM & 3D (Top-Right) ================= */}
+      {/* ================= MOBILE TOUCH FAB TOOLBAR (Top-Right, >=44x44px) ================= */}
       <div
         onClick={(e) => e.stopPropagation()}
-        className="absolute top-3 right-3 z-20 flex flex-col gap-1.5 no-print"
+        className="flex lg:hidden absolute top-3 right-3 z-30 flex-col gap-2 items-end no-print"
+        data-testid="mobile-fab-toolbar"
+      >
+        {/* 1) Layers FAB with active counter badge */}
+        <button
+          type="button"
+          onClick={() => toggleMobileLayers()}
+          className="relative w-11 h-11 min-w-[44px] min-h-[44px] rounded-xl bg-surface-container-low/95 backdrop-blur-md border border-outline-variant text-on-surface flex items-center justify-center shadow-xl active:scale-95 transition-transform cursor-pointer"
+          aria-label="Abrir capas del mapa"
+          title="Capas del mapa"
+          data-testid="mobile-fab-layers"
+        >
+          <Layers className="w-5 h-5 text-primary" />
+          {activeThematicLayersCount > 0 && (
+            <span
+              className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-primary text-on-primary text-[10px] font-mono font-bold flex items-center justify-center border-2 border-surface-container-low shadow-sm"
+              data-testid="mobile-layers-badge"
+            >
+              {activeThematicLayersCount}
+            </span>
+          )}
+        </button>
+
+        {/* 2) Compass FAB with 'N' secondary text */}
+        <button
+          type="button"
+          onClick={handleResetNorth}
+          className="relative w-11 h-11 min-w-[44px] min-h-[44px] rounded-xl bg-surface-container-low/95 backdrop-blur-md border border-outline-variant text-secondary flex flex-col items-center justify-center shadow-xl active:scale-95 transition-transform cursor-pointer"
+          aria-label="Orientación Norte (0°)"
+          title="Orientación Norte (0°)"
+          data-testid="mobile-fab-compass"
+        >
+          <Compass className="w-4 h-4 text-secondary" />
+          <span className="text-[8px] font-bold text-secondary font-mono leading-none mt-0.5">N</span>
+        </button>
+
+        {/* 3) GPS Locate Me FAB */}
+        <button
+          type="button"
+          onClick={handleLocateMe}
+          disabled={isLocating}
+          className="w-11 h-11 min-w-[44px] min-h-[44px] rounded-xl bg-surface-container-low/95 backdrop-blur-md border border-outline-variant text-primary flex items-center justify-center shadow-xl active:scale-95 transition-transform cursor-pointer disabled:opacity-50"
+          aria-label="Mi ubicación"
+          title="Mi ubicación"
+          data-testid="mobile-fab-locate"
+        >
+          {isLocating ? (
+            <Loader2 className="w-5 h-5 animate-spin text-primary" />
+          ) : (
+            <Navigation className="w-5 h-5 text-primary" />
+          )}
+        </button>
+
+        {/* 4) Zoom Pair (+ / -) */}
+        <div className="bg-surface-container-low/95 backdrop-blur-md border border-outline-variant rounded-xl flex flex-col overflow-hidden shadow-xl">
+          <button
+            type="button"
+            onClick={handleZoomIn}
+            className="w-11 h-11 min-w-[44px] min-h-[44px] flex items-center justify-center text-on-surface hover:text-primary active:bg-surface-container transition-colors cursor-pointer"
+            aria-label="Acercar mapa"
+            title="Acercar (+)"
+            data-testid="mobile-fab-zoom-in"
+          >
+            <Plus className="w-5 h-5" />
+          </button>
+          <div className="h-px bg-outline-variant" />
+          <button
+            type="button"
+            onClick={handleZoomOut}
+            className="w-11 h-11 min-w-[44px] min-h-[44px] flex items-center justify-center text-on-surface hover:text-primary active:bg-surface-container transition-colors cursor-pointer"
+            aria-label="Alejar mapa"
+            title="Alejar (-)"
+            data-testid="mobile-fab-zoom-out"
+          >
+            <Minus className="w-5 h-5" />
+          </button>
+        </div>
+      </div>
+
+      {/* ================= FLOATING MAP CONTROLS: DESKTOP (Top-Right) ================= */}
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="hidden lg:flex absolute top-3 right-3 z-20 flex-col gap-1.5 no-print"
       >
         {/* Zoom Controls */}
         <div className="bg-surface-container-low/95 backdrop-blur-md border border-outline-variant rounded flex flex-col overflow-hidden shadow-xl">
@@ -1156,7 +1336,7 @@ export function MapView({
       {isLoading ? (
         <div
           onClick={(e) => e.stopPropagation()}
-          className="absolute bottom-12 sm:bottom-10 left-3 right-3 sm:left-auto sm:right-3 z-30 bg-surface-container/95 backdrop-blur-md px-4 py-3 rounded-lg shadow-2xl border border-outline-variant flex items-center space-x-3 text-xs text-on-surface animate-in fade-in"
+          className="absolute bottom-12 sm:bottom-10 left-3 right-3 sm:left-auto sm:right-3 z-30 bg-surface-container/95 backdrop-blur-md px-4 py-3 rounded-lg shadow-2xl border border-outline-variant hidden lg:flex items-center space-x-3 text-xs text-on-surface animate-in fade-in"
         >
           <Loader2 className="w-4 h-4 text-primary animate-spin shrink-0" />
           <div>
@@ -1167,7 +1347,7 @@ export function MapView({
       ) : report ? (
         <div
           onClick={(e) => e.stopPropagation()}
-          className="absolute bottom-12 sm:bottom-10 left-3 right-3 sm:left-auto sm:right-3 z-30 bg-surface-container/95 backdrop-blur-md p-3.5 rounded-lg shadow-2xl border border-outline-variant flex items-center justify-between gap-4 text-xs sm:max-w-md animate-in slide-in-from-bottom-2"
+          className="absolute bottom-12 sm:bottom-10 left-3 right-3 sm:left-auto sm:right-3 z-30 bg-surface-container/95 backdrop-blur-md p-3.5 rounded-lg shadow-2xl border border-outline-variant hidden lg:flex items-center justify-between gap-4 text-xs sm:max-w-md animate-in slide-in-from-bottom-2"
         >
           <div className="flex items-center space-x-3 min-w-0">
             <div
@@ -1233,6 +1413,289 @@ export function MapView({
               <X className="w-3.5 h-3.5" />
             </button>
           )}
+        </div>
+      )}
+
+      {/* ================= RESPONSIVE MOBILE LAYERS DRAWER / SHEET (Phase 11B) ================= */}
+      {isLayersSheetOpen && (
+        <div
+          className="block lg:hidden fixed inset-0 z-50 flex flex-col justify-end no-print"
+          data-testid="mobile-layers-drawer"
+        >
+          {/* Backdrop */}
+          <div
+            onClick={() => toggleMobileLayers(false)}
+            className="fixed inset-0 bg-black/60 backdrop-blur-xs transition-opacity"
+            aria-label="Cerrar panel de capas"
+            data-testid="mobile-layers-backdrop"
+          />
+
+          {/* Drawer Sheet Body */}
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="relative w-full max-h-[85vh] bg-surface-container-low border-t border-outline-variant rounded-t-2xl p-4 shadow-2xl flex flex-col overflow-hidden text-on-surface animate-in slide-in-from-bottom duration-200 z-10"
+          >
+            {/* Drag Handle */}
+            <div className="w-10 h-1 bg-outline-variant rounded-full mx-auto mb-3 shrink-0" />
+
+            {/* Header */}
+            <div className="flex items-center justify-between border-b border-outline-variant/60 pb-3 mb-3 shrink-0">
+              <div className="flex items-center gap-2">
+                <Layers className="w-5 h-5 text-primary" />
+                <div>
+                  <h3 className="text-sm font-bold font-headline text-on-surface">Capas Temáticas GIS</h3>
+                  <span className="text-[10px] font-mono text-outline">v4.2 ETRS89 · Proyección Oficial</span>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => toggleMobileLayers(false)}
+                className="w-11 h-11 min-w-[44px] min-h-[44px] rounded-xl flex items-center justify-center bg-surface-container hover:bg-surface-container-high text-on-surface-variant hover:text-on-surface transition-colors cursor-pointer"
+                aria-label="Cerrar capas"
+                title="Cerrar capas"
+                data-testid="mobile-layers-close"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="overflow-y-auto space-y-4 pb-4">
+              {/* Basemaps Selection */}
+              <div>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-outline font-mono block mb-2">
+                  Mapas Base
+                </span>
+                <div className="grid grid-cols-3 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setActiveBasemap('dark-gis')}
+                    className={`min-h-[44px] py-2 px-3 rounded-lg text-xs font-mono font-semibold transition border cursor-pointer flex items-center justify-center text-center ${
+                      activeBasemap === 'dark-gis'
+                        ? 'bg-primary text-on-primary border-primary shadow-sm'
+                        : 'bg-surface-container text-on-surface-variant border-outline-variant hover:text-on-surface'
+                    }`}
+                  >
+                    Dark GIS
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setActiveBasemap('pnoa-satellite')}
+                    className={`min-h-[44px] py-2 px-3 rounded-lg text-xs font-mono font-semibold transition border cursor-pointer flex items-center justify-center text-center ${
+                      activeBasemap === 'pnoa-satellite'
+                        ? 'bg-primary text-on-primary border-primary shadow-sm'
+                        : 'bg-surface-container text-on-surface-variant border-outline-variant hover:text-on-surface'
+                    }`}
+                  >
+                    Satélite
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setActiveBasemap('ign-base')}
+                    className={`min-h-[44px] py-2 px-3 rounded-lg text-xs font-mono font-semibold transition border cursor-pointer flex items-center justify-center text-center ${
+                      activeBasemap === 'ign-base'
+                        ? 'bg-primary text-on-primary border-primary shadow-sm'
+                        : 'bg-surface-container text-on-surface-variant border-outline-variant hover:text-on-surface'
+                    }`}
+                  >
+                    IGN Topográfico
+                  </button>
+                </div>
+              </div>
+
+              {/* Thematic Overlays */}
+              <div>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-outline font-mono block mb-2">
+                  Capas Temáticas Oficiales
+                </span>
+                <div className="space-y-2.5">
+                  {/* Layer 1: Catastro WMS */}
+                  <div className="p-3 rounded-xl bg-surface-container border border-secondary-container/40 space-y-2">
+                    <label className="flex items-center justify-between min-h-[44px] cursor-pointer">
+                      <div className="flex items-center gap-3">
+                        <input
+                          type="checkbox"
+                          checked={showCatastroWms}
+                          onChange={(e) => setShowCatastroWms(e.target.checked)}
+                          className="w-5 h-5 rounded bg-surface-container-lowest border-outline-variant text-secondary-container focus:ring-0 cursor-pointer"
+                        />
+                        <div>
+                          <span className="text-xs font-semibold text-on-surface block">Catastro WMS</span>
+                          <span className="text-[10px] text-outline font-mono">Dirección General del Catastro</span>
+                        </div>
+                      </div>
+                      <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-secondary-container/20 text-secondary border border-secondary-container/40">
+                        {showCatastroWms ? 'Activo' : 'Off'}
+                      </span>
+                    </label>
+                    {showCatastroWms && (
+                      <div className="pt-2 border-t border-outline-variant/40 flex items-center gap-3 text-xs">
+                        <span className="text-[10px] font-mono text-outline shrink-0">
+                          Opacidad: {Math.round(catastroOpacity * 100)}%
+                        </span>
+                        <input
+                          type="range"
+                          min="0.2"
+                          max="1.0"
+                          step="0.05"
+                          value={catastroOpacity}
+                          onChange={(e) => setCatastroOpacity(parseFloat(e.target.value))}
+                          className="w-full accent-primary h-2 bg-surface-container-high rounded cursor-pointer"
+                          aria-label="Opacidad Catastro WMS"
+                        />
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Layer 2: INE Income */}
+                  <div className="p-3 rounded-xl bg-surface-container border border-tertiary/40 space-y-2">
+                    <label className="flex items-center justify-between min-h-[44px] cursor-pointer">
+                      <div className="flex items-center gap-3">
+                        <input
+                          type="checkbox"
+                          checked={showIneIncome}
+                          onChange={(e) => setShowIneIncome(e.target.checked)}
+                          className="w-5 h-5 rounded bg-surface-container-lowest border-outline-variant text-tertiary focus:ring-0 cursor-pointer"
+                        />
+                        <div>
+                          <span className="text-xs font-semibold text-on-surface flex items-center gap-1.5">
+                            <TrendingUp className="w-3.5 h-3.5 text-tertiary" />
+                            Renta INE (ADRH)
+                          </span>
+                          <span className="text-[10px] text-outline font-mono">Atlas Distribución Renta Hogares</span>
+                        </div>
+                      </div>
+                      <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-tertiary-container/30 text-tertiary border border-tertiary/40">
+                        {showIneIncome ? 'ADRH 2024' : 'Off'}
+                      </span>
+                    </label>
+                    {showIneIncome && (
+                      <div className="pt-2 border-t border-outline-variant/40 flex items-center gap-3 text-xs">
+                        <span className="text-[10px] font-mono text-outline shrink-0">
+                          Opacidad: {Math.round(ineOpacity * 100)}%
+                        </span>
+                        <input
+                          type="range"
+                          min="0.2"
+                          max="1.0"
+                          step="0.05"
+                          value={ineOpacity}
+                          onChange={(e) => setIneOpacity(parseFloat(e.target.value))}
+                          className="w-full accent-tertiary h-2 bg-surface-container-high rounded cursor-pointer"
+                          aria-label="Opacidad Renta INE"
+                        />
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Layer 3: MITECO Ruido (SICA) */}
+                  <div className="p-3 rounded-xl bg-surface-container border border-outline-variant/60 space-y-2">
+                    <label className="flex items-center justify-between min-h-[44px] cursor-pointer">
+                      <div className="flex items-center gap-3">
+                        <input
+                          type="checkbox"
+                          checked={showMitecoNoise}
+                          onChange={(e) => setShowMitecoNoise(e.target.checked)}
+                          className="w-5 h-5 rounded bg-surface-container-lowest border-outline-variant text-primary focus:ring-0 cursor-pointer"
+                        />
+                        <div>
+                          <span className="text-xs font-semibold text-on-surface flex items-center gap-1.5">
+                            <Volume2 className="w-3.5 h-3.5 text-primary" />
+                            Ruido SICA (MITECO)
+                          </span>
+                          <span className="text-[10px] text-outline font-mono">Mapa Estratégico de Ruido Lden</span>
+                        </div>
+                      </div>
+                      <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-surface-variant text-outline">
+                        {showMitecoNoise ? 'SICA Lden' : 'Inactivo'}
+                      </span>
+                    </label>
+                    {showMitecoNoise && (
+                      <div className="pt-2 border-t border-outline-variant/40 flex items-center gap-3 text-xs">
+                        <span className="text-[10px] font-mono text-outline shrink-0">
+                          Opacidad: {Math.round(noiseOpacity * 100)}%
+                        </span>
+                        <input
+                          type="range"
+                          min="0.2"
+                          max="1.0"
+                          step="0.05"
+                          value={noiseOpacity}
+                          onChange={(e) => setNoiseOpacity(parseFloat(e.target.value))}
+                          className="w-full accent-primary h-2 bg-surface-container-high rounded cursor-pointer"
+                          aria-label="Opacidad Ruido SICA"
+                        />
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Layer 4: SNCZI Inundabilidad */}
+                  <div className="p-3 rounded-xl bg-surface-container border border-outline-variant/60 space-y-2">
+                    <label className="flex items-center justify-between min-h-[44px] cursor-pointer">
+                      <div className="flex items-center gap-3">
+                        <input
+                          type="checkbox"
+                          checked={showSncziFlood}
+                          onChange={(e) => setShowSncziFlood(e.target.checked)}
+                          className="w-5 h-5 rounded bg-surface-container-lowest border-outline-variant text-blue-400 focus:ring-0 cursor-pointer"
+                        />
+                        <div>
+                          <span className="text-xs font-semibold text-on-surface flex items-center gap-1.5">
+                            <Waves className="w-3.5 h-3.5 text-blue-400" />
+                            Inundabilidad SNCZI
+                          </span>
+                          <span className="text-[10px] text-outline font-mono">SNCZI Zonas Inundables T=10..500a</span>
+                        </div>
+                      </div>
+                      <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-surface-variant text-outline">
+                        {showSncziFlood ? 'T=10..500a' : 'Inactivo'}
+                      </span>
+                    </label>
+                    {showSncziFlood && (
+                      <div className="pt-2 border-t border-outline-variant/40 flex items-center gap-3 text-xs">
+                        <span className="text-[10px] font-mono text-outline shrink-0">
+                          Opacidad: {Math.round(floodOpacity * 100)}%
+                        </span>
+                        <input
+                          type="range"
+                          min="0.2"
+                          max="1.0"
+                          step="0.05"
+                          value={floodOpacity}
+                          onChange={(e) => setFloodOpacity(parseFloat(e.target.value))}
+                          className="w-full accent-blue-400 h-2 bg-surface-container-high rounded cursor-pointer"
+                          aria-label="Opacidad Inundabilidad SNCZI"
+                        />
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Layer 5: 15-Minute Walking Catchment */}
+                  <div className="p-3 rounded-xl bg-surface-container border border-primary/30 space-y-2">
+                    <label className="flex items-center justify-between min-h-[44px] cursor-pointer">
+                      <div className="flex items-center gap-3">
+                        <input
+                          type="checkbox"
+                          checked={showIsochrones}
+                          onChange={(e) => setShowIsochrones(e.target.checked)}
+                          className="w-5 h-5 rounded bg-surface-container-lowest border-outline-variant text-primary focus:ring-0 cursor-pointer"
+                        />
+                        <div>
+                          <span className="text-xs font-semibold text-on-surface flex items-center gap-1.5">
+                            <Footprints className="w-3.5 h-3.5 text-primary" />
+                            Isócronas 15-min
+                          </span>
+                          <span className="text-[10px] text-outline font-mono">Radios caminables 5, 10 y 15 min</span>
+                        </div>
+                      </div>
+                      <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-primary-container/20 text-primary border border-primary/30">
+                        {showIsochrones ? '5/10/15m' : 'Inactivo'}
+                      </span>
+                    </label>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </div>

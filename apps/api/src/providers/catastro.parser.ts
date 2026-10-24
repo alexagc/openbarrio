@@ -98,7 +98,10 @@ export function isMultiUnitParcelXml(xml: string): boolean {
   return /<lrcdnp\b/i.test(xml) && !/<bico\b/i.test(xml);
 }
 
-export function parseMultiUnitParcelSummary(xml: string): {
+export function parseMultiUnitParcelSummary(
+  xml: string,
+  preferredPortal?: string
+): {
   totalUnits: number;
   primaryUnitRef?: string;
   hasCommercialUnit: boolean;
@@ -108,13 +111,40 @@ export function parseMultiUnitParcelSummary(xml: string): {
   const totalUnits = cudnpStr ? parseInt(cudnpStr, 10) : (rcdnpList.length || 1);
 
   let primaryUnitRef: string | undefined;
-  if (rcdnpList.length > 0) {
-    const firstRcdnp = rcdnpList[0];
-    const pc1 = extractTag(firstRcdnp, 'pc1');
-    const pc2 = extractTag(firstRcdnp, 'pc2');
-    const car = extractTag(firstRcdnp, 'car');
-    const cc1 = extractTag(firstRcdnp, 'cc1');
-    const cc2 = extractTag(firstRcdnp, 'cc2');
+  let targetRcdnp: string | undefined;
+
+  if (preferredPortal && rcdnpList.length > 0) {
+    const cleanPortal = preferredPortal.trim().toUpperCase();
+    const portalMatches = rcdnpList.filter((rcdnp) => {
+      const plp = (extractTag(rcdnp, 'plp') || '').toUpperCase();
+      const bl = (extractTag(rcdnp, 'bl') || '').toUpperCase();
+      const es = (extractTag(rcdnp, 'es') || '').toUpperCase();
+      return plp === cleanPortal || bl === cleanPortal || es === cleanPortal;
+    });
+
+    if (portalMatches.length > 0) {
+      // Prefer a residential unit in that portal over storage/parking
+      const residential = portalMatches.find((rcdnp) =>
+        /residencial|vivienda/i.test(extractTag(rcdnp, 'luso') || '')
+      );
+      targetRcdnp = residential || portalMatches[0];
+    }
+  }
+
+  if (!targetRcdnp && rcdnpList.length > 0) {
+    // Prefer residential unit over parking/storage
+    const residential = rcdnpList.find((rcdnp) =>
+      /residencial|vivienda/i.test(extractTag(rcdnp, 'luso') || '')
+    );
+    targetRcdnp = residential || rcdnpList[0];
+  }
+
+  if (targetRcdnp) {
+    const pc1 = extractTag(targetRcdnp, 'pc1');
+    const pc2 = extractTag(targetRcdnp, 'pc2');
+    const car = extractTag(targetRcdnp, 'car');
+    const cc1 = extractTag(targetRcdnp, 'cc1');
+    const cc2 = extractTag(targetRcdnp, 'cc2');
     if (pc1 && pc2 && car && cc1 && cc2) {
       primaryUnitRef = `${pc1}${pc2}${car}${cc1}${cc2}`;
     }
@@ -161,7 +191,8 @@ export function parseCadastralUnitsXml(
     let floor = extractTag(loint, 'pt') || extractTag(rcdnp, 'pt');
     let door = extractTag(loint, 'pu') || extractTag(rcdnp, 'pu');
     const staircase = extractTag(loint, 'es') || extractTag(rcdnp, 'es') || undefined;
-    const block = extractTag(loint, 'bl') || extractTag(rcdnp, 'bl') || undefined;
+    const plp = extractTag(rcdnp, 'plp') || '';
+    const block = plp || extractTag(loint, 'bl') || extractTag(rcdnp, 'bl') || undefined;
 
     // Fallback parsing from descriptive text <ldt>
     const ldt = extractTag(rcdnp, 'ldt') || '';
