@@ -79,7 +79,7 @@ describe('cryptoSeal utility', () => {
         distanceMeters: 50,
         walkTimeMinutes: 1,
       },
-      nearestGreenSpace: {
+      nearestPark: {
         id: 'park-espana',
         name: 'Plaza de España',
         type: 'park',
