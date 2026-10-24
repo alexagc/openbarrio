@@ -116,12 +116,13 @@ describe('UnitPickerModal Component', () => {
       />
     );
 
-    // Click on Unit 1 card
-    const unit1Card = screen.getByText('Planta 01 · Puerta A').closest('div[role="button"]') || screen.getByText('Planta 01 · Puerta A');
+    // Click on Unit 1 card button
+    const unit1Text = screen.getByText('Planta 01 · Puerta A');
+    const unit1Card = unit1Text.closest('button') || unit1Text;
     fireEvent.click(unit1Card);
 
     // Click confirm button
-    const confirmButton = screen.getByRole('button', { name: /Auditar Inmueble Seleccionado/i });
+    const confirmButton = screen.getByRole('button', { name: /Auditar Inmueble/i });
     fireEvent.click(confirmButton);
 
     expect(handleSelectUnit).toHaveBeenCalledTimes(1);
