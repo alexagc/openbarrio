@@ -1183,6 +1183,7 @@ export function MapView({
             <div className="min-w-0">
               <p className="font-bold text-on-surface font-headline text-sm truncate">
                 {report.property.address.street} {report.property.address.number}
+                {report.property.unit ? ` (Pta. ${report.property.unit.floor}-${report.property.unit.door})` : ''}
               </p>
               <p className="text-[11px] text-on-surface-variant font-mono truncate">
                 {report.property.address.municipality} · RC {report.property.cadastralReference.slice(0, 14)}
