@@ -101,6 +101,7 @@ const TranslationConsumer = () => {
 describe('Landing Page & i18n Integration', () => {
   beforeEach(() => {
     localStorage.clear();
+    window.history.replaceState({}, '', '/');
   });
 
   describe('LanguageProvider & useTranslation Hook', () => {

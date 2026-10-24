@@ -30,8 +30,7 @@ export function parseUrlState(): UrlParamsState {
   }
 
   const isMapPath = path.startsWith('/map');
-  const hasParams = Boolean(refcatParam || coords);
-  const viewMode: 'landing' | 'map' = isMapPath || hasParams ? 'map' : 'landing';
+  const viewMode: 'landing' | 'map' = isMapPath || Boolean(refcatParam) ? 'map' : 'landing';
   const activeTab: 'dossier' | 'map' = tabParam === 'map' ? 'map' : 'dossier';
 
   return {
@@ -52,6 +51,18 @@ export function useUrlSync(
   const syncToUrl = useCallback(
     (newState: UrlParamsState, replace = false) => {
       if (typeof window === 'undefined') return;
+
+      if (newState.viewMode === 'landing') {
+        const currentPathAndSearch = window.location.pathname + window.location.search;
+        if (currentPathAndSearch !== '/') {
+          if (replace) {
+            window.history.replaceState({ openbarrio: true }, '', '/');
+          } else {
+            window.history.pushState({ openbarrio: true }, '', '/');
+          }
+        }
+        return;
+      }
 
       const params = new URLSearchParams();
 

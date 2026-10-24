@@ -91,7 +91,7 @@ export function AppContent() {
       viewMode,
       activeTab,
       refcat: report?.property.cadastralReference,
-      coords: selectedCoords,
+      coords: report ? selectedCoords : undefined,
     },
     (newState) => {
       setViewMode(newState.viewMode);
