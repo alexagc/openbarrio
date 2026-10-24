@@ -298,6 +298,7 @@ export function CadastralBottomSheet({
     >
       {/* 1. Drawer Drag Handle & Peek Header Area */}
       <div
+        data-testid="bottom-sheet-drag-area"
         className="px-space-md pt-2.5 pb-2 border-b border-outline-variant/40 shrink-0 bg-surface-container select-none cursor-grab active:cursor-grabbing"
         style={{ touchAction: 'none' }}
         onPointerDown={handlePointerDown}

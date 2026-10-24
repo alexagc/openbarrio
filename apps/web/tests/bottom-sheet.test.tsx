@@ -204,7 +204,8 @@ describe('CadastralBottomSheet Component (Phase 11C)', () => {
     );
     expect(screen.getByText('Índice SERPAVI · Ley 12/2023')).toBeDefined();
     expect(screen.getByText('Zona Tensionada')).toBeDefined();
-    expect(screen.getByText(/920€ - 1\.140€/)).toBeDefined();
+    expect(screen.getByText(/Rango Estatal Regulado/i)).toBeDefined();
+    expect(screen.getByText(/Oferta Testigo Mercado/i)).toBeDefined();
     expect(screen.getByText(/División Horizontal \(24 Fincas\)/)).toBeDefined();
     expect(screen.getByText('Exportar Dossier PDF Oficial')).toBeDefined();
     expect(screen.getByText(/Certificado Sede Electrónica Catastro OVC/)).toBeDefined();
@@ -277,7 +278,7 @@ describe('CadastralBottomSheet Component (Phase 11C)', () => {
 
   it('triggers snap change on pointer down/move/up drag gestures', () => {
     const onSnapChange = vi.fn();
-    const { container } = render(
+    render(
       <CadastralBottomSheet
         report={mockReport}
         snapPoint="peek"
@@ -285,19 +286,19 @@ describe('CadastralBottomSheet Component (Phase 11C)', () => {
       />
     );
 
-    const header = container.querySelector('[style*="touch-action: none"]');
+    const header = screen.getByTestId('bottom-sheet-drag-area');
     expect(header).toBeDefined();
 
     // 1. Dragging up from peek (clientY 200 -> 150 = delta -50)
-    fireEvent.pointerDown(header!, { clientY: 200, pointerId: 1, button: 0 });
-    fireEvent.pointerMove(header!, { clientY: 150, pointerId: 1 });
-    fireEvent.pointerUp(header!, { clientY: 150, pointerId: 1 });
+    fireEvent.pointerDown(header, { clientY: 200, pointerId: 1, button: 0 });
+    fireEvent.pointerMove(header, { clientY: 150, pointerId: 1 });
+    fireEvent.pointerUp(header, { clientY: 150, pointerId: 1 });
     expect(onSnapChange).toHaveBeenCalledWith('half');
 
     // 2. Strong drag up from peek (clientY 200 -> 50 = delta -150)
     onSnapChange.mockClear();
-    fireEvent.pointerDown(header!, { clientY: 200, pointerId: 1, button: 0 });
-    fireEvent.pointerUp(header!, { clientY: 50, pointerId: 1 });
+    fireEvent.pointerDown(header, { clientY: 200, pointerId: 1, button: 0 });
+    fireEvent.pointerUp(header, { clientY: 50, pointerId: 1 });
     expect(onSnapChange).toHaveBeenCalledWith('full');
   });
 
