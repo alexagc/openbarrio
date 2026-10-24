@@ -1,4 +1,4 @@
-﻿import { useEffect, useRef, useState, useMemo } from 'react';
+import { useEffect, useRef, useState, useMemo } from 'react';
 import * as maplibregl from 'maplibre-gl';
 import type { Map as MapLibreMap, Marker, MapMouseEvent } from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
@@ -584,17 +584,24 @@ export function MapView({
     const isMatchingReport =
       Boolean(report) &&
       !isLoading &&
-      Math.abs((report?.property.coordinates.latitude ?? 0) - lat) < 0.02 &&
-      Math.abs((report?.property.coordinates.longitude ?? 0) - lon) < 0.02;
+      Math.abs((report?.property.coordinates.latitude ?? 0) - lat) < 0.05 &&
+      Math.abs((report?.property.coordinates.longitude ?? 0) - lon) < 0.05;
 
+    const unitSuffix = isMatchingReport && report?.property.unit
+      ? ` (Planta ${report.property.unit.floor} · Puerta ${report.property.unit.door})`
+      : '';
     const safeTitle = escapeHtml(
-      isMatchingReport && propertyName ? propertyName : `Punto seleccionado (${lat.toFixed(5)}, ${lon.toFixed(5)})`
+      isMatchingReport && propertyName ? `${propertyName}${unitSuffix}` : `Punto seleccionado (${lat.toFixed(5)}, ${lon.toFixed(5)})`
     );
     const safeAddress = escapeHtml(
       isMatchingReport && propertyAddress ? propertyAddress : 'Consultando Sede del Catastro & INE...'
     );
     const refcat = isMatchingReport ? report!.property.cadastralReference : 'Consultando Catastro...';
-    const surfaceM2 = isMatchingReport ? `${report!.property.building.builtSurfaceM2.toLocaleString('es-ES')} m²` : 'Calculando...';
+    const surfaceM2 = isMatchingReport
+      ? report!.property.unit
+        ? `${report!.property.unit.builtSurfaceM2.toLocaleString('es-ES')} m² (privativos)`
+        : `${report!.property.building.builtSurfaceM2.toLocaleString('es-ES')} m²`
+      : 'Calculando...';
     const yearBuilt = isMatchingReport
       ? report!.property.building.constructionYear > 0
         ? `Año ${report!.property.building.constructionYear}`
