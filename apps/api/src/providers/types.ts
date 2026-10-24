@@ -1,5 +1,6 @@
-import {
+﻿import {
   CadastralProperty,
+  CadastralCoordinates,
   CadastralUnitsResponse,
   CensusTractIncome,
   EnvironmentalData,
