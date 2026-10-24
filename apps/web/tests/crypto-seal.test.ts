@@ -104,7 +104,6 @@ describe('cryptoSeal utility', () => {
       keyHighlights: ['Excelente conectividad'],
       keyRisks: [],
     },
-    version: '0.4.0',
   };
 
   it('computes a 64-character SHA-256 hexadecimal hash string', async () => {
