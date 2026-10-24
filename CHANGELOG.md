@@ -33,6 +33,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `tablet-workspace.test.tsx`: Verifying 52/48 split workspace layout, navigation synchronization, and dynamic 100dvh viewport.
   - `mapview.test.tsx`: Verifying touch FAB toolbar, ETRS89 UTM HUD pill, GPS geolocation pan, compass reset, and mobile layer drawer.
 
+### Fixed
+- **Multi-Portal Disambiguation & 20-Digit Dwelling Unit Precision (`apps/api` & `apps/web`)**:
+  - Added `preferredPortal` (`plp` query param) parsing to disambiguate complex multi-portal parcels sharing identical street numbers (e.g. Arroyo Bueno 2F vs 2I).
+  - Extracted portal letter (`<plp>`) into `block` in `parseCadastralUnitsXml`.
+  - Prioritized residential units over storage and parking when extracting parcel primary unit summary.
+  - Fixed coordinate resolution when auditing individual 20-digit dwelling units, preventing fallback drift.
+
 ---
 
 ## [0.2.9] - 2026-10-19
