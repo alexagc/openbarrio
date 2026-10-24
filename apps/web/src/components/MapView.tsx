@@ -29,6 +29,7 @@ import {
   SeasonPreset,
   getMapLightConfig,
   generate3dBuildingFootprints,
+  calculateBuildingShadowPolygon,
 } from '../utils/solar';
 
 export interface MapViewProps {
@@ -192,6 +193,10 @@ export function MapView({
     timeMinutes: 870,
   });
 
+  // 3D building active geometry reference for dynamic shadow casting
+  const currentBuildingCoordsRef = useRef<number[][][] | null>(null);
+  const currentBuildingHeightRef = useRef<number>(44.8);
+
   const handleSolarChange = useCallback(
     (solar: {
       azimuth: number;
@@ -212,6 +217,23 @@ export function MapView({
             intensity: lightCfg.intensity,
             position: [1.5, solar.azimuth, Math.max(0, 90 - solar.altitude)],
           });
+        }
+
+        // Project real ground-plane shadow polygon from building footprint and sun vector
+        const shadowSource = map.getSource('building-3d-shadows-source');
+        if (
+          shadowSource &&
+          typeof (shadowSource as any).setData === 'function' &&
+          currentBuildingCoordsRef.current
+        ) {
+          (shadowSource as any).setData(
+            calculateBuildingShadowPolygon(
+              currentBuildingCoordsRef.current,
+              currentBuildingHeightRef.current,
+              solar.azimuth,
+              solar.altitude
+            )
+          );
         }
       } catch {
         // Ignore during style transitions
@@ -361,6 +383,14 @@ export function MapView({
             type: 'geojson',
             data: generate3dBuildingFootprints(initialLat, initialLon),
           },
+          // 3D Projected Ground Shadows Source
+          'building-3d-shadows-source': {
+            type: 'geojson',
+            data: {
+              type: 'FeatureCollection',
+              features: [],
+            },
+          },
         },
         layers: [
           // 1. Dark GIS Basemap (Active by default)
@@ -508,7 +538,20 @@ export function MapView({
             },
             layout: { visibility: 'visible' },
           },
-          // 9. 3D Building Volumetric Extrusion Layer (LoD2 & Target Highlight)
+          // 9. Projected Ground Shadows Layer (Cast below 3D Extrusion)
+          {
+            id: 'building-3d-ground-shadows',
+            type: 'fill',
+            source: 'building-3d-shadows-source',
+            minzoom: 12,
+            maxzoom: 22,
+            layout: { visibility: 'none' },
+            paint: {
+              'fill-color': '#030712',
+              'fill-opacity': 0.55,
+            },
+          },
+          // 10. 3D Building Volumetric Extrusion Layer (LoD2 & Target Highlight)
           {
             id: 'building-3d-extrusion',
             type: 'fill-extrusion',
@@ -688,6 +731,10 @@ export function MapView({
         if (hasExtrusion && typeof map.setLayoutProperty === 'function') {
           map.setLayoutProperty('building-3d-extrusion', 'visibility', is3DMode ? 'visible' : 'none');
         }
+        const hasShadows = typeof map.getLayer === 'function' ? Boolean(map.getLayer('building-3d-ground-shadows')) : true;
+        if (hasShadows && typeof map.setLayoutProperty === 'function') {
+          map.setLayoutProperty('building-3d-ground-shadows', 'visibility', is3DMode ? 'visible' : 'none');
+        }
       } catch {
         // Ignore during style transitions
       }
@@ -745,19 +792,42 @@ export function MapView({
     const name = propertyName || 'Edificio en Auditoría';
 
     const updateExtrusion = (customPolygon?: number[][][], overrideFloors?: number, overrideHeight?: number) => {
+      const effFloors = overrideFloors ?? floors;
+      const effHeight = overrideHeight ?? height;
+      currentBuildingHeightRef.current = effHeight;
+
       try {
         const source = map.getSource('building-3d-source');
         if (source && typeof (source as any).setData === 'function') {
-          (source as any).setData(
-            generate3dBuildingFootprints(
-              lat,
-              lon,
-              overrideFloors ?? floors,
-              overrideHeight ?? height,
-              name,
-              customPolygon
-            )
+          const footprints = generate3dBuildingFootprints(
+            lat,
+            lon,
+            effFloors,
+            effHeight,
+            name,
+            customPolygon
           );
+          (source as any).setData(footprints);
+          currentBuildingCoordsRef.current =
+            customPolygon || footprints.features[0].geometry.coordinates;
+
+          // Immediately cast initial shadow
+          const shadowSource = map.getSource('building-3d-shadows-source');
+          if (
+            shadowSource &&
+            typeof (shadowSource as any).setData === 'function' &&
+            currentBuildingCoordsRef.current
+          ) {
+            const solar = currentSolarRef.current;
+            (shadowSource as any).setData(
+              calculateBuildingShadowPolygon(
+                currentBuildingCoordsRef.current,
+                effHeight,
+                solar.azimuth,
+                solar.altitude
+              )
+            );
+          }
         }
       } catch {
         // Ignore during initialization
@@ -1558,33 +1628,6 @@ export function MapView({
 
         {/* Desktop Vertical Tool Palette */}
         <div className="flex items-center gap-1.5 bg-surface-container-low/95 backdrop-blur-md border border-outline-variant p-1 rounded-lg shadow-xl">
-          {/* Mode Switcher Buttons */}
-          <div className="flex items-center bg-surface-container p-0.5 rounded border border-outline-variant/60 mr-1">
-            <button
-              type="button"
-              onClick={() => toggle3DMode(false)}
-              className={`px-2.5 py-1 text-xs font-mono font-medium rounded transition cursor-pointer ${
-                !is3DMode
-                  ? 'bg-surface-container-high text-on-surface border border-outline-variant font-bold'
-                  : 'text-on-surface-variant hover:text-on-surface'
-              }`}
-            >
-              2D
-            </button>
-            <button
-              type="button"
-              onClick={() => toggle3DMode(true)}
-              className={`px-2.5 py-1 text-xs font-mono font-medium rounded transition flex items-center gap-1 cursor-pointer ${
-                is3DMode
-                  ? 'bg-primary text-on-primary font-bold shadow-xs'
-                  : 'text-on-surface-variant hover:text-on-surface'
-              }`}
-            >
-              <Box className="w-3 h-3" />
-              <span>3D Extrusión</span>
-            </button>
-          </div>
-
           {/* Zoom In / Out Pair */}
           <button
             type="button"
@@ -1611,20 +1654,6 @@ export function MapView({
             title="Orientación Norte (0°)"
           >
             <Compass className="w-3.5 h-3.5" />
-          </button>
-
-          {/* 3D Axonometric Tilt Button */}
-          <button
-            type="button"
-            onClick={() => toggle3DMode()}
-            className={`w-7 h-7 rounded flex items-center justify-center text-[10px] font-mono font-bold transition-colors cursor-pointer ${
-              is3DMode
-                ? 'border-primary text-primary bg-primary/10 shadow-primary/20'
-                : 'border-outline-variant text-on-surface-variant hover:text-primary'
-            }`}
-            title="Alternar Perspectiva 3D / Axonometría"
-          >
-            3D
           </button>
 
           {/* Reset to Spain View */}

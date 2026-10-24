@@ -340,3 +340,77 @@ export function generate3dBuildingFootprints(
     features: [targetFeature],
   };
 }
+
+/**
+ * Calculates a dynamic projected ground-shadow polygon GeoJSON based on
+ * the building height, solar azimuth, and solar elevation angle.
+ */
+export function calculateBuildingShadowPolygon(
+  buildingPolygon: number[][][],
+  heightMeters: number,
+  solarAzimuthDeg: number,
+  solarAltitudeDeg: number
+) {
+  // If the sun is below the horizon (night/twilight), no projected shadow
+  if (solarAltitudeDeg <= 0 || !buildingPolygon || !buildingPolygon[0] || buildingPolygon[0].length < 3) {
+    return {
+      type: 'FeatureCollection' as const,
+      features: [],
+    };
+  }
+
+  // Shadow length: L = H / tan(altitude)
+  // Clamp altitude to minimum 4° to avoid infinite shadows at horizon
+  const effectiveAlt = Math.max(4, Math.min(88, solarAltitudeDeg));
+  const altRad = (effectiveAlt * Math.PI) / 180;
+  const shadowLengthMeters = Math.min(180, heightMeters / Math.tan(altRad));
+
+  // The shadow is cast in the direction opposite to the sun (azimuth + 180°)
+  const shadowBearingDeg = (solarAzimuthDeg + 180) % 360;
+  const bearingRad = (shadowBearingDeg * Math.PI) / 180;
+
+  // Approximate coordinate deltas in WGS84
+  const dKm = shadowLengthMeters / 1000;
+  const dLat = (dKm / 110.574) * Math.cos(bearingRad);
+
+  const baseRing = buildingPolygon[0];
+  const refLat = baseRing[0][1];
+  const dLon = (dKm / (111.32 * Math.cos((refLat * Math.PI) / 180))) * Math.sin(bearingRad);
+
+  // Offset polygon projecting the building roof footprint onto the ground
+  const projectedRoofRing = baseRing.map(([lon, lat]) => [
+    Number((lon + dLon).toFixed(6)),
+    Number((lat + dLat).toFixed(6)),
+  ]);
+
+  // Combine base and projected points into a convex bounding hull or union polygon
+  // For realistic visual effect: base ring + shifted ring + closing segments
+  const shadowPolyCoords: number[][] = [];
+  for (let i = 0; i < baseRing.length; i++) {
+    shadowPolyCoords.push(baseRing[i]);
+  }
+  for (let i = projectedRoofRing.length - 1; i >= 0; i--) {
+    shadowPolyCoords.push(projectedRoofRing[i]);
+  }
+  // Ensure closed ring
+  if (shadowPolyCoords.length > 0) {
+    shadowPolyCoords.push(shadowPolyCoords[0]);
+  }
+
+  return {
+    type: 'FeatureCollection' as const,
+    features: [
+      {
+        type: 'Feature' as const,
+        properties: {
+          id: 'building-shadow',
+          lengthMeters: Math.round(shadowLengthMeters),
+        },
+        geometry: {
+          type: 'Polygon' as const,
+          coordinates: [shadowPolyCoords],
+        },
+      },
+    ],
+  };
+}

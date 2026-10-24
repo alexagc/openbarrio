@@ -127,7 +127,7 @@ describe('MapView Component (Stitch Civic Precision)', () => {
         />
       );
 
-      const btn3D = screen.getByTitle(/Alternar Perspectiva 3D/i);
+      const btn3D = screen.getByTitle(/3D Extrusión/i);
       expect(btn3D).toBeTruthy();
       fireEvent.click(btn3D);
     });
@@ -401,7 +401,7 @@ describe('MapView Component (Stitch Civic Precision)', () => {
       expect(screen.getByText('VISTA 2D CENITAL')).toBeTruthy();
 
       // Verify Mode Switcher
-      expect(screen.getByText('3D Extrusión')).toBeTruthy();
+      expect(screen.getByTitle('3D Extrusión')).toBeTruthy();
     });
 
     it('should toggle 3D mode, update camera pitch to 55 and bearing to -15, and open Solar HUD', async () => {
@@ -413,7 +413,7 @@ describe('MapView Component (Stitch Civic Precision)', () => {
         />
       );
 
-      const btn3D = screen.getByText('3D Extrusión');
+      const btn3D = screen.getByTitle('3D Extrusión');
       fireEvent.click(btn3D);
 
       const mapConstructor = maplibreMock.Map as unknown as ReturnType<typeof vi.fn>;
@@ -439,7 +439,7 @@ describe('MapView Component (Stitch Civic Precision)', () => {
       );
 
       // Enable 3D mode
-      const btn3D = screen.getByText('3D Extrusión');
+      const btn3D = screen.getByTitle('3D Extrusión');
       fireEvent.click(btn3D);
 
       expect(screen.getByTestId('solar-simulation-hud')).toBeTruthy();
