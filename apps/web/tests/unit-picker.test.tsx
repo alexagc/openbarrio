@@ -74,8 +74,8 @@ describe('UnitPickerModal Component', () => {
       />
     );
 
-    const searchInput = screen.getByPlaceholderText(/Buscar por planta, puerta o referencia/i);
-    fireEvent.change(searchInput, { target: { value: 'Puerta B' } });
+    const searchInput = screen.getByPlaceholderText(/Buscar planta, puerta/i);
+    fireEvent.change(searchInput, { target: { value: '02' } });
 
     expect(screen.getByText('Planta 02 · Puerta B')).toBeDefined();
     expect(screen.queryByText('Planta 01 · Puerta A')).toBeNull();
@@ -94,7 +94,7 @@ describe('UnitPickerModal Component', () => {
       />
     );
 
-    const comercialFilterBtn = screen.getByRole('button', { name: /Comercial/i });
+    const comercialFilterBtn = screen.getByRole('button', { name: /Locales/i });
     fireEvent.click(comercialFilterBtn);
 
     expect(screen.getByText('Planta 00 · Puerta 01')).toBeDefined();
