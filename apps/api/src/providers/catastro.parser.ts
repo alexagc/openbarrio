@@ -1,4 +1,9 @@
-import { CadastralProperty } from '@openbarrio/core';
+import {
+  CadastralProperty,
+  CadastralCoordinates,
+  CadastralUnitsResponse,
+  CadastralUnit,
+} from '@openbarrio/core';
 import { CadastralNotFoundError } from '../errors/problem-details.js';
 
 function extractTag(xml: string, tag: string): string | null {
@@ -124,6 +129,130 @@ export function parseMultiUnitParcelSummary(xml: string): {
   };
 }
 
+export function parseCadastralUnitsXml(
+  xml: string,
+  requestedRefcat?: string
+): CadastralUnitsResponse {
+  const errDes = extractTag(xml, 'des');
+  if (errDes && !/<lrcdnp\b/i.test(xml) && !/<rcdnp\b/i.test(xml) && !/<bico\b/i.test(xml)) {
+    throw new CadastralNotFoundError(errDes);
+  }
+
+  const rcdnpList = extractAllTags(xml, 'rcdnp');
+  const cudnpStr = extractTag(xml, 'cudnp');
+  let parcelCadastralReference = requestedRefcat ? requestedRefcat.slice(0, 14) : '';
+
+  const units: CadastralUnit[] = [];
+
+  for (const rcdnp of rcdnpList) {
+    const pc1 = extractTag(rcdnp, 'pc1') || '';
+    const pc2 = extractTag(rcdnp, 'pc2') || '';
+    const car = extractTag(rcdnp, 'car') || '';
+    const cc1 = extractTag(rcdnp, 'cc1') || '';
+    const cc2 = extractTag(rcdnp, 'cc2') || '';
+
+    const unitRef = `${pc1}${pc2}${car}${cc1}${cc2}`;
+    if (!parcelCadastralReference && pc1 && pc2) {
+      parcelCadastralReference = `${pc1}${pc2}`;
+    }
+
+    // Floor, door, stair, block from <loint>
+    const loint = extractTag(rcdnp, 'loint') || '';
+    let floor = extractTag(loint, 'pt') || extractTag(rcdnp, 'pt');
+    let door = extractTag(loint, 'pu') || extractTag(rcdnp, 'pu');
+    const staircase = extractTag(loint, 'es') || extractTag(rcdnp, 'es') || undefined;
+    const block = extractTag(loint, 'bl') || extractTag(rcdnp, 'bl') || undefined;
+
+    // Fallback parsing from descriptive text <ldt>
+    const ldt = extractTag(rcdnp, 'ldt') || '';
+    if (!floor && ldt) {
+      const matchPl = ldt.match(/(?:Pl|Planta)[:\s]*([0-9A-Za-z\-+]+)/i);
+      if (matchPl) floor = matchPl[1];
+    }
+    if (!door && ldt) {
+      const matchPt = ldt.match(/(?:Pt|Pta|Puerta)[:\s]*([0-9A-Za-z\-]+)/i);
+      if (matchPt) door = matchPt[1];
+    }
+
+    floor = floor || '00';
+    door = door || '01';
+
+    // Use / Destino
+    let use = extractTag(rcdnp, 'luso') || extractTag(rcdnp, 'cn') || extractTag(rcdnp, 'dest') || 'Residencial';
+    if (/comercial|local|oficina/i.test(use)) {
+      use = 'Comercial';
+    } else if (/garaje|aparcamiento|estacionamiento/i.test(use)) {
+      use = 'Aparcamiento';
+    } else if (/almacen|almacén|trastero/i.test(use)) {
+      use = 'Almacén';
+    } else if (/residencial|vivienda/i.test(use)) {
+      use = 'Residencial';
+    }
+
+    // Surface
+    const sfcStr = extractTag(rcdnp, 'sfc') || extractTag(rcdnp, 'stl') || '0';
+    const builtSurfaceM2 = parseInt(sfcStr, 10) || 0;
+
+    // Participation coefficient (cpt)
+    let participationCoefficient: number | undefined;
+    const cptStr = extractTag(rcdnp, 'cpt');
+    if (cptStr) {
+      const parsedCpt = parseFloat(cptStr.replace(',', '.'));
+      if (!isNaN(parsedCpt) && parsedCpt > 0) {
+        participationCoefficient = parsedCpt;
+      }
+    }
+
+    units.push({
+      cadastralReference: unitRef || requestedRefcat || '',
+      floor,
+      door,
+      staircase,
+      block,
+      use,
+      builtSurfaceM2,
+      participationCoefficient,
+    });
+  }
+
+  // If no <rcdnp> items were found but this is a single unit (<bico>), extract the single unit
+  if (units.length === 0 && (/<bico\b/i.test(xml) || /<bi\b/i.test(xml))) {
+    const pc1 = extractTag(xml, 'pc1') || '';
+    const pc2 = extractTag(xml, 'pc2') || '';
+    const car = extractTag(xml, 'car') || '';
+    const cc1 = extractTag(xml, 'cc1') || '';
+    const cc2 = extractTag(xml, 'cc2') || '';
+    const singleRef = pc1 && pc2 && car && cc1 && cc2 ? `${pc1}${pc2}${car}${cc1}${cc2}` : (requestedRefcat || '');
+
+    const loint = extractTag(xml, 'loint') || '';
+    const floor = extractTag(loint, 'pt') || extractTag(xml, 'pt') || '00';
+    const door = extractTag(loint, 'pu') || extractTag(xml, 'pu') || '01';
+    const staircase = extractTag(loint, 'es') || extractTag(xml, 'es') || undefined;
+    const block = extractTag(loint, 'bl') || extractTag(xml, 'bl') || undefined;
+    const use = extractTag(xml, 'luso') || 'Residencial';
+    const sfcStr = extractTag(xml, 'sfc') || '0';
+    const builtSurfaceM2 = parseInt(sfcStr, 10) || 0;
+
+    units.push({
+      cadastralReference: singleRef,
+      floor,
+      door,
+      staircase,
+      block,
+      use,
+      builtSurfaceM2,
+    });
+  }
+
+  const totalUnits = cudnpStr ? parseInt(cudnpStr, 10) : units.length;
+
+  return {
+    parcelCadastralReference: parcelCadastralReference || (requestedRefcat ? requestedRefcat.slice(0, 14) : ''),
+    totalUnits: Math.max(totalUnits, units.length),
+    units,
+  };
+}
+
 export function extractConstructionYear(xml: string): number | null {
   // 1. Check <ant> (antigüedad de la construcción in <debi> or <de>)
   const antStr = extractTag(xml, 'ant');
@@ -160,13 +289,13 @@ export function extractConstructionYear(xml: string): number | null {
 
 export function parseCatastroDnprcXml(
   xml: string,
-  queriedRefcat: string,
-  fallbackCoords?: { latitude: number; longitude: number },
+  queriedRefcat?: string,
+  fallbackCoords?: CadastralCoordinates,
   metadata?: CatastroDnprcMetadata
 ): CadastralProperty {
   const errDes = extractTag(xml, 'des');
   if (errDes) {
-    throw new CadastralNotFoundError(queriedRefcat);
+    throw new CadastralNotFoundError(errDes);
   }
 
   const pc1 = extractTag(xml, 'pc1') || '';
@@ -175,28 +304,17 @@ export function parseCatastroDnprcXml(
   const cc1 = extractTag(xml, 'cc1') || '';
   const cc2 = extractTag(xml, 'cc2') || '';
 
-  // Retain queried reference when valid, else compose from XML components
-  let fullRc = queriedRefcat;
+  let fullRc = `${pc1}${pc2}${car}${cc1}${cc2}`.trim();
   if (!fullRc || fullRc.length < 14) {
-    fullRc = pc1 && pc2 ? `${pc1}${pc2}${car}${cc1}${cc2}` : queriedRefcat;
+    fullRc = queriedRefcat || 'UNKNOWN_REFCAT';
   }
 
-  // Address: parse street name, primary number, letters, suffixes, portal, and horizontal division
-  const tv = extractTag(xml, 'tv') || 'CL';
+  // Address
+  const tv = extractTag(xml, 'tv') || '';
   const nv = extractTag(xml, 'nv') || '';
-  const pnp = extractTag(xml, 'pnp') || '';
-  const plp = extractTag(xml, 'plp') || '';
-  const snp = extractTag(xml, 'snp') || '';
-  const slp = extractTag(xml, 'slp') || '';
+  let number = extractTag(xml, 'pnp') || '';
   const ldt = extractTag(xml, 'ldt') || '';
 
-  let number = pnp;
-  if (plp) {
-    number = number ? `${number} ${plp}`.trim() : plp;
-  }
-  if (snp && snp !== '0') {
-    number = `${number}-${snp}${slp ? ` ${slp}` : ''}`;
-  }
   if (!number) {
     const match = ldt.match(/\b(\d+[\s\w()/-]*?)(?:\s+\d{5}|$)/);
     number = match ? match[1].trim() : '1';
@@ -275,6 +393,46 @@ export function parseCatastroDnprcXml(
     }
   }
 
+  // Unit-level privative metadata when queried with 20-character reference
+  let unit: CadastralUnit | undefined;
+  if (queriedRefcat && queriedRefcat.length === 20) {
+    const loint = extractTag(xml, 'loint') || '';
+    let floor = extractTag(loint, 'pt') || extractTag(xml, 'pt');
+    let door = extractTag(loint, 'pu') || extractTag(xml, 'pu');
+    const staircase = extractTag(loint, 'es') || extractTag(xml, 'es') || undefined;
+    const block = extractTag(loint, 'bl') || extractTag(xml, 'bl') || undefined;
+
+    if (!floor && ldt) {
+      const matchPl = ldt.match(/(?:Pl|Planta)[:\s]*([0-9A-Za-z\-+]+)/i);
+      if (matchPl) floor = matchPl[1];
+    }
+    if (!door && ldt) {
+      const matchPt = ldt.match(/(?:Pt|Pta|Puerta)[:\s]*([0-9A-Za-z\-]+)/i);
+      if (matchPt) door = matchPt[1];
+    }
+
+    const sfcStr = extractTag(xml, 'sfc') || '0';
+    const privSurface = parseInt(sfcStr, 10) || 0;
+
+    let participationCoefficient: number | undefined;
+    const cptStr = extractTag(xml, 'cpt');
+    if (cptStr) {
+      const parsed = parseFloat(cptStr.replace(',', '.'));
+      if (!isNaN(parsed) && parsed > 0) participationCoefficient = parsed;
+    }
+
+    unit = {
+      cadastralReference: queriedRefcat,
+      floor: floor || '00',
+      door: door || '01',
+      staircase,
+      block,
+      use: primaryUse,
+      builtSurfaceM2: privSurface > 0 ? privSurface : builtSurfaceM2,
+      participationCoefficient,
+    };
+  }
+
   return {
     cadastralReference: fullRc,
     address: {
@@ -298,5 +456,6 @@ export function parseCatastroDnprcXml(
       unitsCount,
       hasCommercialGroundFloor,
     },
+    unit,
   };
 }

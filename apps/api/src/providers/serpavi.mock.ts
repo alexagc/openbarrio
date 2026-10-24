@@ -13,7 +13,10 @@ export class MockSERPAVIProvider implements ISERPAVIProvider {
       return this.customOverrides.get(refcat)!;
     }
 
-    const surface = cadastralProperty.building.builtSurfaceM2 || 85;
+    const surface =
+      cadastralProperty.unit?.builtSurfaceM2 ||
+      cadastralProperty.building.builtSurfaceM2 ||
+      85;
     const isBarcelona = Boolean(
       cadastralProperty.address.municipality.toLowerCase() === 'barcelona' ||
       cadastralProperty.address.postalCode?.startsWith('08') ||

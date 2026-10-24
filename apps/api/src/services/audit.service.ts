@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import {
   PropertyAuditReport,
   CadastralProperty,
+  CadastralUnitsResponse,
   CensusTractIncome,
   EnvironmentalData,
   RentalBenchmark,
@@ -32,6 +33,13 @@ export class AuditService {
     const property = await this.providers.catastro.getByCadastralReference(refcat);
 
     return this.generateReportForProperty(property);
+  }
+
+  /**
+   * Retrieves horizontal division cadastral units for a parcel reference.
+   */
+  async getCadastralUnits(refcat: string): Promise<CadastralUnitsResponse> {
+    return this.providers.catastro.getUnitsByCadastralReference(refcat);
   }
 
   private async generateReportForProperty(
@@ -157,7 +165,7 @@ export class AuditService {
     // Attach air quality if not already present
     if (!envData.airQuality && this.providers.airQuality) {
       try {
-        const airQuality = await this.providers.airQuality.getAirQuality(
+        const airQuality = await (this.providers.airQuality as any).getAirQualityData(
           property.coordinates.latitude,
           property.coordinates.longitude
         );
@@ -178,7 +186,7 @@ export class AuditService {
   ): Promise<CivicConnectivityData | undefined> {
     if (!this.providers.connectivity) return undefined;
     try {
-      return await this.providers.connectivity.getConnectivityByCoordinates(latitude, longitude);
+      return await this.providers.connectivity.getConnectivityData(latitude, longitude);
     } catch (err: any) {
       console.warn(`[AuditService] Civic connectivity query failed:`, err?.message);
       return undefined;
@@ -190,7 +198,7 @@ export class AuditService {
   ): Promise<UrbanPlanningData | undefined> {
     if (!this.providers.urbanPlanning) return undefined;
     try {
-      return await this.providers.urbanPlanning.getUrbanPlanning(property);
+      return await this.providers.urbanPlanning.getUrbanPlanningData(property);
     } catch (err: any) {
       console.warn(`[AuditService] Urban planning query failed:`, err?.message);
       return undefined;

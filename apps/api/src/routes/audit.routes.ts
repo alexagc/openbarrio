@@ -5,6 +5,7 @@ import {
   AuditCoordsQuerySchema,
   AuditRefcatParamsSchema,
   PropertyAuditReport,
+  CadastralUnitsResponse,
 } from '@openbarrio/core';
 import { AuditService } from '../services/audit.service.js';
 import { ProviderContainer } from '../providers/index.js';
@@ -44,6 +45,36 @@ export function createAuditRoutes(providers: ProviderContainer): Hono {
       query.lon
     );
     return c.json(report, 200);
+  });
+
+  // GET /refcat/:refcat/units - Horizontal division unit list
+  router.get('/refcat/:refcat/units', async (c) => {
+    const rawRefcat = c.req.param('refcat') || '';
+    const cleanRefcat = rawRefcat.replace(/[\s\-_.]/g, '').toUpperCase();
+    const validatedParams = { refcat: cleanRefcat };
+    const errors = [...Value.Errors(AuditRefcatParamsSchema, validatedParams)];
+
+    if (errors.length > 0) {
+      let instance: string;
+      try {
+        const url = new URL(c.req.url);
+        instance = url.pathname + url.search;
+      } catch {
+        instance = c.req.path;
+      }
+
+      throw new InvalidParametersError(
+        'Invalid cadastral reference parameter format for units lookup',
+        errors.map((err) => ({
+          name: err.path.replace(/^\//, '') || 'refcat',
+          reason: err.message,
+        })),
+        instance
+      );
+    }
+
+    const unitsResponse: CadastralUnitsResponse = await auditService.getCadastralUnits(cleanRefcat);
+    return c.json(unitsResponse, 200);
   });
 
   // GET /refcat/:refcat

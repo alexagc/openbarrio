@@ -1,4 +1,4 @@
-import { CadastralProperty } from '@openbarrio/core';
+import { CadastralProperty, CadastralUnitsResponse, CadastralUnit } from '@openbarrio/core';
 import { ICatastroProvider } from './types.js';
 import { CadastralNotFoundError } from '../errors/problem-details.js';
 
@@ -183,15 +183,34 @@ export class MockCatastroProvider implements ICatastroProvider {
       throw new CadastralNotFoundError(refcat);
     }
 
+    let unit: CadastralUnit | undefined;
+    if (normalized.length === 20) {
+      unit = {
+        cadastralReference: normalized,
+        floor: '02',
+        door: 'B',
+        staircase: '1',
+        use: 'Residencial',
+        builtSurfaceM2: 85,
+        participationCoefficient: 2.5,
+      };
+    }
+
     const existing = this.propertiesByRef.get(normalized);
     if (existing) {
-      return existing;
+      return {
+        ...existing,
+        unit,
+      };
     }
 
     // Check prefix matches (14 chars parcel ref matching 20 chars property)
     for (const [key, value] of this.propertiesByRef.entries()) {
       if (normalized.startsWith(key.slice(0, 14)) || key.startsWith(normalized.slice(0, 14))) {
-        return value;
+        return {
+          ...value,
+          unit,
+        };
       }
     }
 
@@ -223,6 +242,59 @@ export class MockCatastroProvider implements ICatastroProvider {
         unitsCount: 1 + (hash % 24),
         hasCommercialGroundFloor: hash % 3 === 0,
       },
+      unit,
+    };
+  }
+
+  async getUnitsByCadastralReference(refcat: string): Promise<CadastralUnitsResponse> {
+    const normalized = refcat.trim().toUpperCase();
+    if (normalized.includes('NOTFOUND') || normalized.length < 14) {
+      throw new CadastralNotFoundError(refcat);
+    }
+    const parcelRef = normalized.slice(0, 14);
+
+    let prop: CadastralProperty;
+    try {
+      prop = await this.getByCadastralReference(parcelRef);
+    } catch {
+      prop = await this.getByCadastralReference(normalized);
+    }
+
+    const totalUnits = Math.max(prop.building.unitsCount, 8);
+    const units: CadastralUnit[] = [];
+
+    // Deterministically generate units distributed across floors
+    const doors = ['A', 'B', 'C', 'D'];
+    const floorsCount = Math.ceil(totalUnits / doors.length);
+    const cptPerUnit = Number((100 / totalUnits).toFixed(2));
+
+    let count = 0;
+    for (let f = 0; f < floorsCount && count < totalUnits; f++) {
+      const floorStr = f === 0 ? 'PB' : `0${f}`;
+      for (let d = 0; d < doors.length && count < totalUnits; d++) {
+        count++;
+        const carStr = count.toString().padStart(4, '0');
+        const unitRef = `${parcelRef}${carStr}AB`;
+        const isCommercial = f === 0 && prop.building.hasCommercialGroundFloor && d === 0;
+        const use = isCommercial ? 'Comercial' : 'Residencial';
+        const surface = isCommercial ? 140 : 75 + ((count * 7) % 35);
+
+        units.push({
+          cadastralReference: unitRef,
+          floor: floorStr,
+          door: doors[d],
+          staircase: '1',
+          use,
+          builtSurfaceM2: surface,
+          participationCoefficient: cptPerUnit,
+        });
+      }
+    }
+
+    return {
+      parcelCadastralReference: parcelRef,
+      totalUnits: units.length,
+      units,
     };
   }
 }

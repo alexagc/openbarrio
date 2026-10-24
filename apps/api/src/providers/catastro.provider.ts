@@ -1,9 +1,10 @@
-import { CadastralProperty } from '@openbarrio/core';
+import { CadastralProperty, CadastralUnitsResponse } from '@openbarrio/core';
 import { ICatastroProvider } from './types.js';
 import {
   parseCatastroCoordinatesXml,
   parseCatastroDnprcXml,
   parseCatastroCpmrcXml,
+  parseCadastralUnitsXml,
   isMultiUnitParcelXml,
   parseMultiUnitParcelSummary,
 } from './catastro.parser.js';
@@ -175,5 +176,33 @@ export class CatastroProvider implements ICatastroProvider {
     }
 
     return parseCatastroDnprcXml(xmlText, cleanRef, resolvedCoords);
+  }
+
+  async getUnitsByCadastralReference(refcat: string): Promise<CadastralUnitsResponse> {
+    const cleanRef = refcat.replace(/[\s\-_.]/g, '').toUpperCase();
+    const parcelRef = cleanRef.slice(0, 14);
+    const dnprcUrl = `${this.callejeroBaseUrl}/Consulta_DNPRC?Provincia=&Municipio=&RC=${encodeURIComponent(parcelRef)}`;
+
+    let xmlText: string;
+    try {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), this.timeoutMs);
+      const res = await fetch(dnprcUrl, {
+        signal: controller.signal,
+        headers: { 'User-Agent': 'OpenBarrio-DueDiligence/0.1' },
+        ...({ cf: { cacheTtl: 7776000, cacheEverything: true } } as any),
+      });
+      clearTimeout(timer);
+
+      if (!res.ok) {
+        throw new UpstreamProviderError('Catastro OVC', `HTTP status ${res.status}`);
+      }
+      xmlText = await res.text();
+    } catch (err: any) {
+      if (err instanceof UpstreamProviderError) throw err;
+      throw new UpstreamProviderError('Catastro OVC', err.message || 'Network request failed');
+    }
+
+    return parseCadastralUnitsXml(xmlText, parcelRef);
   }
 }

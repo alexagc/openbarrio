@@ -8,6 +8,8 @@ import {
   RentalBenchmark,
   CivicConnectivityData,
   UrbanPlanningData,
+  CadastralUnitsResponse,
+  CadastralUnit,
 } from '@openbarrio/core';
 
 export class ApiError extends Error {
@@ -134,6 +136,62 @@ export class OpenBarrioApiClient {
       console.warn('API backend unreachable. Falling back to local deterministic audit generator.', err);
       return this.generateDeterministicAuditFromRefcat(normalized);
     }
+  }
+
+  /**
+   * Retrieves horizontal division cadastral units for a given cadastral reference.
+   */
+  async getCadastralUnits(refcat: string): Promise<CadastralUnitsResponse> {
+    const cleanRef = refcat.replace(/[\s\-_.]/g, '').toUpperCase();
+    const url = `${this.baseUrl}/api/v1/audit/refcat/${encodeURIComponent(cleanRef)}/units`;
+
+    try {
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: { Accept: 'application/json' },
+      });
+
+      if (!response.ok) {
+        await this.handleHttpError(response);
+      }
+
+      return await response.json();
+    } catch {
+      return this.generateDeterministicUnits(cleanRef);
+    }
+  }
+
+  public generateDeterministicUnits(refcat: string): CadastralUnitsResponse {
+    const clean = refcat.replace(/[\s\-_.]/g, '').toUpperCase();
+    const parcelRef = clean.slice(0, 14);
+    const doors = ['A', 'B', 'C', 'D'];
+    const units: CadastralUnit[] = [];
+    const totalUnits = 24;
+    const cpt = Number((100 / totalUnits).toFixed(2));
+
+    for (let f = 0; f <= 5; f++) {
+      const floorStr = f === 0 ? 'PB' : `0${f}`;
+      for (let d = 0; d < 4; d++) {
+        const idx = f * 4 + d + 1;
+        const carStr = idx.toString().padStart(4, '0');
+        const isCommercial = f === 0 && d === 0;
+        units.push({
+          cadastralReference: `${parcelRef}${carStr}AB`,
+          floor: floorStr,
+          door: doors[d],
+          staircase: '1',
+          use: isCommercial ? 'Comercial' : 'Residencial',
+          builtSurfaceM2: isCommercial ? 140 : 75 + (idx % 4) * 12,
+          participationCoefficient: cpt,
+        });
+      }
+    }
+
+    return {
+      parcelCadastralReference: parcelRef,
+      totalUnits: units.length,
+      units,
+    };
   }
 
   /**

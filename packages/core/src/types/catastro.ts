@@ -24,6 +24,25 @@ export const CadastralBuildingSchema = Type.Object({
   hasCommercialGroundFloor: Type.Boolean(),
 });
 
+export const CadastralUnitSchema = Type.Object({
+  cadastralReference: Type.String({
+    description: 'Full 20-character Cadastral Reference of the individual unit',
+  }),
+  floor: Type.String({ description: 'Floor level (e.g. "03", "PB", "EN", "01")' }),
+  door: Type.String({ description: 'Door indicator (e.g. "01", "B", "DR", "IZ")' }),
+  staircase: Type.Optional(Type.String({ description: 'Staircase indicator (e.g. "1", "D")' })),
+  block: Type.Optional(Type.String({ description: 'Building block indicator' })),
+  use: Type.String({ description: 'Official usage category (e.g. "Residencial", "Comercial", "Almacen")' }),
+  builtSurfaceM2: Type.Number({ description: 'Private constructed surface in square meters' }),
+  participationCoefficient: Type.Optional(Type.Number({ description: 'Community participation percentage (%)' })),
+});
+
+export const CadastralUnitsResponseSchema = Type.Object({
+  parcelCadastralReference: Type.String({ description: '14-character parcel Cadastral Reference' }),
+  totalUnits: Type.Number({ description: 'Total units in the horizontal division' }),
+  units: Type.Array(CadastralUnitSchema),
+});
+
 export const CadastralPropertySchema = Type.Object({
   cadastralReference: Type.String({
     description: 'Spanish Cadastral Reference (14-character parcel or 20-character property code)',
@@ -31,8 +50,11 @@ export const CadastralPropertySchema = Type.Object({
   address: CadastralAddressSchema,
   coordinates: CadastralCoordinatesSchema,
   building: CadastralBuildingSchema,
+  unit: Type.Optional(CadastralUnitSchema),
 });
 
+export type CadastralUnit = Static<typeof CadastralUnitSchema>;
+export type CadastralUnitsResponse = Static<typeof CadastralUnitsResponseSchema>;
 export type CadastralAddress = Static<typeof CadastralAddressSchema>;
 export type CadastralCoordinates = Static<typeof CadastralCoordinatesSchema>;
 export type CadastralBuilding = Static<typeof CadastralBuildingSchema>;
@@ -103,4 +125,3 @@ export function isCadastralReference(value: string | null | undefined): boolean 
 
   return isUrban14 || isUrban20 || isRural14 || isRural20;
 }
-

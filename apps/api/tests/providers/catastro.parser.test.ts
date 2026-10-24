@@ -6,6 +6,7 @@ import {
   parseCatastroCoordinatesXml,
   parseCatastroDnprcXml,
   parseCatastroCpmrcXml,
+  parseCadastralUnitsXml,
   isMultiUnitParcelXml,
   parseMultiUnitParcelSummary,
   extractConstructionYear,
@@ -212,5 +213,87 @@ describe('Catastro XML Parser', () => {
     expect(() => parseCatastroDnprcXml(notFoundXml, 'INVALID_REF')).toThrow(
       CadastralNotFoundError
     );
+  });
+
+  it('parses horizontal division units (<lrcdnp>) with floor, door, use, and participation coefficient', () => {
+    const multiUnitWithDetails = `
+      <consulta_dnp xmlns="http://www.catastro.meh.es/">
+        <control><cudnp>2</cudnp></control>
+        <lrcdnp>
+          <rcdnp>
+            <rc><pc1>2890001</pc1><pc2>VK4729A</pc2><car>0001</car><cc1>X</cc1><cc2>Y</cc2></rc>
+            <dt>
+              <loint><pt>01</pt><pu>A</pu><es>1</es></loint>
+            </dt>
+            <ldt>CL GRAN VIA 32 Pl:01 Pt:A</ldt>
+            <luso>Residencial</luso>
+            <sfc>95</sfc>
+            <cpt>2.50</cpt>
+          </rcdnp>
+          <rcdnp>
+            <rc><pc1>2890001</pc1><pc2>VK4729A</pc2><car>0002</car><cc1>A</cc1><cc2>B</cc2></rc>
+            <dt>
+              <loint><pt>PB</pt><pu>01</pu></loint>
+            </dt>
+            <luso>Comercial</luso>
+            <sfc>180</sfc>
+            <cpt>4.80</cpt>
+          </rcdnp>
+        </lrcdnp>
+      </consulta_dnp>
+    `;
+
+    const result = parseCadastralUnitsXml(multiUnitWithDetails, '2890001VK4729A');
+    expect(result.parcelCadastralReference).toBe('2890001VK4729A');
+    expect(result.totalUnits).toBe(2);
+    expect(result.units).toHaveLength(2);
+
+    const unit1 = result.units[0];
+    expect(unit1.cadastralReference).toBe('2890001VK4729A0001XY');
+    expect(unit1.floor).toBe('01');
+    expect(unit1.door).toBe('A');
+    expect(unit1.staircase).toBe('1');
+    expect(unit1.use).toBe('Residencial');
+    expect(unit1.builtSurfaceM2).toBe(95);
+    expect(unit1.participationCoefficient).toBe(2.5);
+
+    const unit2 = result.units[1];
+    expect(unit2.cadastralReference).toBe('2890001VK4729A0002AB');
+    expect(unit2.floor).toBe('PB');
+    expect(unit2.door).toBe('01');
+    expect(unit2.use).toBe('Comercial');
+    expect(unit2.builtSurfaceM2).toBe(180);
+    expect(unit2.participationCoefficient).toBe(4.8);
+  });
+
+  it('populates unit privative metadata when audited with 20-character reference', () => {
+    const singleUnitDetailXml = `
+      <consulta_dnp xmlns="http://www.catastro.meh.es/">
+        <bico>
+          <bi>
+            <idbi><rc><pc1>2890001</pc1><pc2>VK4729A</pc2><car>0001</car><cc1>X</cc1><cc2>Y</cc2></rc></idbi>
+            <dt>
+              <np>MADRID</np><nm>MADRID</nm>
+              <locs><lous><lourb><loint><pt>03</pt><pu>B</pu><es>1</es></loint></lourb></lous></dt>
+            </dt>
+            <ldt>CL GRAN VIA 32 Pl:03 Pt:B</ldt>
+            <debi>
+              <luso>Residencial</luso>
+              <sfc>84</sfc>
+              <cpt>2.45</cpt>
+              <ant>1945</ant>
+            </debi>
+          </bi>
+        </bico>
+      </consulta_dnp>
+    `;
+
+    const prop = parseCatastroDnprcXml(singleUnitDetailXml, '2890001VK4729A0001XY');
+    expect(prop.cadastralReference).toBe('2890001VK4729A0001XY');
+    expect(prop.unit).toBeDefined();
+    expect(prop.unit?.floor).toBe('03');
+    expect(prop.unit?.door).toBe('B');
+    expect(prop.unit?.builtSurfaceM2).toBe(84);
+    expect(prop.unit?.participationCoefficient).toBe(2.45);
   });
 });
