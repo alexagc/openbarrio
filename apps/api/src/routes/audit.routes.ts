@@ -103,7 +103,21 @@ export function createAuditRoutes(providers: ProviderContainer): Hono {
       );
     }
 
-    const report: PropertyAuditReport = await auditService.auditByCadastralReference(cleanRefcat);
+    const latParam = c.req.query('lat');
+    const lonParam = c.req.query('lon');
+    let fallbackCoords: { latitude: number; longitude: number; srs: 'EPSG:4326' } | undefined;
+    if (latParam && lonParam) {
+      const lat = parseFloat(latParam);
+      const lon = parseFloat(lonParam);
+      if (!isNaN(lat) && !isNaN(lon)) {
+        fallbackCoords = { latitude: lat, longitude: lon, srs: 'EPSG:4326' };
+      }
+    }
+
+    const report: PropertyAuditReport = await auditService.auditByCadastralReference(
+      cleanRefcat,
+      fallbackCoords
+    );
     return c.json(report, 200);
   });
 

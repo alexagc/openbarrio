@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import {
   PropertyAuditReport,
   CadastralProperty,
+  CadastralCoordinates,
   CadastralUnitsResponse,
   CensusTractIncome,
   EnvironmentalData,
@@ -28,9 +29,12 @@ export class AuditService {
   /**
    * Generates a full due diligence audit report by official Spanish cadastral reference.
    */
-  async auditByCadastralReference(refcat: string): Promise<PropertyAuditReport> {
+  async auditByCadastralReference(
+    refcat: string,
+    fallbackCoords?: CadastralCoordinates
+  ): Promise<PropertyAuditReport> {
     // 1. Fetch cadastral property data from Catastro (primary anchor)
-    const property = await this.providers.catastro.getByCadastralReference(refcat);
+    const property = await this.providers.catastro.getByCadastralReference(refcat, fallbackCoords);
 
     return this.generateReportForProperty(property);
   }

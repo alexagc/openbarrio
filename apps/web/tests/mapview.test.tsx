@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest';
+﻿import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { MapView, wgs84ToUtm30n } from '../src/components/MapView';
 
@@ -32,6 +32,7 @@ vi.mock('maplibre-gl', () => {
 
   class MockPopup {
     setHTML = vi.fn().mockReturnThis();
+    on = vi.fn().mockReturnThis();
   }
 
   return {

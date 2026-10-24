@@ -1,4 +1,4 @@
-import { CadastralProperty, CadastralUnitsResponse, CadastralUnit } from '@openbarrio/core';
+import { CadastralProperty, CadastralUnitsResponse, CadastralUnit, CadastralCoordinates } from '@openbarrio/core';
 import { ICatastroProvider } from './types.js';
 import { CadastralNotFoundError } from '../errors/problem-details.js';
 
@@ -80,8 +80,11 @@ export class MockCatastroProvider implements ICatastroProvider {
     };
 
     this.propertiesByRef.set(madridProp.cadastralReference, madridProp);
+    this.propertiesByRef.set(madridProp.cadastralReference.slice(0, 14), madridProp);
     this.propertiesByRef.set(bcnProp.cadastralReference, bcnProp);
+    this.propertiesByRef.set(bcnProp.cadastralReference.slice(0, 14), bcnProp);
     this.propertiesByRef.set(valenciaProp.cadastralReference, valenciaProp);
+    this.propertiesByRef.set(valenciaProp.cadastralReference.slice(0, 14), valenciaProp);
   }
 
   async getByCoordinates(latitude: number, longitude: number): Promise<CadastralProperty> {
@@ -148,7 +151,7 @@ export class MockCatastroProvider implements ICatastroProvider {
     const street = streets[hash % streets.length];
     const ref = `${cp.slice(0, 2)}079A${String(hash).padStart(8, '0')}0001WX`;
 
-    return {
+    const propResult: CadastralProperty = {
       cadastralReference: ref,
       address: {
         street,
@@ -170,9 +173,17 @@ export class MockCatastroProvider implements ICatastroProvider {
         hasCommercialGroundFloor: hash % 2 === 0,
       },
     };
+
+    this.propertiesByRef.set(ref, propResult);
+    this.propertiesByRef.set(ref.slice(0, 14), propResult);
+
+    return propResult;
   }
 
-  async getByCadastralReference(refcat: string): Promise<CadastralProperty> {
+  async getByCadastralReference(
+    refcat: string,
+    fallbackCoords?: CadastralCoordinates
+  ): Promise<CadastralProperty> {
     const normalized = refcat.trim().toUpperCase();
 
     if (
@@ -204,11 +215,23 @@ export class MockCatastroProvider implements ICatastroProvider {
       };
     }
 
+    // Check 14-char parcel prefix
+    const parcelRef = normalized.slice(0, 14);
+    const existingParcel = this.propertiesByRef.get(parcelRef);
+    if (existingParcel) {
+      return {
+        ...existingParcel,
+        cadastralReference: normalized,
+        unit,
+      };
+    }
+
     // Check prefix matches (14 chars parcel ref matching 20 chars property)
     for (const [key, value] of this.propertiesByRef.entries()) {
-      if (normalized.startsWith(key.slice(0, 14)) || key.startsWith(normalized.slice(0, 14))) {
+      if (normalized.startsWith(key.slice(0, 14)) || key.startsWith(parcelRef)) {
         return {
           ...value,
+          cadastralReference: normalized,
           unit,
         };
       }
@@ -221,18 +244,45 @@ export class MockCatastroProvider implements ICatastroProvider {
     }
     const year = 1970 + (hash % 50);
 
+    const provCode = normalized.slice(0, 2);
+    let city = 'Madrid';
+    let prov = 'Madrid';
+    let cp = '28013';
+    let defaultLat = 40.415 + ((hash % 100) / 10000);
+    let defaultLon = -3.707 + ((hash % 100) / 10000);
+
+    if (provCode === '08') {
+      city = 'Barcelona';
+      prov = 'Barcelona';
+      cp = '08007';
+      defaultLat = 41.385 + ((hash % 100) / 10000);
+      defaultLon = 2.173 + ((hash % 100) / 10000);
+    } else if (provCode === '46') {
+      city = 'València';
+      prov = 'València';
+      cp = '46004';
+      defaultLat = 39.469 + ((hash % 100) / 10000);
+      defaultLon = -0.373 + ((hash % 100) / 10000);
+    } else if (provCode === '41') {
+      city = 'Sevilla';
+      prov = 'Sevilla';
+      cp = '41004';
+      defaultLat = 37.389 + ((hash % 100) / 10000);
+      defaultLon = -5.984 + ((hash % 100) / 10000);
+    }
+
     return {
       cadastralReference: normalized,
       address: {
         street: 'Calle Mayor',
         number: `${(hash % 50) + 1}`,
-        postalCode: '28013',
-        municipality: 'Madrid',
-        province: 'Madrid',
+        postalCode: cp,
+        municipality: city,
+        province: prov,
       },
       coordinates: {
-        latitude: 40.415 + ((hash % 100) / 10000),
-        longitude: -3.707 + ((hash % 100) / 10000),
+        latitude: fallbackCoords ? fallbackCoords.latitude : defaultLat,
+        longitude: fallbackCoords ? fallbackCoords.longitude : defaultLon,
         srs: 'EPSG:4326',
       },
       building: {

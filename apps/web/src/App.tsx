@@ -113,15 +113,16 @@ export function AppContent() {
     }
   }, []);
 
-  const handleOpenUnitPicker = async () => {
-    if (!report) return;
+  const handleOpenUnitPicker = async (targetRefcat?: string) => {
+    const ref = targetRefcat || report?.property.cadastralReference;
+    if (!ref || ref === 'Consultando...') return;
     setIsUnitPickerOpen(true);
     setIsLoadingUnits(true);
     try {
-      const data = await apiClient.getCadastralUnits(report.property.cadastralReference);
+      const data = await apiClient.getCadastralUnits(ref);
       setUnitsData(data);
     } catch {
-      const fallback = apiClient.generateDeterministicUnits(report.property.cadastralReference);
+      const fallback = apiClient.generateDeterministicUnits(ref);
       setUnitsData(fallback);
     } finally {
       setIsLoadingUnits(false);
@@ -165,7 +166,7 @@ export function AppContent() {
         let effectiveCoords = coords;
 
         if (isRefcat) {
-          liveReport = await apiClient.auditByCadastralReference(cleanRefcat);
+          liveReport = await apiClient.auditByCadastralReference(cleanRefcat, effectiveCoords);
         } else if (effectiveCoords) {
           liveReport = await apiClient.auditByCoordinates(effectiveCoords.lat, effectiveCoords.lon);
         } else {
@@ -175,7 +176,7 @@ export function AppContent() {
             const best = results[0];
             effectiveCoords = { lat: best.lat, lon: best.lon };
             if (best.refcat) {
-              liveReport = await apiClient.auditByCadastralReference(best.refcat);
+              liveReport = await apiClient.auditByCadastralReference(best.refcat, effectiveCoords);
             } else {
               liveReport = await apiClient.auditByCoordinates(best.lat, best.lon);
             }
@@ -201,6 +202,10 @@ export function AppContent() {
 
         if (liveReport) {
           setReport(liveReport);
+          setSelectedCoords({
+            lat: liveReport.property.coordinates.latitude,
+            lon: liveReport.property.coordinates.longitude,
+          });
           setActiveAudit({
             query,
             refcat: liveReport.property.cadastralReference,
@@ -246,9 +251,9 @@ export function AppContent() {
     })();
   };
 
-  const handleOpenMap = (audit?: AuditData) => {
+  const handleOpenMap = (audit?: AuditData, targetTab: 'map' | 'dossier' = 'dossier') => {
     setViewMode('map');
-    setActiveTab('map');
+    setActiveTab(targetTab);
     setError(null);
 
     if (audit) {
@@ -263,7 +268,7 @@ export function AppContent() {
 
       // 2. Refresh live report in background: prefer coords if available to query real parcel
       const cleanRefcat = audit.refcat ? audit.refcat.replace(/[\s\-_.]/g, '').toUpperCase() : '';
-      if (audit.isLive && cleanRefcat && isCadastralReference(cleanRefcat)) {
+      if (!audit.isLive && cleanRefcat && isCadastralReference(cleanRefcat)) {
         loadAuditByRefcat(cleanRefcat, coords);
       } else if (coords) {
         loadAuditByCoords(coords.lat, coords.lon);
@@ -304,7 +309,16 @@ export function AppContent() {
     }
 
     try {
-      const data = await apiClient.auditByCadastralReference(cleanRefcat);
+      const data = await apiClient.auditByCadastralReference(cleanRefcat, fallbackCoords);
+      if (
+        fallbackCoords &&
+        data.property.coordinates.latitude === 40.4168 &&
+        data.property.coordinates.longitude === -3.7038 &&
+        (fallbackCoords.lat !== 40.4168 || fallbackCoords.lon !== -3.7038)
+      ) {
+        data.property.coordinates.latitude = fallbackCoords.lat;
+        data.property.coordinates.longitude = fallbackCoords.lon;
+      }
       setReport(data);
       setError(null);
       setSelectedCoords({
@@ -317,7 +331,7 @@ export function AppContent() {
       }
       setReport((currentReport) => {
         if (!currentReport) {
-          const fallback = apiClient.generateDeterministicAuditFromRefcat(cleanRefcat);
+          const fallback = apiClient.generateDeterministicAuditFromRefcat(cleanRefcat, fallbackCoords);
           if (fallbackCoords) {
             fallback.property.coordinates = {
               latitude: fallbackCoords.lat,
@@ -502,6 +516,7 @@ export function AppContent() {
               error={error?.message}
               onDismissError={() => setError(null)}
               onViewReport={() => setActiveTab('dossier')}
+              onOpenUnitPicker={handleOpenUnitPicker}
             />
           </section>
 
@@ -553,10 +568,20 @@ export function AppContent() {
               ? `${report.property.address.street} ${report.property.address.number}, ${report.property.address.municipality}`
               : undefined
           }
-          onSelectUnit={(unit) => loadAuditByRefcat(unit.cadastralReference, selectedCoords)}
+          onSelectUnit={(unit) => {
+            const currentCoords = selectedCoords || (report ? {
+              lat: report.property.coordinates.latitude,
+              lon: report.property.coordinates.longitude,
+            } : undefined);
+            loadAuditByRefcat(unit.cadastralReference, currentCoords);
+          }}
           onSelectBuilding={() => {
             if (report) {
-              loadAuditByRefcat(report.property.cadastralReference.slice(0, 14), selectedCoords);
+              const currentCoords = selectedCoords || {
+                lat: report.property.coordinates.latitude,
+                lon: report.property.coordinates.longitude,
+              };
+              loadAuditByRefcat(report.property.cadastralReference.slice(0, 14), currentCoords);
             }
           }}
           isLoading={isLoadingUnits}
@@ -587,6 +612,13 @@ export function AppContent() {
         data={activeAudit}
         onClose={() => setActiveAudit(null)}
         onOpenMap={handleOpenMap}
+        onOpenUnitPicker={() => {
+          if (activeAudit?.refcat && activeAudit.refcat !== 'Consultando...') {
+            handleOpenUnitPicker(activeAudit.refcat);
+          } else if (report) {
+            handleOpenUnitPicker();
+          }
+        }}
       />
 
       {/* Horizontal Division Unit Picker Modal (Phase 10B) */}
@@ -603,13 +635,21 @@ export function AppContent() {
         onSelectUnit={(unit) => {
           setViewMode('map');
           setActiveTab('dossier');
-          loadAuditByRefcat(unit.cadastralReference, selectedCoords);
+          const currentCoords = selectedCoords || (report ? {
+            lat: report.property.coordinates.latitude,
+            lon: report.property.coordinates.longitude,
+          } : undefined);
+          loadAuditByRefcat(unit.cadastralReference, currentCoords);
         }}
         onSelectBuilding={() => {
           if (report) {
             setViewMode('map');
             setActiveTab('dossier');
-            loadAuditByRefcat(report.property.cadastralReference.slice(0, 14), selectedCoords);
+            const currentCoords = selectedCoords || {
+              lat: report.property.coordinates.latitude,
+              lon: report.property.coordinates.longitude,
+            };
+            loadAuditByRefcat(report.property.cadastralReference.slice(0, 14), currentCoords);
           }
         }}
         isLoading={isLoadingUnits}

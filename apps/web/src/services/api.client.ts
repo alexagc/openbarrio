@@ -1,4 +1,4 @@
-import {
+﻿import {
   PropertyAuditReport,
   ProblemDetails,
   calculateBarrioScore,
@@ -112,9 +112,15 @@ export class OpenBarrioApiClient {
   /**
    * Audits property by Spanish Cadastral Reference (14 or 20 characters).
    */
-  async auditByCadastralReference(refcat: string): Promise<ExtendedAuditReport> {
+  async auditByCadastralReference(
+    refcat: string,
+    fallbackCoords?: { lat: number; lon: number }
+  ): Promise<ExtendedAuditReport> {
     const normalized = refcat.replace(/[\s\-_.]/g, '').toUpperCase();
-    const url = `${this.baseUrl}/api/v1/audit/refcat/${encodeURIComponent(normalized)}`;
+    let url = `${this.baseUrl}/api/v1/audit/refcat/${encodeURIComponent(normalized)}`;
+    if (fallbackCoords) {
+      url += `?lat=${encodeURIComponent(fallbackCoords.lat)}&lon=${encodeURIComponent(fallbackCoords.lon)}`;
+    }
 
     try {
       const response = await fetch(url, {
@@ -134,7 +140,7 @@ export class OpenBarrioApiClient {
         throw err;
       }
       console.warn('API backend unreachable. Falling back to local deterministic audit generator.', err);
-      return this.generateDeterministicAuditFromRefcat(normalized);
+      return this.generateDeterministicAuditFromRefcat(normalized, fallbackCoords);
     }
   }
 
@@ -452,17 +458,39 @@ export class OpenBarrioApiClient {
 
     const finalRefcat = overrides?.cadastralReference || refcat;
 
+    let unit: CadastralUnit | undefined = overrides?.unit;
+    if (!unit && finalRefcat.length === 20) {
+      const order = finalRefcat.slice(14, 18);
+      const floorNum = parseInt(order, 10);
+      const floor = !isNaN(floorNum) ? String(Math.floor(floorNum / 4)).padStart(2, '0') : '02';
+      const doorIdx = !isNaN(floorNum) ? floorNum % 4 : 0;
+      const door = ['A', 'B', 'C', 'D'][doorIdx] || 'A';
+      const totalBldgSurface = overrides?.building?.builtSurfaceM2 || surface;
+      const totalUnits = overrides?.building?.unitsCount || units || 20;
+      unit = {
+        cadastralReference: finalRefcat,
+        floor,
+        door,
+        use: overrides?.building?.primaryUse || 'Residencial',
+        builtSurfaceM2: Math.min(180, Math.max(50, Math.round(totalBldgSurface / totalUnits))),
+        participationCoefficient: +(100 / totalUnits).toFixed(2),
+      };
+    }
+
+    const effectiveSurface = unit ? unit.builtSurfaceM2 : (overrides?.building?.builtSurfaceM2 || surface);
+
     const property: CadastralProperty = {
       cadastralReference: finalRefcat,
       address: finalAddress,
       coordinates: { latitude: lat, longitude: lon, srs: 'EPSG:4326' },
       building: {
         constructionYear: overrides?.building?.constructionYear || year,
-        builtSurfaceM2: overrides?.building?.builtSurfaceM2 || surface,
+        builtSurfaceM2: effectiveSurface,
         primaryUse: overrides?.building?.primaryUse || 'Residencial',
         unitsCount: overrides?.building?.unitsCount || units,
         hasCommercialGroundFloor: overrides?.building?.hasCommercialGroundFloor ?? (hash % 2 === 0),
       },
+      unit,
     };
 
     const neighborhood: CensusTractIncome = {
@@ -499,11 +527,12 @@ export class OpenBarrioApiClient {
       },
     };
 
+    const rentalSurface = unit ? unit.builtSurfaceM2 : Math.min(surface, 90);
     const rentalBenchmark: RentalBenchmark = {
       officialRangeLowerEurM2: isStressed ? 16.5 : 13.8,
       officialRangeUpperEurM2: isStressed ? 21.0 : 17.5,
-      estimatedMonthlyRentLowerEur: Math.round((isStressed ? 16.5 : 13.8) * Math.min(surface, 90)),
-      estimatedMonthlyRentUpperEur: Math.round((isStressed ? 21.0 : 17.5) * Math.min(surface, 90)),
+      estimatedMonthlyRentLowerEur: Math.round((isStressed ? 16.5 : 13.8) * rentalSurface),
+      estimatedMonthlyRentUpperEur: Math.round((isStressed ? 21.0 : 17.5) * rentalSurface),
       isStressedHousingZone: isStressed,
     };
 
@@ -577,8 +606,34 @@ export class OpenBarrioApiClient {
     };
   }
 
-  public generateDeterministicAuditFromRefcat(refcat: string): ExtendedAuditReport {
+  public generateDeterministicAuditFromRefcat(
+    refcat: string,
+    fallbackCoords?: { lat: number; lon: number }
+  ): ExtendedAuditReport {
     const clean = refcat.trim().toUpperCase();
+
+    // Unit in horizontal division (20 characters)
+    let unit: CadastralUnit | undefined;
+    if (clean.length === 20) {
+      unit = {
+        cadastralReference: clean,
+        floor: '02',
+        door: 'B',
+        staircase: '1',
+        use: 'Residencial',
+        builtSurfaceM2: 85,
+        participationCoefficient: 4.15,
+      };
+    }
+
+    // Preserve fallbackCoords if provided from geocoding or user selection
+    if (fallbackCoords && (fallbackCoords.lat !== 40.4168 || fallbackCoords.lon !== -3.7038)) {
+      const report = this.generateDeterministicAudit(fallbackCoords.lat, fallbackCoords.lon, {
+        cadastralReference: clean,
+      });
+      if (unit) report.property.unit = unit;
+      return report;
+    }
 
     // Check known mock/sample presets first
     if (clean.startsWith('0227802DF3802E') || clean.startsWith('08019A00200005') || clean.startsWith('08019A02300045')) {
