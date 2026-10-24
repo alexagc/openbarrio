@@ -20,6 +20,7 @@ interface UnitPickerModalProps {
   buildingAddress?: string;
   onSelectUnit: (unit: CadastralUnit) => void;
   onSelectBuilding: () => void;
+  onCompareUnit?: (unit: CadastralUnit) => void;
   isLoading?: boolean;
 }
 
@@ -31,6 +32,7 @@ export function UnitPickerModal({
   buildingAddress,
   onSelectUnit,
   onSelectBuilding,
+  onCompareUnit,
   isLoading = false,
 }: UnitPickerModalProps) {
   const [searchQuery, setSearchQuery] = useState('');
@@ -325,17 +327,32 @@ export function UnitPickerModal({
             </button>
 
             {selectedUnit && (
-              <button
-                type="button"
-                onClick={() => {
-                  onSelectUnit(selectedUnit);
-                  onClose();
-                }}
-                className="px-4 py-2 rounded-lg text-xs font-bold bg-primary hover:bg-primary-container text-on-primary transition-colors flex items-center gap-1.5 shadow-md cursor-pointer"
-              >
-                <span>Auditar Inmueble ({selectedUnit.floor}-{selectedUnit.door})</span>
-                <ChevronRight className="w-4 h-4" />
-              </button>
+              <>
+                {onCompareUnit && (
+                  <button
+                    type="button"
+                    data-testid="unit-picker-compare-btn"
+                    onClick={() => {
+                      onCompareUnit(selectedUnit);
+                      onClose();
+                    }}
+                    className="px-3 py-2 rounded-lg text-xs font-bold bg-surface-container-high border border-primary/40 hover:bg-surface-variant text-primary transition-colors flex items-center gap-1.5 cursor-pointer"
+                  >
+                    <span>Comparar Unidad</span>
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={() => {
+                    onSelectUnit(selectedUnit);
+                    onClose();
+                  }}
+                  className="px-4 py-2 rounded-lg text-xs font-bold bg-primary hover:bg-primary-container text-on-primary transition-colors flex items-center gap-1.5 shadow-md cursor-pointer"
+                >
+                  <span>Auditar Inmueble ({selectedUnit.floor}-{selectedUnit.door})</span>
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+              </>
             )}
           </div>
         </div>

@@ -4,6 +4,7 @@ import { ScoreGauge } from './ScoreGauge';
 import { PillarCards } from './PillarCard';
 import { RentalModule } from './RentalModule';
 import { HighlightsAndRisks } from './HighlightsAndRisks';
+import { BuildingCapExCard } from './dossier/BuildingCapExCard';
 import { downloadCadastralGML } from '../utils/gml';
 import {
   Printer,
@@ -15,14 +16,16 @@ import {
   Bookmark,
   MapPin,
   Download,
+  Sparkles,
 } from 'lucide-react';
 
 interface AuditDossierProps {
   report: PropertyAuditReport;
   onOpenUnitPicker?: () => void;
+  onOpenDuel?: () => void;
 }
 
-export function AuditDossier({ report, onOpenUnitPicker }: AuditDossierProps) {
+export function AuditDossier({ report, onOpenUnitPicker, onOpenDuel }: AuditDossierProps) {
   const [copied, setCopied] = useState(false);
   const [bookmarked, setBookmarked] = useState(false);
 
@@ -195,6 +198,18 @@ export function AuditDossier({ report, onOpenUnitPicker }: AuditDossierProps) {
 
         {/* Action Toolbar */}
         <div className="mt-3 flex items-center gap-2 no-print flex-wrap">
+          {onOpenDuel && (
+            <button
+              type="button"
+              data-testid="dossier-duel-btn"
+              onClick={onOpenDuel}
+              className="bg-primary/20 hover:bg-primary/30 text-primary border border-primary/40 text-xs font-mono px-3 py-1.5 rounded flex items-center gap-1.5 transition-colors cursor-pointer"
+              title="Comparar este inmueble en duelo 1 vs 1"
+            >
+              <Sparkles className="w-3.5 h-3.5 text-primary" />
+              <span>Añadir a Comparar</span>
+            </button>
+          )}
           <button
             type="button"
             onClick={handleDownloadGML}
@@ -249,7 +264,12 @@ export function AuditDossier({ report, onOpenUnitPicker }: AuditDossierProps) {
         </div>
       )}
 
-      {/* 5. DUE DILIGENCE CLEARANCE & RISKS */}
+      {/* 5. CAPEX & BUILDING HEALTH DIAGNOSTICS */}
+      <div className="page-break-inside-avoid p-space-lg">
+        <BuildingCapExCard report={report} onCompareClick={onOpenDuel} />
+      </div>
+
+      {/* 6. DUE DILIGENCE CLEARANCE & RISKS */}
       <div className="page-break-inside-avoid">
         <HighlightsAndRisks
           highlights={score.keyHighlights}

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useMemo } from 'react';
+import { useEffect, useRef, useState, useMemo, useCallback } from 'react';
 import * as maplibregl from 'maplibre-gl';
 import type { Map as MapLibreMap, Marker, MapMouseEvent } from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
@@ -19,9 +19,17 @@ import {
   TrendingUp,
   Footprints,
   Navigation,
+  Sun,
+  Box,
 } from 'lucide-react';
 import { ExtendedAuditReport } from '../services/api.client';
 import { CartographicLegendsHud } from './CartographicLegendsHud';
+import { SolarSimulationHud } from './map/SolarSimulationHud';
+import {
+  SeasonPreset,
+  getMapLightConfig,
+  generate3dBuildingFootprints,
+} from '../utils/solar';
 
 export interface MapViewProps {
   selectedCoords?: { lat: number; lon: number };
@@ -167,6 +175,50 @@ export function MapView({
   const [showIsochrones, setShowIsochrones] = useState<boolean>(true);
   const [is3DMode, setIs3DMode] = useState<boolean>(false);
   const [currentZoom, setCurrentZoom] = useState<number>(15);
+  const [currentBearing, setCurrentBearing] = useState<number>(0);
+  const [currentPitch, setCurrentPitch] = useState<number>(0);
+  const [isSolarHudOpen, setIsSolarHudOpen] = useState<boolean>(true);
+  const currentSolarRef = useRef<{
+    azimuth: number;
+    altitude: number;
+    directRadiationWm2: number;
+    season: SeasonPreset;
+    timeMinutes: number;
+  }>({
+    azimuth: 214,
+    altitude: 38.2,
+    directRadiationWm2: 842,
+    season: 'summer',
+    timeMinutes: 870,
+  });
+
+  const handleSolarChange = useCallback(
+    (solar: {
+      azimuth: number;
+      altitude: number;
+      directRadiationWm2: number;
+      season: SeasonPreset;
+      timeMinutes: number;
+    }) => {
+      currentSolarRef.current = solar;
+      const map = mapRef.current;
+      if (!map) return;
+      try {
+        if (typeof map.setLight === 'function') {
+          const lightCfg = getMapLightConfig(solar.altitude, solar.azimuth);
+          map.setLight({
+            anchor: 'map',
+            color: lightCfg.color,
+            intensity: lightCfg.intensity,
+            position: [1.5, solar.azimuth, Math.max(0, 90 - solar.altitude)],
+          });
+        }
+      } catch {
+        // Ignore during style transitions
+      }
+    },
+    []
+  );
 
   // Mobile drawer / sheet state (Phase 11B)
   const [internalMobileLayersOpen, setInternalMobileLayersOpen] = useState<boolean>(false);
@@ -303,6 +355,11 @@ export function MapView({
               type: 'FeatureCollection',
               features: [],
             },
+          },
+          // 3D Building Extrusion Footprints (GeoJSON Source)
+          'building-3d-source': {
+            type: 'geojson',
+            data: generate3dBuildingFootprints(initialLat, initialLon),
           },
         },
         layers: [
@@ -451,6 +508,32 @@ export function MapView({
             },
             layout: { visibility: 'visible' },
           },
+          // 9. 3D Building Volumetric Extrusion Layer (LoD2 & Target Highlight)
+          {
+            id: 'building-3d-extrusion',
+            type: 'fill-extrusion',
+            source: 'building-3d-source',
+            minzoom: 12,
+            maxzoom: 22,
+            layout: {
+              visibility: 'none',
+            },
+            paint: {
+              'fill-extrusion-color': [
+                'case',
+                ['boolean', ['get', 'isTarget'], false],
+                '#68dba9',
+                '#1e293b',
+              ],
+              'fill-extrusion-height': [
+                'coalesce',
+                ['get', 'height'],
+                ['*', ['coalesce', ['get', 'numberOfFloors'], 4], 3.2],
+              ],
+              'fill-extrusion-base': 0,
+              'fill-extrusion-opacity': 0.92,
+            },
+          },
         ],
       },
       center: [initialLon, initialLat],
@@ -463,6 +546,18 @@ export function MapView({
 
     map.on('zoom', () => {
       setCurrentZoom(Math.round(map.getZoom()));
+    });
+
+    map.on('rotate', () => {
+      if (typeof map.getBearing === 'function') {
+        setCurrentBearing(Math.round(map.getBearing()));
+      }
+    });
+
+    map.on('pitch', () => {
+      if (typeof map.getPitch === 'function') {
+        setCurrentPitch(Math.round(map.getPitch()));
+      }
     });
 
     map.on('move', () => {
@@ -558,20 +653,104 @@ export function MapView({
     };
   }, [activeBasemap, showCatastroWms, showIneIncome, showMitecoNoise, showSncziFlood]);
 
-  // Toggle 3D Axonometric Tilt
-  const toggle3DMode = () => {
+  // Toggle 3D Axonometric Tilt & Building Volumetric Extrusion
+  const toggle3DMode = (forceState?: boolean) => {
     const map = mapRef.current;
     if (!map) return;
 
-    const nextMode = !is3DMode;
+    const nextMode = forceState !== undefined ? forceState : !is3DMode;
     setIs3DMode(nextMode);
 
-    map.easeTo({
-      pitch: nextMode ? 55 : 0,
-      bearing: nextMode ? -15 : 0,
-      duration: 1000,
-    });
+    if (nextMode) {
+      setIsSolarHudOpen(true);
+      map.easeTo({
+        pitch: 55,
+        bearing: -15,
+        duration: 1000,
+      });
+    } else {
+      map.easeTo({
+        pitch: 0,
+        bearing: 0,
+        duration: 800,
+      });
+    }
   };
+
+  // Synchronize 3D building extrusion layer visibility with 3D mode
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+
+    const applyExtrusionVis = () => {
+      try {
+        const hasExtrusion = typeof map.getLayer === 'function' ? Boolean(map.getLayer('building-3d-extrusion')) : true;
+        if (hasExtrusion && typeof map.setLayoutProperty === 'function') {
+          map.setLayoutProperty('building-3d-extrusion', 'visibility', is3DMode ? 'visible' : 'none');
+        }
+      } catch {
+        // Ignore during style transitions
+      }
+    };
+
+    applyExtrusionVis();
+    if (typeof map.on === 'function') {
+      map.on('load', applyExtrusionVis);
+      map.on('styledata', applyExtrusionVis);
+    }
+    return () => {
+      if (typeof map.off === 'function') {
+        map.off('load', applyExtrusionVis);
+        map.off('styledata', applyExtrusionVis);
+      }
+    };
+  }, [is3DMode]);
+
+  // Synchronize dynamic MapLibre light with astronomical solar position when 3D mode toggles
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !is3DMode) return;
+
+    try {
+      if (typeof map.setLight === 'function') {
+        const solar = currentSolarRef.current;
+        const lightCfg = getMapLightConfig(solar.altitude, solar.azimuth);
+        map.setLight({
+          anchor: 'map',
+          color: lightCfg.color,
+          intensity: lightCfg.intensity,
+          position: [1.5, solar.azimuth, Math.max(0, 90 - solar.altitude)],
+        });
+      }
+    } catch {
+      // Ignore during style transitions
+    }
+  }, [is3DMode]);
+
+  // Update 3D building extrusion footprints when target parcel changes
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+
+    const lat = selectedCoords?.lat ?? mapCenter.lat;
+    const lon = selectedCoords?.lon ?? mapCenter.lon;
+    const floors = report?.property.building?.unitsCount
+      ? Math.min(18, Math.max(4, Math.round(report.property.building.unitsCount / 2)))
+      : 14;
+    const height = report?.property.building?.builtSurfaceM2
+      ? Math.min(90, Math.max(16, floors * 3.2))
+      : 44.8;
+    const name = propertyName || 'Edificio en Auditoría';
+
+    try {
+      const source = map.getSource('building-3d-source');
+      if (source && typeof (source as any).setData === 'function') {
+        (source as any).setData(generate3dBuildingFootprints(lat, lon, floors, height, name));
+      }
+    } catch {
+      // Ignore during initialization
+    }
+  }, [selectedCoords, mapCenter.lat, mapCenter.lon, report, propertyName]);
 
   const handleZoomIn = () => {
     mapRef.current?.zoomIn({ duration: 300 });
@@ -583,7 +762,8 @@ export function MapView({
 
   const handleResetNorth = () => {
     mapRef.current?.resetNorthPitch({ duration: 600 });
-    setIs3DMode(false);
+    setCurrentBearing(0);
+    setCurrentPitch(0);
   };
 
   const resetToSpain = () => {
@@ -1255,65 +1435,163 @@ export function MapView({
         </div>
       </div>
 
-      {/* ================= FLOATING MAP CONTROLS: DESKTOP (Top-Right) ================= */}
+      {/* ================= FLOATING MAP CONTROLS & 3D COMPASS GIZMO (Top-Right, Desktop) ================= */}
       <div
         onClick={(e) => e.stopPropagation()}
-        className="hidden lg:flex absolute top-3 right-3 z-20 flex-col gap-1.5 no-print"
+        className="hidden lg:flex absolute top-3 right-3 z-30 flex-col gap-2.5 items-end no-print"
       >
-        {/* Zoom Controls */}
-        <div className="bg-surface-container-low/95 backdrop-blur-md border border-outline-variant rounded flex flex-col overflow-hidden shadow-xl">
+        {/* 3D Navigation Gizmo & Orientation Control */}
+        <div
+          data-testid="3d-compass-gizmo"
+          className="bg-surface-container-low/95 border border-outline-variant rounded-xl p-2.5 shadow-2xl backdrop-blur-md flex items-center gap-3 select-none"
+        >
+          {/* Interactive Compass Disc */}
+          <div
+            className="relative w-12 h-12 rounded-full border border-outline-variant bg-surface-container flex items-center justify-center cursor-pointer transition-transform hover:scale-105"
+            onClick={handleResetNorth}
+            title="Alinear al Norte (0°)"
+            aria-label="Alinear al Norte (0°)"
+          >
+            <div className="absolute inset-1 rounded-full border border-dashed border-outline-variant/60" />
+            {/* Arrow pointing to True North (-currentBearing deg rotation) */}
+            <div
+              className="w-1 h-8 flex flex-col justify-between items-center origin-center transition-transform duration-150"
+              style={{ transform: `rotate(${-currentBearing}deg)` }}
+            >
+              <span className="text-[9px] text-rose-500 font-bold font-mono leading-none">N</span>
+              <div className="w-1.5 h-1.5 rounded-full bg-primary" />
+              <span className="text-[8px] text-outline font-mono leading-none">S</span>
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-1">
+            <div className="flex items-center gap-1">
+              <button
+                type="button"
+                onClick={handleResetNorth}
+                className="w-7 h-7 bg-surface-container hover:bg-surface-container-high rounded text-on-surface border border-outline-variant flex items-center justify-center transition-colors cursor-pointer"
+                title="Alinear al Norte"
+                aria-label="Alinear al Norte"
+              >
+                <Compass className="w-3.5 h-3.5 text-secondary" />
+              </button>
+              <button
+                type="button"
+                onClick={() => toggle3DMode(false)}
+                className={`w-7 h-7 rounded border border-outline-variant flex items-center justify-center transition-colors cursor-pointer ${
+                  !is3DMode
+                    ? 'bg-primary/20 text-primary border-primary/40 font-bold'
+                    : 'bg-surface-container hover:bg-surface-container-high text-on-surface'
+                }`}
+                title="Vista Cenital 2D"
+                aria-label="Vista Cenital 2D"
+              >
+                <span className="text-[10px] font-mono">2D</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => toggle3DMode(true)}
+                className={`w-7 h-7 rounded border border-outline-variant flex items-center justify-center transition-colors cursor-pointer ${
+                  is3DMode
+                    ? 'bg-primary text-on-primary font-bold shadow-sm'
+                    : 'bg-surface-container hover:bg-surface-container-high text-on-surface'
+                }`}
+                title="3D Extrusión"
+                aria-label="3D Extrusión"
+              >
+                <Box className="w-3.5 h-3.5" />
+              </button>
+            </div>
+            <span
+              className="text-[9px] font-mono text-outline text-center uppercase tracking-wider"
+              title={`Inclinación Pitch: ${currentPitch}° · Orientación Bearing: ${currentBearing}°`}
+            >
+              {is3DMode ? 'ÓRBITA 3D ACTIVA' : 'VISTA 2D CENITAL'}
+            </span>
+          </div>
+        </div>
+
+        {/* Desktop Vertical Tool Palette */}
+        <div className="flex items-center gap-1.5 bg-surface-container-low/95 backdrop-blur-md border border-outline-variant p-1 rounded-lg shadow-xl">
+          {/* Mode Switcher Buttons */}
+          <div className="flex items-center bg-surface-container p-0.5 rounded border border-outline-variant/60 mr-1">
+            <button
+              type="button"
+              onClick={() => toggle3DMode(false)}
+              className={`px-2.5 py-1 text-xs font-mono font-medium rounded transition cursor-pointer ${
+                !is3DMode
+                  ? 'bg-surface-container-high text-on-surface border border-outline-variant font-bold'
+                  : 'text-on-surface-variant hover:text-on-surface'
+              }`}
+            >
+              2D
+            </button>
+            <button
+              type="button"
+              onClick={() => toggle3DMode(true)}
+              className={`px-2.5 py-1 text-xs font-mono font-medium rounded transition flex items-center gap-1 cursor-pointer ${
+                is3DMode
+                  ? 'bg-primary text-on-primary font-bold shadow-xs'
+                  : 'text-on-surface-variant hover:text-on-surface'
+              }`}
+            >
+              <Box className="w-3 h-3" />
+              <span>3D Extrusión</span>
+            </button>
+          </div>
+
+          {/* Zoom In / Out Pair */}
           <button
             type="button"
             onClick={handleZoomIn}
-            className="w-8 h-8 flex items-center justify-center text-on-surface-variant hover:text-on-surface hover:bg-surface-container transition-colors cursor-pointer"
+            className="w-7 h-7 rounded hover:bg-surface-container text-on-surface-variant hover:text-on-surface flex items-center justify-center transition-colors cursor-pointer"
             title="Acercar (+)"
           >
-            <Plus className="w-4 h-4" />
+            <Plus className="w-3.5 h-3.5" />
           </button>
-          <div className="h-px bg-outline-variant" />
           <button
             type="button"
             onClick={handleZoomOut}
-            className="w-8 h-8 flex items-center justify-center text-on-surface-variant hover:text-on-surface hover:bg-surface-container transition-colors cursor-pointer"
+            className="w-7 h-7 rounded hover:bg-surface-container text-on-surface-variant hover:text-on-surface flex items-center justify-center transition-colors cursor-pointer"
             title="Alejar (-)"
           >
-            <Minus className="w-4 h-4" />
+            <Minus className="w-3.5 h-3.5" />
+          </button>
+
+          {/* Reset North Compass */}
+          <button
+            type="button"
+            onClick={handleResetNorth}
+            className="w-7 h-7 bg-surface-container-low/95 hover:bg-surface-container border border-outline-variant rounded flex items-center justify-center text-secondary transition-colors cursor-pointer"
+            title="Orientación Norte (0°)"
+          >
+            <Compass className="w-3.5 h-3.5" />
+          </button>
+
+          {/* 3D Axonometric Tilt Button */}
+          <button
+            type="button"
+            onClick={() => toggle3DMode()}
+            className={`w-7 h-7 rounded flex items-center justify-center text-[10px] font-mono font-bold transition-colors cursor-pointer ${
+              is3DMode
+                ? 'border-primary text-primary bg-primary/10 shadow-primary/20'
+                : 'border-outline-variant text-on-surface-variant hover:text-primary'
+            }`}
+            title="Alternar Perspectiva 3D / Axonometría"
+          >
+            3D
+          </button>
+
+          {/* Reset to Spain View */}
+          <button
+            type="button"
+            onClick={resetToSpain}
+            className="w-7 h-7 rounded hover:bg-surface-container text-on-surface-variant hover:text-primary flex items-center justify-center transition-colors cursor-pointer"
+            title="Vista General España"
+          >
+            <Maximize2 className="w-3.5 h-3.5" />
           </button>
         </div>
-
-        {/* Reset North Compass */}
-        <button
-          type="button"
-          onClick={handleResetNorth}
-          className="w-8 h-8 bg-surface-container-low/95 backdrop-blur-md border border-outline-variant rounded flex items-center justify-center text-secondary hover:text-white transition-colors shadow-xl cursor-pointer"
-          title="Orientación Norte (0°)"
-        >
-          <Compass className="w-4 h-4" />
-        </button>
-
-        {/* 3D Axonometric Tilt Button */}
-        <button
-          type="button"
-          onClick={toggle3DMode}
-          className={`w-8 h-8 bg-surface-container-low/95 backdrop-blur-md border rounded flex items-center justify-center text-[10px] font-mono font-bold transition-colors shadow-xl cursor-pointer ${
-            is3DMode
-              ? 'border-primary text-primary bg-primary/10 shadow-primary/20'
-              : 'border-outline-variant text-on-surface-variant hover:text-primary'
-          }`}
-          title="Alternar Perspectiva 3D / Axonometría"
-        >
-          3D
-        </button>
-
-        {/* Reset to Spain View */}
-        <button
-          type="button"
-          onClick={resetToSpain}
-          className="w-8 h-8 bg-surface-container-low/95 backdrop-blur-md border border-outline-variant rounded flex items-center justify-center text-on-surface-variant hover:text-primary transition-colors shadow-xl cursor-pointer"
-          title="Vista General España"
-        >
-          <Maximize2 className="w-3.5 h-3.5" />
-        </button>
       </div>
 
       {/* ================= SPATIAL TELEMETRY & SCALE OVERLAY (Bottom HUD) ================= */}
@@ -1720,6 +1998,39 @@ export function MapView({
               </div>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* ================= FLOATING SOLAR EXPOSURE & DAYLIGHT SIMULATION HUD ================= */}
+      {is3DMode && isSolarHudOpen && (
+        <SolarSimulationHud
+          lat={selectedCoords?.lat ?? mapCenter.lat}
+          lon={selectedCoords?.lon ?? mapCenter.lon}
+          facadeAzimuthDeg={198}
+          roofAreaM2={
+            report?.property.building?.builtSurfaceM2
+              ? Math.min(600, Math.max(120, Math.round(report.property.building.builtSurfaceM2 / 6)))
+              : 200
+          }
+          isOpen={isSolarHudOpen}
+          onClose={() => setIsSolarHudOpen(false)}
+          onSolarChange={handleSolarChange}
+        />
+      )}
+
+      {/* Floating Re-Open Solar HUD Button (when minimized/closed in 3D mode) */}
+      {is3DMode && !isSolarHudOpen && (
+        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-40 no-print">
+          <button
+            type="button"
+            onClick={() => setIsSolarHudOpen(true)}
+            className="bg-surface-container/95 border border-primary/40 hover:border-primary text-primary px-3.5 py-1.5 rounded-full text-xs font-mono flex items-center gap-2 shadow-2xl backdrop-blur-md cursor-pointer hover:bg-surface-container-high transition"
+            title="Abrir Simulador Solar & Sombras"
+            aria-label="Abrir Simulador Solar & Sombras"
+          >
+            <Sun className="w-4 h-4 text-secondary" />
+            <span className="font-semibold">Simulador Solar & Sombras</span>
+          </button>
         </div>
       )}
     </div>

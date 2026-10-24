@@ -29,6 +29,7 @@ export interface CadastralBottomSheetProps {
   onSnapChange: (snap: SheetSnapPoint) => void;
   onOpenUnitPicker?: () => void;
   onExportPdf?: () => void;
+  onOpenDuel?: () => void;
   className?: string;
 }
 
@@ -39,6 +40,7 @@ export function CadastralBottomSheet({
   onSnapChange,
   onOpenUnitPicker,
   onExportPdf,
+  onOpenDuel,
   className = '',
 }: CadastralBottomSheetProps) {
   const [copied, setCopied] = useState(false);
@@ -575,6 +577,18 @@ export function CadastralBottomSheet({
             </div>
             <ChevronRight className="text-on-surface-variant w-4 h-4 shrink-0 group-hover:translate-x-0.5 transition-transform" />
           </button>
+
+          {/* Duel Comparator CTA */}
+          {onOpenDuel && (
+            <button
+              type="button"
+              data-testid="bottomsheet-duel-btn"
+              onClick={onOpenDuel}
+              className="w-full py-2 px-3 rounded-lg bg-surface-container-high border border-primary/40 hover:bg-surface-variant text-primary font-mono text-xs font-semibold flex items-center justify-center gap-2 transition-all cursor-pointer"
+            >
+              <span>+ Comparar Inmueble 1 vs 1</span>
+            </button>
+          )}
 
           {/* Primary Action CTA */}
           <button

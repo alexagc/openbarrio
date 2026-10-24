@@ -5,6 +5,7 @@ export interface UrlParamsState {
   activeTab: 'dossier' | 'map';
   refcat?: string;
   coords?: { lat: number; lon: number };
+  vs?: string;
 }
 
 export function parseUrlState(): UrlParamsState {
@@ -19,6 +20,7 @@ export function parseUrlState(): UrlParamsState {
   const latParam = searchParams.get('lat');
   const lonParam = searchParams.get('lon');
   const tabParam = searchParams.get('tab');
+  const vsParam = searchParams.get('vs') || undefined;
 
   let coords: { lat: number; lon: number } | undefined;
   if (latParam && lonParam) {
@@ -38,6 +40,7 @@ export function parseUrlState(): UrlParamsState {
     activeTab,
     refcat: refcatParam ? refcatParam.toUpperCase().trim() : undefined,
     coords,
+    vs: vsParam ? vsParam.toUpperCase().trim() : undefined,
   };
 }
 
@@ -77,6 +80,10 @@ export function useUrlSync(
         params.set('tab', 'map');
       }
 
+      if (newState.vs) {
+        params.set('vs', newState.vs);
+      }
+
       const queryString = params.toString();
       const targetPath = newState.viewMode === 'map' ? '/map' : '/';
       const targetUrl = queryString ? `${targetPath}?${queryString}` : targetPath;
@@ -100,7 +107,7 @@ export function useUrlSync(
       return;
     }
     syncToUrl(state, false);
-  }, [state.viewMode, state.activeTab, state.refcat, state.coords?.lat, state.coords?.lon, syncToUrl]);
+  }, [state.viewMode, state.activeTab, state.refcat, state.coords?.lat, state.coords?.lon, state.vs, syncToUrl]);
 
   // Handle native browser back/forward buttons (popstate)
   useEffect(() => {
