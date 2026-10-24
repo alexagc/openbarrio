@@ -453,7 +453,7 @@ export function AppContent() {
                   OpenBarrio
                 </span>
                 <span className="font-mono text-[9px] text-on-surface-variant font-medium tracking-wider uppercase mt-0.5 truncate hidden sm:inline max-w-[160px] md:max-w-[200px]">
-                  Visor Cartográfico Catastral
+                  Visor Cartográfico Catastral & Auditoría Territorial
                 </span>
               </div>
             </div>

@@ -329,7 +329,7 @@ describe('Landing Page & i18n Integration', () => {
       expect(screen.queryByRole('dialog')).toBeNull();
 
       // Map view should be active
-      expect(screen.getByText(/Visor Cartográfico Catastral & Auditoría Territorial/i)).toBeTruthy();
+      expect(screen.getByText(/Visor Cartográfico Catastral/i)).toBeTruthy();
 
       // The report displayed should be Barcelona, NOT default Gran Vía Madrid
       await waitFor(() => {
