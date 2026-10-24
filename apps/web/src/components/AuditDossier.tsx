@@ -265,8 +265,8 @@ export function AuditDossier({ report, onOpenUnitPicker, onOpenDuel }: AuditDoss
       )}
 
       {/* 5. CAPEX & BUILDING HEALTH DIAGNOSTICS */}
-      <div className="page-break-inside-avoid p-space-lg">
-        <BuildingCapExCard report={report} onCompareClick={onOpenDuel} />
+      <div className="page-break-inside-avoid">
+        <BuildingCapExCard report={report} />
       </div>
 
       {/* 6. DUE DILIGENCE CLEARANCE & RISKS */}

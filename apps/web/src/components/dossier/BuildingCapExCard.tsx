@@ -8,13 +8,11 @@ import {
   Coins,
   TrendingUp,
   Scale,
-  Sparkles,
 } from 'lucide-react';
 
 export interface BuildingCapExCardProps {
   report?: PropertyAuditReport;
   capex?: BuildingCapExRisk;
-  onCompareClick?: () => void;
   className?: string;
 }
 
@@ -118,7 +116,6 @@ export function deriveBuildingCapEx(
 export function BuildingCapExCard({
   report,
   capex: directCapex,
-  onCompareClick,
   className = '',
 }: BuildingCapExCardProps) {
   const capexData =
@@ -177,47 +174,30 @@ export function BuildingCapExCard({
   return (
     <div
       data-testid="building-capex-card"
-      className={`bg-surface-container-low border border-outline-variant rounded-xl p-space-md sm:p-space-lg flex flex-col gap-space-md shadow-sm ${className}`}
+      className={`p-space-lg bg-surface space-y-4 ${className}`}
     >
-      {/* Header with Title and Compare CTA */}
-      <div className="flex items-start justify-between gap-3 border-b border-outline-variant/60 pb-3 flex-wrap">
-        <div className="flex items-center gap-3">
-          <div className="p-2 rounded bg-surface-container border border-outline-variant text-primary shrink-0">
-            <Wrench className="w-5 h-5 text-primary" />
-          </div>
-          <div>
-            <h3 className="font-headline font-bold text-on-surface text-base sm:text-lg flex items-center gap-2">
-              <span>Diagnóstico CapEx & Salud ITE</span>
-              <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-surface-container border border-outline-variant text-on-surface-variant font-normal uppercase">
-                Edificio {capexData.buildingAgeYears} años
-              </span>
-            </h3>
-            <p className="font-body text-xs text-on-surface-variant mt-0.5">
-              Inspección Técnica de Edificios (ITE/IEE), riesgo de derramas y adecuación de cuotas LPH
-            </p>
-          </div>
+      {/* Header with Title */}
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-2">
+          <Wrench className="w-4 h-4 text-primary" />
+          <h3 className="font-title-md text-title-md text-on-surface font-semibold flex items-center gap-2">
+            <span>Diagnóstico CapEx & Salud ITE</span>
+            <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-surface-container border border-outline-variant text-on-surface-variant font-normal uppercase">
+              {capexData.buildingAgeYears} años
+            </span>
+          </h3>
         </div>
-
-        {onCompareClick && (
-          <button
-            type="button"
-            data-testid="duel-open-btn"
-            onClick={onCompareClick}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded bg-surface-container-high border border-primary/50 text-primary hover:bg-primary/20 text-xs font-semibold font-mono transition-colors cursor-pointer shrink-0"
-            title="Comparar este inmueble en duelo 1 vs 1"
-          >
-            <Sparkles className="w-3.5 h-3.5" />
-            <span>Comparar 1 vs 1</span>
-          </button>
-        )}
+        <span className="text-[10px] font-mono text-outline">
+          LPH 9.1.f & RDL 7/2015
+        </span>
       </div>
 
       {/* Primary 4-Metric Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
         {/* Metric 1: ITE Municipal Status */}
-        <div className="p-3 rounded-lg bg-surface-container border border-outline-variant/80 flex flex-col justify-between">
+        <div className="p-3 rounded-lg bg-surface-container-low border border-outline-variant flex flex-col justify-between">
           <div>
-            <div className="text-[11px] font-mono text-on-surface-variant uppercase flex items-center gap-1.5">
+            <div className="text-[10px] font-mono text-outline uppercase flex items-center gap-1.5">
               <Shield className="w-3.5 h-3.5 text-primary" />
               <span>Estado ITE / IEE</span>
             </div>
@@ -231,22 +211,22 @@ export function BuildingCapExCard({
               </span>
             </div>
           </div>
-          <div className="mt-3 text-[11px] font-mono text-outline">
-            Obligatoria desde 50 años (RDL 7/2015)
+          <div className="mt-3 text-[10px] font-mono text-outline">
+            {capexData.iteRequired ? 'Exigible por antigüedad (≥50 años)' : 'Exento por antigüedad (<50 años)'}
           </div>
         </div>
 
         {/* Metric 2: Derramas Risk Gauge (Level 1-5) */}
-        <div className="p-3 rounded-lg bg-surface-container border border-outline-variant/80 flex flex-col justify-between">
+        <div className="p-3 rounded-lg bg-surface-container-low border border-outline-variant flex flex-col justify-between">
           <div>
-            <div className="text-[11px] font-mono text-on-surface-variant uppercase flex items-center gap-1.5">
+            <div className="text-[10px] font-mono text-outline uppercase flex items-center gap-1.5">
               <Scale className="w-3.5 h-3.5 text-secondary" />
-              <span>Riesgo Derramas (5-10a)</span>
+              <span>Riesgo Derramas</span>
             </div>
             <div className="mt-2 flex items-center gap-1.5" data-testid="derramas-risk-gauge">
               {[1, 2, 3, 4, 5].map((lvl) => {
                 const isActive = lvl <= derramasLevel;
-                let bgClass = 'bg-surface-container-highest';
+                let bgClass = 'bg-surface-variant';
                 if (isActive) {
                   bgClass =
                     derramasLevel <= 2
@@ -258,7 +238,7 @@ export function BuildingCapExCard({
                 return (
                   <div
                     key={lvl}
-                    className={`h-2.5 flex-1 rounded-sm ${bgClass} transition-all`}
+                    className={`h-2 flex-1 rounded-sm ${bgClass} transition-all`}
                     title={`Nivel ${lvl}/5`}
                   />
                 );
@@ -266,7 +246,7 @@ export function BuildingCapExCard({
             </div>
             <div className="mt-1.5 flex items-center justify-between text-xs font-mono">
               <span className="text-on-surface font-semibold">
-                Nivel {derramasLevel} de 5
+                Nivel {derramasLevel}/5
               </span>
               <span
                 className={
@@ -277,26 +257,26 @@ export function BuildingCapExCard({
                     : 'text-rose-400'
                 }
               >
-                {derramasLevel <= 2 ? 'Riesgo Bajo' : derramasLevel === 3 ? 'Moderado' : 'Alto / Inminente'}
+                {derramasLevel <= 2 ? 'Bajo' : derramasLevel === 3 ? 'Moderado' : 'Alto / Inminente'}
               </span>
             </div>
           </div>
-          <div className="mt-2 text-[11px] font-mono text-outline">
+          <div className="mt-2 text-[10px] font-mono text-outline">
             CapEx: {capexData.estimatedCapExPerM2Eur.min}-{capexData.estimatedCapExPerM2Eur.max} €/m²
           </div>
         </div>
 
         {/* Metric 3: Reserve Fund Adequacy (LPH 9.1.f) */}
-        <div className="p-3 rounded-lg bg-surface-container border border-outline-variant/80 flex flex-col justify-between">
+        <div className="p-3 rounded-lg bg-surface-container-low border border-outline-variant flex flex-col justify-between">
           <div>
-            <div className="text-[11px] font-mono text-on-surface-variant uppercase flex items-center gap-1.5">
+            <div className="text-[10px] font-mono text-outline uppercase flex items-center gap-1.5">
               <Coins className="w-3.5 h-3.5 text-tertiary" />
               <span>Fondo de Reserva LPH</span>
             </div>
             <div className="mt-2 flex items-baseline gap-1.5">
               <span
                 data-testid="reserve-fund-deficit"
-                className={`text-lg font-bold font-mono ${
+                className={`text-base sm:text-lg font-bold font-mono ${
                   capexData.estimatedReserveFundDeficitPct > 30
                     ? 'text-rose-400'
                     : capexData.estimatedReserveFundDeficitPct > 10
@@ -308,35 +288,35 @@ export function BuildingCapExCard({
                   ? 'Adecuado'
                   : `-${capexData.estimatedReserveFundDeficitPct}%`}
               </span>
-              <span className="text-[11px] font-mono text-on-surface-variant">
+              <span className="text-[10px] font-mono text-on-surface-variant">
                 {capexData.estimatedReserveFundDeficitPct === 0 ? 'Sin déficit' : 'déficit estimado'}
               </span>
             </div>
           </div>
-          <div className="mt-3 text-[11px] font-mono text-outline">
-            Exigencia legal: mín 10% presupuesto ordinario
+          <div className="mt-3 text-[10px] font-mono text-outline">
+            Mínimo legal: 10% presupuesto ordinario
           </div>
         </div>
 
         {/* Metric 4: Estimated Monthly Quota Impact */}
-        <div className="p-3 rounded-lg bg-surface-container border border-outline-variant/80 flex flex-col justify-between">
+        <div className="p-3 rounded-lg bg-surface-container-low border border-outline-variant flex flex-col justify-between">
           <div>
-            <div className="text-[11px] font-mono text-on-surface-variant uppercase flex items-center gap-1.5">
+            <div className="text-[10px] font-mono text-outline uppercase flex items-center gap-1.5">
               <TrendingUp className="w-3.5 h-3.5 text-primary" />
               <span>Cuota Comunidad Est.</span>
             </div>
             <div className="mt-2 flex items-baseline gap-1.5">
               <span
                 data-testid="monthly-fee-impact"
-                className="text-lg font-bold font-mono text-on-surface"
+                className="text-base sm:text-lg font-bold font-mono text-on-surface"
               >
                 {capexData.estimatedCommunityExpenseRangeEurMonth.min} -{' '}
                 {capexData.estimatedCommunityExpenseRangeEurMonth.max} €
               </span>
-              <span className="text-[11px] font-mono text-on-surface-variant">/ mes</span>
+              <span className="text-[10px] font-mono text-on-surface-variant">/ mes</span>
             </div>
           </div>
-          <div className="mt-3 text-[11px] font-mono text-outline">
+          <div className="mt-3 text-[10px] font-mono text-outline">
             Pérdida térmica envolvente: {capexData.thermalEnvelopeLossPct}%
           </div>
         </div>
@@ -344,15 +324,15 @@ export function BuildingCapExCard({
 
       {/* Renovation Priorities Section */}
       {capexData.renovationPriorities && capexData.renovationPriorities.length > 0 && (
-        <div className="pt-2">
-          <div className="text-xs font-mono text-on-surface-variant mb-2">
+        <div className="pt-1">
+          <div className="text-[11px] font-mono text-outline mb-2">
             Prioridades de Intervención & Conservación Detectadas:
           </div>
           <div className="flex flex-wrap gap-2">
             {capexData.renovationPriorities.map((item, idx) => (
               <span
                 key={idx}
-                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded bg-surface-container border border-outline-variant/80 text-on-surface font-mono text-xs"
+                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded bg-surface-container-low border border-outline-variant text-on-surface font-mono text-xs"
               >
                 <span className="w-1.5 h-1.5 rounded-full bg-secondary" />
                 <span>{item}</span>

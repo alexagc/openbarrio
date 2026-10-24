@@ -213,12 +213,10 @@ describe('Property Duel & Dual Radar Comparator (Phase 12C)', () => {
     expect(handleSelectB).toHaveBeenCalled();
   });
 
-  it('renders BuildingCapExCard with ITE status, derramas risk gauge, and triggers comparison', () => {
-    const handleCompare = vi.fn();
+  it('renders BuildingCapExCard with ITE status, derramas risk gauge, and formatted metrics', () => {
     render(
       <BuildingCapExCard
         report={reportA}
-        onCompareClick={handleCompare}
       />
     );
 
@@ -227,11 +225,6 @@ describe('Property Duel & Dual Radar Comparator (Phase 12C)', () => {
     expect(screen.getByTestId('derramas-risk-gauge')).toBeDefined();
     expect(screen.getByTestId('reserve-fund-deficit')).toBeDefined();
     expect(screen.getByTestId('monthly-fee-impact')).toBeDefined();
-
-    // Trigger compare action
-    const compareBtn = screen.getByTestId('duel-open-btn');
-    fireEvent.click(compareBtn);
-    expect(handleCompare).toHaveBeenCalledTimes(1);
   });
 
   it('derives building capex risk metrics accurately based on building age', () => {
