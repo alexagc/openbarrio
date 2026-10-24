@@ -119,7 +119,7 @@ export class CatastroProvider implements ICatastroProvider {
           const cpmrcXml = await cpmrcRes.text();
           const parsed = parseCatastroCpmrcXml(cpmrcXml);
           if (parsed) {
-            resolvedCoords = { latitude: parsed.latitude, longitude: parsed.longitude };
+            resolvedCoords = { latitude: parsed.latitude, longitude: parsed.longitude, srs: 'EPSG:4326' };
           }
         }
       } catch {

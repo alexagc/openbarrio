@@ -4,9 +4,9 @@ import { MockSICAProvider } from './sica.mock.js';
 import { MockSNCZIProvider } from './snczi.mock.js';
 
 export class MockEnvironmentalProvider implements IEnvironmentalProvider {
-  private readonly sica: ISICAProvider;
-  private readonly snczi: ISNCZIProvider;
-  private readonly airQuality?: IAirQualityProvider;
+  readonly sica: ISICAProvider;
+  readonly snczi: ISNCZIProvider;
+  readonly airQuality?: IAirQualityProvider;
 
   constructor(options?: {
     sica?: ISICAProvider;

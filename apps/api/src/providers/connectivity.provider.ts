@@ -111,6 +111,13 @@ export class D1CivicConnectivityProvider implements ICivicConnectivityProvider {
     this.db = db;
   }
 
+  async getConnectivityData(
+    latitude: number,
+    longitude: number
+  ): Promise<CivicConnectivityData> {
+    return this.getConnectivityByCoordinates(latitude, longitude);
+  }
+
   async getConnectivityByCoordinates(
     latitude: number,
     longitude: number
@@ -480,6 +487,13 @@ export class MockCivicConnectivityProvider implements ICivicConnectivityProvider
 
   addFacility(facility: RawCivicFacilityRow): void {
     this.facilities.push(facility);
+  }
+
+  async getConnectivityData(
+    latitude: number,
+    longitude: number
+  ): Promise<CivicConnectivityData> {
+    return this.getConnectivityByCoordinates(latitude, longitude);
   }
 
   async getConnectivityByCoordinates(

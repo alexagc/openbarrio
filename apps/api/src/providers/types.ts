@@ -75,6 +75,7 @@ export interface ICivicConnectivityProvider {
    * Calculate 15-minute civic connectivity and proximity indicators to essential public services.
    */
   getConnectivityData(latitude: number, longitude: number): Promise<CivicConnectivityData>;
+  getConnectivityByCoordinates?(latitude: number, longitude: number): Promise<CivicConnectivityData>;
 }
 
 export interface IUrbanPlanningProvider {
@@ -82,19 +83,21 @@ export interface IUrbanPlanningProvider {
    * Retrieve official SIU land classification and planning ordinances for a property.
    */
   getUrbanPlanningData(property: CadastralProperty): Promise<UrbanPlanningData>;
+  getUrbanPlanning?(property: CadastralProperty): Promise<UrbanPlanningData>;
 }
 
 export interface IAirQualityProvider {
   /**
    * Retrieve official MITECO European Air Quality Index (AQI) and pollutants for coordinates.
    */
-  getAirQualityData(latitude: number, longitude: number): Promise<AirQualityData>;
+  getAirQualityData(latitude: number, longitude: number): Promise<AirQualityData | undefined>;
+  getAirQuality?(latitude: number, longitude: number): Promise<AirQualityData | undefined>;
 }
 
 export interface IEnvironmentalProvider {
   readonly sica: ISICAProvider;
   readonly snczi: ISNCZIProvider;
-  readonly airQuality: IAirQualityProvider;
+  readonly airQuality?: IAirQualityProvider;
 
   /**
    * Aggregates environmental indicators (acoustic noise, fluvial flood risk, air quality).
