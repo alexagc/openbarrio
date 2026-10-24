@@ -1,6 +1,7 @@
 {
   "name": "@openbarrio/web",
-  "version": "0.5.0",
+  "version": "0.5.1",
+  "type": "module",
   "description": "Interactive Web Dashboard & Civic Landing Page for OpenBarrio",
   "private": true,
   "scripts": {

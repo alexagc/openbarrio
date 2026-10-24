@@ -292,7 +292,7 @@ export function CadastralBottomSheet({
     <section
       role="region"
       aria-label="Auditoría Catastral"
-      className={`z-20 w-full bg-surface-container border-t border-outline-variant rounded-t-xl shadow-2xl flex flex-col shrink-0 transition-transform duration-300 ${snapHeightClasses[snapPoint]} ${className}`}
+      className={`z-20 w-full bg-surface-container border-t border-outline-variant rounded-t-xl shadow-2xl flex flex-col shrink-0 overflow-hidden transition-transform duration-300 ${snapHeightClasses[snapPoint]} ${className}`}
       style={{
         transform: dragDeltaY !== 0 ? `translateY(${Math.max(-80, Math.min(80, dragDeltaY))}px)` : undefined,
         transition: dragDeltaY !== 0 ? 'none' : undefined,
@@ -401,9 +401,10 @@ export function CadastralBottomSheet({
 
       {/* 3. Scrollable Due Diligence Content Section (Visible in half & full) */}
       <div
-        className={`overflow-y-auto px-space-md py-3 space-y-3.5 pb-20 flex-1 ${
+        className={`flex-1 min-h-0 overflow-y-auto overscroll-contain px-space-md py-3 space-y-3.5 pb-24 ${
           snapPoint === 'peek' ? 'hidden' : 'block'
         }`}
+        style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-y' }}
       >
         {/* 5-Pillar Bento Risk Indicators Grid */}
         <div>

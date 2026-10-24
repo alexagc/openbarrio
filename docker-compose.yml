@@ -1,0 +1,27 @@
+services:
+  openbarrio:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    container_name: openbarrio-stack
+    restart: unless-stopped
+    ports:
+      - "3001:3001"
+      - "5173:5173"
+    environment:
+      - NODE_ENV=development
+      - PORT=3001
+      - HOST=0.0.0.0
+      - USE_MOCKS=false
+      - SQLITE_DB_PATH=/workspace/data/openbarrio.sqlite
+      - VITE_API_URL=http://localhost:3001
+    volumes:
+      - .:/workspace
+      - /workspace/node_modules
+      - /workspace/packages/core/node_modules
+      - /workspace/packages/etl/node_modules
+      - /workspace/apps/api/node_modules
+      - /workspace/apps/web/node_modules
+      - /workspace/apps/extension/node_modules
+    command: >
+      sh -c "node scripts/init-local-db.mjs && pnpm --filter @openbarrio/core run build && pnpm --parallel run dev"

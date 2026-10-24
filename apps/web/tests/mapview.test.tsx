@@ -35,6 +35,9 @@ vi.mock('maplibre-gl', () => {
   class MockPopup {
     setHTML = vi.fn().mockReturnThis();
     on = vi.fn().mockReturnThis();
+    addTo = vi.fn().mockReturnThis();
+    remove = vi.fn().mockReturnThis();
+    isOpen = vi.fn().mockReturnValue(false);
   }
 
   return {

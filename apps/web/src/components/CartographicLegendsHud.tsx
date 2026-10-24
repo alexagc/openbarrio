@@ -11,10 +11,14 @@ export interface ActiveLayersState {
 
 interface CartographicLegendsHudProps {
   activeLayers: ActiveLayersState;
+  defaultCollapsed?: boolean;
 }
 
-export function CartographicLegendsHud({ activeLayers }: CartographicLegendsHudProps) {
-  const [isCollapsed, setIsCollapsed] = useState(false);
+export function CartographicLegendsHud({
+  activeLayers,
+  defaultCollapsed = false,
+}: CartographicLegendsHudProps) {
+  const [isCollapsed, setIsCollapsed] = useState(defaultCollapsed);
 
   // If no thematic layers are active, hide HUD cleanly
   const hasThematicLayers =
@@ -23,9 +27,9 @@ export function CartographicLegendsHud({ activeLayers }: CartographicLegendsHudP
   if (!hasThematicLayers) return null;
 
   return (
-    <div className="absolute bottom-6 left-6 z-20 max-w-xs w-72 bg-surface-container-lowest/90 backdrop-blur-md border border-outline-variant/80 rounded-xl shadow-2xl text-on-surface overflow-hidden font-sans transition-all no-print">
+    <div className="absolute bottom-10 left-3 z-20 max-w-xs w-64 bg-surface-container-lowest/95 backdrop-blur-md border border-outline-variant/80 rounded-xl shadow-2xl text-on-surface overflow-hidden font-sans transition-all no-print">
       {/* ================= HUD HEADER ================= */}
-      <div className="px-3.5 py-2.5 bg-surface-container-low/90 border-b border-outline-variant/60 flex items-center justify-between gap-2">
+      <div className="px-3 py-2 bg-surface-container-low/90 border-b border-outline-variant/60 flex items-center justify-between gap-2">
         <div className="flex items-center gap-2">
           <Layers className="w-3.5 h-3.5 text-primary" />
           <span className="text-xs font-bold font-headline text-on-surface tracking-tight">
@@ -46,7 +50,7 @@ export function CartographicLegendsHud({ activeLayers }: CartographicLegendsHudP
 
       {/* ================= HUD BODY (ACCORDION / ACTIVE LEGENDS) ================= */}
       {!isCollapsed && (
-        <div className="p-3.5 space-y-4 max-h-80 overflow-y-auto text-xs">
+        <div className="p-3 space-y-3.5 max-h-72 overflow-y-auto text-xs">
           {/* 1. INE ADRH RENTA MEDIA */}
           {activeLayers.income && (
             <div className="space-y-1.5 animate-fade-in">

@@ -62,3 +62,8 @@ Thumbs.db
 
 # Project internal notes / task boards (local context)
 .notes/
+
+# Local databases and runtime state
+data/
+*.sqlite*
+.wrangler/

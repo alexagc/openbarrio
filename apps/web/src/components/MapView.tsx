@@ -7,6 +7,8 @@ import {
   Maximize2,
   Loader2,
   ChevronRight,
+  ChevronDown,
+  ChevronUp,
   AlertTriangle,
   X,
   Compass,
@@ -34,6 +36,8 @@ export interface MapViewProps {
   onOpenUnitPicker?: () => void;
   isMobileLayersOpen?: boolean;
   onToggleMobileLayers?: (open?: boolean) => void;
+  showFloatingAuditCard?: boolean;
+  defaultLayersExpanded?: boolean;
 }
 
 export type BasemapType = 'dark-gis' | 'pnoa-satellite' | 'ign-base';
@@ -141,6 +145,8 @@ export function MapView({
   onOpenUnitPicker,
   isMobileLayersOpen,
   onToggleMobileLayers,
+  showFloatingAuditCard = true,
+  defaultLayersExpanded = true,
 }: MapViewProps) {
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<MapLibreMap | null>(null);
@@ -181,6 +187,9 @@ export function MapView({
 
   // Mobile GPS Locate Me state
   const [isLocating, setIsLocating] = useState<boolean>(false);
+
+  // Desktop collapsible layer switcher state
+  const [isDesktopLayersExpanded, setIsDesktopLayersExpanded] = useState<boolean>(defaultLayersExpanded);
 
   // Active thematic layers count for mobile FAB badge
   const activeThematicLayersCount = useMemo(() => {
@@ -645,26 +654,15 @@ export function MapView({
   // Update Marker & Target Parcel Flag when coordinates change
   useEffect(() => {
     const map = mapRef.current;
-    if (!map || !selectedCoords) return;
+    if (!map || !selectedCoords) {
+      if (markerRef.current) {
+        markerRef.current.remove();
+        markerRef.current = null;
+      }
+      return;
+    }
 
     const { lat, lon } = selectedCoords;
-
-    // Create custom Stitch-themed neon amber target node
-    const el = document.createElement('div');
-    el.className = 'group relative cursor-pointer';
-    el.innerHTML = `
-      <div class="relative flex items-center justify-center">
-        <div class="absolute w-12 h-12 bg-amber-500/20 rounded-full animate-ping"></div>
-        <div class="absolute w-7 h-7 bg-amber-400/30 rounded-full animate-pulse border border-amber-400/60"></div>
-        <div class="relative w-5 h-5 bg-surface-container-lowest text-secondary rounded-full flex items-center justify-center shadow-lg border-2 border-secondary transform transition hover:scale-125">
-          <div class="w-2 h-2 rounded-full bg-secondary"></div>
-        </div>
-      </div>
-    `;
-
-    if (markerRef.current) {
-      markerRef.current.remove();
-    }
 
     const isMatchingReport =
       Boolean(report) &&
@@ -678,86 +676,55 @@ export function MapView({
     const safeTitle = escapeHtml(
       isMatchingReport && propertyName ? `${propertyName}${unitSuffix}` : `Punto seleccionado (${lat.toFixed(5)}, ${lon.toFixed(5)})`
     );
-    const safeAddress = escapeHtml(
-      isMatchingReport && propertyAddress ? propertyAddress : 'Consultando Sede del Catastro & INE...'
-    );
-    const refcat = isMatchingReport ? report!.property.cadastralReference : 'Consultando Catastro...';
-    const surfaceM2 = isMatchingReport
-      ? report!.property.unit
-        ? `${report!.property.unit.builtSurfaceM2.toLocaleString('es-ES')} m² (privativos)`
-        : `${report!.property.building.builtSurfaceM2.toLocaleString('es-ES')} m²`
-      : 'Calculando...';
-    const yearBuilt = isMatchingReport
-      ? report!.property.building.constructionYear > 0
-        ? `Año ${report!.property.building.constructionYear}`
-        : 'Suelo sin edificar'
-      : 'Consultando...';
-    const scoreVal = isMatchingReport ? `${report!.score.overallScore}/100` : '--/100';
 
-    const popupHtml = `
-      <div class="p-3 text-xs font-mono bg-surface-container-low text-on-surface border border-secondary/40 rounded-lg shadow-2xl min-w-[220px]">
-        <div class="flex items-center justify-between border-b border-outline-variant/60 pb-1.5 mb-2">
-          <span class="text-[9px] font-bold text-secondary uppercase tracking-wider flex items-center gap-1.5">
-            <span class="w-1.5 h-1.5 rounded-full bg-primary animate-pulse"></span>
-            PARCELA AUDITADA
-          </span>
-          <span class="px-1.5 py-0.2 rounded bg-primary/20 text-primary border border-primary/40 text-[9px] font-bold">
-            ${scoreVal}
-          </span>
-        </div>
-        <p class="font-bold text-on-surface text-[11px] truncate mb-0.5">${safeTitle}</p>
-        <p class="text-on-surface-variant text-[10px] truncate mb-2">${safeAddress}</p>
-        <div class="bg-surface-container p-1.5 rounded border border-outline-variant/40 space-y-0.5 text-[9px]">
-          <div class="flex justify-between text-on-surface-variant">
-            <span>RC:</span>
-            <span class="text-secondary font-semibold">${escapeHtml(refcat)}</span>
-          </div>
-          <div class="flex justify-between text-on-surface-variant">
-            <span>Superficie:</span>
-            <span class="text-on-surface font-semibold">${surfaceM2}</span>
-          </div>
-          <div class="flex justify-between text-on-surface-variant">
-            <span>Construcción:</span>
-            <span class="text-on-surface font-semibold">${yearBuilt}</span>
+    // Create custom Stitch-themed modern neon amber radar target beacon (larger, high-tech)
+    const el = document.createElement('div');
+    el.className = 'group relative w-8 h-8 flex items-center justify-center cursor-pointer select-none';
+    el.setAttribute('title', safeTitle);
+    el.style.zIndex = '30';
+    el.innerHTML = `
+      <div class="relative flex items-center justify-center">
+        <!-- Modern radar wave ping & pulse rings (strictly pointer-events-none) -->
+        <div class="absolute w-16 h-16 bg-amber-500/20 rounded-full animate-ping pointer-events-none"></div>
+        <div class="absolute w-10 h-10 bg-amber-400/30 rounded-full animate-pulse border border-amber-400/60 pointer-events-none"></div>
+
+        <!-- High-tech precision reticle & glowing beacon core -->
+        <div class="relative w-7 h-7 bg-surface-container-lowest text-amber-400 rounded-full flex items-center justify-center shadow-2xl border-2 border-amber-400 transform transition-transform duration-200 group-hover:scale-125">
+          <div class="w-3 h-3 rounded-full bg-amber-400 shadow-[0_0_8px_#f59e0b] flex items-center justify-center">
+            <div class="w-1 h-1 rounded-full bg-white"></div>
           </div>
         </div>
-        <div class="mt-2 pt-1.5 border-t border-outline-variant/40 flex items-center justify-between gap-1">
-          <span class="text-[9px] text-secondary font-semibold">Inmuebles:</span>
-          <button id="ob-popup-open-units" type="button" class="px-2 py-0.5 rounded bg-primary text-on-primary text-[9px] font-bold cursor-pointer hover:bg-primary-container">
-            Ver unidades ▾
-          </button>
+
+        <!-- Micro chip label on hover (discrete single-line, does not obscure parcel) -->
+        <div class="absolute -top-8 hidden group-hover:flex items-center gap-1.5 px-2.5 py-1 rounded bg-surface-container-highest/95 backdrop-blur border border-amber-400/50 text-[10px] font-mono font-semibold text-on-surface whitespace-nowrap shadow-2xl pointer-events-none z-50">
+          <span class="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse"></span>
+          <span>${safeTitle}</span>
         </div>
-        <p class="mt-1 text-[8px] text-outline font-sans text-center">Click en el mapa para auditar otro punto</p>
       </div>
     `;
 
-    const popup = new maplibregl.Popup({
-      offset: 20,
-      closeButton: false,
-      className: 'stitch-dark-popup',
-    }).setHTML(popupHtml);
+    // Dynamic stacking context elevation on hover & click isolation
+    el.addEventListener('mouseenter', () => {
+      el.style.zIndex = '999';
+      if (el.parentElement) el.parentElement.style.zIndex = '999';
+    });
+    el.addEventListener('mouseleave', () => {
+      el.style.zIndex = '30';
+      if (el.parentElement) el.parentElement.style.zIndex = '';
+    });
+    el.addEventListener('click', (e) => {
+      e.stopPropagation();
+    });
 
-    const marker = new maplibregl.Marker({ element: el })
-      .setLngLat([lon, lat])
-      .setPopup(popup)
-      .addTo(map);
-
-    if (typeof (popup as any).on === 'function') {
-      (popup as any).on('open', () => {
-        const btn = document.getElementById('ob-popup-open-units');
-        if (btn) {
-          btn.onclick = (e) => {
-            e.stopPropagation();
-            if (onOpenUnitPicker) {
-              onOpenUnitPicker();
-            }
-          };
-        }
-      });
+    if (markerRef.current) {
+      markerRef.current.remove();
     }
 
+    const marker = new maplibregl.Marker({ element: el, anchor: 'center' })
+      .setLngLat([lon, lat])
+      .addTo(map);
+
     markerRef.current = marker;
-    marker.togglePopup();
 
     const center = map.getCenter();
     const dist = Math.hypot(center.lat - lat, center.lng - lon);
@@ -893,7 +860,8 @@ export function MapView({
 
     for (const item of amenitiesList) {
       const fac = item.facility!;
-      const dMeters = Math.max(80, Math.min(1300, fac.distanceMeters));
+      // Minimum visual clearance on map is 160m so amenities never overlap with the central parcel marker
+      const dMeters = Math.max(160, Math.min(1300, fac.distanceMeters));
       const rad = (item.bearing * Math.PI) / 180;
       const dKm = dMeters / 1000;
       const dLat = (dKm / 110.574) * Math.cos(rad);
@@ -903,51 +871,59 @@ export function MapView({
       const fLon = lon + dLon;
 
       const el = document.createElement('div');
-      el.className = 'group relative cursor-pointer';
+      el.className = 'group relative w-7 h-7 flex items-center justify-center cursor-pointer select-none';
+      el.style.zIndex = '20';
       el.innerHTML = `
         <div class="relative flex items-center justify-center">
-          <div class="w-6 h-6 rounded-full flex items-center justify-center text-xs shadow-lg border-2 transition-transform hover:scale-125" style="background: #0b1326; border-color: ${item.color};">
-            <span>${item.icon}</span>
+          <!-- Amenity Icon Node -->
+          <div class="w-7 h-7 rounded-full flex items-center justify-center text-xs shadow-xl border-2 transition-transform duration-150 group-hover:scale-125" style="background: #0b1326; border-color: ${item.color};">
+            <span class="leading-none">${item.icon}</span>
+          </div>
+
+          <!-- Embedded Direct Map Tooltip (Appears immediately on hover above icon, matching precision marker) -->
+          <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:flex flex-col p-2.5 rounded-lg bg-surface-container-low/95 backdrop-blur-md border shadow-2xl min-w-[200px] max-w-[260px] pointer-events-none z-50 text-left" style="border-color: ${item.color}80;">
+            <div class="flex items-center justify-between border-b border-outline-variant/60 pb-1 mb-1.5 gap-2">
+              <span class="text-[9px] font-bold uppercase tracking-wider flex items-center gap-1 font-mono" style="color: ${item.color};">
+                <span class="w-1.5 h-1.5 rounded-full animate-pulse" style="background-color: ${item.color};"></span>
+                ${escapeHtml(item.badge)}
+              </span>
+              <span class="text-[9px] font-bold text-primary font-mono shrink-0">
+                ~${Math.round(fac.walkTimeMinutes)} min
+              </span>
+            </div>
+            <p class="font-bold text-on-surface text-[11px] truncate mb-1 leading-snug">${escapeHtml(fac.name)}</p>
+            <div class="space-y-0.5 text-[9px] text-on-surface-variant font-mono">
+              <div class="flex justify-between">
+                <span>Distancia directa:</span>
+                <span class="font-bold text-on-surface">${fac.distanceMeters} m</span>
+              </div>
+              <div class="flex justify-between">
+                <span>Tiempo a pie:</span>
+                <span class="font-bold text-on-surface">${Math.round(fac.walkTimeMinutes)} min (4.5 km/h)</span>
+              </div>
+              <div class="pt-1 text-[8px] text-outline border-t border-outline-variant/30 truncate">
+                ${escapeHtml(item.sourceText)}
+              </div>
+            </div>
           </div>
         </div>
       `;
 
-      const popupHtml = `
-        <div class="p-3 text-xs font-mono bg-surface-container-low text-on-surface border rounded-lg shadow-2xl min-w-[200px]" style="border-color: ${item.color}60;">
-          <div class="flex items-center justify-between border-b border-outline-variant/60 pb-1 mb-1.5">
-            <span class="text-[9px] font-bold uppercase tracking-wider" style="color: ${item.color};">
-              ${escapeHtml(item.badge)}
-            </span>
-            <span class="text-[9px] font-bold text-primary font-mono">
-              ~${Math.round(fac.walkTimeMinutes)} min
-            </span>
-          </div>
-          <p class="font-bold text-on-surface text-[11px] truncate mb-1">${escapeHtml(fac.name)}</p>
-          <div class="space-y-0.5 text-[9px] text-on-surface-variant">
-            <div class="flex justify-between">
-              <span>Distancia directa:</span>
-              <span class="font-bold text-on-surface">${fac.distanceMeters} m</span>
-            </div>
-            <div class="flex justify-between">
-              <span>Tiempo a pie (4.5 km/h):</span>
-              <span class="font-bold text-on-surface">${Math.round(fac.walkTimeMinutes)} min</span>
-            </div>
-            <div class="pt-1 text-[8px] text-outline border-t border-outline-variant/30 truncate">
-              ${escapeHtml(item.sourceText)}
-            </div>
-          </div>
-        </div>
-      `;
+      // Dynamic stacking context elevation on hover & click isolation
+      el.addEventListener('mouseenter', () => {
+        el.style.zIndex = '999';
+        if (el.parentElement) el.parentElement.style.zIndex = '999';
+      });
+      el.addEventListener('mouseleave', () => {
+        el.style.zIndex = '20';
+        if (el.parentElement) el.parentElement.style.zIndex = '';
+      });
+      el.addEventListener('click', (e) => {
+        e.stopPropagation();
+      });
 
-      const popup = new maplibregl.Popup({
-        offset: 14,
-        closeButton: false,
-        className: 'stitch-dark-popup',
-      }).setHTML(popupHtml);
-
-      const marker = new maplibregl.Marker({ element: el })
+      const marker = new maplibregl.Marker({ element: el, anchor: 'center' })
         .setLngLat([fLon, fLat])
-        .setPopup(popup)
         .addTo(map);
 
       newMarkers.push(marker);
@@ -981,16 +957,46 @@ export function MapView({
       {/* ================= FLOATING HUD: LAYER SWITCHER WIDGET (Top-Left, Desktop) ================= */}
       <div
         onClick={(e) => e.stopPropagation()}
-        className="hidden lg:block absolute top-3 left-3 z-20 bg-surface-container-low/95 backdrop-blur-md border border-outline-variant rounded p-2.5 shadow-2xl w-64 text-on-surface no-print"
+        className="hidden lg:block absolute top-3 left-3 z-20 no-print"
       >
-        {/* HUD Title Bar */}
-        <div className="flex items-center justify-between border-b border-outline-variant/60 pb-1.5 mb-2">
-          <span className="text-xs font-semibold tracking-wider uppercase flex items-center gap-1.5 text-primary font-mono">
-            <Layers className="w-3.5 h-3.5 text-primary" />
-            <span>Capas Temáticas GIS</span>
-          </span>
-          <span className="text-[9px] font-mono text-outline">v4.2 ETRS89</span>
-        </div>
+        {!isDesktopLayersExpanded ? (
+          <button
+            type="button"
+            onClick={() => setIsDesktopLayersExpanded(true)}
+            className="bg-surface-container-low/95 backdrop-blur-md border border-outline-variant hover:border-primary px-3 py-1.5 rounded-full text-xs font-mono text-on-surface flex items-center gap-2 shadow-xl hover:bg-surface-container transition-all cursor-pointer"
+            title="Abrir selector de capas temáticas"
+            data-testid="desktop-layers-toggle"
+          >
+            <Layers className="w-4 h-4 text-primary" />
+            <span className="font-semibold">Capas GIS</span>
+            {activeThematicLayersCount > 0 && (
+              <span className="w-4 h-4 rounded-full bg-primary text-on-primary text-[10px] font-bold flex items-center justify-center">
+                {activeThematicLayersCount}
+              </span>
+            )}
+            <ChevronDown className="w-3.5 h-3.5 text-on-surface-variant" />
+          </button>
+        ) : (
+          <div className="bg-surface-container-low/95 backdrop-blur-md border border-outline-variant rounded p-2.5 shadow-2xl w-64 text-on-surface animate-in fade-in duration-150">
+            {/* HUD Title Bar */}
+            <div className="flex items-center justify-between border-b border-outline-variant/60 pb-1.5 mb-2">
+              <span className="text-xs font-semibold tracking-wider uppercase flex items-center gap-1.5 text-primary font-mono">
+                <Layers className="w-3.5 h-3.5 text-primary" />
+                <span>Capas Temáticas GIS</span>
+              </span>
+              <div className="flex items-center gap-1.5">
+                <span className="text-[9px] font-mono text-outline">v4.2 ETRS89</span>
+                <button
+                  type="button"
+                  onClick={() => setIsDesktopLayersExpanded(false)}
+                  className="p-0.5 rounded hover:bg-surface-container text-on-surface-variant hover:text-on-surface transition-colors cursor-pointer"
+                  title="Minimizar panel de capas"
+                  aria-label="Minimizar panel de capas"
+                >
+                  <ChevronUp className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            </div>
 
         {/* Basemap Selector Pills */}
         <div className="grid grid-cols-3 gap-1 p-0.5 bg-surface-container rounded border border-outline-variant/60 mb-2.5 text-[10px] font-mono">
@@ -1163,6 +1169,8 @@ export function MapView({
             </button>
           </div>
         )}
+          </div>
+        )}
       </div>
 
       {/* ================= MOBILE TOUCH FAB TOOLBAR (Top-Right, >=44x44px) ================= */}
@@ -1309,7 +1317,7 @@ export function MapView({
       </div>
 
       {/* ================= SPATIAL TELEMETRY & SCALE OVERLAY (Bottom HUD) ================= */}
-      <div className="absolute bottom-2 left-3 right-3 z-20 flex flex-col sm:flex-row items-center justify-between gap-2 pointer-events-none no-print">
+      <div className="absolute bottom-2 left-3 right-3 z-20 hidden sm:flex flex-row items-center justify-between gap-2 pointer-events-none no-print">
         {/* Bottom-Left Real-time ETRS89 / UTM Coordinates Readout */}
         <div className="pointer-events-auto bg-surface-container-low/95 backdrop-blur-md border border-outline-variant px-3 py-1 rounded text-[10px] font-mono text-on-surface-variant flex items-center gap-2.5 shadow-md">
           <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse shrink-0" />
@@ -1333,7 +1341,7 @@ export function MapView({
       </div>
 
       {/* ================= FLOATING DUE DILIGENCE AUDIT CARD (Bottom Dock) ================= */}
-      {isLoading ? (
+      {showFloatingAuditCard && (isLoading ? (
         <div
           onClick={(e) => e.stopPropagation()}
           className="absolute bottom-12 sm:bottom-10 left-3 right-3 sm:left-auto sm:right-3 z-30 bg-surface-container/95 backdrop-blur-md px-4 py-3 rounded-lg shadow-2xl border border-outline-variant hidden lg:flex items-center space-x-3 text-xs text-on-surface animate-in fade-in"
@@ -1372,18 +1380,33 @@ export function MapView({
               </p>
             </div>
           </div>
-          {onViewReport && (
-            <button
-              onClick={onViewReport}
-              type="button"
-              className="px-3.5 py-2 rounded bg-primary text-on-primary hover:bg-primary-container font-semibold text-xs shadow-md transition flex items-center justify-center space-x-1.5 shrink-0 cursor-pointer font-sans"
-            >
-              <span>Ver Informe</span>
-              <ChevronRight className="w-3.5 h-3.5" />
-            </button>
-          )}
+          <div className="flex items-center gap-1.5 shrink-0">
+            {onOpenUnitPicker && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onOpenUnitPicker();
+                }}
+                type="button"
+                className="px-2.5 py-2 rounded bg-surface-container-high hover:bg-surface-container-highest text-on-surface border border-outline-variant font-mono text-xs shadow-sm transition flex items-center justify-center cursor-pointer"
+                title="Explorar división horizontal y unidades catastrales"
+              >
+                <span>Unidades</span>
+              </button>
+            )}
+            {onViewReport && (
+              <button
+                onClick={onViewReport}
+                type="button"
+                className="px-3.5 py-2 rounded bg-primary text-on-primary hover:bg-primary-container font-semibold text-xs shadow-md transition flex items-center justify-center space-x-1.5 cursor-pointer font-sans"
+              >
+                <span>Ver Informe</span>
+                <ChevronRight className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
         </div>
-      ) : null}
+      ) : null)}
 
       {/* ================= FLOATING CARTOGRAPHIC LEGENDS HUD (Bottom-Left) ================= */}
       <CartographicLegendsHud
@@ -1394,6 +1417,7 @@ export function MapView({
           income: showIneIncome,
           isochrones: showIsochrones,
         }}
+        defaultCollapsed={true}
       />
 
       {/* Floating Error Alert */}

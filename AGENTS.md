@@ -19,12 +19,18 @@
 
 ---
 
-## 2. Zero-Install Workflow (Crucial Rule)
+## 2. Containerized Local Workflow & Zero-Pollution Policy
 
-* **Local Machine Policy:** Do **NOT** assume or require local installation of Node.js, pnpm, Docker, or native build tools on the developer's workstation. The local environment is strictly for code authoring and Git version control.
-* **Build & Validation Authority:** All compilation, linting, formatting checks, and automated Vitest suites run in **GitHub Actions CI**.
-* **Cloud Debugging & Execution:** When an interactive runtime environment is needed, launch **GitHub Codespaces** (`.devcontainer/devcontainer.json`).
-* **Contribution Flow:** Edit files locally -> Commit/Push to a feature branch -> Open PR -> Verify via GitHub Actions CI pipeline.
+* **Host Machine Policy:** Do **NOT** install Node.js, pnpm, Python, or native build toolchains directly on the developer's host OS. The host environment remains 100% clean (Zero-Pollution).
+* **Local Execution via Docker Desktop:** Local development, live debugging, and tests run containerized via **Docker Desktop** (WSL 2 backend):
+  - **Start stack:** `make docker-up` or `docker compose up -d` (Web: `http://localhost:5173`, API: `http://localhost:3001`, Swagger: `http://localhost:3001/docs`).
+  - **Real Data Parity:** Initialized with ~37,000 real Spanish census sections (INE ADRH) and civic facilities stored in local SQLite (`data/openbarrio.sqlite`) + live Catastro OVC & MITECO WMS queries.
+  - **Local Test Execution:** Run full test suite instantly inside Docker before committing:
+    `make docker-test` (or `docker compose run --rm openbarrio pnpm test`).
+  - **Local Linting:** `make docker-lint` (or `docker compose run --rm openbarrio pnpm lint`).
+  - **Stop stack:** `make docker-down` or `docker compose down`.
+* **Build & Validation Authority:** While Docker provides fast local validation, **GitHub Actions CI** remains the ultimate gating authority for all pull requests.
+* **Contribution Flow:** Edit files locally -> Run `make docker-test` in Docker -> Commit & Push -> Open PR -> Verify via CI -> Squash & Merge.
 
 ---
 
@@ -43,7 +49,9 @@ openbarrio/
 │   ├── web/                # React + Vite web dashboard (Cloudflare Pages)
 │   └── extension/          # Chrome Extension (Manifest V3)
 ├── packages/
-│   └── core/               # Shared TypeScript schemas, DTOs & scoring formulas
+│   ├── core/               # Shared TypeScript schemas, DTOs & scoring formulas
+│   └── etl/                # Data pipelines & pre-built national datasets (INE ADRH, PMTiles)
+├── scripts/                # Local database initialization & developer tooling
 ├── Makefile                # Standard workflow commands
 ├── pnpm-workspace.yaml     # Monorepo workspace configuration
 └── tsconfig.base.json      # Shared TypeScript configuration
@@ -90,7 +98,9 @@ To support concurrent work between humans and autonomous AI agents:
    * Branch naming: `feat/<feature>`, `fix/<bug>`, `docs/<topic>`, `chore/<task>`.
    * **Conventional Commits:** `feat:`, `fix:`, `docs:`, `test:`, `chore:` in English.
    * Merging is strictly via **Squash & Merge**.
-3. **Protect Private Context:**
+3. **Local Docker Validation:**
+   * Run `make docker-test` before pushing changes.
+4. **Protect Private Context:**
    * Never commit `.notes/`, `.env`, or credential tokens.
 
 ---

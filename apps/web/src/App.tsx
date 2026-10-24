@@ -82,11 +82,8 @@ export function AppContent() {
 
   // MapLibre Interactive State
   const [report, setReport] = useState<ExtendedAuditReport | null>(null);
-  const [selectedCoords, setSelectedCoords] = useState<{ lat: number; lon: number }>(
-    initialUrlState.coords || {
-      lat: 40.42028,
-      lon: -3.70379,
-    }
+  const [selectedCoords, setSelectedCoords] = useState<{ lat: number; lon: number } | undefined>(
+    initialUrlState.coords
   );
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<{ message: string; problem?: ProblemDetails } | null>(null);
@@ -270,11 +267,12 @@ export function AppContent() {
     })();
   };
 
-  const handleOpenMap = (audit?: AuditData, targetTab: 'map' | 'dossier' = 'dossier') => {
+  const handleOpenMap = (audit?: AuditData, targetTab?: 'map' | 'dossier') => {
+    const tab = targetTab ?? (audit ? 'dossier' : 'map');
     setViewMode('map');
-    setActiveTab(targetTab);
-    setMobileNavDestination(targetTab === 'dossier' ? 'report' : 'map');
-    setSheetSnapPoint(targetTab === 'dossier' ? 'full' : 'peek');
+    setActiveTab(tab);
+    setMobileNavDestination(tab === 'dossier' ? 'report' : 'map');
+    setSheetSnapPoint(tab === 'dossier' ? 'full' : 'peek');
     setError(null);
 
     if (audit) {
@@ -296,8 +294,6 @@ export function AppContent() {
       } else if (cleanRefcat && isCadastralReference(cleanRefcat)) {
         loadAuditByRefcat(cleanRefcat);
       }
-    } else if (!report) {
-      loadAuditByCoords(40.42028, -3.70379);
     }
   };
 
@@ -457,19 +453,6 @@ export function AppContent() {
                 </span>
               </div>
             </div>
-
-            {/* Desktop Navigation Tabs */}
-            <nav className="hidden 2xl:flex items-center gap-space-md ml-3 pl-3 border-l border-outline-variant">
-              <span className="text-primary border-b-2 border-primary font-medium py-4 text-xs font-mono flex items-center gap-1">
-                Visor Catastral
-              </span>
-              <span className="text-on-surface-variant hover:text-on-surface transition-colors py-4 text-xs font-mono flex items-center gap-1 cursor-default">
-                Auditoría Urbana
-              </span>
-              <span className="text-on-surface-variant hover:text-on-surface transition-colors py-4 text-xs font-mono flex items-center gap-1 cursor-default">
-                Inteligencia de Suelo
-              </span>
-            </nav>
           </div>
 
           {/* Center: Search Bar pre-filled or searchable */}
@@ -559,19 +542,25 @@ export function AppContent() {
               onToggleMobileLayers={(open) =>
                 setIsMobileLayersOpen((prev) => (typeof open === 'boolean' ? open : !prev))
               }
+              showFloatingAuditCard={activeTab === 'map'}
+              defaultLayersExpanded={false}
             />
 
             {/* Mobile Expandable Due Diligence Bottom Sheet (< md) */}
-            <div className="md:hidden">
-              <CadastralBottomSheet
-                report={report}
-                isLoading={isLoading}
-                snapPoint={sheetSnapPoint}
-                onSnapChange={handleSheetSnapChange}
-                onOpenUnitPicker={handleOpenUnitPicker}
-                onExportPdf={() => window.print()}
-              />
-            </div>
+            {(report || mobileNavDestination === 'report' || isLoading) && (
+              <div className="md:hidden absolute inset-x-0 bottom-12 z-30 pointer-events-none">
+                <div className="pointer-events-auto">
+                  <CadastralBottomSheet
+                    report={report}
+                    isLoading={isLoading}
+                    snapPoint={sheetSnapPoint}
+                    onSnapChange={handleSheetSnapChange}
+                    onOpenUnitPicker={handleOpenUnitPicker}
+                    onExportPdf={() => window.print()}
+                  />
+                </div>
+              </div>
+            )}
           </section>
 
           {/* RIGHT: PROPERTY AUDIT DOSSIER PANEL (48% on tablet md/lg, 40% on desktop xl+, hidden on mobile where bottom sheet handles it) */}

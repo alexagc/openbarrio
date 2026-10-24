@@ -5,6 +5,33 @@ All notable changes to the **OpenBarrio** platform are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.1] - 2026-10-24
+
+### Added
+- **Zero-Pollution Containerized Development Workflow (`Dockerfile.dev`, `docker-compose.yml`, `Makefile`)**:
+  - Full local Docker Compose setup with Node 22, pnpm, and sqlite3.
+  - Native Node 22 `node:sqlite` D1 database adapter (`apps/api/src/db/sqlite-d1-adapter.ts`) seeded with 36,994 real Spanish census sections (INE ADRH) and civic facilities (`data/openbarrio.sqlite`).
+  - Hot Module Replacement (HMR) file-polling configuration for seamless Windows NTFS mount synchronization in WSL 2.
+  - Comprehensive documentation added in `AGENTS.md`, `README.md`, and `.agent/rules/testing-standards.md`.
+
+### Fixed
+- **Mobile Bottom Sheet Vertical Scrolling (`apps/web`)**:
+  - Resolved `min-height: auto` flexbox constraint bug by applying `min-h-0`, `overflow-y-auto`, and `overscroll-contain` to the dossier scrollable area.
+  - Enabled native iOS/Android momentum scrolling via `-webkit-overflow-scrolling: touch` and `touch-action: pan-y`.
+  - Positioned mobile bottom sheet cleanly above `MobileBottomNav` with `absolute inset-x-0 bottom-12 z-30`.
+- **Map GIS Precision Reticle & Non-Blocking Hover Tooltips (`apps/web`)**:
+  - Removed bulky 240px auto-opening popup that obscured building footprints and cadastral parcel geometries.
+  - Upgraded target location marker to a prominent neon amber Stitch GIS radar beacon (`w-8 h-8`) with concentric pulse rings and high-precision ground reticle.
+  - Added embedded instant zero-lag hover tooltips directly inside marker DOM elements for both the target location and civic amenity icons (transit, health, school, parks).
+- **Marker Stacking Context & Proximity Isolation (`apps/web`)**:
+  - Resolved erratic hover/click behavior when amenity markers (e.g. metro) and target location are near each other by adding dynamic `z-index: 999` elevation on hover and `e.stopPropagation()` on clicks.
+  - Enforced 160m minimum visual clearance on map projections across 4 dedicated quadrants.
+- **Header Navigation Cleanup (`apps/web`)**:
+  - Removed non-functional dummy navigation tabs (`Visor Catastral`, `Auditoría Urbana`, `Inteligencia de Suelo`) from desktop header.
+  - Prevented ghost parcel auto-load (`40.42028, -3.70379`) upon opening the map.
+
+---
+
 ## [0.5.0] - 2026-10-24
 
 ### Added
