@@ -19,9 +19,10 @@ import {
 
 interface AuditDossierProps {
   report: PropertyAuditReport;
+  onOpenUnitPicker?: () => void;
 }
 
-export function AuditDossier({ report }: AuditDossierProps) {
+export function AuditDossier({ report, onOpenUnitPicker }: AuditDossierProps) {
   const [copied, setCopied] = useState(false);
   const [bookmarked, setBookmarked] = useState(false);
 
@@ -157,6 +158,40 @@ export function AuditDossier({ report }: AuditDossierProps) {
             </a>
           </div>
         </div>
+
+        {/* Horizontal Division Unit Picker Banner */}
+        {(property.building.unitsCount > 1 || property.unit) && (
+          <div className="mt-2.5 p-2.5 bg-surface-container-high/80 border border-primary/30 rounded-lg flex items-center justify-between gap-2 text-xs">
+            <div className="flex items-center gap-2 min-w-0">
+              <span className="w-2 h-2 rounded-full bg-primary shrink-0" />
+              <div className="min-w-0">
+                {property.unit ? (
+                  <p className="font-semibold text-on-surface truncate">
+                    Inmueble Privativo: Planta {property.unit.floor} · Puerta {property.unit.door} ({property.unit.builtSurfaceM2} m²
+                    {property.unit.participationCoefficient ? ` · cpt: ${property.unit.participationCoefficient}%` : ''})
+                  </p>
+                ) : (
+                  <p className="font-semibold text-on-surface truncate">
+                    Edificio en División Horizontal ({property.building.unitsCount} inmuebles registrados)
+                  </p>
+                )}
+                <p className="text-[10px] text-on-surface-variant truncate">
+                  {property.unit ? 'Auditoría individualizada con cuota de comunidad y SERPAVI recalculados' : 'Puedes auditar una vivienda o local específico'}
+                </p>
+              </div>
+            </div>
+
+            {onOpenUnitPicker && (
+              <button
+                type="button"
+                onClick={onOpenUnitPicker}
+                className="px-2.5 py-1.5 rounded bg-primary/20 hover:bg-primary/30 text-primary border border-primary/40 font-semibold text-[11px] font-mono transition-colors shrink-0 cursor-pointer flex items-center gap-1"
+              >
+                <span>{property.unit ? 'Cambiar inmueble ▾' : 'Ver inmuebles ▾'}</span>
+              </button>
+            )}
+          </div>
+        )}
 
         {/* Action Toolbar */}
         <div className="mt-3 flex items-center gap-2 no-print flex-wrap">
