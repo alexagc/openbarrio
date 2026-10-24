@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { LanguageProvider } from './i18n';
 import {
   Header,
@@ -16,8 +16,11 @@ import { MapView } from './components/MapView';
 import { AuditDossier } from './components/AuditDossier';
 import { SkeletonDossier } from './components/SkeletonDossier';
 import { ErrorAlert } from './components/ErrorAlert';
+import { UnitPickerModal } from './components/UnitPickerModal';
+import { CertifiedPdfReport } from './components/CertifiedPdfReport';
+import { useUrlSync, parseUrlState } from './hooks/useUrlSync';
 import { apiClient, ExtendedAuditReport, auditDataToReport } from './services/api.client';
-import { ProblemDetails, isCadastralReference } from '@openbarrio/core';
+import { ProblemDetails, isCadastralReference, CadastralUnitsResponse } from '@openbarrio/core';
 import { ArrowLeft, MapPin, Download, Printer } from 'lucide-react';
 import { downloadCadastralGML } from './utils/gml';
 
@@ -61,18 +64,69 @@ function generateAuditFallback(
 }
 
 export function AppContent() {
-  const [viewMode, setViewMode] = useState<'landing' | 'map'>('landing');
+  const initialUrlState = parseUrlState();
+  const [viewMode, setViewMode] = useState<'landing' | 'map'>(initialUrlState.viewMode);
+  const [activeTab, setActiveTab] = useState<'dossier' | 'map'>(initialUrlState.activeTab);
   const [activeAudit, setActiveAudit] = useState<AuditData | null>(null);
 
   // MapLibre Interactive State
   const [report, setReport] = useState<ExtendedAuditReport | null>(null);
-  const [selectedCoords, setSelectedCoords] = useState<{ lat: number; lon: number }>({
-    lat: 40.42028,
-    lon: -3.70379,
-  });
+  const [selectedCoords, setSelectedCoords] = useState<{ lat: number; lon: number }>(
+    initialUrlState.coords || {
+      lat: 40.42028,
+      lon: -3.70379,
+    }
+  );
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<{ message: string; problem?: ProblemDetails } | null>(null);
-  const [activeTab, setActiveTab] = useState<'dossier' | 'map'>('dossier');
+
+  // Horizontal Division Unit Picker State (Phase 10B)
+  const [isUnitPickerOpen, setIsUnitPickerOpen] = useState<boolean>(false);
+  const [unitsData, setUnitsData] = useState<CadastralUnitsResponse | null>(null);
+  const [isLoadingUnits, setIsLoadingUnits] = useState<boolean>(false);
+
+  // URL Deep-Linking & History State Synchronization (Phase 10E)
+  useUrlSync(
+    {
+      viewMode,
+      activeTab,
+      refcat: report?.property.cadastralReference,
+      coords: report ? selectedCoords : undefined,
+    },
+    (newState) => {
+      setViewMode(newState.viewMode);
+      setActiveTab(newState.activeTab);
+      if (newState.refcat) {
+        loadAuditByRefcat(newState.refcat, newState.coords);
+      } else if (newState.coords) {
+        loadAuditByCoords(newState.coords.lat, newState.coords.lon);
+      }
+    }
+  );
+
+  // Initial deep-link bootstrap on mount (F5 resilience)
+  useEffect(() => {
+    if (initialUrlState.refcat) {
+      loadAuditByRefcat(initialUrlState.refcat, initialUrlState.coords);
+    } else if (initialUrlState.coords) {
+      loadAuditByCoords(initialUrlState.coords.lat, initialUrlState.coords.lon);
+    }
+  }, []);
+
+  const handleOpenUnitPicker = async () => {
+    if (!report) return;
+    setIsUnitPickerOpen(true);
+    setIsLoadingUnits(true);
+    try {
+      const data = await apiClient.getCadastralUnits(report.property.cadastralReference);
+      setUnitsData(data);
+    } catch {
+      const fallback = apiClient.generateDeterministicUnits(report.property.cadastralReference);
+      setUnitsData(fallback);
+    } finally {
+      setIsLoadingUnits(false);
+    }
+  };
 
   const handleAudit = (
     query: string,
@@ -475,7 +529,7 @@ export function AppContent() {
                 <SkeletonDossier />
               </div>
             ) : report ? (
-              <AuditDossier report={report} />
+              <AuditDossier report={report} onOpenUnitPicker={handleOpenUnitPicker} />
             ) : (
               <div className="text-center py-16 bg-surface-container rounded border border-dashed border-outline-variant p-8 m-4">
                 <MapPin className="w-10 h-10 text-outline mx-auto mb-3" />
@@ -487,6 +541,29 @@ export function AppContent() {
             )}
           </section>
         </main>
+
+        {/* Horizontal Division Unit Picker Modal (Phase 10B) */}
+        <UnitPickerModal
+          isOpen={isUnitPickerOpen}
+          onClose={() => setIsUnitPickerOpen(false)}
+          unitsData={unitsData}
+          currentRefcat={report?.property.cadastralReference}
+          buildingAddress={
+            report
+              ? `${report.property.address.street} ${report.property.address.number}, ${report.property.address.municipality}`
+              : undefined
+          }
+          onSelectUnit={(unit) => loadAuditByRefcat(unit.cadastralReference, selectedCoords)}
+          onSelectBuilding={() => {
+            if (report) {
+              loadAuditByRefcat(report.property.cadastralReference.slice(0, 14), selectedCoords);
+            }
+          }}
+          isLoading={isLoadingUnits}
+        />
+
+        {/* Vectorized Certified Due Diligence PDF Export Layout (Phase 10F) */}
+        {report && <CertifiedPdfReport report={report} />}
       </div>
     );
   }
@@ -511,6 +588,35 @@ export function AppContent() {
         onClose={() => setActiveAudit(null)}
         onOpenMap={handleOpenMap}
       />
+
+      {/* Horizontal Division Unit Picker Modal (Phase 10B) */}
+      <UnitPickerModal
+        isOpen={isUnitPickerOpen}
+        onClose={() => setIsUnitPickerOpen(false)}
+        unitsData={unitsData}
+        currentRefcat={report?.property.cadastralReference}
+        buildingAddress={
+          report
+            ? `${report.property.address.street} ${report.property.address.number}, ${report.property.address.municipality}`
+            : undefined
+        }
+        onSelectUnit={(unit) => {
+          setViewMode('map');
+          setActiveTab('dossier');
+          loadAuditByRefcat(unit.cadastralReference, selectedCoords);
+        }}
+        onSelectBuilding={() => {
+          if (report) {
+            setViewMode('map');
+            setActiveTab('dossier');
+            loadAuditByRefcat(report.property.cadastralReference.slice(0, 14), selectedCoords);
+          }
+        }}
+        isLoading={isLoadingUnits}
+      />
+
+      {/* Vectorized Certified Due Diligence PDF Export Layout (Phase 10F) */}
+      {report && <CertifiedPdfReport report={report} />}
     </div>
   );
 }

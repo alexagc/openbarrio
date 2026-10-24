@@ -58,15 +58,14 @@ export class SERPAVIProvider implements ISERPAVIProvider {
       cadastralProperty.address.provinceCode ||
       cadastralProperty.address.postalCode?.slice(0, 2) ||
       '28';
-
-    let muniCode = censusSectionCode?.slice(0, 5);
-    if (!muniCode && cadastralProperty.address.municipalityCode) {
-      muniCode = `${provinceCode}${cadastralProperty.address.municipalityCode.padStart(3, '0')}`;
-    }
-    if (!muniCode && cadastralProperty.address.municipality?.toLowerCase().includes('barcelona')) {
-      muniCode = '08019';
-    }
-    if (!muniCode) {
+    let muniCode = cadastralProperty.address.municipalityCode;
+    if (muniCode) {
+      if (muniCode.length <= 3) {
+        muniCode = `${provinceCode}${muniCode.padStart(3, '0')}`;
+      }
+    } else if (censusSectionCode && censusSectionCode.length >= 5) {
+      muniCode = censusSectionCode.slice(0, 5);
+    } else {
       muniCode = `${provinceCode}001`;
     }
     const isStressed = this.isStressedZone(muniCode, provinceCode);
@@ -78,8 +77,11 @@ export class SERPAVIProvider implements ISERPAVIProvider {
       cadastralProperty.address.municipality
     );
 
-    // Adjustment factors based on building parameters from Catastro
-    const surface = cadastralProperty.building.builtSurfaceM2 || 80;
+    // Adjustment factors based on building/unit parameters from Catastro
+    const surface =
+      cadastralProperty.unit?.builtSurfaceM2 ||
+      cadastralProperty.building.builtSurfaceM2 ||
+      80;
     const year = cadastralProperty.building.constructionYear;
 
     // Age factor

@@ -1,5 +1,6 @@
 import {
   CadastralProperty,
+  CadastralUnitsResponse,
   CensusTractIncome,
   EnvironmentalData,
   NoiseData,
@@ -20,6 +21,11 @@ export interface ICatastroProvider {
    * Look up cadastral property details by 14- or 20-character cadastral reference (RC).
    */
   getByCadastralReference(refcat: string): Promise<CadastralProperty>;
+
+  /**
+   * Look up horizontal division units for a given 14- or 20-character cadastral reference.
+   */
+  getUnitsByCadastralReference(refcat: string): Promise<CadastralUnitsResponse>;
 }
 
 export interface IINEProvider {
@@ -48,47 +54,53 @@ export interface ISICAProvider {
 
 export interface ISNCZIProvider {
   /**
-   * Retrieve official flood risk cartography and return period hazard levels for coordinates.
+   * Retrieve flood hazard cartography and return period risk for geographic coordinates.
    */
   getFloodRiskData(latitude: number, longitude: number): Promise<FloodRiskData>;
 }
 
 export interface ISERPAVIProvider {
   /**
-   * Calculate official reference rental price range (€/m2 and €/month)
-   * and determine whether property is in a declared stressed housing zone (Zona Tensionada).
+   * Calculate reference rental price benchmark range (€/m² and €/month)
+   * based on cadastral property characteristics and official stressed housing zone status.
    */
   getRentalBenchmark(
-    cadastralProperty: CadastralProperty,
+    property: CadastralProperty,
     censusSectionCode?: string
   ): Promise<RentalBenchmark>;
 }
 
-export interface IEnvironmentalProvider {
-  /**
-   * Retrieve acoustic noise, flood hazard, and air quality data for geographic coordinates.
-   */
-  getEnvironmentalData(latitude: number, longitude: number): Promise<EnvironmentalData>;
-}
-
 export interface ICivicConnectivityProvider {
   /**
-   * Retrieve 15-minute city walkability, proximity to amenities (health, education, transit, parks),
-   * and overall walk score.
+   * Calculate 15-minute civic connectivity and proximity indicators to essential public services.
    */
-  getConnectivityByCoordinates(latitude: number, longitude: number): Promise<CivicConnectivityData>;
+  getConnectivityData(latitude: number, longitude: number): Promise<CivicConnectivityData>;
+  getConnectivityByCoordinates?(latitude: number, longitude: number): Promise<CivicConnectivityData>;
 }
 
 export interface IUrbanPlanningProvider {
   /**
-   * Retrieve urban planning data, land classification, zoning codes, and renovation history.
+   * Retrieve official SIU land classification and planning ordinances for a property.
    */
-  getUrbanPlanning(property: CadastralProperty): Promise<UrbanPlanningData>;
+  getUrbanPlanningData(property: CadastralProperty): Promise<UrbanPlanningData>;
+  getUrbanPlanning?(property: CadastralProperty): Promise<UrbanPlanningData>;
 }
 
 export interface IAirQualityProvider {
   /**
-   * Retrieve official European Air Quality Index (AQI) and pollutant concentrations from nearest station.
+   * Retrieve official MITECO European Air Quality Index (AQI) and pollutants for coordinates.
    */
-  getAirQuality(latitude: number, longitude: number): Promise<AirQualityData | undefined>;
+  getAirQualityData(latitude: number, longitude: number): Promise<AirQualityData | undefined>;
+  getAirQuality?(latitude: number, longitude: number): Promise<AirQualityData | undefined>;
+}
+
+export interface IEnvironmentalProvider {
+  readonly sica: ISICAProvider;
+  readonly snczi: ISNCZIProvider;
+  readonly airQuality?: IAirQualityProvider;
+
+  /**
+   * Aggregates environmental indicators (acoustic noise, fluvial flood risk, air quality).
+   */
+  getEnvironmentalData(latitude: number, longitude: number): Promise<EnvironmentalData>;
 }

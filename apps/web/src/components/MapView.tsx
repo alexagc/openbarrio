@@ -15,8 +15,10 @@ import {
   Volume2,
   Waves,
   TrendingUp,
+  Footprints,
 } from 'lucide-react';
 import { ExtendedAuditReport } from '../services/api.client';
+import { CartographicLegendsHud } from './CartographicLegendsHud';
 
 export interface MapViewProps {
   selectedCoords?: { lat: number; lon: number };
@@ -102,6 +104,26 @@ function escapeHtml(str: string): string {
   });
 }
 
+export function createGeodesicCircle(
+  center: [number, number],
+  radiusMeters: number,
+  points = 64
+): number[][] {
+  const [lon, lat] = center;
+  const coords: number[][] = [];
+  const km = radiusMeters / 1000;
+  const distanceX = km / (111.32 * Math.cos((lat * Math.PI) / 180));
+  const distanceY = km / 110.574;
+
+  for (let i = 0; i <= points; i++) {
+    const theta = (i / points) * (2 * Math.PI);
+    const x = distanceX * Math.cos(theta);
+    const y = distanceY * Math.sin(theta);
+    coords.push([lon + x, lat + y]);
+  }
+  return coords;
+}
+
 export function MapView({
   selectedCoords,
   onMapClick,
@@ -116,6 +138,7 @@ export function MapView({
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<MapLibreMap | null>(null);
   const markerRef = useRef<Marker | null>(null);
+  const amenityMarkersRef = useRef<Marker[]>([]);
   const onMapClickRef = useRef(onMapClick);
 
   useEffect(() => {
@@ -128,6 +151,7 @@ export function MapView({
   const [showIneIncome, setShowIneIncome] = useState<boolean>(true);
   const [showMitecoNoise, setShowMitecoNoise] = useState<boolean>(false);
   const [showSncziFlood, setShowSncziFlood] = useState<boolean>(false);
+  const [showIsochrones, setShowIsochrones] = useState<boolean>(true);
   const [is3DMode, setIs3DMode] = useState<boolean>(false);
   const [currentZoom, setCurrentZoom] = useState<number>(15);
 
@@ -229,6 +253,14 @@ export function MapView({
             tileSize: 256,
             attribution: '&copy; MITECO SNCZI',
           },
+          // 15-Minute Walking Catchment Rings (GeoJSON Source)
+          'walking-isochrones': {
+            type: 'geojson',
+            data: {
+              type: 'FeatureCollection',
+              features: [],
+            },
+          },
         },
         layers: [
           // 1. Dark GIS Basemap (Active by default)
@@ -300,6 +332,79 @@ export function MapView({
               'raster-brightness-min': 0.85,
               'raster-brightness-max': 1.0,
               'raster-contrast': 0.5,
+            },
+            layout: { visibility: 'visible' },
+          },
+          // 8. 15-Minute Walking Isochrone Rings
+          {
+            id: 'isochrone-15m-fill',
+            type: 'fill',
+            source: 'walking-isochrones',
+            filter: ['==', 'ring', '15m'],
+            paint: {
+              'fill-color': '#6366f1',
+              'fill-opacity': 0.08,
+            },
+            layout: { visibility: 'visible' },
+          },
+          {
+            id: 'isochrone-15m-line',
+            type: 'line',
+            source: 'walking-isochrones',
+            filter: ['==', 'ring', '15m'],
+            paint: {
+              'line-color': '#6366f1',
+              'line-width': 1.5,
+              'line-dasharray': [4, 2],
+              'line-opacity': 0.6,
+            },
+            layout: { visibility: 'visible' },
+          },
+          {
+            id: 'isochrone-10m-fill',
+            type: 'fill',
+            source: 'walking-isochrones',
+            filter: ['==', 'ring', '10m'],
+            paint: {
+              'fill-color': '#06b6d4',
+              'fill-opacity': 0.10,
+            },
+            layout: { visibility: 'visible' },
+          },
+          {
+            id: 'isochrone-10m-line',
+            type: 'line',
+            source: 'walking-isochrones',
+            filter: ['==', 'ring', '10m'],
+            paint: {
+              'line-color': '#06b6d4',
+              'line-width': 1.5,
+              'line-dasharray': [3, 2],
+              'line-opacity': 0.7,
+            },
+            layout: { visibility: 'visible' },
+          },
+          {
+            id: 'isochrone-5m-fill',
+            type: 'fill',
+            source: 'walking-isochrones',
+            filter: ['==', 'ring', '5m'],
+            paint: {
+              'fill-color': '#10b981',
+              'fill-opacity': 0.15,
+            },
+            layout: { visibility: 'visible' },
+          },
+          {
+            id: 'isochrone-5m-line',
+            type: 'line',
+            source: 'walking-isochrones',
+            filter: ['==', 'ring', '5m'],
+            paint: {
+              'line-color': '#10b981',
+              'line-width': 1.5,
+              'line-dasharray': [2, 2],
+              'line-opacity': 0.85,
             },
             layout: { visibility: 'visible' },
           },
@@ -552,6 +657,195 @@ export function MapView({
     }
   }, [selectedCoords, propertyName, propertyAddress, report]);
 
+  // Synchronize 15-Minute Walking Catchment Isochrones
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+
+    const updateIsochrones = () => {
+      try {
+        const source = map.getSource('walking-isochrones') as maplibregl.GeoJSONSource;
+        if (!source || typeof source.setData !== 'function') return;
+
+        if (!showIsochrones || !selectedCoords) {
+          source.setData({ type: 'FeatureCollection', features: [] });
+          return;
+        }
+
+        const center: [number, number] = [selectedCoords.lon, selectedCoords.lat];
+        const isochronesGeoJson = {
+          type: 'FeatureCollection',
+          features: [
+            {
+              type: 'Feature',
+              properties: { ring: '15m' },
+              geometry: {
+                type: 'Polygon',
+                coordinates: [createGeodesicCircle(center, 1200)],
+              },
+            },
+            {
+              type: 'Feature',
+              properties: { ring: '10m' },
+              geometry: {
+                type: 'Polygon',
+                coordinates: [createGeodesicCircle(center, 800)],
+              },
+            },
+            {
+              type: 'Feature',
+              properties: { ring: '5m' },
+              geometry: {
+                type: 'Polygon',
+                coordinates: [createGeodesicCircle(center, 400)],
+              },
+            },
+          ],
+        };
+
+        source.setData(isochronesGeoJson as any);
+      } catch {
+        // Source not ready yet
+      }
+    };
+
+    updateIsochrones();
+    if (typeof map.on === 'function') {
+      map.on('styledata', updateIsochrones);
+    }
+    return () => {
+      if (typeof map.off === 'function') {
+        map.off('styledata', updateIsochrones);
+      }
+    };
+  }, [selectedCoords, showIsochrones]);
+
+  // Synchronize Civic Amenities POI Markers on Isochrones
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+
+    // Clear existing amenity markers
+    for (const m of amenityMarkersRef.current) {
+      m.remove();
+    }
+    amenityMarkersRef.current = [];
+
+    if (!showIsochrones || !selectedCoords || !report?.connectivity) return;
+
+    const conn = report.connectivity;
+    const { lat, lon } = selectedCoords;
+
+    const amenitiesList = [
+      {
+        facility: conn.nearestHealthcare,
+        type: 'healthcare',
+        icon: '🏥',
+        badge: 'Sanidad / CAP',
+        color: '#f43f5e',
+        bearing: 315, // NW
+        sourceText: 'Registro REPS · Ministerio de Sanidad',
+      },
+      {
+        facility: conn.nearestTransit,
+        type: 'transit',
+        icon: '🚇',
+        badge: 'Transporte Público',
+        color: '#f59e0b',
+        bearing: 45, // NE
+        sourceText: 'Consorcio Regional de Transportes',
+      },
+      {
+        facility: conn.nearestEducation,
+        type: 'education',
+        icon: '🏫',
+        badge: 'Colegio / Educación',
+        color: '#3b82f6',
+        bearing: 225, // SW
+        sourceText: 'Registro Estatal Centros Docentes (MEFP)',
+      },
+      {
+        facility: conn.nearestPark,
+        type: 'park',
+        icon: '🌳',
+        badge: 'Zonas Verdes',
+        color: '#10b981',
+        bearing: 135, // SE
+        sourceText: 'Inventario Municipal Áreas Verdes / IGN',
+      },
+    ].filter((item) => Boolean(item.facility));
+
+    const newMarkers: Marker[] = [];
+
+    for (const item of amenitiesList) {
+      const fac = item.facility!;
+      const dMeters = Math.max(80, Math.min(1300, fac.distanceMeters));
+      const rad = (item.bearing * Math.PI) / 180;
+      const dKm = dMeters / 1000;
+      const dLat = (dKm / 110.574) * Math.cos(rad);
+      const dLon = (dKm / (111.32 * Math.cos((lat * Math.PI) / 180))) * Math.sin(rad);
+
+      const fLat = lat + dLat;
+      const fLon = lon + dLon;
+
+      const el = document.createElement('div');
+      el.className = 'group relative cursor-pointer';
+      el.innerHTML = `
+        <div class="relative flex items-center justify-center">
+          <div class="w-6 h-6 rounded-full flex items-center justify-center text-xs shadow-lg border-2 transition-transform hover:scale-125" style="background: #0b1326; border-color: ${item.color};">
+            <span>${item.icon}</span>
+          </div>
+        </div>
+      `;
+
+      const popupHtml = `
+        <div class="p-3 text-xs font-mono bg-surface-container-low text-on-surface border rounded-lg shadow-2xl min-w-[200px]" style="border-color: ${item.color}60;">
+          <div class="flex items-center justify-between border-b border-outline-variant/60 pb-1 mb-1.5">
+            <span class="text-[9px] font-bold uppercase tracking-wider" style="color: ${item.color};">
+              ${escapeHtml(item.badge)}
+            </span>
+            <span class="text-[9px] font-bold text-primary font-mono">
+              ~${Math.round(fac.walkTimeMinutes)} min
+            </span>
+          </div>
+          <p class="font-bold text-on-surface text-[11px] truncate mb-1">${escapeHtml(fac.name)}</p>
+          <div class="space-y-0.5 text-[9px] text-on-surface-variant">
+            <div class="flex justify-between">
+              <span>Distancia directa:</span>
+              <span class="font-bold text-on-surface">${fac.distanceMeters} m</span>
+            </div>
+            <div class="flex justify-between">
+              <span>Tiempo a pie (4.5 km/h):</span>
+              <span class="font-bold text-on-surface">${Math.round(fac.walkTimeMinutes)} min</span>
+            </div>
+            <div class="pt-1 text-[8px] text-outline border-t border-outline-variant/30 truncate">
+              ${escapeHtml(item.sourceText)}
+            </div>
+          </div>
+        </div>
+      `;
+
+      const popup = new maplibregl.Popup({
+        offset: 14,
+        closeButton: false,
+        className: 'stitch-dark-popup',
+      }).setHTML(popupHtml);
+
+      const marker = new maplibregl.Marker({ element: el })
+        .setLngLat([fLon, fLat])
+        .setPopup(popup)
+        .addTo(map);
+
+      newMarkers.push(marker);
+    }
+
+    amenityMarkersRef.current = newMarkers;
+
+    return () => {
+      for (const m of newMarkers) m.remove();
+    };
+  }, [selectedCoords, showIsochrones, report]);
+
   return (
     <div className="relative w-full h-full min-h-[480px] rounded-xl overflow-hidden border border-outline-variant shadow-2xl bg-surface-container-lowest cadastral-grid select-none">
       {/* MapLibre WebGL Canvas Container */}
@@ -680,6 +974,25 @@ export function MapView({
             </div>
             <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-surface-variant text-outline">
               {showSncziFlood ? 'T=10..500a' : 'Inactivo'}
+            </span>
+          </label>
+
+          {/* Layer 5: 15-Minute Walking Catchment Rings */}
+          <label className="flex items-center justify-between p-1.5 rounded bg-surface-container hover:bg-surface-container-high transition-colors cursor-pointer border border-primary/30">
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                checked={showIsochrones}
+                onChange={(e) => setShowIsochrones(e.target.checked)}
+                className="rounded-sm bg-surface-container-lowest border-outline-variant text-primary focus:ring-0 w-3.5 h-3.5 cursor-pointer"
+              />
+              <span className="text-[11px] text-on-surface font-sans font-medium flex items-center gap-1">
+                <Footprints className="w-3 h-3 text-primary" />
+                <span>Isocronas 15 min</span>
+              </span>
+            </div>
+            <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-primary-container/20 text-primary border border-primary/30">
+              {showIsochrones ? '5/10/15m' : 'Inactivo'}
             </span>
           </label>
         </div>
@@ -861,6 +1174,17 @@ export function MapView({
           )}
         </div>
       ) : null}
+
+      {/* ================= FLOATING CARTOGRAPHIC LEGENDS HUD (Bottom-Left) ================= */}
+      <CartographicLegendsHud
+        activeLayers={{
+          cadastre: showCatastroWms,
+          noise: showMitecoNoise,
+          flood: showSncziFlood,
+          income: showIneIncome,
+          isochrones: showIsochrones,
+        }}
+      />
 
       {/* Floating Error Alert */}
       {error && !isLoading && (

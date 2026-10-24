@@ -1,9 +1,10 @@
-import { CadastralProperty } from '@openbarrio/core';
+import { CadastralProperty, CadastralUnitsResponse, CadastralCoordinates } from '@openbarrio/core';
 import { ICatastroProvider } from './types.js';
 import {
   parseCatastroCoordinatesXml,
   parseCatastroDnprcXml,
   parseCatastroCpmrcXml,
+  parseCadastralUnitsXml,
   isMultiUnitParcelXml,
   parseMultiUnitParcelSummary,
 } from './catastro.parser.js';
@@ -90,18 +91,19 @@ export class CatastroProvider implements ICatastroProvider {
     return this.getByCadastralReference(cadastralReference, {
       latitude: resLat || latitude,
       longitude: resLon || longitude,
+      srs: 'EPSG:4326',
     });
   }
 
   async getByCadastralReference(
     refcat: string,
-    fallbackCoords?: { latitude: number; longitude: number }
+    fallbackCoords?: CadastralCoordinates
   ): Promise<CadastralProperty> {
     const cleanRef = refcat.replace(/[\s\-_.]/g, '').toUpperCase();
     const dnprcUrl = `${this.callejeroBaseUrl}/Consulta_DNPRC?Provincia=&Municipio=&RC=${encodeURIComponent(cleanRef)}`;
 
     // If coordinates are not passed, query Consulta_CPMRC to get the exact parcel centroid coordinates
-    let resolvedCoords = fallbackCoords;
+    let resolvedCoords: CadastralCoordinates | undefined = fallbackCoords;
     if (!resolvedCoords) {
       try {
         const cpmrcUrl = `${this.coordenadasBaseUrl}/Consulta_CPMRC?Provincia=&Municipio=&SRS=EPSG:4326&RC=${encodeURIComponent(cleanRef)}`;
@@ -118,7 +120,7 @@ export class CatastroProvider implements ICatastroProvider {
           const cpmrcXml = await cpmrcRes.text();
           const parsed = parseCatastroCpmrcXml(cpmrcXml);
           if (parsed) {
-            resolvedCoords = { latitude: parsed.latitude, longitude: parsed.longitude };
+            resolvedCoords = { latitude: parsed.latitude, longitude: parsed.longitude, srs: 'EPSG:4326' };
           }
         }
       } catch {
@@ -175,5 +177,33 @@ export class CatastroProvider implements ICatastroProvider {
     }
 
     return parseCatastroDnprcXml(xmlText, cleanRef, resolvedCoords);
+  }
+
+  async getUnitsByCadastralReference(refcat: string): Promise<CadastralUnitsResponse> {
+    const cleanRef = refcat.replace(/[\s\-_.]/g, '').toUpperCase();
+    const parcelRef = cleanRef.slice(0, 14);
+    const dnprcUrl = `${this.callejeroBaseUrl}/Consulta_DNPRC?Provincia=&Municipio=&RC=${encodeURIComponent(parcelRef)}`;
+
+    let xmlText: string;
+    try {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), this.timeoutMs);
+      const res = await fetch(dnprcUrl, {
+        signal: controller.signal,
+        headers: { 'User-Agent': 'OpenBarrio-DueDiligence/0.1' },
+        ...({ cf: { cacheTtl: 7776000, cacheEverything: true } } as any),
+      });
+      clearTimeout(timer);
+
+      if (!res.ok) {
+        throw new UpstreamProviderError('Catastro OVC', `HTTP status ${res.status}`);
+      }
+      xmlText = await res.text();
+    } catch (err: any) {
+      if (err instanceof UpstreamProviderError) throw err;
+      throw new UpstreamProviderError('Catastro OVC', err.message || 'Network request failed');
+    }
+
+    return parseCadastralUnitsXml(xmlText, parcelRef);
   }
 }

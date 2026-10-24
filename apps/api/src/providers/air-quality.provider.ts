@@ -91,6 +91,10 @@ export class AirQualityProvider implements IAirQualityProvider {
     this.stations = [...DEFAULT_MITECO_STATIONS];
   }
 
+  async getAirQualityData(latitude: number, longitude: number): Promise<AirQualityData | undefined> {
+    return this.getAirQuality(latitude, longitude);
+  }
+
   async getAirQuality(latitude: number, longitude: number): Promise<AirQualityData | undefined> {
     if (latitude === 0 && longitude === 0) {
       return undefined;
@@ -150,6 +154,10 @@ export class MockAirQualityProvider implements IAirQualityProvider {
 
   setOverride(key: string, data: AirQualityData): void {
     this.overrides.set(key, data);
+  }
+
+  async getAirQualityData(latitude: number, longitude: number): Promise<AirQualityData | undefined> {
+    return this.getAirQuality(latitude, longitude);
   }
 
   async getAirQuality(latitude: number, longitude: number): Promise<AirQualityData | undefined> {

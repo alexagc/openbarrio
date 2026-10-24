@@ -1,5 +1,10 @@
 import { describe, it, expect } from 'vitest';
-import { isCadastralReference } from '../src/types/catastro.js';
+import { Value } from '@sinclair/typebox/value';
+import {
+  isCadastralReference,
+  CadastralUnitSchema,
+  CadastralUnitsResponseSchema,
+} from '../src/types/catastro.js';
 
 describe('isCadastralReference Validation Engine', () => {
   describe('Valid Spanish Cadastral References', () => {
@@ -63,6 +68,52 @@ describe('isCadastralReference Validation Engine', () => {
       expect(isCadastralReference(undefined)).toBe(false);
       expect(isCadastralReference('')).toBe(false);
       expect(isCadastralReference('   ')).toBe(false);
+    });
+  });
+
+  describe('Horizontal Division CadastralUnit Schemas', () => {
+    it('validates a correct CadastralUnit object', () => {
+      const validUnit = {
+        cadastralReference: '2890001VK4729A0001XY',
+        floor: '03',
+        door: 'B',
+        staircase: '1',
+        block: '1',
+        use: 'Residencial',
+        builtSurfaceM2: 84,
+        participationCoefficient: 2.45,
+      };
+
+      expect(Value.Check(CadastralUnitSchema, validUnit)).toBe(true);
+    });
+
+    it('validates a complete CadastralUnitsResponse object', () => {
+      const validResponse = {
+        parcelCadastralReference: '2890001VK4729A',
+        totalUnits: 1,
+        units: [
+          {
+            cadastralReference: '2890001VK4729A0001XY',
+            floor: 'PB',
+            door: '01',
+            use: 'Comercial',
+            builtSurfaceM2: 120,
+            participationCoefficient: 5.0,
+          },
+        ],
+      };
+
+      expect(Value.Check(CadastralUnitsResponseSchema, validResponse)).toBe(true);
+    });
+
+    it('rejects CadastralUnitsResponse with missing required fields', () => {
+      const invalidResponse = {
+        parcelCadastralReference: '2890001VK4729A',
+        // missing totalUnits
+        units: [],
+      };
+
+      expect(Value.Check(CadastralUnitsResponseSchema, invalidResponse)).toBe(false);
     });
   });
 });

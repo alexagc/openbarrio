@@ -228,4 +228,52 @@ describe('Hono Audit Routes Integration', () => {
       expect(response.headers.get('access-control-allow-origin')).toBe('*');
     });
   });
+
+  describe('GET /api/v1/audit/refcat/:refcat/units', () => {
+    it('returns 200 with CadastralUnitsResponse for valid 14-char parcel reference', async () => {
+      const response = await app.request('/api/v1/audit/refcat/9872023VH5797S/units');
+
+      expect(response.status).toBe(200);
+      const data = await response.json();
+
+      expect(data.parcelCadastralReference).toBe('9872023VH5797S');
+      expect(data.totalUnits).toBeGreaterThan(0);
+      expect(Array.isArray(data.units)).toBe(true);
+      expect(data.units.length).toBeGreaterThan(0);
+
+      const firstUnit = data.units[0];
+      expect(firstUnit.cadastralReference).toMatch(/^9872023VH5797S/);
+      expect(firstUnit.floor).toBeDefined();
+      expect(firstUnit.door).toBeDefined();
+      expect(firstUnit.use).toBeDefined();
+      expect(firstUnit.builtSurfaceM2).toBeGreaterThan(0);
+    });
+
+    it('returns 200 with CadastralUnitsResponse for valid 20-char unit reference', async () => {
+      const response = await app.request('/api/v1/audit/refcat/9872023VH5797S0001WX/units');
+
+      expect(response.status).toBe(200);
+      const data = await response.json();
+      expect(data.parcelCadastralReference).toBe('9872023VH5797S');
+      expect(data.units.length).toBeGreaterThan(0);
+    });
+
+    it('returns RFC 7807 400 Problem Details for invalid cadastral reference parameter', async () => {
+      const response = await app.request('/api/v1/audit/refcat/invalid-ref/units');
+
+      expect(response.status).toBe(400);
+      const problem = await response.json();
+      expect(problem.type).toBe('https://openbarrio.org/errors/invalid-parameters');
+      expect(problem.status).toBe(400);
+    });
+
+    it('returns RFC 7807 404 Problem Details when parcel is not found in Catastro', async () => {
+      const response = await app.request('/api/v1/audit/refcat/0000000NOTFOUND/units');
+
+      expect(response.status).toBe(404);
+      const problem = await response.json();
+      expect(problem.type).toBe('https://openbarrio.org/errors/cadastral-not-found');
+      expect(problem.status).toBe(404);
+    });
+  });
 });

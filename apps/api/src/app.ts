@@ -138,6 +138,34 @@ export function buildOpenApiSpec(): Record<string, any> {
           },
         },
       },
+      '/api/v1/audit/refcat/{refcat}/units': {
+        get: {
+          tags: ['Audit'],
+          summary: 'Retrieve horizontal division cadastral units for a building parcel',
+          description:
+            'Extracts all private dwellings, commercial premises, and storage units from Sede del Catastro (<lrcdnp>) with floor, door, usage, surface, and participation coefficients',
+          parameters: [
+            {
+              name: 'refcat',
+              in: 'path',
+              required: true,
+              schema: { type: 'string', pattern: '^[0-9A-Za-z]{14,20}$' },
+              description: 'Spanish Cadastral Reference (14 or 20 characters)',
+            },
+          ],
+          responses: {
+            '200': {
+              description: 'List of horizontal division cadastral units with parcel summary',
+            },
+            '400': {
+              description: 'RFC 7807 Invalid Cadastral Reference Parameter',
+            },
+            '404': {
+              description: 'RFC 7807 Cadastral Parcel Not Found',
+            },
+          },
+        },
+      },
       '/api/v1/audit/refcat/{refcat}': {
         get: {
           tags: ['Audit'],

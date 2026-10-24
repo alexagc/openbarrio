@@ -23,6 +23,10 @@ export class UrbanPlanningProvider implements IUrbanPlanningProvider {
     this.timeoutMs = options.timeoutMs || 5000;
   }
 
+  async getUrbanPlanningData(property: CadastralProperty): Promise<UrbanPlanningData> {
+    return this.getUrbanPlanning(property);
+  }
+
   async getUrbanPlanning(property: CadastralProperty): Promise<UrbanPlanningData> {
     const refcat = property.cadastralReference.toUpperCase();
     const primaryUse = (property.building.primaryUse || '').toLowerCase();
@@ -103,6 +107,10 @@ export class MockUrbanPlanningProvider implements IUrbanPlanningProvider {
 
   setOverride(refcat: string, data: UrbanPlanningData): void {
     this.overrides.set(refcat.toUpperCase(), data);
+  }
+
+  async getUrbanPlanningData(property: CadastralProperty): Promise<UrbanPlanningData> {
+    return this.getUrbanPlanning(property);
   }
 
   async getUrbanPlanning(property: CadastralProperty): Promise<UrbanPlanningData> {

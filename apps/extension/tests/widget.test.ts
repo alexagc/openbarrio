@@ -139,6 +139,73 @@ describe('OpenBarrioWidget', () => {
     // Direct link to OpenBarrio Web report
     expect(content).toContain('Ver Auditoría Completa en OpenBarrio Web ↗');
     expect(content).toContain('refcat=9872023VH5797S0001WX');
+
+    // 5-Axis Mini Radar SVG & Horizontal Division Unit Pill
+    expect(content).toContain('ob-mini-radar');
+    expect(content).toContain('ob-unit-pill');
+    expect(content).toContain('🏢 Edificio (16 inmuebles) · Ver unidades');
+  });
+
+  it('should render compact 5-axis mini radar SVG graphing the 5 subscores with Civic Precision styling', () => {
+    const widget = new OpenBarrioWidget();
+    widget.showReport(mockReport, 'http://localhost:3000');
+
+    const shadow = widget.getShadowRoot();
+    const radarSvg = shadow?.querySelector('svg.ob-mini-radar');
+    expect(radarSvg).not.toBeNull();
+    expect(radarSvg?.getAttribute('width')).toBe('120');
+    expect(radarSvg?.getAttribute('height')).toBe('120');
+    expect(radarSvg?.getAttribute('viewBox')).toBe('0 0 120 120');
+
+    // Translucent polygon fill and stroke matching Civic Precision theme
+    const dataPolygon = radarSvg?.querySelector('polygon[fill="rgba(104, 219, 169, 0.25)"]');
+    expect(dataPolygon).not.toBeNull();
+    expect(dataPolygon?.getAttribute('stroke')).toBe('#68dba9');
+    expect(dataPolygon?.getAttribute('points')).toBeTruthy();
+
+    // Verify 5 vertices rendered in data polygon points
+    const pointsAttr = dataPolygon?.getAttribute('points') || '';
+    const pointsList = pointsAttr.trim().split(/\s+/);
+    expect(pointsList.length).toBe(5);
+
+    // Verify radar container exists
+    const container = shadow?.querySelector('.ob-mini-radar-container');
+    expect(container).not.toBeNull();
+  });
+
+  it('should render unit switcher badge with direct link to Web Dossier when unitsCount > 1', () => {
+    const widget = new OpenBarrioWidget();
+    widget.showReport(mockReport, 'http://localhost:3000');
+
+    const shadow = widget.getShadowRoot();
+    const unitPill = shadow?.querySelector('.ob-unit-pill');
+    expect(unitPill).not.toBeNull();
+    expect(unitPill?.textContent?.trim()).toBe('🏢 Edificio (16 inmuebles) · Ver unidades');
+
+    const link = shadow?.querySelector('a.ob-unit-pill-link');
+    expect(link).not.toBeNull();
+    expect(link?.getAttribute('href')).toBe('http://localhost:3000/map?refcat=9872023VH5797S0001WX&tab=dossier');
+    expect(link?.getAttribute('target')).toBe('_blank');
+  });
+
+  it('should not render unit pill if unitsCount is 1 or less', () => {
+    const singleUnitReport: PropertyAuditReport = {
+      ...mockReport,
+      property: {
+        ...mockReport.property,
+        building: {
+          ...mockReport.property.building,
+          unitsCount: 1,
+        },
+      },
+    };
+
+    const widget = new OpenBarrioWidget();
+    widget.showReport(singleUnitReport, 'http://localhost:3000');
+
+    const shadow = widget.getShadowRoot();
+    expect(shadow?.querySelector('.ob-unit-pill')).toBeNull();
+    expect(shadow?.querySelector('svg.ob-mini-radar')).not.toBeNull();
   });
 
   it('should toggle between expanded card and collapsed pill state', () => {

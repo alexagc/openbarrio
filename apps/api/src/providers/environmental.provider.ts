@@ -8,9 +8,9 @@ import { SNCZIProvider } from './snczi.provider.js';
  * and MITECO ICA (air quality).
  */
 export class EnvironmentalProvider implements IEnvironmentalProvider {
-  private readonly sica: ISICAProvider;
-  private readonly snczi: ISNCZIProvider;
-  private readonly airQuality?: IAirQualityProvider;
+  readonly sica: ISICAProvider;
+  readonly snczi: ISNCZIProvider;
+  readonly airQuality?: IAirQualityProvider;
 
   constructor(options?: {
     sica?: ISICAProvider;
@@ -27,7 +27,7 @@ export class EnvironmentalProvider implements IEnvironmentalProvider {
       this.sica.getNoiseData(latitude, longitude),
       this.snczi.getFloodRiskData(latitude, longitude),
       this.airQuality
-        ? this.airQuality.getAirQuality(latitude, longitude).catch(() => undefined)
+        ? this.airQuality.getAirQualityData(latitude, longitude).catch(() => undefined)
         : Promise.resolve(undefined),
     ]);
 
