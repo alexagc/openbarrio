@@ -49,7 +49,7 @@ jobs:
           fi
           echo "is_d1_placeholder=${IS_D1_PLACEHOLDER}" >> $GITHUB_OUTPUT
 
-      - name: Apply Cloudflare D1 Remote Migrations
+      - name: Apply Cloudflare D1 Initial Schema Migration
         if: env.HAS_CF_TOKEN == 'true' && steps.cf-check.outputs.is_d1_placeholder != 'true'
         continue-on-error: true
         uses: cloudflare/wrangler-action@v3
@@ -58,6 +58,16 @@ jobs:
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           workingDirectory: apps/api
           command: d1 execute openbarrio-d1 --file=migrations/0001_initial_schema.sql --remote --yes
+
+      - name: Apply Cloudflare D1 Civic Facilities Migration
+        if: env.HAS_CF_TOKEN == 'true' && steps.cf-check.outputs.is_d1_placeholder != 'true'
+        continue-on-error: true
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          workingDirectory: apps/api
+          command: d1 execute openbarrio-d1 --file=migrations/0002_civic_facilities.sql --remote --yes
 
       - name: Deploy API to Cloudflare Workers
         if: env.HAS_CF_TOKEN == 'true' && steps.cf-check.outputs.is_d1_placeholder != 'true'

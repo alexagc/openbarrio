@@ -106,6 +106,12 @@ jobs:
             --input packages/etl/data/ign_secciones_censales.geojson \
             --output-pmtiles packages/etl/dist/census_tracts.pmtiles
 
+      - name: Run Civic Facilities Processing (Python -> D1 SQL)
+        if: inputs.apply_only != true
+        run: |
+          python3 packages/etl/src/process_civic_facilities.py \
+            --output-sql packages/etl/dist/civic_facilities.sql
+
       - name: Download Processed National Artifacts (Fast Sync)
         if: inputs.apply_only == true
         env:
@@ -131,6 +137,17 @@ jobs:
           workingDirectory: apps/api
           command: d1 execute openbarrio-d1 --file=${{ github.workspace }}/packages/etl/dist/ine_adrh.sql --remote --yes
 
+      - name: Sync Cloudflare D1 (Civic Facilities SQLite)
+        if: inputs.dry_run != true && env.HAS_CF_TOKEN == 'true'
+        continue-on-error: true
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          wranglerVersion: '3.114.17'
+          workingDirectory: apps/api
+          command: d1 execute openbarrio-d1 --file=${{ github.workspace }}/packages/etl/dist/civic_facilities.sql --remote --yes
+
       - name: Sync Cloudflare R2 (PMTiles Vector Boundaries)
         if: inputs.dry_run != true && env.HAS_CF_TOKEN == 'true'
         uses: cloudflare/wrangler-action@v3
@@ -148,6 +165,7 @@ jobs:
           name: openbarrio-etl-dist
           path: |
             packages/etl/dist/ine_adrh.sql
+            packages/etl/dist/civic_facilities.sql
             packages/etl/dist/census_tracts.pmtiles
             packages/etl/dist/census_tracts_simplified.geojson
           retention-days: 30
