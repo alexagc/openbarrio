@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useMemo } from 'react';
+﻿import { useEffect, useRef, useState, useMemo } from 'react';
 import * as maplibregl from 'maplibre-gl';
 import type { Map as MapLibreMap, Marker, MapMouseEvent } from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
@@ -657,7 +657,8 @@ export function MapView({
       .setPopup(popup)
       .addTo(map);
 
-    popup.on('open', () => {
+    if (typeof (popup as any).on === 'function') {
+      (popup as any).on('open', () => {
       const btn = document.getElementById('ob-popup-open-units');
       if (btn) {
         btn.onclick = (e) => {
@@ -667,7 +668,8 @@ export function MapView({
           }
         };
       }
-    });
+      });
+    }
 
     markerRef.current = marker;
     marker.togglePopup();
