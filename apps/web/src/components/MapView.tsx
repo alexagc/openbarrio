@@ -631,12 +631,23 @@ export function MapView({
 
     map.getCanvas().style.cursor = 'crosshair';
 
+    let clickTimeout: ReturnType<typeof setTimeout> | null = null;
     map.on('click', (e: MapMouseEvent) => {
       // In 3D mode, do not trigger coordinate re-selection on orbital navigation clicks
       if (is3DModeRef.current) return;
       const lat = parseFloat(e.lngLat.lat.toFixed(6));
       const lon = parseFloat(e.lngLat.lng.toFixed(6));
-      onMapClickRef.current(lat, lon);
+      if (clickTimeout) clearTimeout(clickTimeout);
+      clickTimeout = setTimeout(() => {
+        onMapClickRef.current(lat, lon);
+      }, 250);
+    });
+
+    map.on('dblclick', () => {
+      if (clickTimeout) {
+        clearTimeout(clickTimeout);
+        clickTimeout = null;
+      }
     });
 
     map.on('load', () => {
@@ -1186,14 +1197,13 @@ export function MapView({
 
     for (const item of amenitiesList) {
       const fac = item.facility!;
-      // Minimum visual clearance on map is 160m so amenities never overlap with the central parcel marker
       let fLat: number;
       let fLon: number;
-      if (fac.latitude && fac.longitude && (fac.latitude !== lat || fac.longitude !== lon)) {
+      if (typeof fac.latitude === 'number' && typeof fac.longitude === 'number' && (fac.latitude !== lat || fac.longitude !== lon)) {
         fLat = fac.latitude;
         fLon = fac.longitude;
       } else {
-        const dMeters = Math.max(160, Math.min(1300, fac.distanceMeters));
+        const dMeters = Math.max(30, Math.min(1300, fac.distanceMeters));
         const rad = (item.bearing * Math.PI) / 180;
         const dKm = dMeters / 1000;
         const dLat = (dKm / 110.574) * Math.cos(rad);
@@ -1266,7 +1276,7 @@ export function MapView({
     return () => {
       for (const m of newMarkers) m.remove();
     };
-  }, [selectedCoords, showIsochrones, is3DMode, report]);
+  }, [selectedCoords?.lat, selectedCoords?.lon, showIsochrones, is3DMode, report?.property.cadastralReference]);
 
   return (
     <div className="relative w-full h-full min-h-[480px] rounded-xl overflow-hidden border border-outline-variant shadow-2xl bg-surface-container-lowest cadastral-grid select-none">
@@ -1729,31 +1739,33 @@ export function MapView({
       </div>
 
       {/* ================= SPATIAL TELEMETRY & SCALE OVERLAY (Bottom HUD) ================= */}
-      <div className="absolute bottom-2 left-3 right-3 z-20 hidden sm:flex flex-row items-center justify-between gap-2 pointer-events-none no-print">
-        {/* Bottom-Left Real-time ETRS89 / UTM Coordinates Readout */}
-        <div className="pointer-events-auto bg-surface-container-low/95 backdrop-blur-md border border-outline-variant px-3 py-1 rounded text-[10px] font-mono text-on-surface-variant flex items-center gap-2.5 shadow-md">
-          <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse shrink-0" />
-          <span className="text-on-surface font-semibold">UTM ETRS89:</span>
-          <span>X: {utmCoords.x.toLocaleString()}</span>
-          <span>Y: {utmCoords.y.toLocaleString()}</span>
-          <span className="text-outline">|</span>
-          <span>Huso: {utmCoords.zone}</span>
-          <span className="text-outline">|</span>
-          <span>Cota: {estimatedElevation}m s.n.m.</span>
-        </div>
-
-        {/* Bottom-Right Scale Bar & Official Attribution */}
-        <div className="pointer-events-auto bg-surface-container-low/95 backdrop-blur-md border border-outline-variant px-3 py-1 rounded text-[10px] font-mono text-on-surface-variant flex items-center gap-3 shadow-md">
-          <div className="flex flex-col items-center">
-            <span className="text-[9px] leading-tight text-on-surface-variant">50 m</span>
-            <div className="w-16 h-1 border-b-2 border-l-2 border-r-2 border-primary" />
+      {!is3DMode && (
+        <div className="absolute bottom-2 left-3 right-3 z-20 hidden sm:flex flex-row items-center justify-between gap-2 pointer-events-none no-print">
+          {/* Bottom-Left Real-time ETRS89 / UTM Coordinates Readout */}
+          <div className="pointer-events-auto bg-surface-container-low/95 backdrop-blur-md border border-outline-variant px-3 py-1 rounded text-[10px] font-mono text-on-surface-variant flex items-center gap-2.5 shadow-md">
+            <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse shrink-0" />
+            <span className="text-on-surface font-semibold">UTM ETRS89:</span>
+            <span>X: {utmCoords.x.toLocaleString()}</span>
+            <span>Y: {utmCoords.y.toLocaleString()}</span>
+            <span className="text-outline">|</span>
+            <span>Huso: {utmCoords.zone}</span>
+            <span className="text-outline">|</span>
+            <span>Cota: {estimatedElevation}m s.n.m.</span>
           </div>
-          <span className="text-outline text-[9px]">Sede Electrónica Catastro · INE ADRH</span>
+
+          {/* Bottom-Right Scale Bar & Official Attribution */}
+          <div className="pointer-events-auto bg-surface-container-low/95 backdrop-blur-md border border-outline-variant px-3 py-1 rounded text-[10px] font-mono text-on-surface-variant flex items-center gap-3 shadow-md">
+            <div className="flex flex-col items-center">
+              <span className="text-[9px] leading-tight text-on-surface-variant">50 m</span>
+              <div className="w-16 h-1 border-b-2 border-l-2 border-r-2 border-primary" />
+            </div>
+            <span className="text-outline text-[9px]">Sede Electrónica Catastro · INE ADRH</span>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* ================= FLOATING DUE DILIGENCE AUDIT CARD (Bottom Dock) ================= */}
-      {showFloatingAuditCard && (isLoading ? (
+      {!is3DMode && showFloatingAuditCard && (isLoading ? (
         <div
           onClick={(e) => e.stopPropagation()}
           className="absolute bottom-12 sm:bottom-10 left-3 right-3 sm:left-auto sm:right-3 z-30 bg-surface-container/95 backdrop-blur-md px-4 py-3 rounded-lg shadow-2xl border border-outline-variant hidden lg:flex items-center space-x-3 text-xs text-on-surface animate-in fade-in"

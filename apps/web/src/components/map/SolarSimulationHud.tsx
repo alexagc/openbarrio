@@ -124,9 +124,9 @@ export function SolarSimulationHud({
   return (
     <div
       data-testid="solar-simulation-hud"
-      className="absolute bottom-2 sm:bottom-3 left-2 right-2 sm:left-auto sm:right-auto sm:w-[680px] sm:left-1/2 sm:-translate-x-1/2 z-40 pointer-events-none"
+      className="absolute bottom-4 left-1/2 -translate-x-1/2 w-[calc(100%-2rem)] max-w-2xl z-40 pointer-events-none"
     >
-      <div className="bg-surface-container/95 border border-outline-variant rounded-xl shadow-2xl backdrop-blur-xl p-2.5 sm:p-3 pointer-events-auto flex flex-col gap-2 text-on-surface animate-in slide-in-from-bottom-3 duration-200">
+      <div className="bg-surface-container/95 border border-outline-variant rounded-xl shadow-2xl backdrop-blur-md p-3 pointer-events-auto flex flex-col gap-2.5 text-on-surface animate-in slide-in-from-bottom-3 duration-200">
         {/* Header Row: Astronomical Engine Status & Live Vector */}
         <div className="flex flex-wrap items-center justify-between gap-1.5 border-b border-outline-variant/60 pb-1.5">
           <div className="flex items-center gap-2">
