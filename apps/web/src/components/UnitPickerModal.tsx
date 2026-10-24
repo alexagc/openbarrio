@@ -59,12 +59,11 @@ export function UnitPickerModal({
       // Search query (floor, door, full refcat, staircase)
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase().trim();
-        const matchFloor = u.floor.toLowerCase().includes(q);
-        const matchDoor = u.door.toLowerCase().includes(q);
-        const matchRef = u.cadastralReference.toLowerCase().includes(q);
+        const fullLabel = `planta ${u.floor} puerta ${u.door} ${u.floor} ${u.door} ${u.floor}${u.door} ${u.floor}-${u.door}`.toLowerCase();
+        const matchLabel = fullLabel.includes(q);
+        const matchRef = q.length >= 4 && u.cadastralReference.toLowerCase().includes(q);
         const matchStair = (u.staircase || '').toLowerCase().includes(q);
-        const matchCombo = `${u.floor} ${u.door}`.toLowerCase().includes(q) || `${u.floor}-${u.door}`.toLowerCase().includes(q);
-        return matchFloor || matchDoor || matchRef || matchStair || matchCombo;
+        return matchLabel || matchRef || matchStair;
       }
 
       return true;

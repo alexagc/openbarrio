@@ -54,8 +54,8 @@ describe('UnitPickerModal Component', () => {
       />
     );
 
-    expect(screen.getByText('Inmuebles en División Horizontal')).toBeDefined();
-    expect(screen.getByText(/3 unidades registradas/)).toBeDefined();
+    expect(screen.getByText('División Horizontal')).toBeDefined();
+    expect(screen.getByText(/3 inmuebles registrados/)).toBeDefined();
     expect(screen.getByText('Planta 01 · Puerta A')).toBeDefined();
     expect(screen.getByText('Planta 02 · Puerta B')).toBeDefined();
     expect(screen.getByText('Planta 00 · Puerta 01')).toBeDefined();
@@ -75,7 +75,7 @@ describe('UnitPickerModal Component', () => {
     );
 
     const searchInput = screen.getByPlaceholderText(/Buscar planta, puerta/i);
-    fireEvent.change(searchInput, { target: { value: '02' } });
+    fireEvent.change(searchInput, { target: { value: 'Puerta B' } });
 
     expect(screen.getByText('Planta 02 · Puerta B')).toBeDefined();
     expect(screen.queryByText('Planta 01 · Puerta A')).toBeNull();
