@@ -1149,7 +1149,7 @@ export function MapView({
     }
     amenityMarkersRef.current = [];
 
-    if (!showIsochrones || is3DMode || !selectedCoords || !report?.connectivity) return;
+    if (!selectedCoords || !report?.connectivity) return;
 
     const conn = report.connectivity;
     const { lat, lon } = selectedCoords;
@@ -1183,6 +1183,7 @@ export function MapView({
             icon: '🚆',
             badge: 'Cercanías / Tren',
             color: '#e11d48',
+            zIndex: 35,
             bearing: 45 + index * 30,
             sourceText: 'Renfe Cercanías / Consorcio Regional de Transportes',
           };
@@ -1192,6 +1193,7 @@ export function MapView({
             icon: '🚇',
             badge: 'Metro de Madrid',
             color: '#0284c7',
+            zIndex: 34,
             bearing: 60 + index * 30,
             sourceText: 'Metro / Consorcio Regional de Transportes',
           };
@@ -1200,6 +1202,7 @@ export function MapView({
           icon: '🚌',
           badge: 'Autobús EMT',
           color: '#f59e0b',
+          zIndex: 25,
           bearing: 30 + index * 40,
           sourceText: 'EMT Madrid / Consorcio Regional de Transportes',
         };
@@ -1211,6 +1214,7 @@ export function MapView({
           icon: isHospital ? '🏥' : '🩺',
           badge: isHospital ? 'Hospital Universitario' : 'Centro de Salud / CAP',
           color: '#f43f5e',
+          zIndex: 30,
           bearing: 315 + index * 20,
           sourceText: 'Registro REPS · Ministerio de Sanidad',
         };
@@ -1222,6 +1226,7 @@ export function MapView({
           icon: isHighSchool ? '🏛️' : '🏫',
           badge: isHighSchool ? 'Instituto de Secundaria' : 'Colegio Infantil y Primaria',
           color: '#3b82f6',
+          zIndex: 28,
           bearing: 225 + index * 25,
           sourceText: 'Registro Estatal Centros Docentes (MEFP)',
         };
@@ -1231,6 +1236,7 @@ export function MapView({
         icon: '🌳',
         badge: 'Parque / Zonas Verdes',
         color: '#10b981',
+        zIndex: 24,
         bearing: 135 + index * 30,
         sourceText: 'Inventario Municipal Áreas Verdes / IGN',
       };
@@ -1258,22 +1264,25 @@ export function MapView({
 
       const el = document.createElement('div');
       el.className = 'group relative flex flex-col items-center cursor-pointer select-none';
-      el.style.zIndex = '25';
+      el.style.zIndex = String(meta.zIndex || 25);
       el.innerHTML = `
         <div class="relative flex flex-col items-center pointer-events-auto">
-          <!-- Interactive Civic Amenity Badge (Directly visible site name and walk distance on map) -->
-          <div class="flex items-center gap-1.5 px-2.5 py-1 rounded-full shadow-2xl border backdrop-blur-md transition-all duration-150 group-hover:scale-105" style="background: #0b1326f0; border-color: ${meta.color};">
+          <!-- Interactive Civic Amenity Pin Header (Icon badge + Compact direct site name chip) -->
+          <div class="flex items-center gap-1.5 px-2 py-0.5 rounded-full shadow-2xl border backdrop-blur-md transition-all duration-150 group-hover:scale-110 whitespace-nowrap" style="background: #0b1326f0; border-color: ${meta.color};">
             <span class="text-xs leading-none shrink-0">${meta.icon}</span>
-            <span class="text-[11px] font-semibold text-white tracking-tight truncate max-w-[140px] sm:max-w-[190px]" title="${escapeHtml(fac.name)}">
+            <span class="text-[10px] font-semibold text-white tracking-tight truncate max-w-[110px] sm:max-w-[150px]" title="${escapeHtml(fac.name)}">
               ${escapeHtml(fac.name)}
             </span>
-            <span class="text-[9px] font-mono font-bold text-amber-400 shrink-0 border-l border-white/20 pl-1.5">
+            <span class="text-[9px] font-mono font-bold shrink-0 border-l border-white/20 pl-1" style="color: ${meta.color};">
               ${fac.distanceMeters}m
             </span>
           </div>
 
-          <!-- Pointer Pin Anchor (Touches exact street coordinates) -->
-          <div class="w-0 h-0 border-l-[4px] border-l-transparent border-r-[4px] border-r-transparent border-t-[5px]" style="border-t-color: ${meta.color};"></div>
+          <!-- Pointer Needle Stem touching the exact street ground -->
+          <div class="w-0.5 h-2 bg-gradient-to-b from-current to-transparent" style="color: ${meta.color};"></div>
+
+          <!-- Ground Contact Pin Dot (Directly on road/sidewalk coordinate) -->
+          <div class="w-2.5 h-2.5 rounded-full border-2 border-white shadow-lg shrink-0 -mt-0.5 animate-pulse" style="background-color: ${meta.color};"></div>
 
           <!-- Detailed Hover Flyout Card (Full technical walk metrics and official register) -->
           <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:flex flex-col p-2.5 rounded-lg bg-surface-container-low/95 backdrop-blur-md border shadow-2xl min-w-[220px] max-w-[290px] pointer-events-none z-50 text-left" style="border-color: ${meta.color}80;">
@@ -1310,7 +1319,7 @@ export function MapView({
         if (el.parentElement) el.parentElement.style.zIndex = '999';
       });
       el.addEventListener('mouseleave', () => {
-        el.style.zIndex = '25';
+        el.style.zIndex = String(meta.zIndex || 25);
         if (el.parentElement) el.parentElement.style.zIndex = '';
       });
       el.addEventListener('click', (e) => {
@@ -1329,7 +1338,7 @@ export function MapView({
     return () => {
       for (const m of newMarkers) m.remove();
     };
-  }, [selectedCoords?.lat, selectedCoords?.lon, showIsochrones, is3DMode, report?.connectivity, report?.property.cadastralReference]);
+  }, [selectedCoords?.lat, selectedCoords?.lon, report?.connectivity, report?.property.cadastralReference]);
 
   return (
     <div className="relative w-full h-full min-h-[480px] rounded-xl overflow-hidden border border-outline-variant shadow-2xl bg-surface-container-lowest cadastral-grid select-none">
