@@ -211,9 +211,25 @@ export class CatastroProvider implements ICatastroProvider {
 
           if (unitRes.ok) {
             const unitXml = await unitRes.text();
+            let totalBuildingSurface: number | undefined;
+
+            // When queried as a 14-char building, calculate total building constructed surface across all units
+            if (cleanRef.length === 14 && summary.totalUnits > 1) {
+              try {
+                const unitsResp = await this.getUnitsByCadastralReference(cleanRef);
+                const sumSurface = unitsResp.units.reduce((acc, u) => acc + (u.builtSurfaceM2 || 0), 0);
+                if (sumSurface > 0) {
+                  totalBuildingSurface = sumSurface;
+                }
+              } catch {
+                // Fall back if units lookup fails
+              }
+            }
+
             return parseCatastroDnprcXml(unitXml, cleanRef, resolvedCoords, {
               unitsCount: summary.totalUnits,
               hasCommercialGroundFloor: summary.hasCommercialUnit,
+              totalBuildingSurface,
             });
           }
         } catch {
@@ -250,7 +266,73 @@ export class CatastroProvider implements ICatastroProvider {
       throw new UpstreamProviderError('Catastro OVC', err.message || 'Network request failed');
     }
 
-    return parseCadastralUnitsXml(xmlText, parcelRef);
+    const parsed = parseCadastralUnitsXml(xmlText, parcelRef);
+    if (!parsed.units || parsed.units.length === 0) {
+      return parsed;
+    }
+
+    // Hydrate each individual unit's real built surface (<sfc>) and official use (<luso>) from Catastro OVC in parallel
+    const hydratedUnits = await Promise.all(
+      parsed.units.map(async (u) => {
+        if (!u.cadastralReference || u.cadastralReference.length !== 20) {
+          return u;
+        }
+        try {
+          const unitUrl = `${this.callejeroBaseUrl}/Consulta_DNPRC?Provincia=&Municipio=&RC=${encodeURIComponent(u.cadastralReference)}`;
+          const unitController = new AbortController();
+          const unitTimer = setTimeout(() => unitController.abort(), 4000);
+          const unitRes = await fetch(unitUrl, {
+            signal: unitController.signal,
+            headers: { 'User-Agent': 'OpenBarrio-DueDiligence/0.1' },
+            ...({ cf: { cacheTtl: 7776000, cacheEverything: true } } as any),
+          });
+          clearTimeout(unitTimer);
+
+          if (unitRes.ok) {
+            const uXml = await unitRes.text();
+            const sfcMatch = uXml.match(/<sfc>([^<]+)<\/sfc>/i) || uXml.match(/<stl>([^<]+)<\/stl>/i);
+            const lusoMatch = uXml.match(/<luso>([^<]+)<\/luso>/i);
+
+            const sfc = sfcMatch ? parseInt(sfcMatch[1], 10) : 0;
+            let use = u.use;
+            if (lusoMatch) {
+              const rawLuso = lusoMatch[1].trim();
+              if (/comercial|local|oficina/i.test(rawLuso)) use = 'Comercial';
+              else if (/garaje|aparcamiento|estacionamiento/i.test(rawLuso)) use = 'Aparcamiento';
+              else if (/almacen|almacén|trastero/i.test(rawLuso)) use = 'Almacén';
+              else if (/residencial|vivienda/i.test(rawLuso)) use = 'Residencial';
+              else use = rawLuso;
+            }
+
+            return {
+              ...u,
+              use,
+              builtSurfaceM2: sfc > 0 ? sfc : u.builtSurfaceM2,
+            };
+          }
+        } catch {
+          // Keep unit as-is on network/timeout error
+        }
+        return u;
+      })
+    );
+
+    // Compute accurate participation coefficients based on real square meters
+    const totalSurface = hydratedUnits.reduce((acc, u) => acc + (u.builtSurfaceM2 || 0), 0);
+    const finalUnits = hydratedUnits.map((u) => {
+      if (totalSurface > 0 && u.builtSurfaceM2 > 0) {
+        return {
+          ...u,
+          participationCoefficient: Number(((u.builtSurfaceM2 / totalSurface) * 100).toFixed(2)),
+        };
+      }
+      return u;
+    });
+
+    return {
+      ...parsed,
+      units: finalUnits,
+    };
   }
 
   async getGeometryByCadastralReference(refcat: string): Promise<CadastralGeometry> {
