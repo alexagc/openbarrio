@@ -1505,22 +1505,19 @@ export function MapView({
           };
         };
 
-        const features = uniqueFacilities.map((fac) => {
-          const meta = resolveItemMeta(fac);
-          let fLat = fac.latitude;
-          let fLon = fac.longitude;
+        const features = uniqueFacilities
+          .filter((fac) => typeof fac.latitude === 'number' && typeof fac.longitude === 'number' && !isNaN(fac.latitude) && !isNaN(fac.longitude))
+          .map((fac) => {
+            const meta = resolveItemMeta(fac);
+            const fLat = fac.latitude!;
+            const fLon = fac.longitude!;
 
-          if (typeof fLat !== 'number' || typeof fLon !== 'number' || isNaN(fLat) || isNaN(fLon)) {
-            fLat = lat;
-            fLon = lon;
-          }
-
-          return {
-            type: 'Feature' as const,
-            geometry: {
-              type: 'Point' as const,
-              coordinates: [fLon, fLat],
-            },
+            return {
+              type: 'Feature' as const,
+              geometry: {
+                type: 'Point' as const,
+                coordinates: [fLon, fLat],
+              },
             properties: {
               id: fac.id,
               name: fac.name,

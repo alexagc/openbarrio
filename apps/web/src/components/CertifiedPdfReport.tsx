@@ -240,7 +240,7 @@ export function CertifiedPdfReport({ report }: CertifiedPdfReportProps) {
                 <td className="p-1.5">
                   {connectivity?.nearestHealthcare
                     ? `${connectivity.nearestHealthcare.name} (${Math.round(connectivity.nearestHealthcare.walkTimeMinutes)} min · ${connectivity.nearestHealthcare.distanceMeters}m)`
-                    : 'A menos de 10 min a pie'}
+                    : 'No detectado en radio próximo'}
                 </td>
               </tr>
               <tr className="border-b border-slate-200">
@@ -248,7 +248,7 @@ export function CertifiedPdfReport({ report }: CertifiedPdfReportProps) {
                 <td className="p-1.5">
                   {connectivity?.nearestTransit
                     ? `${connectivity.nearestTransit.name} (${Math.round(connectivity.nearestTransit.walkTimeMinutes)} min · ${connectivity.nearestTransit.distanceMeters}m)`
-                    : 'A menos de 5 min a pie'}
+                    : 'No detectado en radio próximo'}
                 </td>
               </tr>
               <tr>
@@ -256,7 +256,7 @@ export function CertifiedPdfReport({ report }: CertifiedPdfReportProps) {
                 <td className="p-1.5">
                   {connectivity?.nearestPark
                     ? `${connectivity.nearestPark.name} (${Math.round(connectivity.nearestPark.walkTimeMinutes)} min · ${connectivity.nearestPark.distanceMeters}m)`
-                    : 'A menos de 12 min a pie'}
+                    : 'No detectado en radio próximo'}
                 </td>
               </tr>
             </tbody>

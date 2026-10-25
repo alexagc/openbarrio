@@ -213,11 +213,11 @@ export function PillarCards({
                 <HeartPulse className="w-3.5 h-3.5 text-primary" />
                 <span>Salud Primaria (CAP)</span>
               </div>
-              <span className="font-sans text-xs font-semibold text-on-surface block mt-1 truncate" title={conn.nearestHealthcare?.name}>
-                {conn.nearestHealthcare?.name || 'CAP Centro de Salud'}
+              <span className="font-sans text-xs font-semibold text-on-surface block mt-1 truncate" title={conn.nearestHealthcare?.name || 'No detectado en radio próximo'}>
+                {conn.nearestHealthcare?.name || 'No detectado en radio próximo'}
               </span>
               <span className="text-[10px] font-mono text-primary font-medium block mt-0.5">
-                {conn.nearestHealthcare ? `${Math.round(conn.nearestHealthcare.distanceMeters)}m · ~${Math.round(conn.nearestHealthcare.walkTimeMinutes)} min` : '350m · ~4 min'}
+                {conn.nearestHealthcare ? `${Math.round(conn.nearestHealthcare.distanceMeters)}m · ~${Math.round(conn.nearestHealthcare.walkTimeMinutes)} min` : 'Sin centro próximo (<10 km)'}
               </span>
             </div>
 
@@ -227,11 +227,11 @@ export function PillarCards({
                 <GraduationCap className="w-3.5 h-3.5 text-secondary" />
                 <span>Educación (Colegio/IES)</span>
               </div>
-              <span className="font-sans text-xs font-semibold text-on-surface block mt-1 truncate" title={conn.nearestEducation?.name}>
-                {conn.nearestEducation?.name || 'Colegio Público'}
+              <span className="font-sans text-xs font-semibold text-on-surface block mt-1 truncate" title={conn.nearestEducation?.name || 'No detectado en radio próximo'}>
+                {conn.nearestEducation?.name || 'No detectado en radio próximo'}
               </span>
               <span className="text-[10px] font-mono text-secondary font-medium block mt-0.5">
-                {conn.nearestEducation ? `${Math.round(conn.nearestEducation.distanceMeters)}m · ~${Math.round(conn.nearestEducation.walkTimeMinutes)} min` : '420m · ~5 min'}
+                {conn.nearestEducation ? `${Math.round(conn.nearestEducation.distanceMeters)}m · ~${Math.round(conn.nearestEducation.walkTimeMinutes)} min` : 'Sin centro próximo (<10 km)'}
               </span>
             </div>
 
@@ -241,11 +241,11 @@ export function PillarCards({
                 <Train className="w-3.5 h-3.5 text-tertiary" />
                 <span>Transporte Rápido</span>
               </div>
-              <span className="font-sans text-xs font-semibold text-on-surface block mt-1 truncate" title={conn.nearestTransit?.name}>
-                {conn.nearestTransit?.name || 'Metro / Bus'}
+              <span className="font-sans text-xs font-semibold text-on-surface block mt-1 truncate" title={conn.nearestTransit?.name || 'No detectado en radio próximo'}>
+                {conn.nearestTransit?.name || 'No detectado en radio próximo'}
               </span>
               <span className="text-[10px] font-mono text-tertiary font-medium block mt-0.5">
-                {conn.nearestTransit ? `${Math.round(conn.nearestTransit.distanceMeters)}m · ~${Math.round(conn.nearestTransit.walkTimeMinutes)} min` : '180m · ~2 min'}
+                {conn.nearestTransit ? `${Math.round(conn.nearestTransit.distanceMeters)}m · ~${Math.round(conn.nearestTransit.walkTimeMinutes)} min` : 'Sin estación próxima (<10 km)'}
               </span>
             </div>
 
@@ -255,11 +255,11 @@ export function PillarCards({
                 <Trees className="w-3.5 h-3.5 text-primary" />
                 <span>Parque & Zona Verde</span>
               </div>
-              <span className="font-sans text-xs font-semibold text-on-surface block mt-1 truncate" title={conn.nearestPark?.name}>
-                {conn.nearestPark?.name || 'Parque Público'}
+              <span className="font-sans text-xs font-semibold text-on-surface block mt-1 truncate" title={conn.nearestPark?.name || 'No detectado en radio próximo'}>
+                {conn.nearestPark?.name || 'No detectado en radio próximo'}
               </span>
               <span className="text-[10px] font-mono text-primary font-medium block mt-0.5">
-                {conn.nearestPark ? `${Math.round(conn.nearestPark.distanceMeters)}m · ~${Math.round(conn.nearestPark.walkTimeMinutes)} min` : '460m · ~6 min'}
+                {conn.nearestPark ? `${Math.round(conn.nearestPark.distanceMeters)}m · ~${Math.round(conn.nearestPark.walkTimeMinutes)} min` : 'Sin parque próximo (<10 km)'}
               </span>
             </div>
           </div>

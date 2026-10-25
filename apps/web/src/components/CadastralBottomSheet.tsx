@@ -262,12 +262,23 @@ export function CadastralBottomSheet({
   const acousticLabel = noiseDba > 65 ? 'ZPAE Activa' : 'ZPAE Mod.';
 
   const walkScore = connectivity?.walkScore15Min ?? score?.subscores?.connectivity ?? 95;
-  const walkLabel = walkScore >= 85 ? 'Excelente' : 'Notable';
-  const nearestTransitText = connectivity?.nearestTransit?.name || 'Metro';
-  const nearestTransitDist = connectivity?.nearestTransit?.distanceMeters || 80;
-  const nearestHealthText = connectivity?.nearestHealthcare?.name || 'Salud';
-  const nearestHealthDist = connectivity?.nearestHealthcare?.distanceMeters || 190;
-  const walkSubtext = `${nearestTransitText} (${nearestTransitDist}m) · ${nearestHealthText} (${nearestHealthDist}m) · Supermercado (120m)`;
+  const walkLabel = walkScore >= 85 ? 'Excelente' : walkScore >= 60 ? 'Notable' : walkScore >= 40 ? 'Medio' : 'Rural / Aislado';
+  const summaryParts: string[] = [];
+  if (connectivity?.nearestTransit) {
+    summaryParts.push(`${connectivity.nearestTransit.name} (${Math.round(connectivity.nearestTransit.distanceMeters)}m)`);
+  }
+  if (connectivity?.nearestHealthcare) {
+    summaryParts.push(`${connectivity.nearestHealthcare.name} (${Math.round(connectivity.nearestHealthcare.distanceMeters)}m)`);
+  }
+  if (connectivity?.nearestEducation) {
+    summaryParts.push(`${connectivity.nearestEducation.name} (${Math.round(connectivity.nearestEducation.distanceMeters)}m)`);
+  }
+  if (connectivity?.nearestPark) {
+    summaryParts.push(`${connectivity.nearestPark.name} (${Math.round(connectivity.nearestPark.distanceMeters)}m)`);
+  }
+  const walkSubtext = summaryParts.length > 0
+    ? summaryParts.slice(0, 3).join(' · ')
+    : 'Sin equipamientos en radio de proximidad';
 
   // SERPAVI card computations
   const isStressed = rentalBenchmark?.isStressedHousingZone ?? report.urbanPlanning?.isStressedHousingZone ?? false;

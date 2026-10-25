@@ -171,125 +171,22 @@ export class D1CivicConnectivityProvider implements ICivicConnectivityProvider {
       }
 
       if (rows.length === 0) {
-        return this.generateDeterministicFallback(latitude, longitude, context);
+        return {
+          walkScore15Min: 0,
+          facilitiesWithin15MinCount: 0,
+          nearbyFacilities: [],
+        };
       }
 
       return this.aggregateFacilities(latitude, longitude, rows);
     } catch (err: any) {
       console.warn(`[D1CivicConnectivityProvider] Spatial query failed:`, err?.message);
-      return this.generateDeterministicFallback(latitude, longitude, context);
-    }
-  }
-
-  protected generateDeterministicFallback(
-    latitude: number,
-    longitude: number,
-    context?: { municipality?: string; street?: string }
-  ): CivicConnectivityData {
-    const hash = Math.abs(Math.round(latitude * 1000 + longitude * 1000));
-    const transitDist = 120 + (hash % 300);
-    const healthDist = 250 + (hash % 450);
-    const eduDist = 280 + (hash % 400);
-    const parkDist = 320 + (hash % 500);
-
-    const toCoord = (distMeters: number, bearingDeg: number) => {
-      const rad = (bearingDeg * Math.PI) / 180;
-      const dKm = distMeters / 1000;
-      const dLat = (dKm / 110.574) * Math.cos(rad);
-      const dLon = (dKm / (111.32 * Math.cos((latitude * Math.PI) / 180))) * Math.sin(rad);
       return {
-        latitude: Number((latitude + dLat).toFixed(6)),
-        longitude: Number((longitude + dLon).toFixed(6)),
+        walkScore15Min: 0,
+        facilitiesWithin15MinCount: 0,
+        nearbyFacilities: [],
       };
-    };
-
-    const cTransit = toCoord(transitDist, 45);
-    const cHealth = toCoord(healthDist, 315);
-    const cEdu = toCoord(eduDist, 225);
-    const cPark = toCoord(parkDist, 135);
-
-    const muni = context?.municipality?.trim() || '';
-    const street = context?.street?.trim() || '';
-
-    const transitName = street
-      ? `Parada Bus ${street.slice(0, 20)}`
-      : muni
-      ? `Parada Bus / Metro (${muni})`
-      : 'Parada de Transporte Público';
-
-    const healthName = muni ? `Centro de Salud ${muni}` : 'Centro de Salud Municipal';
-    const eduName = muni ? `CEIP ${muni}` : 'Colegio Público de Educación Infantil y Primaria';
-    const parkName = muni ? `Parque Municipal ${muni}` : 'Parque Público de la Alameda';
-
-    const syntheticFacilities: CivicFacility[] = [
-      {
-        id: `syn-trans-${hash}`,
-        type: 'transit',
-        subtype: 'bus',
-        name: transitName,
-        distanceMeters: transitDist,
-        walkTimeMinutes: calculateWalkTimeMinutes(transitDist),
-        latitude: cTransit.latitude,
-        longitude: cTransit.longitude,
-      },
-      {
-        id: `syn-health-${hash}`,
-        type: 'healthcare',
-        subtype: 'primary_care',
-        name: healthName,
-        distanceMeters: healthDist,
-        walkTimeMinutes: calculateWalkTimeMinutes(healthDist),
-        latitude: cHealth.latitude,
-        longitude: cHealth.longitude,
-      },
-      {
-        id: `syn-edu-${hash}`,
-        type: 'education',
-        subtype: 'school',
-        name: eduName,
-        distanceMeters: eduDist,
-        walkTimeMinutes: calculateWalkTimeMinutes(eduDist),
-        latitude: cEdu.latitude,
-        longitude: cEdu.longitude,
-      },
-      {
-        id: `syn-park-${hash}`,
-        type: 'park',
-        subtype: 'urban_park',
-        name: parkName,
-        distanceMeters: parkDist,
-        walkTimeMinutes: calculateWalkTimeMinutes(parkDist),
-        latitude: cPark.latitude,
-        longitude: cPark.longitude,
-      },
-    ];
-
-    let facilitiesWithin15MinCount = 0;
-    for (const f of syntheticFacilities) {
-      if (f.distanceMeters <= 1125) {
-        facilitiesWithin15MinCount += 1;
-      }
     }
-
-    const walkScore15Min = calculateWalkScore(
-      {
-        transit: syntheticFacilities[0],
-        healthcare: syntheticFacilities[1],
-        education: syntheticFacilities[2],
-        park: syntheticFacilities[3],
-      },
-      facilitiesWithin15MinCount
-    );
-
-    return {
-      walkScore15Min,
-      nearestTransit: syntheticFacilities[0],
-      nearestHealthcare: syntheticFacilities[1],
-      nearestEducation: syntheticFacilities[2],
-      nearestPark: syntheticFacilities[3],
-      facilitiesWithin15MinCount,
-      nearbyFacilities: syntheticFacilities,
-    };
   }
 
   protected aggregateFacilities(
