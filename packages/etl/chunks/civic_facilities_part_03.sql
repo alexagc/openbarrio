@@ -1,18 +1,4 @@
--- OpenBarrio Civic Facilities Dataset (All Spain)
--- Total records: 60397
-CREATE TABLE IF NOT EXISTS civic_facilities (
-  id TEXT PRIMARY KEY,
-  type TEXT NOT NULL,
-  subtype TEXT,
-  name TEXT NOT NULL,
-  latitude REAL NOT NULL,
-  longitude REAL NOT NULL,
-  municipality_code TEXT NOT NULL,
-  postal_code TEXT
-);
-CREATE INDEX IF NOT EXISTS idx_facilities_coords ON civic_facilities(latitude, longitude);
-CREATE INDEX IF NOT EXISTS idx_facilities_type ON civic_facilities(type);
-BEGIN TRANSACTION;
+-- Cloudflare D1 Batch Insert Chunk for Civic Facilities
 INSERT OR REPLACE INTO civic_facilities (id, type, subtype, name, latitude, longitude, municipality_code, postal_code) VALUES ('osm_158848101', 'education', 'school', 'Colegio de Educación Infantil y Primaria Sancho Panza', 37.1620577, -3.5893711, '41001', '41001');
 INSERT OR REPLACE INTO civic_facilities (id, type, subtype, name, latitude, longitude, municipality_code, postal_code) VALUES ('osm_159019455', 'park', 'urban_park', 'Parque de los Bomberos', 37.2603562, -5.5396265, '41001', '41001');
 INSERT OR REPLACE INTO civic_facilities (id, type, subtype, name, latitude, longitude, municipality_code, postal_code) VALUES ('osm_159019461', 'park', 'urban_park', 'Parque San Antonio', 37.2623334, -5.5381712, '41001', '41001');
@@ -5013,4 +4999,3 @@ INSERT OR REPLACE INTO civic_facilities (id, type, subtype, name, latitude, long
 INSERT OR REPLACE INTO civic_facilities (id, type, subtype, name, latitude, longitude, municipality_code, postal_code) VALUES ('osm_723545399', 'park', 'urban_park', 'Parque de cuba', 37.5262594, -5.2532445, '41001', '41001');
 INSERT OR REPLACE INTO civic_facilities (id, type, subtype, name, latitude, longitude, municipality_code, postal_code) VALUES ('osm_723545400', 'park', 'urban_park', 'Plaza de america', 37.5268786, -5.2553501, '41001', '41001');
 INSERT OR REPLACE INTO civic_facilities (id, type, subtype, name, latitude, longitude, municipality_code, postal_code) VALUES ('osm_723545401', 'park', 'urban_park', 'Plaza de Roma', 37.5270108, -5.256967, '41001', '41001');
-COMMIT;

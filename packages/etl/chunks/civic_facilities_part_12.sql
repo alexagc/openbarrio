@@ -1,18 +1,4 @@
--- OpenBarrio Civic Facilities Dataset (All Spain)
--- Total records: 60397
-CREATE TABLE IF NOT EXISTS civic_facilities (
-  id TEXT PRIMARY KEY,
-  type TEXT NOT NULL,
-  subtype TEXT,
-  name TEXT NOT NULL,
-  latitude REAL NOT NULL,
-  longitude REAL NOT NULL,
-  municipality_code TEXT NOT NULL,
-  postal_code TEXT
-);
-CREATE INDEX IF NOT EXISTS idx_facilities_coords ON civic_facilities(latitude, longitude);
-CREATE INDEX IF NOT EXISTS idx_facilities_type ON civic_facilities(type);
-BEGIN TRANSACTION;
+-- Cloudflare D1 Batch Insert Chunk for Civic Facilities
 INSERT OR REPLACE INTO civic_facilities (id, type, subtype, name, latitude, longitude, municipality_code, postal_code) VALUES ('hlth_sanicen_h_180122', 'healthcare', 'hospital', 'HOSPITAL DE ALTA RESOLUCION DE GUADIX', 37.3077165, -3.1456938, '18089', '18500');
 INSERT OR REPLACE INTO civic_facilities (id, type, subtype, name, latitude, longitude, municipality_code, postal_code) VALUES ('hlth_sanicen_h_180133', 'healthcare', 'hospital', 'HOSPITAL DE ALTA RESOLUCIÓN DE LOJA', 37.1927439, -3.8344939, '18122', '18300');
 INSERT OR REPLACE INTO civic_facilities (id, type, subtype, name, latitude, longitude, municipality_code, postal_code) VALUES ('hlth_sanicen_h_190019', 'healthcare', 'hospital', 'HOSPITAL UNIVERSITARIO DE GUADALAJARA', 40.6186304, -3.1534376, '19130', '19002');
@@ -5013,4 +4999,3 @@ INSERT OR REPLACE INTO civic_facilities (id, type, subtype, name, latitude, long
 INSERT OR REPLACE INTO civic_facilities (id, type, subtype, name, latitude, longitude, municipality_code, postal_code) VALUES ('transit_rail_2483_kastrexana', 'transit', 'train', 'Estación de KASTREXANA', 43.2554888891884, -2.97196944380933, '99999', NULL);
 INSERT OR REPLACE INTO civic_facilities (id, type, subtype, name, latitude, longitude, municipality_code, postal_code) VALUES ('transit_rail_2484_la_asuncion_universidad', 'transit', 'train', 'Estación de LA ASUNCION UNIVERSIDAD', 42.6162222219572, -5.56601388866876, '99999', NULL);
 INSERT OR REPLACE INTO civic_facilities (id, type, subtype, name, latitude, longitude, municipality_code, postal_code) VALUES ('transit_rail_2485_cantera_de_mingorria', 'transit', 'train', 'Estación de CANTERA DE MINGORRIA', 40.73394040949, -4.67181799312, '99999', NULL);
-COMMIT;

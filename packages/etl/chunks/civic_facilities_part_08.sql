@@ -1,18 +1,4 @@
--- OpenBarrio Civic Facilities Dataset (All Spain)
--- Total records: 60397
-CREATE TABLE IF NOT EXISTS civic_facilities (
-  id TEXT PRIMARY KEY,
-  type TEXT NOT NULL,
-  subtype TEXT,
-  name TEXT NOT NULL,
-  latitude REAL NOT NULL,
-  longitude REAL NOT NULL,
-  municipality_code TEXT NOT NULL,
-  postal_code TEXT
-);
-CREATE INDEX IF NOT EXISTS idx_facilities_coords ON civic_facilities(latitude, longitude);
-CREATE INDEX IF NOT EXISTS idx_facilities_type ON civic_facilities(type);
-BEGIN TRANSACTION;
+-- Cloudflare D1 Batch Insert Chunk for Civic Facilities
 INSERT OR REPLACE INTO civic_facilities (id, type, subtype, name, latitude, longitude, municipality_code, postal_code) VALUES ('osm_1552117487', 'park', 'urban_park', 'Parque de la Calera', 39.8009833, -4.0562225, '45001', '45001');
 INSERT OR REPLACE INTO civic_facilities (id, type, subtype, name, latitude, longitude, municipality_code, postal_code) VALUES ('osm_1552264233', 'education', 'school', 'Santiago el Mayor', 39.8632595, -4.023149, '45001', '45001');
 INSERT OR REPLACE INTO civic_facilities (id, type, subtype, name, latitude, longitude, municipality_code, postal_code) VALUES ('osm_1552284159', 'education', 'school', 'Centro de Formación al Consumidor Agustín Esteban', 39.958325, -4.8174583, '45001', '45001');
@@ -5013,4 +4999,3 @@ INSERT OR REPLACE INTO civic_facilities (id, type, subtype, name, latitude, long
 INSERT OR REPLACE INTO civic_facilities (id, type, subtype, name, latitude, longitude, municipality_code, postal_code) VALUES ('osm_511329934', 'park', 'urban_park', 'Plaza de El Rasico', 37.853291, -1.4267074, '30001', '30001');
 INSERT OR REPLACE INTO civic_facilities (id, type, subtype, name, latitude, longitude, municipality_code, postal_code) VALUES ('osm_511329943', 'park', 'urban_park', 'Plaza del Santo Ángel', 37.8563488, -1.4358371, '30001', '30001');
 INSERT OR REPLACE INTO civic_facilities (id, type, subtype, name, latitude, longitude, municipality_code, postal_code) VALUES ('osm_511329946', 'park', 'urban_park', 'Jardín de la Fuente de Nochebuena', 37.8549031, -1.4328002, '30001', '30001');
-COMMIT;

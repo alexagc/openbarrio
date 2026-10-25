@@ -66,7 +66,9 @@ if (fs.existsSync(facilitiesSqlPath)) {
   const files = fs.readdirSync(chunksDir).filter((f) => f.endsWith('.sql')).sort();
   for (const f of files) {
     const chunkSql = fs.readFileSync(path.join(chunksDir, f), 'utf8');
+    db.exec('BEGIN TRANSACTION;');
     db.exec(chunkSql);
+    db.exec('COMMIT;');
   }
   console.log(`✅ Civic facilities dataset loaded from ${files.length} chunks.`);
 } else {

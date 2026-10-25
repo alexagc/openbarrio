@@ -1,18 +1,4 @@
--- OpenBarrio Civic Facilities Dataset (All Spain)
--- Total records: 60397
-CREATE TABLE IF NOT EXISTS civic_facilities (
-  id TEXT PRIMARY KEY,
-  type TEXT NOT NULL,
-  subtype TEXT,
-  name TEXT NOT NULL,
-  latitude REAL NOT NULL,
-  longitude REAL NOT NULL,
-  municipality_code TEXT NOT NULL,
-  postal_code TEXT
-);
-CREATE INDEX IF NOT EXISTS idx_facilities_coords ON civic_facilities(latitude, longitude);
-CREATE INDEX IF NOT EXISTS idx_facilities_type ON civic_facilities(type);
-BEGIN TRANSACTION;
+-- Cloudflare D1 Batch Insert Chunk for Civic Facilities
 INSERT OR REPLACE INTO civic_facilities (id, type, subtype, name, latitude, longitude, municipality_code, postal_code) VALUES ('osm_511332369', 'park', 'urban_park', 'Paseo de las Vías', 37.8463776, -1.4205494, '30001', '30001');
 INSERT OR REPLACE INTO civic_facilities (id, type, subtype, name, latitude, longitude, municipality_code, postal_code) VALUES ('osm_511336386', 'park', 'urban_park', 'Jardín de las Ramblillas', 37.85592, -1.4091994, '30001', '30001');
 INSERT OR REPLACE INTO civic_facilities (id, type, subtype, name, latitude, longitude, municipality_code, postal_code) VALUES ('osm_511548570', 'education', 'school', 'Colegio Privado-Concertado Azaraque', 37.8558453, -1.4165098, '30001', '30001');
@@ -5013,4 +4999,3 @@ INSERT OR REPLACE INTO civic_facilities (id, type, subtype, name, latitude, long
 INSERT OR REPLACE INTO civic_facilities (id, type, subtype, name, latitude, longitude, municipality_code, postal_code) VALUES ('hlth_sanicen_c_118395', 'healthcare', 'consultorio', 'Consultorio Médico SAN JOSÉ ESCOBAR', 38.04027689999999, -4.055845, '23005', '23740');
 INSERT OR REPLACE INTO civic_facilities (id, type, subtype, name, latitude, longitude, municipality_code, postal_code) VALUES ('hlth_sanicen_c_118396', 'healthcare', 'consultorio', 'Consultorio Médico VEGAS DE TRIANA', 38.01755259999999, -4.0567433, '23005', '23747');
 INSERT OR REPLACE INTO civic_facilities (id, type, subtype, name, latitude, longitude, municipality_code, postal_code) VALUES ('hlth_sanicen_c_118397', 'healthcare', 'primary_care', 'Centro de Salud SANTISTEBAN DEL PUERTO', 38.2537694, -3.2029591, '23079', '23250');
-COMMIT;

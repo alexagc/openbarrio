@@ -1,18 +1,4 @@
--- OpenBarrio Civic Facilities Dataset (All Spain)
--- Total records: 60397
-CREATE TABLE IF NOT EXISTS civic_facilities (
-  id TEXT PRIMARY KEY,
-  type TEXT NOT NULL,
-  subtype TEXT,
-  name TEXT NOT NULL,
-  latitude REAL NOT NULL,
-  longitude REAL NOT NULL,
-  municipality_code TEXT NOT NULL,
-  postal_code TEXT
-);
-CREATE INDEX IF NOT EXISTS idx_facilities_coords ON civic_facilities(latitude, longitude);
-CREATE INDEX IF NOT EXISTS idx_facilities_type ON civic_facilities(type);
-BEGIN TRANSACTION;
+-- Cloudflare D1 Batch Insert Chunk for Civic Facilities
 INSERT OR REPLACE INTO civic_facilities (id, type, subtype, name, latitude, longitude, municipality_code, postal_code) VALUES ('osm_286390124', 'education', 'school', 'Escuela de Educación Infantil Pradoluengo', 42.6174034, -6.4165293, '47001', '47001');
 INSERT OR REPLACE INTO civic_facilities (id, type, subtype, name, latitude, longitude, municipality_code, postal_code) VALUES ('osm_286390126', 'education', 'high_school', 'Instituto de Educación Secundaria Álvaro Yáñez', 42.6205026, -6.4117443, '47001', '47001');
 INSERT OR REPLACE INTO civic_facilities (id, type, subtype, name, latitude, longitude, municipality_code, postal_code) VALUES ('osm_286456965', 'education', 'school', 'Colegio de Educación Infantil y Primaria Santa Bárbara', 42.6081519, -6.4224016, '47001', '47001');
@@ -5013,4 +4999,3 @@ INSERT OR REPLACE INTO civic_facilities (id, type, subtype, name, latitude, long
 INSERT OR REPLACE INTO civic_facilities (id, type, subtype, name, latitude, longitude, municipality_code, postal_code) VALUES ('osm_1551461917', 'park', 'urban_park', 'Plaza Maestro Maroto', 38.9983582, -3.3643042, '45001', '45001');
 INSERT OR REPLACE INTO civic_facilities (id, type, subtype, name, latitude, longitude, municipality_code, postal_code) VALUES ('osm_1552117469', 'park', 'urban_park', 'Parque de la Lia', 39.8148404, -4.0568466, '45001', '45001');
 INSERT OR REPLACE INTO civic_facilities (id, type, subtype, name, latitude, longitude, municipality_code, postal_code) VALUES ('osm_1552117486', 'park', 'urban_park', 'Parque del Cercado Largo', 39.7989359, -4.0575602, '45001', '45001');
-COMMIT;

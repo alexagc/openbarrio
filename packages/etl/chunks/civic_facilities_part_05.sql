@@ -1,18 +1,4 @@
--- OpenBarrio Civic Facilities Dataset (All Spain)
--- Total records: 60397
-CREATE TABLE IF NOT EXISTS civic_facilities (
-  id TEXT PRIMARY KEY,
-  type TEXT NOT NULL,
-  subtype TEXT,
-  name TEXT NOT NULL,
-  latitude REAL NOT NULL,
-  longitude REAL NOT NULL,
-  municipality_code TEXT NOT NULL,
-  postal_code TEXT
-);
-CREATE INDEX IF NOT EXISTS idx_facilities_coords ON civic_facilities(latitude, longitude);
-CREATE INDEX IF NOT EXISTS idx_facilities_type ON civic_facilities(type);
-BEGIN TRANSACTION;
+-- Cloudflare D1 Batch Insert Chunk for Civic Facilities
 INSERT OR REPLACE INTO civic_facilities (id, type, subtype, name, latitude, longitude, municipality_code, postal_code) VALUES ('osm_420625125', 'healthcare', 'primary_care', 'Centro de Salud de Sax', 38.5345711, -0.8194653, '46001', '46001');
 INSERT OR REPLACE INTO civic_facilities (id, type, subtype, name, latitude, longitude, municipality_code, postal_code) VALUES ('osm_420628104', 'park', 'urban_park', 'Parque del Río Vinalopó', 38.5377252, -0.8142917, '46001', '46001');
 INSERT OR REPLACE INTO civic_facilities (id, type, subtype, name, latitude, longitude, municipality_code, postal_code) VALUES ('osm_421229672', 'park', 'urban_park', 'Parque de Hispano-América', 38.5358168, -0.8260639, '46001', '46001');
@@ -5013,4 +4999,3 @@ INSERT OR REPLACE INTO civic_facilities (id, type, subtype, name, latitude, long
 INSERT OR REPLACE INTO civic_facilities (id, type, subtype, name, latitude, longitude, municipality_code, postal_code) VALUES ('osm_138213137', 'healthcare', 'primary_care', 'Centro de Saúde e Punto de Atención Continuada de Muros', 42.7889873, -9.0686028, '15001', '15001');
 INSERT OR REPLACE INTO civic_facilities (id, type, subtype, name, latitude, longitude, municipality_code, postal_code) VALUES ('osm_139594556', 'park', 'urban_park', 'Parque Eugenio Arbones', 42.2181603, -8.7331297, '15001', '15001');
 INSERT OR REPLACE INTO civic_facilities (id, type, subtype, name, latitude, longitude, municipality_code, postal_code) VALUES ('osm_140399591', 'park', 'urban_park', 'Parque do Sangoñedo', 42.6054437, -7.7803514, '15001', '15001');
-COMMIT;

@@ -1,18 +1,4 @@
--- OpenBarrio Civic Facilities Dataset (All Spain)
--- Total records: 60397
-CREATE TABLE IF NOT EXISTS civic_facilities (
-  id TEXT PRIMARY KEY,
-  type TEXT NOT NULL,
-  subtype TEXT,
-  name TEXT NOT NULL,
-  latitude REAL NOT NULL,
-  longitude REAL NOT NULL,
-  municipality_code TEXT NOT NULL,
-  postal_code TEXT
-);
-CREATE INDEX IF NOT EXISTS idx_facilities_coords ON civic_facilities(latitude, longitude);
-CREATE INDEX IF NOT EXISTS idx_facilities_type ON civic_facilities(type);
-BEGIN TRANSACTION;
+-- Cloudflare D1 Batch Insert Chunk for Civic Facilities
 INSERT OR REPLACE INTO civic_facilities (id, type, subtype, name, latitude, longitude, municipality_code, postal_code) VALUES ('hlth_sanicen_c_118398', 'healthcare', 'consultorio', 'Consultorio Médico ALDEAHERMOSA', 38.3222902, -3.1328011, '23062', '23267');
 INSERT OR REPLACE INTO civic_facilities (id, type, subtype, name, latitude, longitude, municipality_code, postal_code) VALUES ('hlth_sanicen_c_118399', 'healthcare', 'consultorio', 'Consultorio Médico CASTELLAR DE SANTISTEBAN', 38.2554137, -3.1324113, '23025', '23260');
 INSERT OR REPLACE INTO civic_facilities (id, type, subtype, name, latitude, longitude, municipality_code, postal_code) VALUES ('hlth_sanicen_c_118400', 'healthcare', 'consultorio', 'Consultorio Médico CHICLANA DE SEGURA', 38.3107885, -3.0444752, '23029', '23264');
@@ -5013,4 +4999,3 @@ INSERT OR REPLACE INTO civic_facilities (id, type, subtype, name, latitude, long
 INSERT OR REPLACE INTO civic_facilities (id, type, subtype, name, latitude, longitude, municipality_code, postal_code) VALUES ('hlth_sanicen_c_123594', 'healthcare', 'consultorio', 'Consultorio Médico LEDANCA', 40.9250972, -2.9217985, '19159', '19195');
 INSERT OR REPLACE INTO civic_facilities (id, type, subtype, name, latitude, longitude, municipality_code, postal_code) VALUES ('hlth_sanicen_c_123595', 'healthcare', 'consultorio', 'Consultorio Médico MALACUERA', 40.75326870000001, -2.8299369, '19053', '19413');
 INSERT OR REPLACE INTO civic_facilities (id, type, subtype, name, latitude, longitude, municipality_code, postal_code) VALUES ('hlth_sanicen_c_123596', 'healthcare', 'consultorio', 'Consultorio Médico MUDUEX', 40.8295788, -2.9594616, '19196', '19196');
-COMMIT;

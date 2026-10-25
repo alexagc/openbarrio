@@ -1,18 +1,4 @@
--- OpenBarrio Civic Facilities Dataset (All Spain)
--- Total records: 60397
-CREATE TABLE IF NOT EXISTS civic_facilities (
-  id TEXT PRIMARY KEY,
-  type TEXT NOT NULL,
-  subtype TEXT,
-  name TEXT NOT NULL,
-  latitude REAL NOT NULL,
-  longitude REAL NOT NULL,
-  municipality_code TEXT NOT NULL,
-  postal_code TEXT
-);
-CREATE INDEX IF NOT EXISTS idx_facilities_coords ON civic_facilities(latitude, longitude);
-CREATE INDEX IF NOT EXISTS idx_facilities_type ON civic_facilities(type);
-BEGIN TRANSACTION;
+-- Cloudflare D1 Batch Insert Chunk for Civic Facilities
 INSERT OR REPLACE INTO civic_facilities (id, type, subtype, name, latitude, longitude, municipality_code, postal_code) VALUES ('fac_mad_hosp_lapaz', 'healthcare', 'hospital', 'Hospital Universitario La Paz', 40.4805, -3.6872, '28079', '28046');
 INSERT OR REPLACE INTO civic_facilities (id, type, subtype, name, latitude, longitude, municipality_code, postal_code) VALUES ('fac_mad_hosp_gregorio', 'healthcare', 'hospital', 'Hospital General Universitario Gregorio Marañón', 40.4192, -3.6714, '28079', '28007');
 INSERT OR REPLACE INTO civic_facilities (id, type, subtype, name, latitude, longitude, municipality_code, postal_code) VALUES ('fac_mad_hosp_clinico', 'healthcare', 'hospital', 'Hospital Clínico San Carlos', 40.4402, -3.7198, '28079', '28040');
@@ -5013,4 +4999,3 @@ INSERT OR REPLACE INTO civic_facilities (id, type, subtype, name, latitude, long
 INSERT OR REPLACE INTO civic_facilities (id, type, subtype, name, latitude, longitude, municipality_code, postal_code) VALUES ('osm_255246395', 'transit', 'train', 'Estación Leganés', 40.3290937, -3.7711973, '28001', '28001');
 INSERT OR REPLACE INTO civic_facilities (id, type, subtype, name, latitude, longitude, municipality_code, postal_code) VALUES ('osm_255246398', 'transit', 'train', 'Estación Móstoles', 40.3285651, -3.8639329, '28001', '28001');
 INSERT OR REPLACE INTO civic_facilities (id, type, subtype, name, latitude, longitude, municipality_code, postal_code) VALUES ('osm_255246399', 'transit', 'train', 'Estación Móstoles-El Soto', 40.33094, -3.8822004, '28001', '28001');
-COMMIT;

@@ -1,18 +1,4 @@
--- OpenBarrio Civic Facilities Dataset (All Spain)
--- Total records: 60397
-CREATE TABLE IF NOT EXISTS civic_facilities (
-  id TEXT PRIMARY KEY,
-  type TEXT NOT NULL,
-  subtype TEXT,
-  name TEXT NOT NULL,
-  latitude REAL NOT NULL,
-  longitude REAL NOT NULL,
-  municipality_code TEXT NOT NULL,
-  postal_code TEXT
-);
-CREATE INDEX IF NOT EXISTS idx_facilities_coords ON civic_facilities(latitude, longitude);
-CREATE INDEX IF NOT EXISTS idx_facilities_type ON civic_facilities(type);
-BEGIN TRANSACTION;
+-- Cloudflare D1 Batch Insert Chunk for Civic Facilities
 INSERT OR REPLACE INTO civic_facilities (id, type, subtype, name, latitude, longitude, municipality_code, postal_code) VALUES ('osm_140402421', 'park', 'urban_park', 'Parque Eloísa Ribadulla', 42.6115919, -7.7702878, '15001', '15001');
 INSERT OR REPLACE INTO civic_facilities (id, type, subtype, name, latitude, longitude, municipality_code, postal_code) VALUES ('osm_140428221', 'education', 'high_school', 'Instituto de Educación Secundaria Lama das Quendas', 42.6122732, -7.7761392, '15001', '15001');
 INSERT OR REPLACE INTO civic_facilities (id, type, subtype, name, latitude, longitude, municipality_code, postal_code) VALUES ('osm_140428373', 'education', 'school', 'Colexio de Educación Infantil e Primaria Plurilingüe Xoán de Requeixo', 42.6126615, -7.7746702, '15001', '15001');
@@ -5013,4 +4999,3 @@ INSERT OR REPLACE INTO civic_facilities (id, type, subtype, name, latitude, long
 INSERT OR REPLACE INTO civic_facilities (id, type, subtype, name, latitude, longitude, municipality_code, postal_code) VALUES ('osm_284566363', 'healthcare', 'primary_care', 'Consultorio Médico de La Bastida', 40.584654, -6.0580393, '47001', '47001');
 INSERT OR REPLACE INTO civic_facilities (id, type, subtype, name, latitude, longitude, municipality_code, postal_code) VALUES ('osm_285592107', 'education', 'school', 'Colegio Sagrada Familia', 42.6844741, -2.9448885, '47001', '47001');
 INSERT OR REPLACE INTO civic_facilities (id, type, subtype, name, latitude, longitude, municipality_code, postal_code) VALUES ('osm_286376624', 'healthcare', 'primary_care', 'Consultorio Médico de Narros de Matalayegua', 40.6990747, -5.9288286, '47001', '47001');
-COMMIT;

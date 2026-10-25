@@ -1,18 +1,4 @@
--- OpenBarrio Civic Facilities Dataset (All Spain)
--- Total records: 60397
-CREATE TABLE IF NOT EXISTS civic_facilities (
-  id TEXT PRIMARY KEY,
-  type TEXT NOT NULL,
-  subtype TEXT,
-  name TEXT NOT NULL,
-  latitude REAL NOT NULL,
-  longitude REAL NOT NULL,
-  municipality_code TEXT NOT NULL,
-  postal_code TEXT
-);
-CREATE INDEX IF NOT EXISTS idx_facilities_coords ON civic_facilities(latitude, longitude);
-CREATE INDEX IF NOT EXISTS idx_facilities_type ON civic_facilities(type);
-BEGIN TRANSACTION;
+-- Cloudflare D1 Batch Insert Chunk for Civic Facilities
 INSERT OR REPLACE INTO civic_facilities (id, type, subtype, name, latitude, longitude, municipality_code, postal_code) VALUES ('hlth_sanicen_c_123597', 'healthcare', 'consultorio', 'Consultorio Médico OLMEDA DEL EXTREMO', 40.7852462, -2.8375959, '19053', '19413');
 INSERT OR REPLACE INTO civic_facilities (id, type, subtype, name, latitude, longitude, municipality_code, postal_code) VALUES ('hlth_sanicen_c_123598', 'healthcare', 'consultorio', 'Consultorio Médico PAJARES', 40.734201, -2.8324723, '19053', '19413');
 INSERT OR REPLACE INTO civic_facilities (id, type, subtype, name, latitude, longitude, municipality_code, postal_code) VALUES ('hlth_sanicen_c_123599', 'healthcare', 'consultorio', 'Consultorio Médico ROMANCOS', 40.68851739999999, -2.8836646, '19053', '19410');
@@ -5013,4 +4999,3 @@ INSERT OR REPLACE INTO civic_facilities (id, type, subtype, name, latitude, long
 INSERT OR REPLACE INTO civic_facilities (id, type, subtype, name, latitude, longitude, municipality_code, postal_code) VALUES ('hlth_sanicen_h_180093', 'healthcare', 'hospital', 'HOSPITAL COMARCAL DE BAZA', 37.4922747, -2.7674057, '18023', '18800');
 INSERT OR REPLACE INTO civic_facilities (id, type, subtype, name, latitude, longitude, municipality_code, postal_code) VALUES ('hlth_sanicen_h_180107', 'healthcare', 'hospital', 'HOSPITAL COMARCAL SANTA ANA DE MOTRIL', 36.7531259, -3.5218155, '18140', '18600');
 INSERT OR REPLACE INTO civic_facilities (id, type, subtype, name, latitude, longitude, municipality_code, postal_code) VALUES ('hlth_sanicen_h_180114', 'healthcare', 'hospital', 'COMPLEJO HOSPITALARIO REGIONAL VIRGEN DE LAS NIEVES', 37.1884198, -3.6095205, '18087', '18014');
-COMMIT;

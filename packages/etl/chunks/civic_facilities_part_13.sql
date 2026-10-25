@@ -1,18 +1,4 @@
--- OpenBarrio Civic Facilities Dataset (All Spain)
--- Total records: 60397
-CREATE TABLE IF NOT EXISTS civic_facilities (
-  id TEXT PRIMARY KEY,
-  type TEXT NOT NULL,
-  subtype TEXT,
-  name TEXT NOT NULL,
-  latitude REAL NOT NULL,
-  longitude REAL NOT NULL,
-  municipality_code TEXT NOT NULL,
-  postal_code TEXT
-);
-CREATE INDEX IF NOT EXISTS idx_facilities_coords ON civic_facilities(latitude, longitude);
-CREATE INDEX IF NOT EXISTS idx_facilities_type ON civic_facilities(type);
-BEGIN TRANSACTION;
+-- Cloudflare D1 Batch Insert Chunk for Civic Facilities
 INSERT OR REPLACE INTO civic_facilities (id, type, subtype, name, latitude, longitude, municipality_code, postal_code) VALUES ('transit_rail_2486_zalla', 'transit', 'train', 'Estación de ZALLA', 43.2128666661748, -3.133155555643, '99999', NULL);
 INSERT OR REPLACE INTO civic_facilities (id, type, subtype, name, latitude, longitude, municipality_code, postal_code) VALUES ('transit_rail_2487_zanzabornin', 'transit', 'train', 'Estación de ZANZABORNIN', 43.5688055554625, -5.82533888842502, '99999', NULL);
 INSERT OR REPLACE INTO civic_facilities (id, type, subtype, name, latitude, longitude, municipality_code, postal_code) VALUES ('transit_rail_2488_zaramillo', 'transit', 'train', 'Estación de ZARAMILLO', 43.2333583334755, -3.01603055656594, '99999', NULL);
@@ -410,4 +396,3 @@ INSERT OR REPLACE INTO civic_facilities (id, type, subtype, name, latitude, long
 INSERT OR REPLACE INTO civic_facilities (id, type, subtype, name, latitude, longitude, municipality_code, postal_code) VALUES ('hlth_sanicen_c_121210', 'healthcare', 'consultorio', 'Consultorio Médico Villanueva de la Peña', 43.317381, -4.191223, '39041', '39509');
 INSERT OR REPLACE INTO civic_facilities (id, type, subtype, name, latitude, longitude, municipality_code, postal_code) VALUES ('fac_39_edu_malacoria', 'education', 'school', 'CEIP Malacoria', 43.316196, -4.17349, '39041', '39509');
 INSERT OR REPLACE INTO civic_facilities (id, type, subtype, name, latitude, longitude, municipality_code, postal_code) VALUES ('fac_39_par_bolera_villanueva', 'park', 'urban_park', 'Parque y Área Recreativa Villanueva de la Peña', 43.3178, -4.1892, '39041', '39509');
-COMMIT;

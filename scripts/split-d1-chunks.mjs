@@ -17,21 +17,7 @@ export function splitSqlForD1() {
   const content = fs.readFileSync(SQL_SRC, 'utf8');
   const lines = content.split('\n');
 
-  const header = `-- Cloudflare D1 Migration Chunk for Civic Facilities
-CREATE TABLE IF NOT EXISTS civic_facilities (
-  id TEXT PRIMARY KEY,
-  type TEXT NOT NULL,
-  subtype TEXT,
-  name TEXT NOT NULL,
-  latitude REAL NOT NULL,
-  longitude REAL NOT NULL,
-  municipality_code TEXT NOT NULL,
-  postal_code TEXT
-);
-CREATE INDEX IF NOT EXISTS idx_facilities_coords ON civic_facilities(latitude, longitude);
-CREATE INDEX IF NOT EXISTS idx_facilities_type ON civic_facilities(type);
-BEGIN TRANSACTION;
-`;
+  const header = `-- Cloudflare D1 Batch Insert Chunk for Civic Facilities\n`;
 
   const insertLines = lines.filter((l) => l.startsWith('INSERT'));
   console.log(`Found ${insertLines.length} INSERT statements.`);
@@ -49,7 +35,7 @@ BEGIN TRANSACTION;
     const chunkFileName = `civic_facilities_part_${String(chunkIndex).padStart(2, '0')}.sql`;
     const chunkFile = path.join(OUTPUT_DIR, chunkFileName);
     const altChunkFile = path.join(ALT_OUTPUT_DIR, chunkFileName);
-    const chunkContent = header + chunkStatements.join('\n') + '\nCOMMIT;\n';
+    const chunkContent = header + chunkStatements.join('\n') + '\n';
     fs.writeFileSync(chunkFile, chunkContent, 'utf8');
     try { fs.writeFileSync(altChunkFile, chunkContent, 'utf8'); } catch {}
     console.log(`   -> Created ${chunkFile} (${chunkStatements.length} statements, ${(fs.statSync(chunkFile).size / 1024).toFixed(1)} KB)`);
