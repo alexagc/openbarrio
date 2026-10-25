@@ -27,9 +27,9 @@ on:
         default: false
         type: boolean
       artifact_run_id:
-        description: 'Run ID of artifact to download (if apply_only is true, default: 39150455664)'
+        description: 'Run ID of artifact to download (if apply_only is true, default: 40088381506)'
         required: false
-        default: '39150455664'
+        default: '40088381506'
         type: string
 
 jobs:
@@ -118,7 +118,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           mkdir -p packages/etl/dist
-          TARGET_RUN="${{ inputs.artifact_run_id || '39150455664' }}"
+          TARGET_RUN="${{ inputs.artifact_run_id || '40088381506' }}"
           echo "Downloading processed artifacts from workflow run $TARGET_RUN..."
           gh run download "$TARGET_RUN" --dir packages/etl/dist
           if [ -d "packages/etl/dist/openbarrio-etl-dist" ]; then
@@ -137,16 +137,33 @@ jobs:
           workingDirectory: apps/api
           command: d1 execute openbarrio-d1 --file=${{ github.workspace }}/packages/etl/dist/ine_adrh.sql --remote --yes
 
-      - name: Sync Cloudflare D1 (Civic Facilities SQLite)
+      - name: Sync Cloudflare D1 (Civic Facilities SQLite Chunks)
         if: inputs.dry_run != true && env.HAS_CF_TOKEN == 'true'
         continue-on-error: true
-        uses: cloudflare/wrangler-action@v3
-        with:
-          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          wranglerVersion: '3.114.17'
-          workingDirectory: apps/api
-          command: d1 execute openbarrio-d1 --file=${{ github.workspace }}/packages/etl/dist/civic_facilities.sql --remote --yes
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          CHUNKS_DIR=""
+          if [ -d "packages/etl/chunks" ] && [ $(ls -1 packages/etl/chunks/*.sql 2>/dev/null | wc -l) -gt 0 ]; then
+            CHUNKS_DIR="packages/etl/chunks"
+          elif [ -d "packages/etl/dist/openbarrio-etl-dist/chunks" ]; then
+            CHUNKS_DIR="packages/etl/dist/openbarrio-etl-dist/chunks"
+          elif [ -d "packages/etl/dist/chunks" ]; then
+            CHUNKS_DIR="packages/etl/dist/chunks"
+          fi
+
+          if [ -n "$CHUNKS_DIR" ]; then
+            echo "🚀 Found D1 migration chunks in $CHUNKS_DIR. Executing batch migration..."
+            for chunk in "$CHUNKS_DIR"/*.sql; do
+              echo ">>> Executing $chunk into Cloudflare D1..."
+              pnpm --filter @openbarrio/api exec wrangler d1 execute openbarrio-d1 --file="$chunk" --remote --yes
+            done
+            echo "✅ Successfully synced all civic facilities chunks to Cloudflare D1."
+          elif [ -f "packages/etl/dist/civic_facilities.sql" ]; then
+            echo "Executing monolithic civic_facilities.sql into Cloudflare D1..."
+            pnpm --filter @openbarrio/api exec wrangler d1 execute openbarrio-d1 --file="packages/etl/dist/civic_facilities.sql" --remote --yes
+          fi
 
       - name: Sync Cloudflare R2 (PMTiles Vector Boundaries)
         if: inputs.dry_run != true && env.HAS_CF_TOKEN == 'true'
