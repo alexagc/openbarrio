@@ -142,6 +142,64 @@ export function createGeodesicCircle(
   return coords;
 }
 
+const FACILITY_MAP_ICONS: Record<string, { color: string; path: string }> = {
+  'fac-train': {
+    color: '#e11d48',
+    path: '<rect x="4" y="3" width="16" height="16" rx="2"/><path d="M4 11h16"/><path d="M12 3v8"/><path d="m8 19-2 3"/><path d="m18 22-2-3"/><circle cx="8" cy="15" r="1"/><circle cx="16" cy="15" r="1"/>',
+  },
+  'fac-metro': {
+    color: '#0284c7',
+    path: '<rect x="3" y="3" width="18" height="14" rx="2"/><path d="M7 21l3-4"/><path d="M17 21l-3-4"/><circle cx="7" cy="13" r="1"/><circle cx="17" cy="13" r="1"/><path d="M3 9h18"/>',
+  },
+  'fac-bus': {
+    color: '#f59e0b',
+    path: '<path d="M8 6v6"/><path d="M15 6v6"/><path d="M2 12h19.6"/><path d="M18 18h3s.5-1.7.8-2.8c.1-.4.2-.8.2-1.2 0-.4-.1-.8-.2-1.2l-1.4-5C20.1 6.8 19.1 6 18 6H4a2 2 0 0 0-2 2v10h3"/><circle cx="7" cy="18" r="2"/><path d="M9 18h5"/><circle cx="16" cy="18" r="2"/>',
+  },
+  'fac-health': {
+    color: '#f43f5e',
+    path: '<path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/><path d="M12 7v6"/><path d="M9 10h6"/>',
+  },
+  'fac-education': {
+    color: '#3b82f6',
+    path: '<path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/>',
+  },
+  'fac-park': {
+    color: '#10b981',
+    path: '<path d="M10 10v.2A3 3 0 0 1 8.9 16H5a3 3 0 0 1-1-5.8V10a3 3 0 0 1 6 0Z"/><path d="M7 16v6"/><path d="M13 19v3"/><path d="M12 19h8.3a1 1 0 0 0 .7-1.7L18 14h.3a1 1 0 0 0 .7-1.7L16 9h.2a1 1 0 0 0 .8-1.7l-3.3-4.4a1 1 0 0 0-1.4 0L9 7.3"/>',
+  },
+};
+
+function registerFacilityMapImages(map: MapLibreMap) {
+  if (typeof window === 'undefined') return;
+  const size = 32;
+  for (const [id, def] of Object.entries(FACILITY_MAP_ICONS)) {
+    try {
+      if (typeof map.hasImage === 'function' && map.hasImage(id)) continue;
+      const svg = `
+        <svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 32 32">
+          <circle cx="16" cy="16" r="14" fill="${def.color}" stroke="#ffffff" stroke-width="2.5"/>
+          <g transform="translate(6, 6) scale(0.833)" fill="none" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            ${def.path}
+          </g>
+        </svg>
+      `;
+      const img = new Image(size, size);
+      img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+      img.onload = () => {
+        try {
+          if (typeof map.hasImage === 'function' && !map.hasImage(id)) {
+            map.addImage(id, img);
+          }
+        } catch {
+          // Ignore style transitions
+        }
+      };
+    } catch {
+      // Ignore during initial mounting
+    }
+  }
+}
+
 export function MapView({
   selectedCoords,
   onMapClick,
@@ -600,24 +658,39 @@ export function MapView({
                 ['linear'],
                 ['zoom'],
                 12,
-                4,
+                5,
                 15,
-                7,
+                8,
                 18,
-                10,
+                12,
               ],
               'circle-color': ['get', 'color'],
-              'circle-stroke-width': 2.5,
+              'circle-stroke-width': 2,
               'circle-stroke-color': '#ffffff',
               'circle-pitch-alignment': 'map',
             },
           },
           {
-            id: 'civic-facilities-label',
+            id: 'civic-facilities-symbol',
             type: 'symbol',
             source: 'civic-facilities-source',
-            minzoom: 13,
+            minzoom: 11,
             layout: {
+              'icon-image': ['get', 'icon'],
+              'icon-size': [
+                'interpolate',
+                ['linear'],
+                ['zoom'],
+                11,
+                0.75,
+                14,
+                0.95,
+                17,
+                1.15,
+              ],
+              'icon-allow-overlap': true,
+              'icon-ignore-placement': true,
+              'icon-pitch-alignment': 'viewport',
               'text-field': ['get', 'label'],
               'text-font': ['Open Sans Regular'],
               'text-size': [
@@ -631,7 +704,7 @@ export function MapView({
                 19,
                 12,
               ],
-              'text-offset': [0, 1.2],
+              'text-offset': [0, 1.6],
               'text-anchor': 'top',
               'text-allow-overlap': true,
               'text-ignore-placement': true,
@@ -746,7 +819,7 @@ export function MapView({
       className: 'stitch-dark-popup',
     });
 
-    map.on('mouseenter', 'civic-facilities-point', (e) => {
+    const handleFacilityMouseEnter = (e: any) => {
       map.getCanvas().style.cursor = 'pointer';
       if (!e.features || !e.features[0]) return;
       const feat = e.features[0];
@@ -785,21 +858,31 @@ export function MapView({
       `;
 
       hoverFacilityPopup.setLngLat(coords).setHTML(html).addTo(map);
-    });
+    };
 
-    map.on('mouseleave', 'civic-facilities-point', () => {
+    const handleFacilityMouseLeave = () => {
       map.getCanvas().style.cursor = is3DModeRef.current ? 'grab' : 'crosshair';
       hoverFacilityPopup.remove();
-    });
+    };
 
+    map.on('mouseenter', 'civic-facilities-symbol', handleFacilityMouseEnter);
+    map.on('mouseenter', 'civic-facilities-point', handleFacilityMouseEnter);
+    map.on('mouseleave', 'civic-facilities-symbol', handleFacilityMouseLeave);
+    map.on('mouseleave', 'civic-facilities-point', handleFacilityMouseLeave);
+
+    map.on('click', 'civic-facilities-symbol', (e) => {
+      e.originalEvent?.stopPropagation();
+    });
     map.on('click', 'civic-facilities-point', (e) => {
       e.originalEvent?.stopPropagation();
     });
 
     map.on('load', () => {
+      registerFacilityMapImages(map);
       map.resize();
     });
 
+    registerFacilityMapImages(map);
     mapRef.current = map;
 
     let resizeObserver: ResizeObserver | null = null;
@@ -1306,6 +1389,7 @@ export function MapView({
 
     const updateFacilities = () => {
       try {
+        registerFacilityMapImages(map);
         const source = map.getSource('civic-facilities-source') as maplibregl.GeoJSONSource;
         if (!source || typeof source.setData !== 'function') return;
 
@@ -1364,6 +1448,7 @@ export function MapView({
           if (fac.type === 'transit') {
             if (subtype === 'train' || nameLower.includes('cercan') || nameLower.includes('renfe')) {
               return {
+                icon: 'fac-train',
                 shortBadge: 'Cercanías',
                 badge: 'Cercanías / Tren',
                 color: '#e11d48',
@@ -1372,6 +1457,7 @@ export function MapView({
             }
             if (subtype === 'metro' || nameLower.includes('metro')) {
               return {
+                icon: 'fac-metro',
                 shortBadge: 'Metro',
                 badge: 'Metro de Madrid',
                 color: '#0284c7',
@@ -1379,6 +1465,7 @@ export function MapView({
               };
             }
             return {
+              icon: 'fac-bus',
               shortBadge: 'Bus EMT',
               badge: 'Autobús EMT',
               color: '#f59e0b',
@@ -1389,6 +1476,7 @@ export function MapView({
           if (fac.type === 'healthcare') {
             const isHospital = subtype === 'hospital' || nameLower.includes('hospital');
             return {
+              icon: 'fac-health',
               shortBadge: isHospital ? 'Hospital' : 'C. Salud',
               badge: isHospital ? 'Hospital Universitario' : 'Centro de Salud / CAP',
               color: '#f43f5e',
@@ -1400,6 +1488,7 @@ export function MapView({
             const isHighSchool =
               subtype === 'high_school' || nameLower.includes('ies') || nameLower.includes('instituto');
             return {
+              icon: 'fac-education',
               shortBadge: isHighSchool ? 'IES' : 'Colegio',
               badge: isHighSchool ? 'Instituto de Secundaria' : 'Colegio / Formación Profesional',
               color: '#3b82f6',
@@ -1408,6 +1497,7 @@ export function MapView({
           }
 
           return {
+            icon: 'fac-park',
             shortBadge: 'Parque',
             badge: 'Parque / Zonas Verdes',
             color: '#10b981',
@@ -1434,6 +1524,7 @@ export function MapView({
             properties: {
               id: fac.id,
               name: fac.name,
+              icon: meta.icon,
               type: fac.type,
               subtype: fac.subtype,
               distanceMeters: fac.distanceMeters,
