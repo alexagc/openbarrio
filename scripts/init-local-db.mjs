@@ -53,6 +53,7 @@ if (fs.existsSync(ineSqlPath)) {
 
 // 3. Load real civic facilities data
 const facilitiesSqlPath = 'packages/etl/dist/openbarrio-etl-dist/civic_facilities.sql';
+const chunksDir = 'packages/etl/chunks';
 if (fs.existsSync(facilitiesSqlPath)) {
   console.log('🏫 Loading civic facilities dataset (Healthcare, Schools, Transit)...');
   const facilitiesSql = fs.readFileSync(facilitiesSqlPath, 'utf8');
@@ -60,8 +61,16 @@ if (fs.existsSync(facilitiesSqlPath)) {
   db.exec(facilitiesSql);
   db.exec('COMMIT;');
   console.log('✅ Civic facilities dataset loaded.');
+} else if (fs.existsSync(chunksDir)) {
+  console.log('🏫 Loading civic facilities dataset from versioned chunks...');
+  const files = fs.readdirSync(chunksDir).filter((f) => f.endsWith('.sql')).sort();
+  for (const f of files) {
+    const chunkSql = fs.readFileSync(path.join(chunksDir, f), 'utf8');
+    db.exec(chunkSql);
+  }
+  console.log(`✅ Civic facilities dataset loaded from ${files.length} chunks.`);
 } else {
-  console.warn(`⚠️ Could not find ${facilitiesSqlPath}`);
+  console.warn(`⚠️ Could not find ${facilitiesSqlPath} or ${chunksDir}`);
 }
 
 const finalRow = db.prepare('SELECT count(*) as total FROM census_tract_income').get();

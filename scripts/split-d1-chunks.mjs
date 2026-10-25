@@ -3,6 +3,7 @@ import path from 'node:path';
 
 const SQL_SRC = 'packages/etl/dist/openbarrio-etl-dist/civic_facilities.sql';
 const OUTPUT_DIR = 'packages/etl/dist/openbarrio-etl-dist/chunks';
+const ALT_OUTPUT_DIR = 'packages/etl/chunks';
 const CHUNK_SIZE = 5000; // Cloudflare D1 limit is 10,000 statements per batch
 
 export function splitSqlForD1() {
@@ -38,13 +39,19 @@ BEGIN TRANSACTION;
   if (!fs.existsSync(OUTPUT_DIR)) {
     fs.mkdirSync(OUTPUT_DIR, { recursive: true });
   }
+  if (!fs.existsSync(ALT_OUTPUT_DIR)) {
+    fs.mkdirSync(ALT_OUTPUT_DIR, { recursive: true });
+  }
 
   let chunkIndex = 1;
   for (let i = 0; i < insertLines.length; i += CHUNK_SIZE) {
     const chunkStatements = insertLines.slice(i, i + CHUNK_SIZE);
-    const chunkFile = path.join(OUTPUT_DIR, `civic_facilities_part_${String(chunkIndex).padStart(2, '0')}.sql`);
+    const chunkFileName = `civic_facilities_part_${String(chunkIndex).padStart(2, '0')}.sql`;
+    const chunkFile = path.join(OUTPUT_DIR, chunkFileName);
+    const altChunkFile = path.join(ALT_OUTPUT_DIR, chunkFileName);
     const chunkContent = header + chunkStatements.join('\n') + '\nCOMMIT;\n';
     fs.writeFileSync(chunkFile, chunkContent, 'utf8');
+    try { fs.writeFileSync(altChunkFile, chunkContent, 'utf8'); } catch {}
     console.log(`   -> Created ${chunkFile} (${chunkStatements.length} statements, ${(fs.statSync(chunkFile).size / 1024).toFixed(1)} KB)`);
     chunkIndex++;
   }
