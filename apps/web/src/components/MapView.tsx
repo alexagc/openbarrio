@@ -1154,20 +1154,29 @@ export function MapView({
     const conn = report.connectivity;
     const { lat, lon } = selectedCoords;
 
-    // Collect facilities: use all nearbyFacilities if provided, otherwise fallback to the 4 singular slots
-    let rawList: CivicFacility[] = [];
+    // Show ONLY the nearest facility per essential civic pillar (transit, health, school, park)
+    // plus nearest Cercanías/train station if different from the nearest transit stop
+    const targetFacilities: CivicFacility[] = [];
+
+    if (conn.nearestHealthcare) targetFacilities.push(conn.nearestHealthcare);
+    if (conn.nearestEducation) targetFacilities.push(conn.nearestEducation);
+    if (conn.nearestPark) targetFacilities.push(conn.nearestPark);
+    if (conn.nearestTransit) targetFacilities.push(conn.nearestTransit);
+
+    // If nearest transit is a bus stop, also include the nearest train/cercanias station
     if (conn.nearbyFacilities && conn.nearbyFacilities.length > 0) {
-      rawList = conn.nearbyFacilities;
-    } else {
-      const singular = [conn.nearestTransit, conn.nearestHealthcare, conn.nearestEducation, conn.nearestPark].filter(
-        Boolean
-      ) as CivicFacility[];
-      rawList = singular;
+      const isTrain = (f: CivicFacility) =>
+        f.type === 'transit' &&
+        (f.subtype === 'train' || f.name.toLowerCase().includes('cercanías') || f.name.toLowerCase().includes('renfe'));
+      const nearestTrain = conn.nearbyFacilities.find(isTrain);
+      if (nearestTrain && (!conn.nearestTransit || nearestTrain.id !== conn.nearestTransit.id)) {
+        targetFacilities.push(nearestTrain);
+      }
     }
 
     // Deduplicate facilities by ID
     const seenIds = new Set<string>();
-    const uniqueFacilities = rawList.filter((f) => {
+    const uniqueFacilities = targetFacilities.filter((f) => {
       if (!f || !f.id || seenIds.has(f.id)) return false;
       seenIds.add(f.id);
       return true;
@@ -1262,52 +1271,63 @@ export function MapView({
         fLon = lon + dLon;
       }
 
+      // Fixed 32x44px container: needle tip at exact bottom center (16px, 44px)
       const el = document.createElement('div');
-      el.className = 'group relative flex flex-col items-center cursor-pointer select-none';
+      el.className = 'group cursor-pointer select-none';
+      el.style.width = '32px';
+      el.style.height = '44px';
+      el.style.position = 'relative';
       el.style.zIndex = String(meta.zIndex || 25);
+
       el.innerHTML = `
-        <div class="relative flex flex-col items-center pointer-events-auto">
-          <!-- Interactive Civic Amenity Pin Header (Icon badge + Compact direct site name chip) -->
-          <div class="flex items-center gap-1.5 px-2 py-0.5 rounded-full shadow-2xl border backdrop-blur-md transition-all duration-150 group-hover:scale-110 whitespace-nowrap" style="background: #0b1326f0; border-color: ${meta.color};">
-            <span class="text-xs leading-none shrink-0">${meta.icon}</span>
-            <span class="text-[10px] font-semibold text-white tracking-tight truncate max-w-[110px] sm:max-w-[150px]" title="${escapeHtml(fac.name)}">
-              ${escapeHtml(fac.name)}
+        <!-- Mathematical Exact Drop Pin SVG: needle tip at (16, 44) -->
+        <svg width="32" height="44" viewBox="0 0 32 44" fill="none" xmlns="http://www.w3.org/2000/svg" class="transform transition-transform duration-150 group-hover:scale-110 drop-shadow-xl overflow-visible">
+          <!-- Pin Body -->
+          <path d="M 16,1 C 7.7,1 1,7.7 1,16 C 1,26.5 16,43 16,43 C 16,43 31,26.5 31,16 C 31,7.7 24.3,1 16,1 Z"
+                fill="${meta.color}" stroke="#ffffff" stroke-width="1.8" />
+          <!-- Inner Core Circle -->
+          <circle cx="16" cy="15" r="10.5" fill="#0b1326" />
+          <!-- Emoji Icon centered inside -->
+          <text x="16" y="19" text-anchor="middle" font-size="11" font-family="system-ui, sans-serif">${meta.icon}</text>
+          <!-- Ground impact precision dot -->
+          <circle cx="16" cy="43.5" r="1.5" fill="#ffffff" />
+        </svg>
+
+        <!-- Compact Label Chip (Positioned safely above pin, zero influence on needle tip) -->
+        <div class="absolute bottom-[46px] left-1/2 -translate-x-1/2 flex items-center gap-1 px-2 py-0.5 rounded-full shadow-2xl border backdrop-blur-md pointer-events-none whitespace-nowrap transition-all duration-150 group-hover:scale-105"
+             style="background: #0b1326f2; border-color: ${meta.color};">
+          <span class="text-[10px] font-semibold text-white tracking-tight truncate max-w-[120px] sm:max-w-[160px]" title="${escapeHtml(fac.name)}">
+            ${escapeHtml(fac.name)}
+          </span>
+          <span class="text-[9px] font-mono font-bold shrink-0 border-l border-white/20 pl-1" style="color: ${meta.color};">
+            ${fac.distanceMeters}m
+          </span>
+        </div>
+
+        <!-- Detailed Hover Flyout Card -->
+        <div class="absolute bottom-[68px] left-1/2 -translate-x-1/2 hidden group-hover:flex flex-col p-2.5 rounded-lg bg-surface-container-low/95 backdrop-blur-md border shadow-2xl min-w-[210px] max-w-[270px] pointer-events-none z-50 text-left"
+             style="border-color: ${meta.color}80;">
+          <div class="flex items-center justify-between border-b border-outline-variant/60 pb-1 mb-1.5 gap-2">
+            <span class="text-[9px] font-bold uppercase tracking-wider flex items-center gap-1 font-mono" style="color: ${meta.color};">
+              <span class="w-1.5 h-1.5 rounded-full animate-pulse" style="background-color: ${meta.color};"></span>
+              ${escapeHtml(meta.badge)}
             </span>
-            <span class="text-[9px] font-mono font-bold shrink-0 border-l border-white/20 pl-1" style="color: ${meta.color};">
-              ${fac.distanceMeters}m
+            <span class="text-[9px] font-bold text-primary font-mono shrink-0">
+              ~${Math.round(fac.walkTimeMinutes)} min
             </span>
           </div>
-
-          <!-- Pointer Needle Stem touching the exact street ground -->
-          <div class="w-0.5 h-2 bg-gradient-to-b from-current to-transparent" style="color: ${meta.color};"></div>
-
-          <!-- Ground Contact Pin Dot (Directly on road/sidewalk coordinate) -->
-          <div class="w-2.5 h-2.5 rounded-full border-2 border-white shadow-lg shrink-0 -mt-0.5 animate-pulse" style="background-color: ${meta.color};"></div>
-
-          <!-- Detailed Hover Flyout Card (Full technical walk metrics and official register) -->
-          <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:flex flex-col p-2.5 rounded-lg bg-surface-container-low/95 backdrop-blur-md border shadow-2xl min-w-[220px] max-w-[290px] pointer-events-none z-50 text-left" style="border-color: ${meta.color}80;">
-            <div class="flex items-center justify-between border-b border-outline-variant/60 pb-1 mb-1.5 gap-2">
-              <span class="text-[9px] font-bold uppercase tracking-wider flex items-center gap-1 font-mono" style="color: ${meta.color};">
-                <span class="w-1.5 h-1.5 rounded-full animate-pulse" style="background-color: ${meta.color};"></span>
-                ${escapeHtml(meta.badge)}
-              </span>
-              <span class="text-[9px] font-bold text-primary font-mono shrink-0">
-                ~${Math.round(fac.walkTimeMinutes)} min
-              </span>
+          <p class="font-bold text-on-surface text-[11px] truncate mb-1 leading-snug">${escapeHtml(fac.name)}</p>
+          <div class="space-y-0.5 text-[9px] text-on-surface-variant font-mono">
+            <div class="flex justify-between">
+              <span>Distancia directa:</span>
+              <span class="font-bold text-on-surface">${fac.distanceMeters} m</span>
             </div>
-            <p class="font-bold text-on-surface text-[11px] truncate mb-1 leading-snug">${escapeHtml(fac.name)}</p>
-            <div class="space-y-0.5 text-[9px] text-on-surface-variant font-mono">
-              <div class="flex justify-between">
-                <span>Distancia directa:</span>
-                <span class="font-bold text-on-surface">${fac.distanceMeters} m</span>
-              </div>
-              <div class="flex justify-between">
-                <span>Tiempo a pie:</span>
-                <span class="font-bold text-on-surface">${Math.round(fac.walkTimeMinutes)} min (4.5 km/h)</span>
-              </div>
-              <div class="pt-1 text-[8px] text-outline border-t border-outline-variant/30 truncate">
-                ${escapeHtml(meta.sourceText)}
-              </div>
+            <div class="flex justify-between">
+              <span>Tiempo a pie:</span>
+              <span class="font-bold text-on-surface">${Math.round(fac.walkTimeMinutes)} min (4.5 km/h)</span>
+            </div>
+            <div class="pt-1 text-[8px] text-outline border-t border-outline-variant/30 truncate">
+              ${escapeHtml(meta.sourceText)}
             </div>
           </div>
         </div>
