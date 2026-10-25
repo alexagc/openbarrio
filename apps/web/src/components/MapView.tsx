@@ -1399,7 +1399,6 @@ export function MapView({
         }
 
         const conn = report.connectivity;
-        const { lat, lon } = selectedCoords;
 
         // Collect essential facilities (health, education, transit, park)
         const targetFacilities: CivicFacility[] = [];

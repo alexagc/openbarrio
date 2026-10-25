@@ -5,12 +5,12 @@ All notable changes to the **OpenBarrio** platform are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.6.0] - 2026-10-24
+## [0.6.0] - 2026-10-25
 
 ### Added
-- **Phase 12A: MapLibre GL 3D Building Volumetric Extrusion (`apps/web`, Stitch: `81b6b903886c40e68f8d98410e253088`)**:
+- **Phase 12A: MapLibre GL 3D Building Volumetric Extrusion & Catastro INSPIRE Geometry (`apps/web`, Stitch: `81b6b903886c40e68f8d98410e253088`)**:
   - Implemented 3D axonometric tilt camera controls (`pitch: 55`, `bearing: -15`) and interactive 2D/3D mode switchers.
-  - Added MapLibre GL `fill-extrusion` volumetric layer (`building-3d-extrusion`) rendering building heights (`numberOfFloors * 3.2m`).
+  - Connected official Catastro INSPIRE WFS 3D building geometries rendering real physical footprints and exact building heights (`numberOfFloors * 3.2m`).
   - Added neon emerald (`#68dba9`) / amber volumetric parcel illumination on selected property with surrounding LoD2 contextual building masses.
   - Interactive 3D Compass Gizmo in top-right viewport with rotating True North needle, align North, zenith 2D, and 3D orbit shortcuts.
 - **Phase 12B: Solar Exposure & Daylight Simulation HUD (`apps/web`, Stitch: `81b6b903886c40e68f8d98410e253088`)**:
@@ -34,6 +34,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - Community expense bracket estimation scaling with surface, elevator, age, and participation coefficient (`cpt`).
     - LPH reserve fund deficit simulation and prioritized common-element renovation actions (SATE, cota cero, roofs).
   - Attached to all audit responses (`report.capex`) and visualized via dedicated dossier card `BuildingCapExCard.tsx`.
+- **National Civic Facilities & GIS Precision (`packages/etl`, `apps/api`, `apps/web`)**:
+  - Ingested 60,000+ authentic civic facilities across all 52 Spanish provinces (healthcare centers, public schools, transit stations, parks).
+  - Crisp WebGL vector icon layers and needle-point ground-anchored markers with smart stacking elevation and isolation.
+  - Multi-portal horizontal division filtering and address precision for complex cadastral parcels.
 
 ## [0.5.1] - 2026-10-24
 

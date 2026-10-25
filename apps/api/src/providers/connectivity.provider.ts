@@ -122,7 +122,7 @@ export class D1CivicConnectivityProvider implements ICivicConnectivityProvider {
   async getConnectivityByCoordinates(
     latitude: number,
     longitude: number,
-    context?: { municipality?: string; street?: string }
+    _context?: { municipality?: string; street?: string }
   ): Promise<CivicConnectivityData> {
     if (!this.db) {
       return {

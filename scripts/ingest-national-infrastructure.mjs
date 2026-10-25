@@ -1,4 +1,3 @@
-import fs from 'node:fs';
 import { DatabaseSync } from 'node:sqlite';
 
 const DB_PATH = 'data/openbarrio.sqlite';
