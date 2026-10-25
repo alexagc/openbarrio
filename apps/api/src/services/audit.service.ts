@@ -64,7 +64,10 @@ export class AuditService {
     const [neighborhood, environment, connectivity, urbanPlanning] = await Promise.all([
       this.resolveNeighborhood(property),
       this.resolveEnvironment(property),
-      this.resolveConnectivity(lat, lon),
+      this.resolveConnectivity(lat, lon, {
+        municipality: property.address.municipality,
+        street: property.address.street,
+      }),
       this.resolveUrbanPlanning(property),
     ]);
 
@@ -198,11 +201,12 @@ export class AuditService {
 
   private async resolveConnectivity(
     latitude: number,
-    longitude: number
+    longitude: number,
+    context?: { municipality?: string; street?: string }
   ): Promise<CivicConnectivityData | undefined> {
     if (!this.providers.connectivity) return undefined;
     try {
-      return await this.providers.connectivity.getConnectivityData(latitude, longitude);
+      return await this.providers.connectivity.getConnectivityData(latitude, longitude, context);
     } catch (err: any) {
       console.warn(`[AuditService] Civic connectivity query failed:`, err?.message);
       return undefined;

@@ -1213,17 +1213,26 @@ export function MapView({
       }
 
       const el = document.createElement('div');
-      el.className = 'group relative w-7 h-7 flex items-center justify-center cursor-pointer select-none';
-      el.style.zIndex = '20';
+      el.className = 'group relative flex flex-col items-center cursor-pointer select-none';
+      el.style.zIndex = '25';
       el.innerHTML = `
-        <div class="relative flex items-center justify-center">
-          <!-- Amenity Icon Node -->
-          <div class="w-7 h-7 rounded-full flex items-center justify-center text-xs shadow-xl border-2 transition-transform duration-150 group-hover:scale-125" style="background: #0b1326; border-color: ${item.color};">
-            <span class="leading-none">${item.icon}</span>
+        <div class="relative flex flex-col items-center">
+          <!-- Interactive Civic Amenity Badge (Directly visible site name and walk distance on map) -->
+          <div class="flex items-center gap-1.5 px-2.5 py-1 rounded-full shadow-2xl border backdrop-blur-md transition-all duration-150 group-hover:scale-105" style="background: #0b1326f0; border-color: ${item.color};">
+            <span class="text-xs leading-none shrink-0">${item.icon}</span>
+            <span class="text-[11px] font-semibold text-white tracking-tight truncate max-w-[130px] sm:max-w-[170px]" title="${escapeHtml(fac.name)}">
+              ${escapeHtml(fac.name)}
+            </span>
+            <span class="text-[9px] font-mono font-bold text-amber-400 shrink-0 border-l border-white/20 pl-1.5">
+              ${fac.distanceMeters}m
+            </span>
           </div>
 
-          <!-- Embedded Direct Map Tooltip (Appears immediately on hover above icon, matching precision marker) -->
-          <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:flex flex-col p-2.5 rounded-lg bg-surface-container-low/95 backdrop-blur-md border shadow-2xl min-w-[200px] max-w-[260px] pointer-events-none z-50 text-left" style="border-color: ${item.color}80;">
+          <!-- Pointer Pin Anchor (Touches exact street coordinates) -->
+          <div class="w-0 h-0 border-l-[4px] border-l-transparent border-r-[4px] border-r-transparent border-t-[5px]" style="border-t-color: ${item.color};"></div>
+
+          <!-- Detailed Hover Flyout Card (Full technical walk metrics and official register) -->
+          <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:flex flex-col p-2.5 rounded-lg bg-surface-container-low/95 backdrop-blur-md border shadow-2xl min-w-[210px] max-w-[270px] pointer-events-none z-50 text-left" style="border-color: ${item.color}80;">
             <div class="flex items-center justify-between border-b border-outline-variant/60 pb-1 mb-1.5 gap-2">
               <span class="text-[9px] font-bold uppercase tracking-wider flex items-center gap-1 font-mono" style="color: ${item.color};">
                 <span class="w-1.5 h-1.5 rounded-full animate-pulse" style="background-color: ${item.color};"></span>
@@ -1257,14 +1266,14 @@ export function MapView({
         if (el.parentElement) el.parentElement.style.zIndex = '999';
       });
       el.addEventListener('mouseleave', () => {
-        el.style.zIndex = '20';
+        el.style.zIndex = '25';
         if (el.parentElement) el.parentElement.style.zIndex = '';
       });
       el.addEventListener('click', (e) => {
         e.stopPropagation();
       });
 
-      const marker = new maplibregl.Marker({ element: el, anchor: 'center' })
+      const marker = new maplibregl.Marker({ element: el, anchor: 'bottom' })
         .setLngLat([fLon, fLat])
         .addTo(map);
 

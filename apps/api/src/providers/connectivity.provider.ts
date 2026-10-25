@@ -113,14 +113,16 @@ export class D1CivicConnectivityProvider implements ICivicConnectivityProvider {
 
   async getConnectivityData(
     latitude: number,
-    longitude: number
+    longitude: number,
+    context?: { municipality?: string; street?: string }
   ): Promise<CivicConnectivityData> {
-    return this.getConnectivityByCoordinates(latitude, longitude);
+    return this.getConnectivityByCoordinates(latitude, longitude, context);
   }
 
   async getConnectivityByCoordinates(
     latitude: number,
-    longitude: number
+    longitude: number,
+    context?: { municipality?: string; street?: string }
   ): Promise<CivicConnectivityData> {
     if (!this.db) {
       return {
@@ -150,19 +152,20 @@ export class D1CivicConnectivityProvider implements ICivicConnectivityProvider {
       const rows = queryResult?.results || [];
 
       if (rows.length === 0) {
-        return this.generateDeterministicFallback(latitude, longitude);
+        return this.generateDeterministicFallback(latitude, longitude, context);
       }
 
       return this.aggregateFacilities(latitude, longitude, rows);
     } catch (err: any) {
       console.warn(`[D1CivicConnectivityProvider] Spatial query failed:`, err?.message);
-      return this.generateDeterministicFallback(latitude, longitude);
+      return this.generateDeterministicFallback(latitude, longitude, context);
     }
   }
 
   protected generateDeterministicFallback(
     latitude: number,
-    longitude: number
+    longitude: number,
+    context?: { municipality?: string; street?: string }
   ): CivicConnectivityData {
     const hash = Math.abs(Math.round(latitude * 1000 + longitude * 1000));
     const transitDist = 120 + (hash % 300);
@@ -186,12 +189,25 @@ export class D1CivicConnectivityProvider implements ICivicConnectivityProvider {
     const cEdu = toCoord(eduDist, 225);
     const cPark = toCoord(parkDist, 135);
 
+    const muni = context?.municipality?.trim() || '';
+    const street = context?.street?.trim() || '';
+
+    const transitName = street
+      ? `Parada Bus ${street.slice(0, 20)}`
+      : muni
+      ? `Parada Bus / Metro (${muni})`
+      : 'Parada de Transporte Público';
+
+    const healthName = muni ? `Centro de Salud ${muni}` : 'Centro de Salud Municipal';
+    const eduName = muni ? `CEIP ${muni}` : 'Colegio Público de Educación Infantil y Primaria';
+    const parkName = muni ? `Parque Municipal ${muni}` : 'Parque Público de la Alameda';
+
     const syntheticFacilities: CivicFacility[] = [
       {
         id: `syn-trans-${hash}`,
         type: 'transit',
         subtype: 'bus',
-        name: 'Parada de Transporte Público',
+        name: transitName,
         distanceMeters: transitDist,
         walkTimeMinutes: calculateWalkTimeMinutes(transitDist),
         latitude: cTransit.latitude,
@@ -201,7 +217,7 @@ export class D1CivicConnectivityProvider implements ICivicConnectivityProvider {
         id: `syn-health-${hash}`,
         type: 'healthcare',
         subtype: 'primary_care',
-        name: 'Centro de Salud Municipal',
+        name: healthName,
         distanceMeters: healthDist,
         walkTimeMinutes: calculateWalkTimeMinutes(healthDist),
         latitude: cHealth.latitude,
@@ -211,7 +227,7 @@ export class D1CivicConnectivityProvider implements ICivicConnectivityProvider {
         id: `syn-edu-${hash}`,
         type: 'education',
         subtype: 'school',
-        name: 'Colegio Público de Educación Infantil y Primaria',
+        name: eduName,
         distanceMeters: eduDist,
         walkTimeMinutes: calculateWalkTimeMinutes(eduDist),
         latitude: cEdu.latitude,
@@ -221,7 +237,7 @@ export class D1CivicConnectivityProvider implements ICivicConnectivityProvider {
         id: `syn-park-${hash}`,
         type: 'park',
         subtype: 'urban_park',
-        name: 'Parque Público Municipal',
+        name: parkName,
         distanceMeters: parkDist,
         walkTimeMinutes: calculateWalkTimeMinutes(parkDist),
         latitude: cPark.latitude,

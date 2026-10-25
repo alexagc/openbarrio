@@ -85,8 +85,16 @@ export interface ICivicConnectivityProvider {
   /**
    * Calculate 15-minute civic connectivity and proximity indicators to essential public services.
    */
-  getConnectivityData(latitude: number, longitude: number): Promise<CivicConnectivityData>;
-  getConnectivityByCoordinates?(latitude: number, longitude: number): Promise<CivicConnectivityData>;
+  getConnectivityData(
+    latitude: number,
+    longitude: number,
+    context?: { municipality?: string; street?: string }
+  ): Promise<CivicConnectivityData>;
+  getConnectivityByCoordinates?(
+    latitude: number,
+    longitude: number,
+    context?: { municipality?: string; street?: string }
+  ): Promise<CivicConnectivityData>;
 }
 
 export interface IUrbanPlanningProvider {
