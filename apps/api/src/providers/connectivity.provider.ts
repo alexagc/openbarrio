@@ -149,7 +149,26 @@ export class D1CivicConnectivityProvider implements ICivicConnectivityProvider {
       ).bind(minLat, maxLat, minLon, maxLon);
 
       const queryResult = await stmt.all<RawCivicFacilityRow>();
-      const rows = queryResult?.results || [];
+      let rows = queryResult?.results || [];
+
+      if (rows.length === 0) {
+        // Expand search radius up to 10 km to locate real regional facilities in rural areas
+        const ruralRadiusMeters = 10000;
+        const ruralLatDelta = ruralRadiusMeters / 111132;
+        const ruralLonDelta = ruralRadiusMeters / (111132 * (Math.abs(cosLat) > 0.001 ? Math.abs(cosLat) : 1));
+        const ruralStmt = this.db.prepare(
+          `SELECT id, type, subtype, name, latitude, longitude, municipality_code, postal_code
+           FROM civic_facilities
+           WHERE latitude BETWEEN ? AND ? AND longitude BETWEEN ? AND ?`
+        ).bind(
+          latitude - ruralLatDelta,
+          latitude + ruralLatDelta,
+          longitude - ruralLonDelta,
+          longitude + ruralLonDelta
+        );
+        const ruralResult = await ruralStmt.all<RawCivicFacilityRow>();
+        rows = ruralResult?.results || [];
+      }
 
       if (rows.length === 0) {
         return this.generateDeterministicFallback(latitude, longitude, context);
