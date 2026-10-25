@@ -157,12 +157,12 @@ jobs:
             echo "🚀 Found D1 migration chunks in $CHUNKS_DIR. Executing batch migration..."
             for chunk in "$CHUNKS_DIR"/*.sql; do
               echo ">>> Executing $chunk into Cloudflare D1..."
-              pnpm --filter @openbarrio/api exec wrangler d1 execute openbarrio-d1 --file="$chunk" --remote --yes
+              pnpm --filter @openbarrio/api exec wrangler d1 execute openbarrio-d1 --file="$GITHUB_WORKSPACE/$chunk" --remote --yes
             done
             echo "✅ Successfully synced all civic facilities chunks to Cloudflare D1."
           elif [ -f "packages/etl/dist/civic_facilities.sql" ]; then
             echo "Executing monolithic civic_facilities.sql into Cloudflare D1..."
-            pnpm --filter @openbarrio/api exec wrangler d1 execute openbarrio-d1 --file="packages/etl/dist/civic_facilities.sql" --remote --yes
+            pnpm --filter @openbarrio/api exec wrangler d1 execute openbarrio-d1 --file="$GITHUB_WORKSPACE/packages/etl/dist/civic_facilities.sql" --remote --yes
           fi
 
       - name: Sync Cloudflare R2 (PMTiles Vector Boundaries)
