@@ -562,7 +562,7 @@ export function CadastralBottomSheet({
           {(Boolean(report?.property.unit) || unitsCount > 1) && (
           <button
             type="button"
-            onClick={onOpenUnitPicker}
+            onClick={() => onOpenUnitPicker?.()}
             className="w-full flex items-center justify-between p-2.5 rounded-lg bg-surface-container-high border border-outline-variant hover:bg-surface-bright active:scale-[0.99] transition-all text-left group"
           >
             <div className="flex items-center gap-2 min-w-0">

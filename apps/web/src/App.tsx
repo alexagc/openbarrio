@@ -162,16 +162,25 @@ export function AppContent() {
     setIsDuelOpen(true);
   };
 
-  const handleOpenUnitPicker = async (targetRefcat?: string) => {
-    const ref = targetRefcat || report?.property.cadastralReference;
-    if (!ref || ref === 'Consultando...') return;
+  const handleOpenUnitPicker = async (targetRefcat?: unknown) => {
+    const rawRef =
+      typeof targetRefcat === 'string' && targetRefcat.trim() && targetRefcat !== 'Consultando...'
+        ? targetRefcat.trim()
+        : report?.property.cadastralReference;
+    if (!rawRef || rawRef === 'Consultando...') return;
+    const cleanRef = String(rawRef).replace(/[\s\-_.]/g, '').toUpperCase();
+    const parcelRef = cleanRef.slice(0, 14);
+
     setIsUnitPickerOpen(true);
     setIsLoadingUnits(true);
+    setUnitsData(null);
+
     try {
-      const data = await apiClient.getCadastralUnits(ref);
+      const data = await apiClient.getCadastralUnits(parcelRef);
       setUnitsData(data);
-    } catch {
-      const fallback = apiClient.generateDeterministicUnits(ref);
+    } catch (err) {
+      console.warn('[UnitPicker] Failed to load units from OVC, using deterministic fallback:', err);
+      const fallback = apiClient.generateDeterministicUnits(parcelRef);
       setUnitsData(fallback);
     } finally {
       setIsLoadingUnits(false);
@@ -584,7 +593,7 @@ export function AppContent() {
                 setSheetSnapPoint('full');
                 setMobileNavDestination('report');
               }}
-              onOpenUnitPicker={handleOpenUnitPicker}
+              onOpenUnitPicker={() => handleOpenUnitPicker()}
               isMobileLayersOpen={isMobileLayersOpen}
               onToggleMobileLayers={(open) =>
                 setIsMobileLayersOpen((prev) => (typeof open === 'boolean' ? open : !prev))
@@ -602,7 +611,7 @@ export function AppContent() {
                     isLoading={isLoading}
                     snapPoint={sheetSnapPoint}
                     onSnapChange={handleSheetSnapChange}
-                    onOpenUnitPicker={handleOpenUnitPicker}
+                    onOpenUnitPicker={() => handleOpenUnitPicker()}
                     onExportPdf={() => window.print()}
                     onOpenDuel={() => handleOpenDuel()}
                   />
@@ -631,7 +640,7 @@ export function AppContent() {
                 <SkeletonDossier />
               </div>
             ) : report ? (
-              <AuditDossier report={report} onOpenUnitPicker={handleOpenUnitPicker} onOpenDuel={() => handleOpenDuel()} />
+              <AuditDossier report={report} onOpenUnitPicker={() => handleOpenUnitPicker()} onOpenDuel={() => handleOpenDuel()} />
             ) : (
               <div className="text-center py-16 bg-surface-container rounded border border-dashed border-outline-variant p-8 m-4">
                 <MapPin className="w-10 h-10 text-outline mx-auto mb-3" />
@@ -656,6 +665,7 @@ export function AppContent() {
           isOpen={isUnitPickerOpen}
           onClose={() => setIsUnitPickerOpen(false)}
           unitsData={unitsData}
+          isLoading={isLoadingUnits}
           currentRefcat={report?.property.cadastralReference}
           buildingAddress={
             report
@@ -694,7 +704,6 @@ export function AppContent() {
             setActiveTab('dossier');
             handleOpenDuel(unit.cadastralReference);
           }}
-          isLoading={isLoadingUnits}
         />
 
         {/* Side-by-Side Property Duel & Dual Radar Comparator Modal (Phase 12C) */}

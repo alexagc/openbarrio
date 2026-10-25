@@ -187,7 +187,7 @@ export function AuditDossier({ report, onOpenUnitPicker, onOpenDuel }: AuditDoss
             {onOpenUnitPicker && (
               <button
                 type="button"
-                onClick={onOpenUnitPicker}
+                onClick={() => onOpenUnitPicker?.()}
                 className="px-2.5 py-1.5 rounded bg-primary/20 hover:bg-primary/30 text-primary border border-primary/40 font-semibold text-[11px] font-mono transition-colors shrink-0 cursor-pointer flex items-center gap-1"
               >
                 <span>{property.unit ? 'Cambiar inmueble ▾' : 'Ver inmuebles ▾'}</span>

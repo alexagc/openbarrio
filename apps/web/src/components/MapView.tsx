@@ -826,6 +826,19 @@ export function MapView({
     const name = propertyName || 'Edificio en Auditoría';
 
     const updateExtrusion = (customPolygon?: number[][][], overrideFloors?: number, overrideHeight?: number) => {
+      if (!customPolygon || customPolygon.length === 0 || !customPolygon[0] || customPolygon[0].length < 4) {
+        try {
+          const source = map.getSource('building-3d-source');
+          if (source && typeof (source as any).setData === 'function') {
+            (source as any).setData({ type: 'FeatureCollection', features: [] });
+          }
+          const shadowSource = map.getSource('building-3d-shadows-source');
+          if (shadowSource && typeof (shadowSource as any).setData === 'function') {
+            (shadowSource as any).setData({ type: 'FeatureCollection', features: [] });
+          }
+        } catch {}
+        return;
+      }
       const effFloors = overrideFloors ?? floors;
       const effHeight = overrideHeight ?? height;
       currentBuildingHeightRef.current = effHeight;
@@ -875,10 +888,7 @@ export function MapView({
       return;
     }
 
-    // Only draw fallback if no coordinates or polygon exist yet
-    if (!currentBuildingCoordsRef.current) {
-      updateExtrusion();
-    }
+    // Do not draw artificial square box before real Catastro WFS geometry arrives
 
     // Query official Catastro WFS geometry if cadastral reference is available
     if (refcat) {
@@ -1160,23 +1170,27 @@ export function MapView({
     const { lat, lon } = selectedCoords;
 
     // Show ONLY the nearest facility per essential civic pillar (transit, health, school, park)
-    // plus nearest Cercanías/train station if different from the nearest transit stop
     const targetFacilities: CivicFacility[] = [];
 
     if (conn.nearestHealthcare) targetFacilities.push(conn.nearestHealthcare);
     if (conn.nearestEducation) targetFacilities.push(conn.nearestEducation);
     if (conn.nearestPark) targetFacilities.push(conn.nearestPark);
-    if (conn.nearestTransit) targetFacilities.push(conn.nearestTransit);
 
-    // If nearest transit is a bus stop, also include the nearest train/cercanias station
+    // Transit pillar: If there is a high-capacity Cercanías / Metro train station within 500m,
+    // prefer it as the primary transit node so it never overlaps with adjacent bus stop pins!
+    let chosenTransit = conn.nearestTransit;
     if (conn.nearbyFacilities && conn.nearbyFacilities.length > 0) {
-      const isTrain = (f: CivicFacility) =>
-        f.type === 'transit' &&
-        (f.subtype === 'train' || f.name.toLowerCase().includes('cercanías') || f.name.toLowerCase().includes('renfe'));
+      const isTrain = (f: CivicFacility) => {
+        const n = (f.name || '').toLowerCase();
+        return f.type === 'transit' && (f.subtype === 'train' || f.subtype === 'metro' || n.includes('cercan') || n.includes('renfe') || n.includes('estaci'));
+      };
       const nearestTrain = conn.nearbyFacilities.find(isTrain);
-      if (nearestTrain && (!conn.nearestTransit || nearestTrain.id !== conn.nearestTransit.id)) {
-        targetFacilities.push(nearestTrain);
+      if (nearestTrain && nearestTrain.distanceMeters <= 600) {
+        chosenTransit = nearestTrain;
       }
+    }
+    if (chosenTransit) {
+      targetFacilities.push(chosenTransit);
     }
 
     // Deduplicate facilities by ID
@@ -1188,13 +1202,13 @@ export function MapView({
     });
 
     const resolveItemMeta = (fac: CivicFacility, index: number) => {
-      const nameLower = fac.name.toLowerCase();
+      const nameLower = (fac.name || '').toLowerCase();
       const subtype = (fac.subtype || '').toLowerCase();
 
       if (fac.type === 'transit') {
-        if (subtype === 'train' || nameLower.includes('cercanías') || nameLower.includes('renfe')) {
+        if (subtype === 'train' || nameLower.includes('cercan') || nameLower.includes('renfe')) {
           return {
-            icon: '🚆',
+            svgIcon: '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="3" width="16" height="16" rx="2"/><path d="M4 11h16"/><path d="M12 3v8"/><path d="m8 19-2 3"/><path d="m18 22-2-3"/><circle cx="8" cy="15" r="1"/><circle cx="16" cy="15" r="1"/></svg>',
             badge: 'Cercanías / Tren',
             color: '#e11d48',
             zIndex: 35,
@@ -1204,7 +1218,7 @@ export function MapView({
         }
         if (subtype === 'metro' || nameLower.includes('metro')) {
           return {
-            icon: '🚇',
+            svgIcon: '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="14" rx="2"/><path d="M7 21l3-4"/><path d="M17 21l-3-4"/><circle cx="7" cy="13" r="1"/><circle cx="17" cy="13" r="1"/><path d="M3 9h18"/></svg>',
             badge: 'Metro de Madrid',
             color: '#0284c7',
             zIndex: 34,
@@ -1213,7 +1227,7 @@ export function MapView({
           };
         }
         return {
-          icon: '🚌',
+          svgIcon: '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 6v6"/><path d="M15 6v6"/><path d="M2 12h19.6"/><path d="M18 18h3s.5-1.7.8-2.8c.1-.4.2-.8.2-1.2 0-.4-.1-.8-.2-1.2l-1.4-5C20.1 6.8 19.1 6 18 6H4a2 2 0 0 0-2 2v10h3"/><circle cx="7" cy="18" r="2"/><path d="M9 18h5"/><circle cx="16" cy="18" r="2"/></svg>',
           badge: 'Autobús EMT',
           color: '#f59e0b',
           zIndex: 25,
@@ -1225,7 +1239,7 @@ export function MapView({
       if (fac.type === 'healthcare') {
         const isHospital = subtype === 'hospital' || nameLower.includes('hospital');
         return {
-          icon: isHospital ? '🏥' : '🩺',
+          svgIcon: '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/><path d="M12 7v6"/><path d="M9 10h6"/></svg>',
           badge: isHospital ? 'Hospital Universitario' : 'Centro de Salud / CAP',
           color: '#f43f5e',
           zIndex: 30,
@@ -1237,7 +1251,7 @@ export function MapView({
       if (fac.type === 'education') {
         const isHighSchool = subtype === 'high_school' || nameLower.includes('ies') || nameLower.includes('instituto');
         return {
-          icon: isHighSchool ? '🏛️' : '🏫',
+          svgIcon: '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg>',
           badge: isHighSchool ? 'Instituto de Secundaria' : 'Colegio Infantil y Primaria',
           color: '#3b82f6',
           zIndex: 28,
@@ -1247,7 +1261,7 @@ export function MapView({
       }
 
       return {
-        icon: '🌳',
+        svgIcon: '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 10v.2A3 3 0 0 1 8.9 16H5a3 3 0 0 1-1-5.8V10a3 3 0 0 1 6 0Z"/><path d="M7 16v6"/><path d="M13 19v3"/><path d="M12 19h8.3a1 1 0 0 0 .7-1.7L18 14h.3a1 1 0 0 0 .7-1.7L16 9h.2a1 1 0 0 0 .8-1.7l-3.3-4.4a1 1 0 0 0-1.4 0L9 7.3"/></svg>',
         badge: 'Parque / Zonas Verdes',
         color: '#10b981',
         zIndex: 24,
@@ -1260,13 +1274,10 @@ export function MapView({
 
     uniqueFacilities.forEach((fac, index) => {
       const meta = resolveItemMeta(fac, index);
-      let fLat: number;
-      let fLon: number;
+      let fLat = fac.latitude;
+      let fLon = fac.longitude;
 
-      if (typeof fac.latitude === 'number' && typeof fac.longitude === 'number' && (fac.latitude !== lat || fac.longitude !== lon)) {
-        fLat = fac.latitude;
-        fLon = fac.longitude;
-      } else {
+      if (typeof fLat !== 'number' || typeof fLon !== 'number' || isNaN(fLat) || isNaN(fLon)) {
         const dMeters = Math.max(30, Math.min(1300, fac.distanceMeters));
         const rad = (meta.bearing * Math.PI) / 180;
         const dKm = dMeters / 1000;
@@ -1276,62 +1287,66 @@ export function MapView({
         fLon = lon + dLon;
       }
 
+      // Rigid container strictly 32px wide by 42px high:
+      // MapLibre's anchor: 'bottom' translates by [-16px, -42px].
+      // The tip of the needle touches the ground at (16px, 42px), exactly at [fLon, fLat] without subpixel drift!
       const el = document.createElement('div');
-      el.className = 'group relative flex flex-col items-center cursor-pointer select-none';
+      el.className = 'openbarrio-amenity-marker group select-none cursor-pointer';
+      el.style.width = '32px';
+      el.style.height = '42px';
+      el.style.position = 'relative';
       el.style.zIndex = String(meta.zIndex || 25);
       el.innerHTML = `
-        <div class="relative flex flex-col items-center pointer-events-auto">
-          <!-- Interactive Civic Amenity Label Chip with Clear Emoji -->
-          <div class="flex items-center gap-1.5 px-2.5 py-1 rounded-full shadow-2xl border backdrop-blur-md whitespace-nowrap mb-1 transition-transform group-hover:scale-105"
-               style="background: #0b1326f8; border-color: ${meta.color};">
-            <span class="text-xs leading-none shrink-0">${meta.icon}</span>
-            <span class="text-[11px] font-semibold text-white tracking-tight truncate max-w-[130px] sm:max-w-[170px]" title="${escapeHtml(fac.name)}">
+        <!-- Absolute Label Chip positioned above the pin without altering container bounds -->
+        <div style="position: absolute; bottom: 48px; left: 50%; transform: translateX(-50%); pointer-events: auto; white-space: nowrap; z-index: 10;">
+          <div class="flex items-center gap-1.5 px-2.5 py-1 rounded-full shadow-2xl border backdrop-blur-md transition-transform group-hover:scale-105"
+               style="background: #0b1326f2; border-color: ${meta.color}; box-shadow: 0 4px 14px rgba(0,0,0,0.5);">
+            <span class="flex items-center text-white shrink-0">${meta.svgIcon}</span>
+            <span class="text-[11px] font-semibold text-white tracking-tight truncate max-w-[150px] sm:max-w-[180px]" title="${escapeHtml(fac.name)}">
               ${escapeHtml(fac.name)}
             </span>
             <span class="text-[9px] font-mono font-bold shrink-0 border-l border-white/20 pl-1.5" style="color: ${meta.color};">
               ${fac.distanceMeters}m
             </span>
           </div>
+        </div>
 
-          <!-- Distinct Map Pin with Real Emoji Head -->
-          <div class="relative flex flex-col items-center">
-            <div class="w-8 h-8 rounded-full border-2 border-white shadow-2xl flex items-center justify-center transform transition-transform duration-150 group-hover:scale-110"
-                 style="background-color: ${meta.color};">
-              <span class="text-sm leading-none drop-shadow-sm select-none">${meta.icon}</span>
-            </div>
-            <!-- Pointer Needle Tip pointing directly at the ground -->
-            <div class="w-0 h-0 border-l-[5px] border-l-transparent border-r-[5px] border-r-transparent border-t-[7px] -mt-[1px]"
-                 style="border-t-color: ${meta.color};"></div>
-            <!-- Ground Impact Dot touching the exact asphalt/curb -->
-            <div class="w-2 h-2 rounded-full border border-white shadow-md -mt-1"
-                 style="background-color: ${meta.color};"></div>
+        <!-- Distinct Map Pin Circle: exactly 32px by 32px at top: 0, left: 0 -->
+        <div style="position: absolute; top: 0; left: 0; width: 32px; height: 32px; border-radius: 9999px; background-color: ${meta.color}; border: 2px solid #ffffff; box-shadow: 0 4px 10px rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; transition: transform 0.15s ease;"
+             class="group-hover:scale-110">
+          <span class="flex items-center justify-center text-white">${meta.svgIcon}</span>
+        </div>
+
+        <!-- Pointer Needle Tip pointing directly down to (16px, 42px) -->
+        <div style="position: absolute; top: 31px; left: 11px; width: 0; height: 0; border-left: 5px solid transparent; border-right: 5px solid transparent; border-top: 10px solid ${meta.color};"></div>
+
+        <!-- Ground Impact Dot touching the exact asphalt/curb -->
+        <div style="position: absolute; top: 38px; left: 13px; width: 6px; height: 6px; border-radius: 9999px; background-color: #ffffff; box-shadow: 0 1px 3px rgba(0,0,0,0.6);"></div>
+
+        <!-- Detailed Hover Flyout Card -->
+        <div style="position: absolute; bottom: 84px; left: 50%; transform: translateX(-50%); pointer-events: none; z-index: 50;"
+             class="hidden group-hover:flex flex-col p-2.5 rounded-lg bg-surface-container-low/95 backdrop-blur-md border shadow-2xl min-w-[220px] max-w-[280px] text-left border-outline-variant">
+          <div class="flex items-center justify-between border-b border-outline-variant/60 pb-1 mb-1.5 gap-2">
+            <span class="text-[9px] font-bold uppercase tracking-wider flex items-center gap-1 font-mono" style="color: ${meta.color};">
+              <span class="w-1.5 h-1.5 rounded-full animate-pulse" style="background-color: ${meta.color};"></span>
+              ${escapeHtml(meta.badge)}
+            </span>
+            <span class="text-[9px] font-bold text-primary font-mono shrink-0">
+              ~${Math.round(fac.walkTimeMinutes)} min
+            </span>
           </div>
-
-          <!-- Detailed Hover Flyout Card -->
-          <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:flex flex-col p-2.5 rounded-lg bg-surface-container-low/95 backdrop-blur-md border shadow-2xl min-w-[220px] max-w-[280px] pointer-events-none z-50 text-left"
-               style="border-color: ${meta.color}80;">
-            <div class="flex items-center justify-between border-b border-outline-variant/60 pb-1 mb-1.5 gap-2">
-              <span class="text-[9px] font-bold uppercase tracking-wider flex items-center gap-1 font-mono" style="color: ${meta.color};">
-                <span class="w-1.5 h-1.5 rounded-full animate-pulse" style="background-color: ${meta.color};"></span>
-                ${escapeHtml(meta.badge)}
-              </span>
-              <span class="text-[9px] font-bold text-primary font-mono shrink-0">
-                ~${Math.round(fac.walkTimeMinutes)} min
-              </span>
+          <p class="font-bold text-on-surface text-[11px] truncate mb-1 leading-snug">${escapeHtml(fac.name)}</p>
+          <div class="space-y-0.5 text-[9px] text-on-surface-variant font-mono">
+            <div class="flex justify-between">
+              <span>Distancia directa:</span>
+              <span class="font-bold text-on-surface">${fac.distanceMeters} m</span>
             </div>
-            <p class="font-bold text-on-surface text-[11px] truncate mb-1 leading-snug">${escapeHtml(fac.name)}</p>
-            <div class="space-y-0.5 text-[9px] text-on-surface-variant font-mono">
-              <div class="flex justify-between">
-                <span>Distancia directa:</span>
-                <span class="font-bold text-on-surface">${fac.distanceMeters} m</span>
-              </div>
-              <div class="flex justify-between">
-                <span>Tiempo a pie:</span>
-                <span class="font-bold text-on-surface">${Math.round(fac.walkTimeMinutes)} min (4.5 km/h)</span>
-              </div>
-              <div class="pt-1 text-[8px] text-outline border-t border-outline-variant/30 truncate">
-                ${escapeHtml(meta.sourceText)}
-              </div>
+            <div class="flex justify-between">
+              <span>Tiempo a pie:</span>
+              <span class="font-bold text-on-surface">${Math.round(fac.walkTimeMinutes)} min (4.5 km/h)</span>
+            </div>
+            <div class="pt-1 text-[8px] text-outline border-t border-outline-variant/30 truncate">
+              ${escapeHtml(meta.sourceText)}
             </div>
           </div>
         </div>
