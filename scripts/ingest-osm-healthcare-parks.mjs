@@ -78,6 +78,6 @@ for (const el of rawData) {
 const sqlContent = '\n-- Official Healthcare & Parks in Villaverde (OpenStreetMap Real Ingestion)\n' + sqlStatements.join('\n') + '\n';
 const p1 = 'packages/etl/dist/openbarrio-etl-dist/civic_facilities.sql';
 const p2 = 'packages/etl/dist/civic_facilities.sql';
-if (fs.existsSync(p1)) fs.appendFileSync(p1, sqlContent);
-if (fs.existsSync(p2)) fs.appendFileSync(p2, sqlContent);
+try { fs.appendFileSync(p1, sqlContent); } catch {}
+try { fs.appendFileSync(p2, sqlContent); } catch {}
 console.log('✅ Appended statements to ETL distribution SQL files.');

@@ -209,7 +209,7 @@ export function analyzeFacadeSolarExposure(
   const facadeOrientation = getCardinalOrientation(facadeAzimuthDeg);
 
   // Comfort score & rating based on orientation and direct daylight hours
-  let comfortScore = 80;
+  let comfortScore: number;
   const normAz = ((facadeAzimuthDeg % 360) + 360) % 360;
 
   // South / SSW / SSE orientations have optimal solar comfort
@@ -223,7 +223,7 @@ export function analyzeFacadeSolarExposure(
     comfortScore = directSunlightHours === 0 ? 35 : 52;
   }
 
-  let comfortRating: 'optimal' | 'good' | 'moderate' | 'low' = 'good';
+  let comfortRating: 'optimal' | 'good' | 'moderate' | 'low';
   if (directSunlightHours === 0 || comfortScore < 50) {
     comfortRating = 'low';
   } else if (comfortScore >= 90) {
@@ -266,8 +266,8 @@ export function getMapLightConfig(altitude: number, azimuth: number): MapLightCo
   // polar angle p: 0 at zenith to 90 at horizon.
   const polarAngle = Math.max(0, Math.min(90, 90 - altitude));
 
-  let color = '#f8fafc'; // Noon crisp daylight
-  let intensity = 0.75;
+  let color: string;
+  let intensity: number;
 
   if (altitude <= 0) {
     color = '#38bdf8'; // Twilight / night deep blue

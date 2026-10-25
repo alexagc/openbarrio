@@ -1085,8 +1085,7 @@ export function MapView({
             customPolygon
           );
           (source as any).setData(footprints);
-          currentBuildingCoordsRef.current =
-            customPolygon || footprints.features[0].geometry.coordinates;
+          currentBuildingCoordsRef.current = customPolygon;
 
           // Immediately cast initial shadow
           const shadowSource = map.getSource('building-3d-shadows-source');

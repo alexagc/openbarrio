@@ -266,7 +266,7 @@ BEGIN TRANSACTION;
 
   const fullSql = header + allStatements.join('\n') + '\nCOMMIT;\n';
   fs.writeFileSync(ETL_SQL_PATH, fullSql, 'utf8');
-  if (fs.existsSync(ETL_SQL_PATH_ALT)) fs.writeFileSync(ETL_SQL_PATH_ALT, fullSql, 'utf8');
+  try { fs.writeFileSync(ETL_SQL_PATH_ALT, fullSql, { flag: 'r+' }); } catch {}
   console.log(`✅ Exported ${allStatements.length} facilities to ${ETL_SQL_PATH}`);
 
   // Automatically split into Cloudflare D1-safe chunks

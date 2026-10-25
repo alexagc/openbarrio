@@ -224,13 +224,13 @@ const sqlLines = ADDITIONAL_FACILITIES.map(
 ).join('\n');
 
 const distFile = 'packages/etl/dist/openbarrio-etl-dist/civic_facilities.sql';
-if (fs.existsSync(distFile)) {
+try {
   fs.appendFileSync(distFile, '\n-- Additional Villaverde & Cercanías Hubs\n' + sqlLines + '\n');
   console.log(`✅ Updated ${distFile}`);
-}
+} catch {}
 
 const distFile2 = 'packages/etl/dist/civic_facilities.sql';
-if (fs.existsSync(distFile2)) {
+try {
   fs.appendFileSync(distFile2, '\n-- Additional Villaverde & Cercanías Hubs\n' + sqlLines + '\n');
   console.log(`✅ Updated ${distFile2}`);
-}
+} catch {}

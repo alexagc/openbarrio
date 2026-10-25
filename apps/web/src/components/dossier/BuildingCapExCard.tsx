@@ -24,19 +24,19 @@ export function deriveBuildingCapEx(
   const currentYear = new Date().getFullYear();
   const age = yearBuilt > 0 ? Math.max(0, currentYear - yearBuilt) : 42;
 
-  let iteStatus: BuildingCapExRisk['iteStatus'] = 'favorable_active';
+  let iteStatus: BuildingCapExRisk['iteStatus'];
   let iteDeadlineYear = currentYear + (10 - (age % 10));
   let accessibilityRisk: BuildingCapExRisk['accessibilityRisk'] = 'low';
   const hasElevator = true;
   let elevatorRisk = false;
   let reserveFundAdequacy: BuildingCapExRisk['reserveFundAdequacy'] = 'optimal';
-  let reserveDeficit = 5;
-  let capexMin = 10;
-  let capexMax = 35;
-  let feeMin = 50;
-  let feeMax = 80;
-  let priorities = ['Mantenimiento preventivo anual', 'Limpieza y sellado bajantes'];
-  let capexRiskScore = 85;
+  let reserveDeficit: number;
+  let capexMin: number;
+  let capexMax: number;
+  let feeMin: number;
+  let feeMax: number;
+  let priorities: string[];
+  let capexRiskScore: number;
 
   if (age < 20) {
     iteStatus = 'exempt';

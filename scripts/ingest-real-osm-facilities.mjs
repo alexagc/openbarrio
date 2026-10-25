@@ -75,10 +75,10 @@ const sqlLines = facilities.map(f => {
 const etlDistPath = 'packages/etl/dist/openbarrio-etl-dist/civic_facilities.sql';
 const etlPath = 'packages/etl/dist/civic_facilities.sql';
 
-if (fs.existsSync(etlDistPath)) {
+try {
   fs.appendFileSync(etlDistPath, '\n-- Real OSM Ingestion for Villaverde (28021)\n' + sqlLines + '\n');
-}
-if (fs.existsSync(etlPath)) {
+} catch {}
+try {
   fs.appendFileSync(etlPath, '\n-- Real OSM Ingestion for Villaverde (28021)\n' + sqlLines + '\n');
-}
+} catch {}
 console.log('✅ Exported to D1 production SQL scripts.');
