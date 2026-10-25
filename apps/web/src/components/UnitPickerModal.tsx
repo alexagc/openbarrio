@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { CadastralUnit, CadastralUnitsResponse } from '@openbarrio/core';
 import {
   X,
@@ -38,6 +38,14 @@ export function UnitPickerModal({
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedUseFilter, setSelectedUseFilter] = useState<string>('all');
   const [selectedUnit, setSelectedUnit] = useState<CadastralUnit | null>(null);
+
+  useEffect(() => {
+    if (isOpen) {
+      setSearchQuery('');
+      setSelectedUseFilter('all');
+      setSelectedUnit(null);
+    }
+  }, [isOpen]);
 
   const units = unitsData?.units || [];
 
@@ -238,10 +246,12 @@ export function UnitPickerModal({
                     const isAudited = isCurrentSelection(u.cadastralReference);
 
                     return (
-                      <button
+                      <div
                         key={u.cadastralReference}
-                        type="button"
+                        role="button"
+                        tabIndex={0}
                         onClick={() => setSelectedUnit(u)}
+                        onDoubleClick={() => { setSelectedUnit(u); onSelectUnit(u); onClose(); }}
                         className={`text-left p-3 rounded-lg border transition-all cursor-pointer relative flex flex-col justify-between gap-2 ${
                           isSelected
                             ? 'bg-surface-container-high border-primary ring-1 ring-primary shadow-md'
@@ -284,13 +294,27 @@ export function UnitPickerModal({
 
                         <div className="flex items-center justify-between pt-1 border-t border-outline-variant/40 text-[10px] font-mono text-outline">
                           <span className="truncate">{u.cadastralReference}</span>
+                          <button
+                            type="button"
+                            data-testid="instant-audit-unit"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onSelectUnit(u);
+                              onClose();
+                            }}
+                            className="px-2 py-0.5 rounded bg-primary/20 hover:bg-primary text-primary hover:text-on-primary border border-primary/40 font-semibold text-[10px] transition-colors flex items-center gap-0.5 cursor-pointer ml-auto"
+                            title="Auditar inmediatamente este inmueble"
+                          >
+                            <span>Auditar</span>
+                            <ChevronRight className="w-3 h-3" />
+                          </button>
                           {isAudited && (
                             <span className="flex items-center gap-1 text-primary font-semibold">
                               <Check className="w-3 h-3" /> Auditado
                             </span>
                           )}
                         </div>
-                      </button>
+                      </div>
                     );
                   })}
                 </div>

@@ -663,6 +663,11 @@ export function AppContent() {
               : undefined
           }
           onSelectUnit={(unit) => {
+            setIsUnitPickerOpen(false);
+            setViewMode('map');
+            setActiveTab('dossier');
+            setSheetSnapPoint('full');
+            setMobileNavDestination('report');
             const currentCoords = selectedCoords || (report ? {
               lat: report.property.coordinates.latitude,
               lon: report.property.coordinates.longitude,
@@ -670,7 +675,12 @@ export function AppContent() {
             loadAuditByRefcat(unit.cadastralReference, currentCoords);
           }}
           onSelectBuilding={() => {
+            setIsUnitPickerOpen(false);
             if (report) {
+              setViewMode('map');
+              setActiveTab('dossier');
+              setSheetSnapPoint('full');
+              setMobileNavDestination('report');
               const currentCoords = selectedCoords || {
                 lat: report.property.coordinates.latitude,
                 lon: report.property.coordinates.longitude,
@@ -679,6 +689,9 @@ export function AppContent() {
             }
           }}
           onCompareUnit={(unit) => {
+            setIsUnitPickerOpen(false);
+            setViewMode('map');
+            setActiveTab('dossier');
             handleOpenDuel(unit.cadastralReference);
           }}
           isLoading={isLoadingUnits}
@@ -736,48 +749,7 @@ export function AppContent() {
         }}
       />
 
-      {/* Horizontal Division Unit Picker Modal (Phase 10B) */}
-      <UnitPickerModal
-        isOpen={isUnitPickerOpen}
-        onClose={() => setIsUnitPickerOpen(false)}
-        unitsData={unitsData}
-        currentRefcat={report?.property.cadastralReference}
-        buildingAddress={
-          report
-            ? `${report.property.address.street} ${report.property.address.number}, ${report.property.address.municipality}`
-            : undefined
-        }
-        onSelectUnit={(unit) => {
-          setViewMode('map');
-          setActiveTab('dossier');
-          setSheetSnapPoint('full');
-          setMobileNavDestination('report');
-          const currentCoords = selectedCoords || (report ? {
-            lat: report.property.coordinates.latitude,
-            lon: report.property.coordinates.longitude,
-          } : undefined);
-          loadAuditByRefcat(unit.cadastralReference, currentCoords);
-        }}
-        onSelectBuilding={() => {
-          if (report) {
-            setViewMode('map');
-            setActiveTab('dossier');
-            setSheetSnapPoint('full');
-            setMobileNavDestination('report');
-            const currentCoords = selectedCoords || {
-              lat: report.property.coordinates.latitude,
-              lon: report.property.coordinates.longitude,
-            };
-            loadAuditByRefcat(report.property.cadastralReference.slice(0, 14), currentCoords);
-          }
-        }}
-        onCompareUnit={(unit) => {
-          setViewMode('map');
-          setActiveTab('dossier');
-          handleOpenDuel(unit.cadastralReference);
-        }}
-        isLoading={isLoadingUnits}
-      />
+      
 
       {/* Vectorized Certified Due Diligence PDF Export Layout (Phase 10F) */}
       {report && <CertifiedPdfReport report={report} />}

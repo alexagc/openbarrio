@@ -163,7 +163,7 @@ export function AuditDossier({ report, onOpenUnitPicker, onOpenDuel }: AuditDoss
         </div>
 
         {/* Horizontal Division Unit Picker Banner */}
-        {onOpenUnitPicker && (
+        {onOpenUnitPicker && Boolean(property.unit || (property.building?.unitsCount && property.building.unitsCount > 1)) && (
           <div className="mt-2.5 p-2.5 bg-surface-container-high/80 border border-primary/30 rounded-lg flex items-center justify-between gap-2 text-xs">
             <div className="flex items-center gap-2 min-w-0">
               <span className="w-2 h-2 rounded-full bg-primary shrink-0" />

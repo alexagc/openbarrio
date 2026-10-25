@@ -559,6 +559,7 @@ export function CadastralBottomSheet({
 
         {/* Horizontal Division & PDF CTA Action Area */}
         <div className="space-y-2 pt-1">
+          {(Boolean(report?.property.unit) || unitsCount > 1) && (
           <button
             type="button"
             onClick={onOpenUnitPicker}
@@ -577,6 +578,7 @@ export function CadastralBottomSheet({
             </div>
             <ChevronRight className="text-on-surface-variant w-4 h-4 shrink-0 group-hover:translate-x-0.5 transition-transform" />
           </button>
+          )}
 
           {/* Duel Comparator CTA */}
           {onOpenDuel && (
