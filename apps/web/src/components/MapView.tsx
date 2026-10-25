@@ -1154,57 +1154,101 @@ export function MapView({
     const conn = report.connectivity;
     const { lat, lon } = selectedCoords;
 
-    const amenitiesList = [
-      {
-        facility: conn.nearestHealthcare,
-        type: 'healthcare',
-        icon: '🏥',
-        badge: 'Sanidad / CAP',
-        color: '#f43f5e',
-        bearing: 315, // NW
-        sourceText: 'Registro REPS · Ministerio de Sanidad',
-      },
-      {
-        facility: conn.nearestTransit,
-        type: 'transit',
-        icon: '🚇',
-        badge: 'Transporte Público',
-        color: '#f59e0b',
-        bearing: 45, // NE
-        sourceText: 'Consorcio Regional de Transportes',
-      },
-      {
-        facility: conn.nearestEducation,
-        type: 'education',
-        icon: '🏫',
-        badge: 'Colegio / Educación',
-        color: '#3b82f6',
-        bearing: 225, // SW
-        sourceText: 'Registro Estatal Centros Docentes (MEFP)',
-      },
-      {
-        facility: conn.nearestPark,
-        type: 'park',
+    // Collect facilities: use all nearbyFacilities if provided, otherwise fallback to the 4 singular slots
+    let rawList: CivicFacility[] = [];
+    if (conn.nearbyFacilities && conn.nearbyFacilities.length > 0) {
+      rawList = conn.nearbyFacilities;
+    } else {
+      const singular = [conn.nearestTransit, conn.nearestHealthcare, conn.nearestEducation, conn.nearestPark].filter(
+        Boolean
+      ) as CivicFacility[];
+      rawList = singular;
+    }
+
+    // Deduplicate facilities by ID
+    const seenIds = new Set<string>();
+    const uniqueFacilities = rawList.filter((f) => {
+      if (!f || !f.id || seenIds.has(f.id)) return false;
+      seenIds.add(f.id);
+      return true;
+    });
+
+    const resolveItemMeta = (fac: CivicFacility, index: number) => {
+      const nameLower = fac.name.toLowerCase();
+      const subtype = (fac.subtype || '').toLowerCase();
+
+      if (fac.type === 'transit') {
+        if (subtype === 'train' || nameLower.includes('cercanías') || nameLower.includes('renfe')) {
+          return {
+            icon: '🚆',
+            badge: 'Cercanías / Tren',
+            color: '#e11d48',
+            bearing: 45 + index * 30,
+            sourceText: 'Renfe Cercanías / Consorcio Regional de Transportes',
+          };
+        }
+        if (subtype === 'metro' || nameLower.includes('metro')) {
+          return {
+            icon: '🚇',
+            badge: 'Metro de Madrid',
+            color: '#0284c7',
+            bearing: 60 + index * 30,
+            sourceText: 'Metro / Consorcio Regional de Transportes',
+          };
+        }
+        return {
+          icon: '🚌',
+          badge: 'Autobús EMT',
+          color: '#f59e0b',
+          bearing: 30 + index * 40,
+          sourceText: 'EMT Madrid / Consorcio Regional de Transportes',
+        };
+      }
+
+      if (fac.type === 'healthcare') {
+        const isHospital = subtype === 'hospital' || nameLower.includes('hospital');
+        return {
+          icon: isHospital ? '🏥' : '🩺',
+          badge: isHospital ? 'Hospital Universitario' : 'Centro de Salud / CAP',
+          color: '#f43f5e',
+          bearing: 315 + index * 20,
+          sourceText: 'Registro REPS · Ministerio de Sanidad',
+        };
+      }
+
+      if (fac.type === 'education') {
+        const isHighSchool = subtype === 'high_school' || nameLower.includes('ies') || nameLower.includes('instituto');
+        return {
+          icon: isHighSchool ? '🏛️' : '🏫',
+          badge: isHighSchool ? 'Instituto de Secundaria' : 'Colegio Infantil y Primaria',
+          color: '#3b82f6',
+          bearing: 225 + index * 25,
+          sourceText: 'Registro Estatal Centros Docentes (MEFP)',
+        };
+      }
+
+      return {
         icon: '🌳',
-        badge: 'Zonas Verdes',
+        badge: 'Parque / Zonas Verdes',
         color: '#10b981',
-        bearing: 135, // SE
+        bearing: 135 + index * 30,
         sourceText: 'Inventario Municipal Áreas Verdes / IGN',
-      },
-    ].filter((item) => Boolean(item.facility));
+      };
+    };
 
     const newMarkers: Marker[] = [];
 
-    for (const item of amenitiesList) {
-      const fac = item.facility!;
+    uniqueFacilities.forEach((fac, index) => {
+      const meta = resolveItemMeta(fac, index);
       let fLat: number;
       let fLon: number;
+
       if (typeof fac.latitude === 'number' && typeof fac.longitude === 'number' && (fac.latitude !== lat || fac.longitude !== lon)) {
         fLat = fac.latitude;
         fLon = fac.longitude;
       } else {
         const dMeters = Math.max(30, Math.min(1300, fac.distanceMeters));
-        const rad = (item.bearing * Math.PI) / 180;
+        const rad = (meta.bearing * Math.PI) / 180;
         const dKm = dMeters / 1000;
         const dLat = (dKm / 110.574) * Math.cos(rad);
         const dLon = (dKm / (111.32 * Math.cos((lat * Math.PI) / 180))) * Math.sin(rad);
@@ -1216,11 +1260,11 @@ export function MapView({
       el.className = 'group relative flex flex-col items-center cursor-pointer select-none';
       el.style.zIndex = '25';
       el.innerHTML = `
-        <div class="relative flex flex-col items-center">
+        <div class="relative flex flex-col items-center pointer-events-auto">
           <!-- Interactive Civic Amenity Badge (Directly visible site name and walk distance on map) -->
-          <div class="flex items-center gap-1.5 px-2.5 py-1 rounded-full shadow-2xl border backdrop-blur-md transition-all duration-150 group-hover:scale-105" style="background: #0b1326f0; border-color: ${item.color};">
-            <span class="text-xs leading-none shrink-0">${item.icon}</span>
-            <span class="text-[11px] font-semibold text-white tracking-tight truncate max-w-[130px] sm:max-w-[170px]" title="${escapeHtml(fac.name)}">
+          <div class="flex items-center gap-1.5 px-2.5 py-1 rounded-full shadow-2xl border backdrop-blur-md transition-all duration-150 group-hover:scale-105" style="background: #0b1326f0; border-color: ${meta.color};">
+            <span class="text-xs leading-none shrink-0">${meta.icon}</span>
+            <span class="text-[11px] font-semibold text-white tracking-tight truncate max-w-[140px] sm:max-w-[190px]" title="${escapeHtml(fac.name)}">
               ${escapeHtml(fac.name)}
             </span>
             <span class="text-[9px] font-mono font-bold text-amber-400 shrink-0 border-l border-white/20 pl-1.5">
@@ -1229,14 +1273,14 @@ export function MapView({
           </div>
 
           <!-- Pointer Pin Anchor (Touches exact street coordinates) -->
-          <div class="w-0 h-0 border-l-[4px] border-l-transparent border-r-[4px] border-r-transparent border-t-[5px]" style="border-t-color: ${item.color};"></div>
+          <div class="w-0 h-0 border-l-[4px] border-l-transparent border-r-[4px] border-r-transparent border-t-[5px]" style="border-t-color: ${meta.color};"></div>
 
           <!-- Detailed Hover Flyout Card (Full technical walk metrics and official register) -->
-          <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:flex flex-col p-2.5 rounded-lg bg-surface-container-low/95 backdrop-blur-md border shadow-2xl min-w-[210px] max-w-[270px] pointer-events-none z-50 text-left" style="border-color: ${item.color}80;">
+          <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:flex flex-col p-2.5 rounded-lg bg-surface-container-low/95 backdrop-blur-md border shadow-2xl min-w-[220px] max-w-[290px] pointer-events-none z-50 text-left" style="border-color: ${meta.color}80;">
             <div class="flex items-center justify-between border-b border-outline-variant/60 pb-1 mb-1.5 gap-2">
-              <span class="text-[9px] font-bold uppercase tracking-wider flex items-center gap-1 font-mono" style="color: ${item.color};">
-                <span class="w-1.5 h-1.5 rounded-full animate-pulse" style="background-color: ${item.color};"></span>
-                ${escapeHtml(item.badge)}
+              <span class="text-[9px] font-bold uppercase tracking-wider flex items-center gap-1 font-mono" style="color: ${meta.color};">
+                <span class="w-1.5 h-1.5 rounded-full animate-pulse" style="background-color: ${meta.color};"></span>
+                ${escapeHtml(meta.badge)}
               </span>
               <span class="text-[9px] font-bold text-primary font-mono shrink-0">
                 ~${Math.round(fac.walkTimeMinutes)} min
@@ -1253,7 +1297,7 @@ export function MapView({
                 <span class="font-bold text-on-surface">${Math.round(fac.walkTimeMinutes)} min (4.5 km/h)</span>
               </div>
               <div class="pt-1 text-[8px] text-outline border-t border-outline-variant/30 truncate">
-                ${escapeHtml(item.sourceText)}
+                ${escapeHtml(meta.sourceText)}
               </div>
             </div>
           </div>
@@ -1278,14 +1322,14 @@ export function MapView({
         .addTo(map);
 
       newMarkers.push(marker);
-    }
+    });
 
     amenityMarkersRef.current = newMarkers;
 
     return () => {
       for (const m of newMarkers) m.remove();
     };
-  }, [selectedCoords?.lat, selectedCoords?.lon, showIsochrones, is3DMode, report?.property.cadastralReference]);
+  }, [selectedCoords?.lat, selectedCoords?.lon, showIsochrones, is3DMode, report?.connectivity, report?.property.cadastralReference]);
 
   return (
     <div className="relative w-full h-full min-h-[480px] rounded-xl overflow-hidden border border-outline-variant shadow-2xl bg-surface-container-lowest cadastral-grid select-none">

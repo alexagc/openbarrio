@@ -25,6 +25,7 @@ export const CivicConnectivityDataSchema = Type.Object({
   nearestTransit: Type.Optional(CivicFacilitySchema),
   nearestPark: Type.Optional(CivicFacilitySchema),
   facilitiesWithin15MinCount: Type.Number({ minimum: 0 }),
+  nearbyFacilities: Type.Optional(Type.Array(CivicFacilitySchema)),
 });
 
 export type CivicFacilityType = Static<typeof CivicFacilityTypeSchema>;

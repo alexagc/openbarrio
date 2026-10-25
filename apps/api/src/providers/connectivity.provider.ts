@@ -269,6 +269,7 @@ export class D1CivicConnectivityProvider implements ICivicConnectivityProvider {
       nearestEducation: syntheticFacilities[2],
       nearestPark: syntheticFacilities[3],
       facilitiesWithin15MinCount,
+      nearbyFacilities: syntheticFacilities,
     };
   }
 
@@ -338,6 +339,7 @@ export class D1CivicConnectivityProvider implements ICivicConnectivityProvider {
       nearestTransit,
       nearestPark,
       facilitiesWithin15MinCount,
+      nearbyFacilities: facilities.slice(0, 15),
     };
   }
 }
@@ -426,6 +428,88 @@ export class MockCivicConnectivityProvider implements ICivicConnectivityProvider
         longitude: -3.6844,
         municipality_code: '28079',
         postal_code: '28009',
+      },
+
+      // Madrid Villaverde Alto (Calle Arroyo Bueno 2)
+      {
+        id: 'mad-vil-cercanias-01',
+        type: 'transit',
+        subtype: 'train',
+        name: 'Estación Cercanías Villaverde Alto (C-4, C-5)',
+        latitude: 40.3479,
+        longitude: -3.7098,
+        municipality_code: '28079',
+        postal_code: '28021',
+      },
+      {
+        id: 'mad-vil-metro-01',
+        type: 'transit',
+        subtype: 'metro',
+        name: 'Metro Villaverde Alto (Línea 3)',
+        latitude: 40.3481,
+        longitude: -3.7092,
+        municipality_code: '28079',
+        postal_code: '28021',
+      },
+      {
+        id: 'mad-vil-bus-01',
+        type: 'transit',
+        subtype: 'bus',
+        name: 'Parada EMT Arroyo Bueno - Villalonso (Líneas 22, 79, 130, 131, T41)',
+        latitude: 40.3488,
+        longitude: -3.7047,
+        municipality_code: '28079',
+        postal_code: '28021',
+      },
+      {
+        id: 'mad-vil-bus-02',
+        type: 'transit',
+        subtype: 'bus',
+        name: 'Parada EMT Arroyo Bueno - Dr. Martín Arévalo (Líneas 22, 79, 130, 131)',
+        latitude: 40.3491,
+        longitude: -3.7039,
+        municipality_code: '28079',
+        postal_code: '28021',
+      },
+      {
+        id: 'mad-vil-bus-03',
+        type: 'transit',
+        subtype: 'bus',
+        name: 'Parada EMT Plaza de Ágata (Líneas 22, 79, 86, 130, 131)',
+        latitude: 40.3496,
+        longitude: -3.7082,
+        municipality_code: '28079',
+        postal_code: '28021',
+      },
+      {
+        id: 'mad-vil-health-01',
+        type: 'healthcare',
+        subtype: 'primary_care',
+        name: 'Centro de Salud San Andrés',
+        latitude: 40.3508,
+        longitude: -3.7075,
+        municipality_code: '28079',
+        postal_code: '28021',
+      },
+      {
+        id: 'mad-vil-edu-01',
+        type: 'education',
+        subtype: 'school',
+        name: 'CEIP República de El Salvador',
+        latitude: 40.3495,
+        longitude: -3.7058,
+        municipality_code: '28079',
+        postal_code: '28021',
+      },
+      {
+        id: 'mad-vil-park-01',
+        type: 'park',
+        subtype: 'urban_park',
+        name: 'Parque Dehesa Boyal de Villaverde',
+        latitude: 40.3465,
+        longitude: -3.7065,
+        municipality_code: '28079',
+        postal_code: '28021',
       },
 
       // Barcelona Eixample (Passeig de Gràcia / Diagonal)
@@ -760,6 +844,7 @@ export class MockCivicConnectivityProvider implements ICivicConnectivityProvider
       nearestTransit,
       nearestPark,
       facilitiesWithin15MinCount,
+      nearbyFacilities: facilities.slice(0, 15),
     };
   }
 }

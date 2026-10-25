@@ -716,49 +716,58 @@ export class OpenBarrioApiClient {
     const transitCoords = isGranVia ? { latitude: 40.4201, longitude: -3.7018 } : calcOffsetCoord(transitDist, 45);
     const parkCoords = isGranVia ? { latitude: 40.4195, longitude: -3.7126 } : calcOffsetCoord(parkDist, 135);
 
+    const healthFacility: CivicFacility = {
+      id: 'cap-' + finalAddress.postalCode,
+      type: 'healthcare',
+      subtype: 'primary_care',
+      name: isGranVia ? 'CS Palma Norte' : isGracia ? 'CAP Eixample Dreta' : `CAP ${finalAddress.municipality}`,
+      distanceMeters: healthDist,
+      walkTimeMinutes: +(healthDist / 75).toFixed(1),
+      latitude: healthCoords.latitude,
+      longitude: healthCoords.longitude,
+    };
+
+    const eduFacility: CivicFacility = {
+      id: 'esc-' + finalAddress.postalCode,
+      type: 'education',
+      subtype: 'school',
+      name: isGranVia ? 'IES Isabel la Católica' : isGracia ? 'Escola Pia Diputació' : `Colegio Público ${finalAddress.municipality}`,
+      distanceMeters: eduDist,
+      walkTimeMinutes: +(eduDist / 75).toFixed(1),
+      latitude: eduCoords.latitude,
+      longitude: eduCoords.longitude,
+    };
+
+    const transitFacility: CivicFacility = {
+      id: 'transit-' + finalAddress.postalCode,
+      type: 'transit',
+      subtype: 'metro',
+      name: isGranVia ? 'Metro Gran Vía (L1, L5)' : isGracia ? 'Passeig de Gràcia (L2, L3, L4)' : `Metro / Bus ${finalAddress.street.split(' ').slice(-1)[0]}`,
+      distanceMeters: transitDist,
+      walkTimeMinutes: +(transitDist / 75).toFixed(1),
+      latitude: transitCoords.latitude,
+      longitude: transitCoords.longitude,
+    };
+
+    const parkFacility: CivicFacility = {
+      id: 'park-' + finalAddress.postalCode,
+      type: 'park',
+      subtype: 'urban_park',
+      name: isGranVia ? 'Jardines de Sabatini' : isGracia ? 'Jardins de la Torre de les Aigües' : `Parque ${finalAddress.municipality}`,
+      distanceMeters: parkDist,
+      walkTimeMinutes: +(parkDist / 75).toFixed(1),
+      latitude: parkCoords.latitude,
+      longitude: parkCoords.longitude,
+    };
+
     const connectivity: CivicConnectivityData = {
       walkScore15Min: walkScore,
       facilitiesWithin15MinCount: isGranVia ? 44 : isGracia ? 39 : 22 + (hash % 20),
-      nearestHealthcare: {
-        id: 'cap-' + finalAddress.postalCode,
-        type: 'healthcare',
-        subtype: 'primary_care',
-        name: isGranVia ? 'CS Palma Norte' : isGracia ? 'CAP Eixample Dreta' : `CAP ${finalAddress.municipality}`,
-        distanceMeters: healthDist,
-        walkTimeMinutes: +(healthDist / 75).toFixed(1),
-        latitude: healthCoords.latitude,
-        longitude: healthCoords.longitude,
-      },
-      nearestEducation: {
-        id: 'esc-' + finalAddress.postalCode,
-        type: 'education',
-        subtype: 'school',
-        name: isGranVia ? 'IES Isabel la Católica' : isGracia ? 'Escola Pia Diputació' : `Colegio Público ${finalAddress.municipality}`,
-        distanceMeters: eduDist,
-        walkTimeMinutes: +(eduDist / 75).toFixed(1),
-        latitude: eduCoords.latitude,
-        longitude: eduCoords.longitude,
-      },
-      nearestTransit: {
-        id: 'transit-' + finalAddress.postalCode,
-        type: 'transit',
-        subtype: 'metro',
-        name: isGranVia ? 'Metro Gran Vía (L1, L5)' : isGracia ? 'Passeig de Gràcia (L2, L3, L4)' : `Metro / Bus ${finalAddress.street.split(' ').slice(-1)[0]}`,
-        distanceMeters: transitDist,
-        walkTimeMinutes: +(transitDist / 75).toFixed(1),
-        latitude: transitCoords.latitude,
-        longitude: transitCoords.longitude,
-      },
-      nearestPark: {
-        id: 'park-' + finalAddress.postalCode,
-        type: 'park',
-        subtype: 'urban_park',
-        name: isGranVia ? 'Jardines de Sabatini' : isGracia ? 'Jardins de la Torre de les Aigües' : `Parque ${finalAddress.municipality}`,
-        distanceMeters: parkDist,
-        walkTimeMinutes: +(parkDist / 75).toFixed(1),
-        latitude: parkCoords.latitude,
-        longitude: parkCoords.longitude,
-      },
+      nearestHealthcare: healthFacility,
+      nearestEducation: eduFacility,
+      nearestTransit: transitFacility,
+      nearestPark: parkFacility,
+      nearbyFacilities: [transitFacility, healthFacility, eduFacility, parkFacility],
     };
 
     const urbanPlanning: UrbanPlanningData = {
