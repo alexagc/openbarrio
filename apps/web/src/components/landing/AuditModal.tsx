@@ -33,6 +33,7 @@ export interface AuditData {
   coordinates?: { lat: number; lon: number };
   isLive?: boolean;
   isLoading?: boolean;
+  unitsCount?: number;
 }
 
 interface AuditModalProps {

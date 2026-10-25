@@ -11,6 +11,7 @@ import {
   CadastralUnitsResponse,
   CadastralUnit,
   CadastralGeometry,
+  CivicFacility,
 } from '@openbarrio/core';
 
 export class ApiError extends Error {

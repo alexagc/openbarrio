@@ -23,6 +23,7 @@ import {
   Box,
 } from 'lucide-react';
 import { ExtendedAuditReport, apiClient } from '../services/api.client';
+import type { CivicFacility } from '@openbarrio/core';
 import { CartographicLegendsHud } from './CartographicLegendsHud';
 import { SolarSimulationHud } from './map/SolarSimulationHud';
 import {
@@ -249,8 +250,8 @@ export function MapView({
   const cachedCadastralGeometryRef = useRef<{
     refcat: string;
     polygon: number[][][];
-    floors: number;
-    height: number;
+    floors?: number;
+    height?: number;
   } | null>(null);
 
   const currentSolarRef = useRef<{
