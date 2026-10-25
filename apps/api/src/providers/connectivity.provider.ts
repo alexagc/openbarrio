@@ -113,14 +113,16 @@ export class D1CivicConnectivityProvider implements ICivicConnectivityProvider {
 
   async getConnectivityData(
     latitude: number,
-    longitude: number
+    longitude: number,
+    context?: { municipality?: string; street?: string }
   ): Promise<CivicConnectivityData> {
-    return this.getConnectivityByCoordinates(latitude, longitude);
+    return this.getConnectivityByCoordinates(latitude, longitude, context);
   }
 
   async getConnectivityByCoordinates(
     latitude: number,
-    longitude: number
+    longitude: number,
+    _context?: { municipality?: string; street?: string }
   ): Promise<CivicConnectivityData> {
     if (!this.db) {
       return {
@@ -147,7 +149,34 @@ export class D1CivicConnectivityProvider implements ICivicConnectivityProvider {
       ).bind(minLat, maxLat, minLon, maxLon);
 
       const queryResult = await stmt.all<RawCivicFacilityRow>();
-      const rows = queryResult?.results || [];
+      let rows = queryResult?.results || [];
+
+      if (rows.length === 0) {
+        // Expand search radius up to 10 km to locate real regional facilities in rural areas
+        const ruralRadiusMeters = 10000;
+        const ruralLatDelta = ruralRadiusMeters / 111132;
+        const ruralLonDelta = ruralRadiusMeters / (111132 * (Math.abs(cosLat) > 0.001 ? Math.abs(cosLat) : 1));
+        const ruralStmt = this.db.prepare(
+          `SELECT id, type, subtype, name, latitude, longitude, municipality_code, postal_code
+           FROM civic_facilities
+           WHERE latitude BETWEEN ? AND ? AND longitude BETWEEN ? AND ?`
+        ).bind(
+          latitude - ruralLatDelta,
+          latitude + ruralLatDelta,
+          longitude - ruralLonDelta,
+          longitude + ruralLonDelta
+        );
+        const ruralResult = await ruralStmt.all<RawCivicFacilityRow>();
+        rows = ruralResult?.results || [];
+      }
+
+      if (rows.length === 0) {
+        return {
+          walkScore15Min: 0,
+          facilitiesWithin15MinCount: 0,
+          nearbyFacilities: [],
+        };
+      }
 
       return this.aggregateFacilities(latitude, longitude, rows);
     } catch (err: any) {
@@ -155,6 +184,7 @@ export class D1CivicConnectivityProvider implements ICivicConnectivityProvider {
       return {
         walkScore15Min: 0,
         facilitiesWithin15MinCount: 0,
+        nearbyFacilities: [],
       };
     }
   }
@@ -178,6 +208,8 @@ export class D1CivicConnectivityProvider implements ICivicConnectivityProvider {
         name: String(r.name),
         distanceMeters,
         walkTimeMinutes: calculateWalkTimeMinutes(distanceMeters),
+        latitude: Number(r.latitude),
+        longitude: Number(r.longitude),
       };
     });
 
@@ -223,6 +255,7 @@ export class D1CivicConnectivityProvider implements ICivicConnectivityProvider {
       nearestTransit,
       nearestPark,
       facilitiesWithin15MinCount,
+      nearbyFacilities: facilities.slice(0, 15),
     };
   }
 }
@@ -311,6 +344,88 @@ export class MockCivicConnectivityProvider implements ICivicConnectivityProvider
         longitude: -3.6844,
         municipality_code: '28079',
         postal_code: '28009',
+      },
+
+      // Madrid Villaverde Alto (Calle Arroyo Bueno 2)
+      {
+        id: 'mad-vil-cercanias-01',
+        type: 'transit',
+        subtype: 'train',
+        name: 'Estación Cercanías Villaverde Alto (C-4, C-5)',
+        latitude: 40.3479,
+        longitude: -3.7098,
+        municipality_code: '28079',
+        postal_code: '28021',
+      },
+      {
+        id: 'mad-vil-metro-01',
+        type: 'transit',
+        subtype: 'metro',
+        name: 'Metro Villaverde Alto (Línea 3)',
+        latitude: 40.3481,
+        longitude: -3.7092,
+        municipality_code: '28079',
+        postal_code: '28021',
+      },
+      {
+        id: 'mad-vil-bus-01',
+        type: 'transit',
+        subtype: 'bus',
+        name: 'Parada EMT Arroyo Bueno - Villalonso (Líneas 22, 79, 130, 131, T41)',
+        latitude: 40.3488,
+        longitude: -3.7047,
+        municipality_code: '28079',
+        postal_code: '28021',
+      },
+      {
+        id: 'mad-vil-bus-02',
+        type: 'transit',
+        subtype: 'bus',
+        name: 'Parada EMT Arroyo Bueno - Dr. Martín Arévalo (Líneas 22, 79, 130, 131)',
+        latitude: 40.3491,
+        longitude: -3.7039,
+        municipality_code: '28079',
+        postal_code: '28021',
+      },
+      {
+        id: 'mad-vil-bus-03',
+        type: 'transit',
+        subtype: 'bus',
+        name: 'Parada EMT Plaza de Ágata (Líneas 22, 79, 86, 130, 131)',
+        latitude: 40.3496,
+        longitude: -3.7082,
+        municipality_code: '28079',
+        postal_code: '28021',
+      },
+      {
+        id: 'mad-vil-health-01',
+        type: 'healthcare',
+        subtype: 'primary_care',
+        name: 'Centro de Salud San Andrés',
+        latitude: 40.3508,
+        longitude: -3.7075,
+        municipality_code: '28079',
+        postal_code: '28021',
+      },
+      {
+        id: 'mad-vil-edu-01',
+        type: 'education',
+        subtype: 'school',
+        name: 'CEIP República de El Salvador',
+        latitude: 40.3495,
+        longitude: -3.7058,
+        municipality_code: '28079',
+        postal_code: '28021',
+      },
+      {
+        id: 'mad-vil-park-01',
+        type: 'park',
+        subtype: 'urban_park',
+        name: 'Parque Dehesa Boyal de Villaverde',
+        latitude: 40.3465,
+        longitude: -3.7065,
+        municipality_code: '28079',
+        postal_code: '28021',
       },
 
       // Barcelona Eixample (Passeig de Gràcia / Diagonal)
@@ -521,6 +636,8 @@ export class MockCivicConnectivityProvider implements ICivicConnectivityProvider
         name: f.name,
         distanceMeters,
         walkTimeMinutes: calculateWalkTimeMinutes(distanceMeters),
+        latitude: f.latitude,
+        longitude: f.longitude,
       };
     });
 
@@ -540,6 +657,22 @@ export class MockCivicConnectivityProvider implements ICivicConnectivityProvider
     const eduDist = 280 + (hash % 400);
     const parkDist = 320 + (hash % 500);
 
+    const toCoord = (distMeters: number, bearingDeg: number) => {
+      const rad = (bearingDeg * Math.PI) / 180;
+      const dKm = distMeters / 1000;
+      const dLat = (dKm / 110.574) * Math.cos(rad);
+      const dLon = (dKm / (111.32 * Math.cos((latitude * Math.PI) / 180))) * Math.sin(rad);
+      return {
+        latitude: Number((latitude + dLat).toFixed(6)),
+        longitude: Number((longitude + dLon).toFixed(6)),
+      };
+    };
+
+    const cTransit = toCoord(transitDist, 45);
+    const cHealth = toCoord(healthDist, 315);
+    const cEdu = toCoord(eduDist, 225);
+    const cPark = toCoord(parkDist, 135);
+
     const syntheticFacilities: CivicFacility[] = [
       {
         id: `syn-trans-${hash}`,
@@ -548,6 +681,8 @@ export class MockCivicConnectivityProvider implements ICivicConnectivityProvider
         name: 'Parada de Transporte Público',
         distanceMeters: transitDist,
         walkTimeMinutes: calculateWalkTimeMinutes(transitDist),
+        latitude: cTransit.latitude,
+        longitude: cTransit.longitude,
       },
       {
         id: `syn-health-${hash}`,
@@ -556,6 +691,8 @@ export class MockCivicConnectivityProvider implements ICivicConnectivityProvider
         name: 'Centro de Salud Municipal',
         distanceMeters: healthDist,
         walkTimeMinutes: calculateWalkTimeMinutes(healthDist),
+        latitude: cHealth.latitude,
+        longitude: cHealth.longitude,
       },
       {
         id: `syn-edu-${hash}`,
@@ -564,6 +701,8 @@ export class MockCivicConnectivityProvider implements ICivicConnectivityProvider
         name: 'Colegio Público de Educación Infantil y Primaria',
         distanceMeters: eduDist,
         walkTimeMinutes: calculateWalkTimeMinutes(eduDist),
+        latitude: cEdu.latitude,
+        longitude: cEdu.longitude,
       },
       {
         id: `syn-park-${hash}`,
@@ -572,6 +711,8 @@ export class MockCivicConnectivityProvider implements ICivicConnectivityProvider
         name: 'Parque Público Municipal',
         distanceMeters: parkDist,
         walkTimeMinutes: calculateWalkTimeMinutes(parkDist),
+        latitude: cPark.latitude,
+        longitude: cPark.longitude,
       },
     ];
 
@@ -619,6 +760,7 @@ export class MockCivicConnectivityProvider implements ICivicConnectivityProvider
       nearestTransit,
       nearestPark,
       facilitiesWithin15MinCount,
+      nearbyFacilities: facilities.slice(0, 15),
     };
   }
 }

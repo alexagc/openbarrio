@@ -33,6 +33,7 @@ export interface AuditData {
   coordinates?: { lat: number; lon: number };
   isLive?: boolean;
   isLoading?: boolean;
+  unitsCount?: number;
 }
 
 interface AuditModalProps {
@@ -169,7 +170,7 @@ export const AuditModal: React.FC<AuditModalProps> = ({
             </div>
 
             {/* Horizontal Division Units Banner */}
-            {onOpenUnitPicker && (
+            {onOpenUnitPicker && Boolean(data.unitsCount && data.unitsCount > 1) && (
               <div className="mb-4 p-3 rounded-lg bg-surface-container-high border border-primary/40 flex items-center justify-between gap-3 shadow-xs">
                 <div className="flex items-center gap-2.5 min-w-0">
                   <div className="w-8 h-8 rounded-lg bg-primary/20 text-primary flex items-center justify-center shrink-0 border border-primary/30">

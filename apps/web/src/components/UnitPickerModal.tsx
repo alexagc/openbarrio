@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { CadastralUnit, CadastralUnitsResponse } from '@openbarrio/core';
 import {
   X,
@@ -20,6 +20,7 @@ interface UnitPickerModalProps {
   buildingAddress?: string;
   onSelectUnit: (unit: CadastralUnit) => void;
   onSelectBuilding: () => void;
+  onCompareUnit?: (unit: CadastralUnit) => void;
   isLoading?: boolean;
 }
 
@@ -31,17 +32,49 @@ export function UnitPickerModal({
   buildingAddress,
   onSelectUnit,
   onSelectBuilding,
+  onCompareUnit,
   isLoading = false,
 }: UnitPickerModalProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedUseFilter, setSelectedUseFilter] = useState<string>('all');
+  const [selectedPortalFilter, setSelectedPortalFilter] = useState<string>('all');
   const [selectedUnit, setSelectedUnit] = useState<CadastralUnit | null>(null);
+
+  useEffect(() => {
+    if (isOpen) {
+      setSearchQuery('');
+      setSelectedUseFilter('all');
+      setSelectedPortalFilter('all');
+      setSelectedUnit(null);
+    }
+  }, [isOpen]);
 
   const units = unitsData?.units || [];
 
-  // Filter units by search query and usage category
+  // Extract distinct portals / blocks / staircases
+  const availablePortals = useMemo(() => {
+    const set = new Set<string>();
+    for (const u of units) {
+      if (u.block) {
+        set.add(u.block);
+      } else if (u.staircase) {
+        set.add(`Esc. ${u.staircase}`);
+      }
+    }
+    return Array.from(set).sort();
+  }, [units]);
+
+  // Filter units by search query, usage category and portal/block
   const filteredUnits = useMemo(() => {
     return units.filter((u) => {
+      // Portal / Bloque filter
+      if (selectedPortalFilter !== 'all') {
+        const portalLabel = u.block || (u.staircase ? `Esc. ${u.staircase}` : '');
+        if (portalLabel !== selectedPortalFilter) {
+          return false;
+        }
+      }
+
       // Use filter
       if (selectedUseFilter !== 'all') {
         const uUse = u.use.toLowerCase();
@@ -69,7 +102,7 @@ export function UnitPickerModal({
 
       return true;
     });
-  }, [units, selectedUseFilter, searchQuery]);
+  }, [units, selectedUseFilter, selectedPortalFilter, searchQuery]);
 
   // Group units by floor for clean cartographic scanning
   const groupedByFloor = useMemo(() => {
@@ -125,6 +158,7 @@ export function UnitPickerModal({
             </h2>
             <p className="text-xs text-on-surface-variant mt-0.5">
               {unitsData?.totalUnits || units.length} inmuebles registrados en la Sede Electrónica del Catastro
+              {availablePortals.length > 1 && ` · ${availablePortals.length} portales (${availablePortals.map((p) => p.startsWith('Esc.') ? p : `Portal ${p}`).join(', ')})`}
             </p>
           </div>
 
@@ -139,79 +173,119 @@ export function UnitPickerModal({
         </div>
 
         {/* ================= CONTROLS & FILTER BAR ================= */}
-        <div className="p-3 sm:p-4 bg-surface-container-lowest border-b border-outline-variant flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
-          {/* Use filter tabs */}
-          <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0 scrollbar-none">
-            <button
-              type="button"
-              onClick={() => setSelectedUseFilter('all')}
-              className={`px-3 py-1.5 rounded text-xs font-medium transition-colors whitespace-nowrap cursor-pointer ${
-                selectedUseFilter === 'all'
-                  ? 'bg-primary text-on-primary font-semibold'
-                  : 'bg-surface-container hover:bg-surface-container-high text-on-surface-variant'
-              }`}
-            >
-              Todos ({counts.all})
-            </button>
-            <button
-              type="button"
-              onClick={() => setSelectedUseFilter('vivienda')}
-              className={`px-3 py-1.5 rounded text-xs font-medium transition-colors whitespace-nowrap cursor-pointer flex items-center gap-1 ${
-                selectedUseFilter === 'vivienda'
-                  ? 'bg-primary text-on-primary font-semibold'
-                  : 'bg-surface-container hover:bg-surface-container-high text-on-surface-variant'
-              }`}
-            >
-              <Home className="w-3 h-3" />
-              Viviendas ({counts.viviendas})
-            </button>
-            <button
-              type="button"
-              onClick={() => setSelectedUseFilter('comercial')}
-              className={`px-3 py-1.5 rounded text-xs font-medium transition-colors whitespace-nowrap cursor-pointer flex items-center gap-1 ${
-                selectedUseFilter === 'comercial'
-                  ? 'bg-primary text-on-primary font-semibold'
-                  : 'bg-surface-container hover:bg-surface-container-high text-on-surface-variant'
-              }`}
-            >
-              <Store className="w-3 h-3" />
-              Locales ({counts.comerciales})
-            </button>
-            {counts.otros > 0 && (
+        <div className="p-3 sm:p-4 bg-surface-container-lowest border-b border-outline-variant flex flex-col gap-2.5">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+            {/* Use filter tabs */}
+            <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0 scrollbar-none">
               <button
                 type="button"
-                onClick={() => setSelectedUseFilter('otros')}
-                className={`px-3 py-1.5 rounded text-xs font-medium transition-colors whitespace-nowrap cursor-pointer flex items-center gap-1 ${
-                  selectedUseFilter === 'otros'
+                onClick={() => setSelectedUseFilter('all')}
+                className={`px-3 py-1.5 rounded text-xs font-medium transition-colors whitespace-nowrap cursor-pointer ${
+                  selectedUseFilter === 'all'
                     ? 'bg-primary text-on-primary font-semibold'
                     : 'bg-surface-container hover:bg-surface-container-high text-on-surface-variant'
                 }`}
               >
-                <Warehouse className="w-3 h-3" />
-                Otros ({counts.otros})
+                Todos ({isLoading || !unitsData ? '...' : counts.all})
               </button>
-            )}
+              <button
+                type="button"
+                onClick={() => setSelectedUseFilter('vivienda')}
+                className={`px-3 py-1.5 rounded text-xs font-medium transition-colors whitespace-nowrap cursor-pointer flex items-center gap-1 ${
+                  selectedUseFilter === 'vivienda'
+                    ? 'bg-primary text-on-primary font-semibold'
+                    : 'bg-surface-container hover:bg-surface-container-high text-on-surface-variant'
+                }`}
+              >
+                <Home className="w-3 h-3" />
+                Viviendas ({isLoading || !unitsData ? '...' : counts.viviendas})
+              </button>
+              <button
+                type="button"
+                onClick={() => setSelectedUseFilter('comercial')}
+                className={`px-3 py-1.5 rounded text-xs font-medium transition-colors whitespace-nowrap cursor-pointer flex items-center gap-1 ${
+                  selectedUseFilter === 'comercial'
+                    ? 'bg-primary text-on-primary font-semibold'
+                    : 'bg-surface-container hover:bg-surface-container-high text-on-surface-variant'
+                }`}
+              >
+                <Store className="w-3 h-3" />
+                Locales ({isLoading || !unitsData ? '...' : counts.comerciales})
+              </button>
+              {counts.otros > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setSelectedUseFilter('otros')}
+                  className={`px-3 py-1.5 rounded text-xs font-medium transition-colors whitespace-nowrap cursor-pointer flex items-center gap-1 ${
+                    selectedUseFilter === 'otros'
+                      ? 'bg-primary text-on-primary font-semibold'
+                      : 'bg-surface-container hover:bg-surface-container-high text-on-surface-variant'
+                  }`}
+                >
+                  <Warehouse className="w-3 h-3" />
+                  Otros ({isLoading || !unitsData ? '...' : counts.otros})
+                </button>
+              )}
+            </div>
+
+            {/* Quick search input */}
+            <div className="relative w-full sm:w-64">
+              <Search className="w-4 h-4 text-outline absolute left-3 top-1/2 -translate-y-1/2" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Buscar planta, puerta (ej. 3º B)..."
+                className="w-full bg-surface-container border border-outline-variant rounded-lg pl-9 pr-3 py-1.5 text-xs text-on-surface placeholder:text-outline focus:outline-none focus:border-primary font-mono transition-colors"
+              />
+            </div>
           </div>
 
-          {/* Quick search input */}
-          <div className="relative w-full sm:w-64">
-            <Search className="w-4 h-4 text-outline absolute left-3 top-1/2 -translate-y-1/2" />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Buscar planta, puerta (ej. 3º B)..."
-              className="w-full bg-surface-container border border-outline-variant rounded-lg pl-9 pr-3 py-1.5 text-xs text-on-surface placeholder:text-outline focus:outline-none focus:border-primary font-mono transition-colors"
-            />
-          </div>
+          {/* Portal / Bloque filter bar (when multi-portal building detected) */}
+          {availablePortals.length > 1 && (
+            <div className="flex items-center gap-1.5 pt-2 border-t border-outline-variant/60 overflow-x-auto scrollbar-none">
+              <span className="text-[10px] font-mono text-outline uppercase shrink-0 font-semibold mr-1">
+                Portales / Bloques:
+              </span>
+              <button
+                type="button"
+                onClick={() => setSelectedPortalFilter('all')}
+                className={`px-2.5 py-1 rounded text-xs font-mono transition-colors whitespace-nowrap cursor-pointer ${
+                  selectedPortalFilter === 'all'
+                    ? 'bg-secondary text-on-secondary font-semibold'
+                    : 'bg-surface-container hover:bg-surface-container-high text-on-surface-variant'
+                }`}
+              >
+                Todos ({units.length})
+              </button>
+              {availablePortals.map((p) => {
+                const pCount = units.filter((u) => (u.block || (u.staircase ? `Esc. ${u.staircase}` : '')) === p).length;
+                return (
+                  <button
+                    key={p}
+                    type="button"
+                    onClick={() => setSelectedPortalFilter(p)}
+                    className={`px-2.5 py-1 rounded text-xs font-mono transition-colors whitespace-nowrap cursor-pointer ${
+                      selectedPortalFilter === p
+                        ? 'bg-secondary text-on-secondary font-semibold'
+                        : 'bg-surface-container hover:bg-surface-container-high text-on-surface-variant'
+                    }`}
+                  >
+                    {p.startsWith('Esc.') ? p : `Portal ${p}`} ({pCount})
+                  </button>
+                );
+              })}
+            </div>
+          )}
         </div>
 
         {/* ================= UNIT LIST / GRID BODY ================= */}
         <div className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-5">
-          {isLoading ? (
-            <div className="py-16 text-center text-on-surface-variant">
-              <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-3" />
-              <p className="text-xs font-mono">Consultando división horizontal en Sede del Catastro...</p>
+          {isLoading || !unitsData ? (
+            <div className="py-20 text-center text-on-surface-variant flex flex-col items-center justify-center">
+              <div className="w-9 h-9 border-2 border-primary border-t-transparent rounded-full animate-spin mb-3" />
+              <p className="text-xs font-mono font-semibold text-on-surface">Consultando división horizontal en Sede del Catastro...</p>
+              <p className="text-[11px] text-outline mt-1 font-mono">Obteniendo fincas registrales y coeficientes de copropiedad oficiales</p>
             </div>
           ) : filteredUnits.length === 0 ? (
             <div className="py-16 text-center text-on-surface-variant">
@@ -224,7 +298,11 @@ export function UnitPickerModal({
               <div key={floor} className="space-y-2">
                 <div className="flex items-center gap-2">
                   <span className="text-[11px] font-bold font-mono uppercase tracking-wider text-outline px-2 py-0.5 rounded bg-surface-container border border-outline-variant/60">
-                    {floor === 'PB' || floor === '00' ? 'Planta Baja / Acceso' : `Planta ${floor}ª`}
+                    {floor.startsWith('-')
+                      ? `Planta Sótano ${floor.replace('-', '')}`
+                      : floor === 'PB' || floor === '00'
+                      ? 'Planta Baja / Acceso'
+                      : `Planta ${floor}ª`}
                   </span>
                   <div className="h-px flex-1 bg-outline-variant/40" />
                   <span className="text-[10px] font-mono text-outline">{floorUnits.length} inmuebles</span>
@@ -236,10 +314,12 @@ export function UnitPickerModal({
                     const isAudited = isCurrentSelection(u.cadastralReference);
 
                     return (
-                      <button
+                      <div
                         key={u.cadastralReference}
-                        type="button"
+                        role="button"
+                        tabIndex={0}
                         onClick={() => setSelectedUnit(u)}
+                        onDoubleClick={() => { setSelectedUnit(u); onSelectUnit(u); onClose(); }}
                         className={`text-left p-3 rounded-lg border transition-all cursor-pointer relative flex flex-col justify-between gap-2 ${
                           isSelected
                             ? 'bg-surface-container-high border-primary ring-1 ring-primary shadow-md'
@@ -264,7 +344,7 @@ export function UnitPickerModal({
                               )}
                             </div>
                             <span className="text-[11px] text-on-surface-variant font-mono mt-0.5 inline-block">
-                              {u.builtSurfaceM2} m² privativos
+                              {u.builtSurfaceM2 > 0 ? `${u.builtSurfaceM2} m² privativos` : 'Finca registrada'}
                               {u.participationCoefficient ? ` · cpt: ${u.participationCoefficient}%` : ''}
                             </span>
                           </div>
@@ -282,13 +362,27 @@ export function UnitPickerModal({
 
                         <div className="flex items-center justify-between pt-1 border-t border-outline-variant/40 text-[10px] font-mono text-outline">
                           <span className="truncate">{u.cadastralReference}</span>
+                          <button
+                            type="button"
+                            data-testid="instant-audit-unit"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onSelectUnit(u);
+                              onClose();
+                            }}
+                            className="px-2 py-0.5 rounded bg-primary/20 hover:bg-primary text-primary hover:text-on-primary border border-primary/40 font-semibold text-[10px] transition-colors flex items-center gap-0.5 cursor-pointer ml-auto"
+                            title="Auditar inmediatamente este inmueble"
+                          >
+                            <span>Auditar</span>
+                            <ChevronRight className="w-3 h-3" />
+                          </button>
                           {isAudited && (
                             <span className="flex items-center gap-1 text-primary font-semibold">
                               <Check className="w-3 h-3" /> Auditado
                             </span>
                           )}
                         </div>
-                      </button>
+                      </div>
                     );
                   })}
                 </div>
@@ -325,17 +419,32 @@ export function UnitPickerModal({
             </button>
 
             {selectedUnit && (
-              <button
-                type="button"
-                onClick={() => {
-                  onSelectUnit(selectedUnit);
-                  onClose();
-                }}
-                className="px-4 py-2 rounded-lg text-xs font-bold bg-primary hover:bg-primary-container text-on-primary transition-colors flex items-center gap-1.5 shadow-md cursor-pointer"
-              >
-                <span>Auditar Inmueble ({selectedUnit.floor}-{selectedUnit.door})</span>
-                <ChevronRight className="w-4 h-4" />
-              </button>
+              <>
+                {onCompareUnit && (
+                  <button
+                    type="button"
+                    data-testid="unit-picker-compare-btn"
+                    onClick={() => {
+                      onCompareUnit(selectedUnit);
+                      onClose();
+                    }}
+                    className="px-3 py-2 rounded-lg text-xs font-bold bg-surface-container-high border border-primary/40 hover:bg-surface-variant text-primary transition-colors flex items-center gap-1.5 cursor-pointer"
+                  >
+                    <span>Comparar Unidad</span>
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={() => {
+                    onSelectUnit(selectedUnit);
+                    onClose();
+                  }}
+                  className="px-4 py-2 rounded-lg text-xs font-bold bg-primary hover:bg-primary-container text-on-primary transition-colors flex items-center gap-1.5 shadow-md cursor-pointer"
+                >
+                  <span>Auditar Inmueble ({selectedUnit.floor}-{selectedUnit.door})</span>
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+              </>
             )}
           </div>
         </div>

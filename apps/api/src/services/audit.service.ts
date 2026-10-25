@@ -11,7 +11,7 @@ import {
   UrbanPlanningData,
   calculateBarrioScore,
 } from '@openbarrio/core';
-import { ProviderContainer } from '../providers/index.js';
+import { ProviderContainer, calculateBuildingCapExRisk } from '../providers/index.js';
 
 export class AuditService {
   constructor(private readonly providers: ProviderContainer) {}
@@ -29,7 +29,7 @@ export class AuditService {
   /**
    * Generates a full due diligence audit report by official Spanish cadastral reference.
    */
-    async auditByCadastralReference(
+  async auditByCadastralReference(
     refcat: string,
     fallbackCoords?: CadastralCoordinates,
     preferredPortal?: string
@@ -47,6 +47,13 @@ export class AuditService {
     return this.providers.catastro.getUnitsByCadastralReference(refcat);
   }
 
+  /**
+   * Retrieves official building/parcel geometry from Catastro WFS for 3D extrusion.
+   */
+  async getCadastralGeometry(refcat: string) {
+    return this.providers.catastro.getGeometryByCadastralReference(refcat);
+  }
+
   private async generateReportForProperty(
     property: CadastralProperty
   ): Promise<PropertyAuditReport> {
@@ -57,7 +64,10 @@ export class AuditService {
     const [neighborhood, environment, connectivity, urbanPlanning] = await Promise.all([
       this.resolveNeighborhood(property),
       this.resolveEnvironment(property),
-      this.resolveConnectivity(lat, lon),
+      this.resolveConnectivity(lat, lon, {
+        municipality: property.address.municipality,
+        street: property.address.street,
+      }),
       this.resolveUrbanPlanning(property),
     ]);
 
@@ -82,6 +92,9 @@ export class AuditService {
       urbanPlanning
     );
 
+    // 5. Calculate Building CapEx & Community Risk Intelligence
+    const capex = calculateBuildingCapExRisk(property);
+
     return {
       id: randomUUID(),
       generatedAt: new Date().toISOString(),
@@ -92,6 +105,7 @@ export class AuditService {
       urbanPlanning,
       score,
       rentalBenchmark,
+      capex,
     };
   }
 
@@ -187,11 +201,12 @@ export class AuditService {
 
   private async resolveConnectivity(
     latitude: number,
-    longitude: number
+    longitude: number,
+    context?: { municipality?: string; street?: string }
   ): Promise<CivicConnectivityData | undefined> {
     if (!this.providers.connectivity) return undefined;
     try {
-      return await this.providers.connectivity.getConnectivityData(latitude, longitude);
+      return await this.providers.connectivity.getConnectivityData(latitude, longitude, context);
     } catch (err: any) {
       console.warn(`[AuditService] Civic connectivity query failed:`, err?.message);
       return undefined;

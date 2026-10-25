@@ -1,9 +1,17 @@
-import { Type, Static } from '@sinclair/typebox';
+import { Type, Static, FormatRegistry } from '@sinclair/typebox';
 import { CadastralPropertySchema } from './catastro.js';
 import { CensusTractIncomeSchema } from './ine.js';
 import { EnvironmentalDataSchema } from './environmental.js';
 import { CivicConnectivityDataSchema } from './connectivity.js';
 import { UrbanPlanningDataSchema } from './urban-planning.js';
+import { BuildingCapExRiskSchema } from './capex.js';
+
+if (!FormatRegistry.Has('uuid')) {
+  FormatRegistry.Set('uuid', (value) => typeof value === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value));
+}
+if (!FormatRegistry.Has('date-time')) {
+  FormatRegistry.Set('date-time', (value) => typeof value === 'string' && !isNaN(Date.parse(value)));
+}
 
 export const AuditSubscoresSchema = Type.Object({
   building: Type.Number({ minimum: 0, maximum: 100, description: 'Building antiquity, CTE era and structural specs (0-100)' }),
@@ -43,6 +51,7 @@ export const PropertyAuditReportSchema = Type.Object({
   urbanPlanning: Type.Optional(UrbanPlanningDataSchema),
   score: AuditScoreBreakdownSchema,
   rentalBenchmark: Type.Optional(RentalBenchmarkSchema),
+  capex: Type.Optional(BuildingCapExRiskSchema),
 });
 
 export type AuditSubscores = Static<typeof AuditSubscoresSchema>;

@@ -29,6 +29,7 @@ export interface CadastralBottomSheetProps {
   onSnapChange: (snap: SheetSnapPoint) => void;
   onOpenUnitPicker?: () => void;
   onExportPdf?: () => void;
+  onOpenDuel?: () => void;
   className?: string;
 }
 
@@ -39,6 +40,7 @@ export function CadastralBottomSheet({
   onSnapChange,
   onOpenUnitPicker,
   onExportPdf,
+  onOpenDuel,
   className = '',
 }: CadastralBottomSheetProps) {
   const [copied, setCopied] = useState(false);
@@ -260,12 +262,23 @@ export function CadastralBottomSheet({
   const acousticLabel = noiseDba > 65 ? 'ZPAE Activa' : 'ZPAE Mod.';
 
   const walkScore = connectivity?.walkScore15Min ?? score?.subscores?.connectivity ?? 95;
-  const walkLabel = walkScore >= 85 ? 'Excelente' : 'Notable';
-  const nearestTransitText = connectivity?.nearestTransit?.name || 'Metro';
-  const nearestTransitDist = connectivity?.nearestTransit?.distanceMeters || 80;
-  const nearestHealthText = connectivity?.nearestHealthcare?.name || 'Salud';
-  const nearestHealthDist = connectivity?.nearestHealthcare?.distanceMeters || 190;
-  const walkSubtext = `${nearestTransitText} (${nearestTransitDist}m) · ${nearestHealthText} (${nearestHealthDist}m) · Supermercado (120m)`;
+  const walkLabel = walkScore >= 85 ? 'Excelente' : walkScore >= 60 ? 'Notable' : walkScore >= 40 ? 'Medio' : 'Rural / Aislado';
+  const summaryParts: string[] = [];
+  if (connectivity?.nearestTransit) {
+    summaryParts.push(`${connectivity.nearestTransit.name} (${Math.round(connectivity.nearestTransit.distanceMeters)}m)`);
+  }
+  if (connectivity?.nearestHealthcare) {
+    summaryParts.push(`${connectivity.nearestHealthcare.name} (${Math.round(connectivity.nearestHealthcare.distanceMeters)}m)`);
+  }
+  if (connectivity?.nearestEducation) {
+    summaryParts.push(`${connectivity.nearestEducation.name} (${Math.round(connectivity.nearestEducation.distanceMeters)}m)`);
+  }
+  if (connectivity?.nearestPark) {
+    summaryParts.push(`${connectivity.nearestPark.name} (${Math.round(connectivity.nearestPark.distanceMeters)}m)`);
+  }
+  const walkSubtext = summaryParts.length > 0
+    ? summaryParts.slice(0, 3).join(' · ')
+    : 'Sin equipamientos en radio de proximidad';
 
   // SERPAVI card computations
   const isStressed = rentalBenchmark?.isStressedHousingZone ?? report.urbanPlanning?.isStressedHousingZone ?? false;
@@ -557,9 +570,10 @@ export function CadastralBottomSheet({
 
         {/* Horizontal Division & PDF CTA Action Area */}
         <div className="space-y-2 pt-1">
+          {(Boolean(report?.property.unit) || unitsCount > 1) && (
           <button
             type="button"
-            onClick={onOpenUnitPicker}
+            onClick={() => onOpenUnitPicker?.()}
             className="w-full flex items-center justify-between p-2.5 rounded-lg bg-surface-container-high border border-outline-variant hover:bg-surface-bright active:scale-[0.99] transition-all text-left group"
           >
             <div className="flex items-center gap-2 min-w-0">
@@ -575,6 +589,19 @@ export function CadastralBottomSheet({
             </div>
             <ChevronRight className="text-on-surface-variant w-4 h-4 shrink-0 group-hover:translate-x-0.5 transition-transform" />
           </button>
+          )}
+
+          {/* Duel Comparator CTA */}
+          {onOpenDuel && (
+            <button
+              type="button"
+              data-testid="bottomsheet-duel-btn"
+              onClick={onOpenDuel}
+              className="w-full py-2 px-3 rounded-lg bg-surface-container-high border border-primary/40 hover:bg-surface-variant text-primary font-mono text-xs font-semibold flex items-center justify-center gap-2 transition-all cursor-pointer"
+            >
+              <span>+ Comparar Inmueble 1 vs 1</span>
+            </button>
+          )}
 
           {/* Primary Action CTA */}
           <button

@@ -1,4 +1,10 @@
-import { CadastralProperty, CadastralUnitsResponse, CadastralCoordinates } from '@openbarrio/core';
+import {
+  CadastralProperty,
+  CadastralUnitsResponse,
+  CadastralCoordinates,
+  CadastralGeometry,
+  CadastralUnit,
+} from '@openbarrio/core';
 import { ICatastroProvider } from './types.js';
 import {
   parseCatastroCoordinatesXml,
@@ -7,6 +13,7 @@ import {
   parseCadastralUnitsXml,
   isMultiUnitParcelXml,
   parseMultiUnitParcelSummary,
+  parseCatastroWfsGeometryXml,
 } from './catastro.parser.js';
 import { UpstreamProviderError } from '../errors/problem-details.js';
 
@@ -30,7 +37,7 @@ export class CatastroProvider implements ICatastroProvider {
     this.callejeroBaseUrl =
       options.callejeroBaseUrl ||
       'https://ovc.catastro.meh.es/ovcservweb/ovcswlocalizacionrc/ovccallejero.asmx';
-    this.timeoutMs = options.timeoutMs || 8000;
+    this.timeoutMs = options.timeoutMs || 15000;
   }
 
   async getByCoordinates(latitude: number, longitude: number): Promise<CadastralProperty> {
@@ -205,9 +212,25 @@ export class CatastroProvider implements ICatastroProvider {
 
           if (unitRes.ok) {
             const unitXml = await unitRes.text();
+            let totalBuildingSurface: number | undefined;
+
+            // When queried as a 14-char building, calculate total building constructed surface across all units
+            if (cleanRef.length === 14 && summary.totalUnits > 1 && summary.totalUnits <= 30) {
+              try {
+                const unitsResp = await this.getUnitsByCadastralReference(cleanRef);
+                const sumSurface = unitsResp.units.reduce((acc, u) => acc + (u.builtSurfaceM2 || 0), 0);
+                if (sumSurface > 0) {
+                  totalBuildingSurface = sumSurface;
+                }
+              } catch {
+                // Fall back if units lookup fails
+              }
+            }
+
             return parseCatastroDnprcXml(unitXml, cleanRef, resolvedCoords, {
               unitsCount: summary.totalUnits,
               hasCommercialGroundFloor: summary.hasCommercialUnit,
+              totalBuildingSurface,
             });
           }
         } catch {
@@ -244,6 +267,192 @@ export class CatastroProvider implements ICatastroProvider {
       throw new UpstreamProviderError('Catastro OVC', err.message || 'Network request failed');
     }
 
-    return parseCadastralUnitsXml(xmlText, parcelRef);
+    const parsed = parseCadastralUnitsXml(xmlText, parcelRef);
+    if (!parsed.units || parsed.units.length === 0) {
+      return parsed;
+    }
+
+    // Hydrate each individual unit's real built surface (<sfc>) and official use (<luso>) from Catastro OVC in controlled batches
+    const BATCH_SIZE = 15;
+    const hydratedUnits: CadastralUnit[] = [];
+
+    for (let i = 0; i < parsed.units.length; i += BATCH_SIZE) {
+      const batch = parsed.units.slice(i, i + BATCH_SIZE);
+      const batchHydrated = await Promise.all(
+        batch.map(async (u) => {
+          if (!u.cadastralReference || u.cadastralReference.length !== 20) {
+            return u;
+          }
+          try {
+            const unitUrl = `${this.callejeroBaseUrl}/Consulta_DNPRC?Provincia=&Municipio=&RC=${encodeURIComponent(u.cadastralReference)}`;
+            const unitController = new AbortController();
+            const unitTimer = setTimeout(() => unitController.abort(), 4000);
+            const unitRes = await fetch(unitUrl, {
+              signal: unitController.signal,
+              headers: { 'User-Agent': 'OpenBarrio-DueDiligence/0.1' },
+              ...({ cf: { cacheTtl: 7776000, cacheEverything: true } } as any),
+            });
+            clearTimeout(unitTimer);
+
+            if (unitRes.ok) {
+              const uXml = await unitRes.text();
+              const sfcMatch = uXml.match(/<sfc>([^<]+)<\/sfc>/i) || uXml.match(/<stl>([^<]+)<\/stl>/i);
+              const lusoMatch = uXml.match(/<luso>([^<]+)<\/luso>/i);
+
+              const sfc = sfcMatch ? parseInt(sfcMatch[1], 10) : 0;
+              let use = u.use;
+              if (lusoMatch) {
+                const rawLuso = lusoMatch[1].trim();
+                if (/comercial|local|oficina/i.test(rawLuso)) use = 'Comercial';
+                else if (/garaje|aparcamiento|estacionamiento/i.test(rawLuso)) use = 'Aparcamiento';
+                else if (/almacen|almacén|trastero/i.test(rawLuso)) use = 'Almacén';
+                else if (/residencial|vivienda/i.test(rawLuso)) use = 'Residencial';
+                else use = rawLuso;
+              }
+
+              return {
+                ...u,
+                use,
+                builtSurfaceM2: sfc > 0 ? sfc : u.builtSurfaceM2,
+              };
+            }
+          } catch {
+            // Keep unit as-is on network/timeout error
+          }
+          return u;
+        })
+      );
+      hydratedUnits.push(...batchHydrated);
+    }
+
+    // Compute accurate participation coefficients based on real square meters
+    const totalSurface = hydratedUnits.reduce((acc, u) => acc + (u.builtSurfaceM2 || 0), 0);
+    const finalUnits = hydratedUnits.map((u) => {
+      if (totalSurface > 0 && u.builtSurfaceM2 > 0) {
+        return {
+          ...u,
+          participationCoefficient: Number(((u.builtSurfaceM2 / totalSurface) * 100).toFixed(2)),
+        };
+      }
+      return u;
+    });
+
+    return {
+      ...parsed,
+      units: finalUnits,
+    };
+  }
+
+  async getGeometryByCadastralReference(refcat: string): Promise<CadastralGeometry> {
+    const cleanRef = refcat.replace(/[\s\-_.]/g, '').toUpperCase();
+    const parcelRef = cleanRef.slice(0, 14);
+
+    // 1. Try Building footprint (wfsBU)
+    const buUrl = `https://ovc.catastro.meh.es/INSPIRE/wfsBU.aspx?service=WFS&version=2.0.0&request=GetFeature&STOREDQUERIE_ID=GetBuildingByParcel&refcat=${encodeURIComponent(parcelRef)}&srsname=EPSG::4326`;
+    try {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), this.timeoutMs);
+      const res = await fetch(buUrl, {
+        signal: controller.signal,
+        headers: { 'User-Agent': 'OpenBarrio-DueDiligence/0.1' },
+        ...({ cf: { cacheTtl: 7776000, cacheEverything: true } } as any),
+      });
+      clearTimeout(timer);
+
+      if (res.ok) {
+        const xml = await res.text();
+        const parsed = parseCatastroWfsGeometryXml(xml, parcelRef, 'building');
+        if (parsed) {
+          const floors = parsed.numberOfFloors || 4;
+          const height = floors * 3.2;
+          return {
+            cadastralReference: cleanRef,
+            type: 'building',
+            geometry: {
+              type: 'Polygon',
+              coordinates: parsed.coordinates,
+            },
+            properties: {
+              numberOfFloors: floors,
+              height: Number(height.toFixed(1)),
+              areaM2: parsed.areaM2,
+            },
+          };
+        }
+      }
+    } catch {
+      // Continue to parcel boundary fallback
+    }
+
+    // 2. Try Cadastral Parcel boundary (wfsCP)
+    const cpUrl = `https://ovc.catastro.meh.es/INSPIRE/wfsCP.aspx?service=WFS&version=2.0.0&request=GetFeature&STOREDQUERIE_ID=GetParcel&refcat=${encodeURIComponent(parcelRef)}&srsname=EPSG::4326`;
+    try {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), this.timeoutMs);
+      const res = await fetch(cpUrl, {
+        signal: controller.signal,
+        headers: { 'User-Agent': 'OpenBarrio-DueDiligence/0.1' },
+        ...({ cf: { cacheTtl: 7776000, cacheEverything: true } } as any),
+      });
+      clearTimeout(timer);
+
+      if (res.ok) {
+        const xml = await res.text();
+        const parsed = parseCatastroWfsGeometryXml(xml, parcelRef, 'parcel');
+        if (parsed) {
+          return {
+            cadastralReference: cleanRef,
+            type: 'parcel',
+            geometry: {
+              type: 'Polygon',
+              coordinates: parsed.coordinates,
+            },
+            properties: {
+              numberOfFloors: 3,
+              height: 9.6,
+              areaM2: parsed.areaM2,
+            },
+          };
+        }
+      }
+    } catch {
+      // Continue to deterministic fallback
+    }
+
+    // 3. Fallback: Query coordinates from Catastro to generate realistic parcel box
+    let centerLat = 40.42028;
+    let centerLon = -3.70379;
+    try {
+      const prop = await this.getByCadastralReference(cleanRef);
+      centerLat = prop.coordinates.latitude;
+      centerLon = prop.coordinates.longitude;
+    } catch {
+      // keep default center
+    }
+
+    const dLat = 0.00020;
+    const dLon = 0.00025;
+    const coords = [
+      [
+        [Number((centerLon - dLon).toFixed(6)), Number((centerLat - dLat).toFixed(6))],
+        [Number((centerLon + dLon).toFixed(6)), Number((centerLat - dLat).toFixed(6))],
+        [Number((centerLon + dLon).toFixed(6)), Number((centerLat + dLat).toFixed(6))],
+        [Number((centerLon - dLon).toFixed(6)), Number((centerLat + dLat).toFixed(6))],
+        [Number((centerLon - dLon).toFixed(6)), Number((centerLat - dLat).toFixed(6))],
+      ],
+    ];
+
+    return {
+      cadastralReference: cleanRef,
+      type: 'fallback',
+      geometry: {
+        type: 'Polygon',
+        coordinates: coords,
+      },
+      properties: {
+        numberOfFloors: 4,
+        height: 12.8,
+      },
+    };
   }
 }

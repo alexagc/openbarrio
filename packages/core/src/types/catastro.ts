@@ -125,3 +125,21 @@ export function isCadastralReference(value: string | null | undefined): boolean 
 
   return isUrban14 || isUrban20 || isRural14 || isRural20;
 }
+
+export const CadastralGeometrySchema = Type.Object({
+  cadastralReference: Type.String(),
+  type: Type.Union([Type.Literal('building'), Type.Literal('parcel'), Type.Literal('fallback')]),
+  geometry: Type.Object({
+    type: Type.Literal('Polygon'),
+    coordinates: Type.Array(Type.Array(Type.Array(Type.Number()))),
+  }),
+  properties: Type.Object({
+    name: Type.Optional(Type.String()),
+    numberOfFloors: Type.Optional(Type.Number()),
+    height: Type.Optional(Type.Number()),
+    constructionYear: Type.Optional(Type.Number()),
+    areaM2: Type.Optional(Type.Number()),
+  }),
+});
+
+export type CadastralGeometry = Static<typeof CadastralGeometrySchema>;

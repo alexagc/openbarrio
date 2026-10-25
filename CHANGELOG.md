@@ -5,6 +5,40 @@ All notable changes to the **OpenBarrio** platform are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.0] - 2026-10-25
+
+### Added
+- **Phase 12A: MapLibre GL 3D Building Volumetric Extrusion & Catastro INSPIRE Geometry (`apps/web`, Stitch: `81b6b903886c40e68f8d98410e253088`)**:
+  - Implemented 3D axonometric tilt camera controls (`pitch: 55`, `bearing: -15`) and interactive 2D/3D mode switchers.
+  - Connected official Catastro INSPIRE WFS 3D building geometries rendering real physical footprints and exact building heights (`numberOfFloors * 3.2m`).
+  - Added neon emerald (`#68dba9`) / amber volumetric parcel illumination on selected property with surrounding LoD2 contextual building masses.
+  - Interactive 3D Compass Gizmo in top-right viewport with rotating True North needle, align North, zenith 2D, and 3D orbit shortcuts.
+- **Phase 12B: Solar Exposure & Daylight Simulation HUD (`apps/web`, Stitch: `81b6b903886c40e68f8d98410e253088`)**:
+  - High-precision astronomical solar engine (`apps/web/src/utils/solar.ts`) calculating solar azimuth, elevation, and direct radiation ($W/m^2$) based on Spencer and NOAA algorithms.
+  - Floating glassmorphic HUD panel anchored at bottom-center with live solar vector readouts (azimuth, elevation, direct radiation).
+  - Season presets (Winter Solstice Dec 21, Equinox Mar 21, Summer Solstice Jun 21) and scrub timeline slider (06:00 to 22:00) with golden daylight wave curve.
+  - Dynamic MapLibre GL real-time lighting integration: sun position shifts light color temperature (amber dawn/dusk `#ffb77d`, crisp daylight `#f8fafc`, twilight blue `#38bdf8`) and ambient illumination.
+  - Façade exposure intelligence: estimated daily direct sunlight hours, lumínic comfort rating, and annual photovoltaic potential ($MWh/\text{year}$).
+- **Phase 12C: Side-by-Side Property Duel & Dual Radar Comparator (`apps/web`, Stitch: `4641477025444a24947a0a98d0ff4378`)**:
+  - Dual-overlapping 5-axis SVG Radar Pentagon component (`DualRadarChart.tsx`) comparing Property A (Cyan `#06b6d4`) vs Property B (Amber `#f59e0b`).
+  - 4 interactive radar display modes: *Ambos Superpuestos*, *Solo Inmueble A*, *Solo Inmueble B*, and *Diferencial Neto*.
+  - Full-featured Property Duel Modal (`PropertyDuelModal.tsx`) with URL deep-linking synchronization (`?refcat=...&vs=...`) and `[Escape]` keyboard dismiss.
+  - Side-by-side candidate Bento cards with one-click cadastral reference copy, antiquity, surface area, and participation coefficient (`cpt`).
+  - Automated differential matrix table comparing all 5 vectors with color-coded deltas and technical arbitrage natural-language synthesis.
+  - Trilingual dictionary coverage across Spanish, English, and Catalan for all comparator and capex keys.
+- **Phase 12D: Building CapEx & Community Risk Intelligence (`packages/core` & `apps/api`)**:
+  - Core schema `BuildingCapExRiskSchema` and TypeScript DTOs in `@openbarrio/core`.
+  - CapEx calculation engine in `apps/api/src/providers/capex.provider.ts`:
+    - Municipal ITE/IEE inspection obligation status from construction antiquity (>= 50 years mandatory overdue/in progress, 45-49 due soon).
+    - Spanish accessibility law compliance (RDL 1/2013, LPH art. 10.1.b) detecting lack of elevator in >3 floor buildings built pre-1981.
+    - Community expense bracket estimation scaling with surface, elevator, age, and participation coefficient (`cpt`).
+    - LPH reserve fund deficit simulation and prioritized common-element renovation actions (SATE, cota cero, roofs).
+  - Attached to all audit responses (`report.capex`) and visualized via dedicated dossier card `BuildingCapExCard.tsx`.
+- **National Civic Facilities & GIS Precision (`packages/etl`, `apps/api`, `apps/web`)**:
+  - Ingested 60,000+ authentic civic facilities across all 52 Spanish provinces (healthcare centers, public schools, transit stations, parks).
+  - Crisp WebGL vector icon layers and needle-point ground-anchored markers with smart stacking elevation and isolation.
+  - Multi-portal horizontal division filtering and address precision for complex cadastral parcels.
+
 ## [0.5.1] - 2026-10-24
 
 ### Added

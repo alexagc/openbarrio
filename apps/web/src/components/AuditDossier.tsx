@@ -4,6 +4,7 @@ import { ScoreGauge } from './ScoreGauge';
 import { PillarCards } from './PillarCard';
 import { RentalModule } from './RentalModule';
 import { HighlightsAndRisks } from './HighlightsAndRisks';
+import { BuildingCapExCard } from './dossier/BuildingCapExCard';
 import { downloadCadastralGML } from '../utils/gml';
 import {
   Printer,
@@ -15,14 +16,16 @@ import {
   Bookmark,
   MapPin,
   Download,
+  Sparkles,
 } from 'lucide-react';
 
 interface AuditDossierProps {
   report: PropertyAuditReport;
   onOpenUnitPicker?: () => void;
+  onOpenDuel?: () => void;
 }
 
-export function AuditDossier({ report, onOpenUnitPicker }: AuditDossierProps) {
+export function AuditDossier({ report, onOpenUnitPicker, onOpenDuel }: AuditDossierProps) {
   const [copied, setCopied] = useState(false);
   const [bookmarked, setBookmarked] = useState(false);
 
@@ -37,7 +40,19 @@ export function AuditDossier({ report, onOpenUnitPicker }: AuditDossierProps) {
     generatedAt,
   } = report;
 
-  const fullAddress = `${property.address.street} ${property.address.number}, ${property.address.postalCode} ${property.address.municipality}`;
+  const fullAddress = property.unit
+    ? `${property.address.street} ${property.address.number}${property.unit.block ? `, Portal ${property.unit.block}` : ''}${property.unit.floor ? `, Pl. ${property.unit.floor}` : ''}${property.unit.door ? ` Pta. ${property.unit.door}` : ''}, ${property.address.postalCode} ${property.address.municipality}`
+    : `${property.address.street} ${property.address.number}, ${property.address.postalCode} ${property.address.municipality}`;
+
+  const unitDetail = property.unit
+    ? [
+        property.unit.block ? `Portal ${property.unit.block}` : null,
+        property.unit.floor ? `Planta ${property.unit.floor}` : null,
+        property.unit.door ? `Puerta ${property.unit.door}` : null,
+      ]
+        .filter(Boolean)
+        .join(' · ')
+    : null;
   const formattedDate = new Date(generatedAt).toLocaleDateString('es-ES', {
     day: '2-digit',
     month: 'long',
@@ -92,10 +107,13 @@ export function AuditDossier({ report, onOpenUnitPicker }: AuditDossierProps) {
               <Building className="w-4 h-4 text-outline shrink-0" />
               <span>
                 {property.address.province} ·{' '}
-                {property.building.builtSurfaceM2.toLocaleString('es-ES')} m²{' '}
-                {property.building.constructionYear > 0
-                  ? `construidos (Año ${property.building.constructionYear})`
-                  : 'superficie (Suelo sin edificar)'}
+                {property.unit
+                  ? `${property.unit.builtSurfaceM2.toLocaleString('es-ES')} m² privativos (Edificio Año ${property.building.constructionYear || '—'})`
+                  : `${property.building.builtSurfaceM2.toLocaleString('es-ES')} m² ${
+                      property.building.constructionYear > 0
+                        ? `construidos (Año ${property.building.constructionYear})`
+                        : 'superficie (Suelo sin edificar)'
+                    }`}
               </span>
             </p>
           </div>
@@ -160,14 +178,14 @@ export function AuditDossier({ report, onOpenUnitPicker }: AuditDossierProps) {
         </div>
 
         {/* Horizontal Division Unit Picker Banner */}
-        {onOpenUnitPicker && (
+        {onOpenUnitPicker && Boolean(property.unit || (property.building?.unitsCount && property.building.unitsCount > 1)) && (
           <div className="mt-2.5 p-2.5 bg-surface-container-high/80 border border-primary/30 rounded-lg flex items-center justify-between gap-2 text-xs">
             <div className="flex items-center gap-2 min-w-0">
               <span className="w-2 h-2 rounded-full bg-primary shrink-0" />
               <div className="min-w-0">
                 {property.unit ? (
                   <p className="font-semibold text-on-surface truncate">
-                    Inmueble Privativo: Planta {property.unit.floor} · Puerta {property.unit.door} ({property.unit.builtSurfaceM2} m²
+                    Inmueble Privativo: {unitDetail} ({property.unit.builtSurfaceM2} m²
                     {property.unit.participationCoefficient ? ` · cpt: ${property.unit.participationCoefficient}%` : ''})
                   </p>
                 ) : (
@@ -184,7 +202,7 @@ export function AuditDossier({ report, onOpenUnitPicker }: AuditDossierProps) {
             {onOpenUnitPicker && (
               <button
                 type="button"
-                onClick={onOpenUnitPicker}
+                onClick={() => onOpenUnitPicker?.()}
                 className="px-2.5 py-1.5 rounded bg-primary/20 hover:bg-primary/30 text-primary border border-primary/40 font-semibold text-[11px] font-mono transition-colors shrink-0 cursor-pointer flex items-center gap-1"
               >
                 <span>{property.unit ? 'Cambiar inmueble ▾' : 'Ver inmuebles ▾'}</span>
@@ -195,6 +213,18 @@ export function AuditDossier({ report, onOpenUnitPicker }: AuditDossierProps) {
 
         {/* Action Toolbar */}
         <div className="mt-3 flex items-center gap-2 no-print flex-wrap">
+          {onOpenDuel && (
+            <button
+              type="button"
+              data-testid="dossier-duel-btn"
+              onClick={onOpenDuel}
+              className="bg-primary/20 hover:bg-primary/30 text-primary border border-primary/40 text-xs font-mono px-3 py-1.5 rounded flex items-center gap-1.5 transition-colors cursor-pointer"
+              title="Comparar este inmueble en duelo 1 vs 1"
+            >
+              <Sparkles className="w-3.5 h-3.5 text-primary" />
+              <span>Añadir a Comparar</span>
+            </button>
+          )}
           <button
             type="button"
             onClick={handleDownloadGML}
@@ -249,7 +279,12 @@ export function AuditDossier({ report, onOpenUnitPicker }: AuditDossierProps) {
         </div>
       )}
 
-      {/* 5. DUE DILIGENCE CLEARANCE & RISKS */}
+      {/* 5. CAPEX & BUILDING HEALTH DIAGNOSTICS */}
+      <div className="page-break-inside-avoid">
+        <BuildingCapExCard report={report} />
+      </div>
+
+      {/* 6. DUE DILIGENCE CLEARANCE & RISKS */}
       <div className="page-break-inside-avoid">
         <HighlightsAndRisks
           highlights={score.keyHighlights}

@@ -2,6 +2,7 @@ import {
   CadastralProperty,
   CadastralCoordinates,
   CadastralUnitsResponse,
+  CadastralGeometry,
   CensusTractIncome,
   EnvironmentalData,
   NoiseData,
@@ -31,6 +32,11 @@ export interface ICatastroProvider {
    * Look up horizontal division units for a given 14- or 20-character cadastral reference.
    */
   getUnitsByCadastralReference(refcat: string): Promise<CadastralUnitsResponse>;
+
+  /**
+   * Look up real building or parcel geometry (WFS INSPIRE) for a given cadastral reference.
+   */
+  getGeometryByCadastralReference(refcat: string): Promise<CadastralGeometry>;
 }
 
 export interface IINEProvider {
@@ -79,8 +85,16 @@ export interface ICivicConnectivityProvider {
   /**
    * Calculate 15-minute civic connectivity and proximity indicators to essential public services.
    */
-  getConnectivityData(latitude: number, longitude: number): Promise<CivicConnectivityData>;
-  getConnectivityByCoordinates?(latitude: number, longitude: number): Promise<CivicConnectivityData>;
+  getConnectivityData(
+    latitude: number,
+    longitude: number,
+    context?: { municipality?: string; street?: string }
+  ): Promise<CivicConnectivityData>;
+  getConnectivityByCoordinates?(
+    latitude: number,
+    longitude: number,
+    context?: { municipality?: string; street?: string }
+  ): Promise<CivicConnectivityData>;
 }
 
 export interface IUrbanPlanningProvider {

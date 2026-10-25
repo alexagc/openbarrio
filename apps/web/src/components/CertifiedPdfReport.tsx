@@ -90,7 +90,12 @@ export function CertifiedPdfReport({ report }: CertifiedPdfReportProps) {
             <tbody>
               <tr className="border-b border-slate-200">
                 <td className="p-1.5 bg-slate-100 font-semibold w-1/3">Dirección Oficial</td>
-                <td className="p-1.5 font-mono">{property.address.street} {property.address.number}</td>
+                <td className="p-1.5 font-mono">
+                  {property.address.street} {property.address.number}
+                  {unit?.block && `, Portal ${unit.block}`}
+                  {unit?.floor && `, Pl. ${unit.floor}`}
+                  {unit?.door && ` Pta. ${unit.door}`}
+                </td>
               </tr>
               <tr className="border-b border-slate-200">
                 <td className="p-1.5 bg-slate-100 font-semibold">Municipio / CP</td>
@@ -128,7 +133,7 @@ export function CertifiedPdfReport({ report }: CertifiedPdfReportProps) {
                 <td className="p-1.5">
                   {unit ? (
                     <span className="font-bold text-emerald-800">
-                      Planta {unit.floor} · Puerta {unit.door} ({unit.builtSurfaceM2} m² · cpt: {unit.participationCoefficient || '—'}%)
+                      {unit.block ? `Portal ${unit.block} · ` : ''}Planta {unit.floor} · Puerta {unit.door} ({unit.builtSurfaceM2} m² · cpt: {unit.participationCoefficient || '—'}%)
                     </span>
                   ) : (
                     `Edificio Completo (${property.building.unitsCount} inmuebles registrados)`
@@ -240,7 +245,7 @@ export function CertifiedPdfReport({ report }: CertifiedPdfReportProps) {
                 <td className="p-1.5">
                   {connectivity?.nearestHealthcare
                     ? `${connectivity.nearestHealthcare.name} (${Math.round(connectivity.nearestHealthcare.walkTimeMinutes)} min · ${connectivity.nearestHealthcare.distanceMeters}m)`
-                    : 'A menos de 10 min a pie'}
+                    : 'No detectado en radio próximo'}
                 </td>
               </tr>
               <tr className="border-b border-slate-200">
@@ -248,7 +253,7 @@ export function CertifiedPdfReport({ report }: CertifiedPdfReportProps) {
                 <td className="p-1.5">
                   {connectivity?.nearestTransit
                     ? `${connectivity.nearestTransit.name} (${Math.round(connectivity.nearestTransit.walkTimeMinutes)} min · ${connectivity.nearestTransit.distanceMeters}m)`
-                    : 'A menos de 5 min a pie'}
+                    : 'No detectado en radio próximo'}
                 </td>
               </tr>
               <tr>
@@ -256,7 +261,7 @@ export function CertifiedPdfReport({ report }: CertifiedPdfReportProps) {
                 <td className="p-1.5">
                   {connectivity?.nearestPark
                     ? `${connectivity.nearestPark.name} (${Math.round(connectivity.nearestPark.walkTimeMinutes)} min · ${connectivity.nearestPark.distanceMeters}m)`
-                    : 'A menos de 12 min a pie'}
+                    : 'No detectado en radio próximo'}
                 </td>
               </tr>
             </tbody>

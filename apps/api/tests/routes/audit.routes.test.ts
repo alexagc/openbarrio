@@ -91,6 +91,13 @@ describe('Hono Audit Routes Integration', () => {
       expect(report.score.subscores.socioeconomic).toBeGreaterThanOrEqual(0);
       expect(report.score.subscores.urbanPlanning).toBeGreaterThanOrEqual(0);
       expect(report.score.keyHighlights.length).toBeGreaterThan(0);
+
+      // v0.4.0 Building CapEx & Community Risk Intelligence
+      expect(report.capex).toBeDefined();
+      expect(report.capex.buildingAgeYears).toBeGreaterThan(0);
+      expect(report.capex.iteStatus).toBeDefined();
+      expect(report.capex.capexRiskScore).toBeGreaterThanOrEqual(0);
+      expect(report.capex.estimatedCommunityExpenseRangeEurMonth.min).toBeGreaterThan(0);
     });
 
     it('returns 400 Bad Request with RFC 7807 Problem Details on invalid coordinates query', async () => {
@@ -150,6 +157,13 @@ describe('Hono Audit Routes Integration', () => {
       expect(report.score.subscores.environmental).toBeGreaterThanOrEqual(0);
       expect(report.score.subscores.socioeconomic).toBeGreaterThanOrEqual(0);
       expect(report.score.subscores.urbanPlanning).toBeGreaterThanOrEqual(0);
+
+      // v0.4.0 Building CapEx & Community Risk Intelligence
+      expect(report.capex).toBeDefined();
+      expect(report.capex.iteStatus).toBe('mandatory_overdue');
+      expect(report.capex.iteRequired).toBe(true);
+      expect(report.capex.accessibilityRisk).toBe('high');
+      expect(report.capex.capexRiskScore).toBeLessThan(50);
     });
 
     it('returns 200 with complete report for Barcelona stressed housing zone', async () => {
@@ -163,6 +177,7 @@ describe('Hono Audit Routes Integration', () => {
       expect(report.rentalBenchmark.isStressedHousingZone).toBe(true);
       expect(report.connectivity.walkScore15Min).toBeGreaterThan(50);
       expect(report.score.subscores.connectivity).toBeGreaterThan(0);
+      expect(report.capex).toBeDefined();
     });
 
     it('returns 200 with complete report when refcat contains spaces or hyphens', async () => {

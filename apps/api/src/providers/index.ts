@@ -52,6 +52,7 @@ export * from './environmental.mock.js';
 export * from './connectivity.provider.js';
 export * from './urban-planning.provider.js';
 export * from './air-quality.provider.js';
+export * from './capex.provider.js';
 
 export interface ProviderContainer {
   catastro: ICatastroProvider;

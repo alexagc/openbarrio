@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useMemo } from 'react';
+import { useEffect, useRef, useState, useMemo, useCallback } from 'react';
 import * as maplibregl from 'maplibre-gl';
 import type { Map as MapLibreMap, Marker, MapMouseEvent } from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
@@ -19,9 +19,20 @@ import {
   TrendingUp,
   Footprints,
   Navigation,
+  Sun,
+  Box,
 } from 'lucide-react';
-import { ExtendedAuditReport } from '../services/api.client';
+import { ExtendedAuditReport, apiClient } from '../services/api.client';
+import type { CivicFacility } from '@openbarrio/core';
 import { CartographicLegendsHud } from './CartographicLegendsHud';
+import { SolarSimulationHud } from './map/SolarSimulationHud';
+import {
+  SeasonPreset,
+  getMapLightConfig,
+  generate3dBuildingFootprints,
+  calculateBuildingShadowPolygon,
+  getCardinalOrientation,
+} from '../utils/solar';
 
 export interface MapViewProps {
   selectedCoords?: { lat: number; lon: number };
@@ -132,6 +143,64 @@ export function createGeodesicCircle(
   return coords;
 }
 
+const FACILITY_MAP_ICONS: Record<string, { color: string; path: string }> = {
+  'fac-train': {
+    color: '#e11d48',
+    path: '<rect x="4" y="3" width="16" height="16" rx="2"/><path d="M4 11h16"/><path d="M12 3v8"/><path d="m8 19-2 3"/><path d="m18 22-2-3"/><circle cx="8" cy="15" r="1"/><circle cx="16" cy="15" r="1"/>',
+  },
+  'fac-metro': {
+    color: '#0284c7',
+    path: '<rect x="3" y="3" width="18" height="14" rx="2"/><path d="M7 21l3-4"/><path d="M17 21l-3-4"/><circle cx="7" cy="13" r="1"/><circle cx="17" cy="13" r="1"/><path d="M3 9h18"/>',
+  },
+  'fac-bus': {
+    color: '#f59e0b',
+    path: '<path d="M8 6v6"/><path d="M15 6v6"/><path d="M2 12h19.6"/><path d="M18 18h3s.5-1.7.8-2.8c.1-.4.2-.8.2-1.2 0-.4-.1-.8-.2-1.2l-1.4-5C20.1 6.8 19.1 6 18 6H4a2 2 0 0 0-2 2v10h3"/><circle cx="7" cy="18" r="2"/><path d="M9 18h5"/><circle cx="16" cy="18" r="2"/>',
+  },
+  'fac-health': {
+    color: '#f43f5e',
+    path: '<path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/><path d="M12 7v6"/><path d="M9 10h6"/>',
+  },
+  'fac-education': {
+    color: '#3b82f6',
+    path: '<path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/>',
+  },
+  'fac-park': {
+    color: '#10b981',
+    path: '<path d="M10 10v.2A3 3 0 0 1 8.9 16H5a3 3 0 0 1-1-5.8V10a3 3 0 0 1 6 0Z"/><path d="M7 16v6"/><path d="M13 19v3"/><path d="M12 19h8.3a1 1 0 0 0 .7-1.7L18 14h.3a1 1 0 0 0 .7-1.7L16 9h.2a1 1 0 0 0 .8-1.7l-3.3-4.4a1 1 0 0 0-1.4 0L9 7.3"/>',
+  },
+};
+
+function registerFacilityMapImages(map: MapLibreMap) {
+  if (typeof window === 'undefined') return;
+  const size = 32;
+  for (const [id, def] of Object.entries(FACILITY_MAP_ICONS)) {
+    try {
+      if (typeof map.hasImage === 'function' && map.hasImage(id)) continue;
+      const svg = `
+        <svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 32 32">
+          <circle cx="16" cy="16" r="14" fill="${def.color}" stroke="#ffffff" stroke-width="2.5"/>
+          <g transform="translate(6, 6) scale(0.833)" fill="none" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            ${def.path}
+          </g>
+        </svg>
+      `;
+      const img = new Image(size, size);
+      img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+      img.onload = () => {
+        try {
+          if (typeof map.hasImage === 'function' && !map.hasImage(id)) {
+            map.addImage(id, img);
+          }
+        } catch {
+          // Ignore style transitions
+        }
+      };
+    } catch {
+      // Ignore during initial mounting
+    }
+  }
+}
+
 export function MapView({
   selectedCoords,
   onMapClick,
@@ -151,7 +220,7 @@ export function MapView({
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<MapLibreMap | null>(null);
   const markerRef = useRef<Marker | null>(null);
-  const amenityMarkersRef = useRef<Marker[]>([]);
+  const lastCenteredCoordsRef = useRef<{ lat: number; lon: number } | null>(null);
   const onMapClickRef = useRef(onMapClick);
 
   useEffect(() => {
@@ -167,6 +236,88 @@ export function MapView({
   const [showIsochrones, setShowIsochrones] = useState<boolean>(true);
   const [is3DMode, setIs3DMode] = useState<boolean>(false);
   const [currentZoom, setCurrentZoom] = useState<number>(15);
+  const [currentBearing, setCurrentBearing] = useState<number>(0);
+  const [currentPitch, setCurrentPitch] = useState<number>(0);
+  const [isSolarHudOpen, setIsSolarHudOpen] = useState<boolean>(true);
+  const [currentSolarAzimuth, setCurrentSolarAzimuth] = useState<number>(214);
+  const [currentSolarAltitude, setCurrentSolarAltitude] = useState<number>(38.2);
+
+  const is3DModeRef = useRef<boolean>(is3DMode);
+  useEffect(() => {
+    is3DModeRef.current = is3DMode;
+  }, [is3DMode]);
+
+  const cachedCadastralGeometryRef = useRef<{
+    refcat: string;
+    polygon: number[][][];
+    floors?: number;
+    height?: number;
+  } | null>(null);
+
+  const currentSolarRef = useRef<{
+    azimuth: number;
+    altitude: number;
+    directRadiationWm2: number;
+    season: SeasonPreset;
+    timeMinutes: number;
+  }>({
+    azimuth: 214,
+    altitude: 38.2,
+    directRadiationWm2: 842,
+    season: 'summer',
+    timeMinutes: 870,
+  });
+
+  // 3D building active geometry reference for dynamic shadow casting
+  const currentBuildingCoordsRef = useRef<number[][][] | null>(null);
+  const currentBuildingHeightRef = useRef<number>(44.8);
+
+  const handleSolarChange = useCallback(
+    (solar: {
+      azimuth: number;
+      altitude: number;
+      directRadiationWm2: number;
+      season: SeasonPreset;
+      timeMinutes: number;
+    }) => {
+      currentSolarRef.current = solar;
+      setCurrentSolarAzimuth(solar.azimuth);
+      setCurrentSolarAltitude(solar.altitude);
+      const map = mapRef.current;
+      if (!map) return;
+      try {
+        if (typeof map.setLight === 'function') {
+          const lightCfg = getMapLightConfig(solar.altitude, solar.azimuth);
+          map.setLight({
+            anchor: 'map',
+            color: lightCfg.color,
+            intensity: lightCfg.intensity,
+            position: [1.5, solar.azimuth, Math.max(0, 90 - solar.altitude)],
+          });
+        }
+
+        // Project real ground-plane shadow polygon from building footprint and sun vector
+        const shadowSource = map.getSource('building-3d-shadows-source');
+        if (
+          shadowSource &&
+          typeof (shadowSource as any).setData === 'function' &&
+          currentBuildingCoordsRef.current
+        ) {
+          (shadowSource as any).setData(
+            calculateBuildingShadowPolygon(
+              currentBuildingCoordsRef.current,
+              currentBuildingHeightRef.current,
+              solar.azimuth,
+              solar.altitude
+            )
+          );
+        }
+      } catch {
+        // Ignore during style transitions
+      }
+    },
+    []
+  );
 
   // Mobile drawer / sheet state (Phase 11B)
   const [internalMobileLayersOpen, setInternalMobileLayersOpen] = useState<boolean>(false);
@@ -229,6 +380,7 @@ export function MapView({
       container: mapContainerRef.current,
       style: {
         version: 8,
+        glyphs: 'https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf',
         sources: {
           // Esri World Dark Gray Canvas (High-precision dark GIS basemap, 100% free, zero API key)
           // Native server tiles are available up to zoom 16; setting maxzoom: 16 allows MapLibre to overzoom smoothly at z>=17
@@ -298,6 +450,27 @@ export function MapView({
           },
           // 15-Minute Walking Catchment Rings (GeoJSON Source)
           'walking-isochrones': {
+            type: 'geojson',
+            data: {
+              type: 'FeatureCollection',
+              features: [],
+            },
+          },
+          // 3D Building Extrusion Footprints (GeoJSON Source)
+          'building-3d-source': {
+            type: 'geojson',
+            data: generate3dBuildingFootprints(initialLat, initialLon),
+          },
+          // 3D Projected Ground Shadows Source
+          'building-3d-shadows-source': {
+            type: 'geojson',
+            data: {
+              type: 'FeatureCollection',
+              features: [],
+            },
+          },
+          // Civic Amenity Facilities Points (GPU-Anchored GeoJSON Source)
+          'civic-facilities-source': {
             type: 'geojson',
             data: {
               type: 'FeatureCollection',
@@ -451,6 +624,139 @@ export function MapView({
             },
             layout: { visibility: 'visible' },
           },
+          // Civic Amenities - GPU-Anchored Native WebGL Layers (Zero Zoom Drift)
+          {
+            id: 'civic-facilities-glow',
+            type: 'circle',
+            source: 'civic-facilities-source',
+            minzoom: 11,
+            paint: {
+              'circle-radius': [
+                'interpolate',
+                ['linear'],
+                ['zoom'],
+                12,
+                6,
+                15,
+                12,
+                18,
+                18,
+              ],
+              'circle-color': ['get', 'color'],
+              'circle-opacity': 0.35,
+              'circle-blur': 0.6,
+              'circle-pitch-alignment': 'map',
+            },
+          },
+          {
+            id: 'civic-facilities-point',
+            type: 'circle',
+            source: 'civic-facilities-source',
+            minzoom: 11,
+            paint: {
+              'circle-radius': [
+                'interpolate',
+                ['linear'],
+                ['zoom'],
+                12,
+                5,
+                15,
+                8,
+                18,
+                12,
+              ],
+              'circle-color': ['get', 'color'],
+              'circle-stroke-width': 2,
+              'circle-stroke-color': '#ffffff',
+              'circle-pitch-alignment': 'map',
+            },
+          },
+          {
+            id: 'civic-facilities-symbol',
+            type: 'symbol',
+            source: 'civic-facilities-source',
+            minzoom: 11,
+            layout: {
+              'icon-image': ['get', 'icon'],
+              'icon-size': [
+                'interpolate',
+                ['linear'],
+                ['zoom'],
+                11,
+                0.75,
+                14,
+                0.95,
+                17,
+                1.15,
+              ],
+              'icon-allow-overlap': true,
+              'icon-ignore-placement': true,
+              'icon-pitch-alignment': 'viewport',
+              'text-field': ['get', 'label'],
+              'text-font': ['Open Sans Regular'],
+              'text-size': [
+                'interpolate',
+                ['linear'],
+                ['zoom'],
+                13,
+                10,
+                16,
+                11,
+                19,
+                12,
+              ],
+              'text-offset': [0, 1.6],
+              'text-anchor': 'top',
+              'text-allow-overlap': true,
+              'text-ignore-placement': true,
+              'text-pitch-alignment': 'viewport',
+            },
+            paint: {
+              'text-color': '#ffffff',
+              'text-halo-color': '#0b1326',
+              'text-halo-width': 2.5,
+              'text-halo-blur': 0.5,
+            },
+          },
+          // 9. Projected Ground Shadows Layer (Cast below 3D Extrusion)
+          {
+            id: 'building-3d-ground-shadows',
+            type: 'fill',
+            source: 'building-3d-shadows-source',
+            minzoom: 12,
+            maxzoom: 22,
+            layout: { visibility: 'none' },
+            paint: {
+              'fill-color': '#030712',
+              'fill-opacity': 0.55,
+            },
+          },
+          // 10. 3D Building Volumetric Extrusion Layer (LoD2 & Target Highlight)
+          {
+            id: 'building-3d-extrusion',
+            type: 'fill-extrusion',
+            source: 'building-3d-source',
+            minzoom: 12,
+            maxzoom: 22,
+            layout: {
+              visibility: 'none',
+            },
+            paint: {
+              'fill-extrusion-color': [
+                'case',
+                ['boolean', ['get', 'isTarget'], false],
+                '#68dba9',
+                '#1e293b',
+              ],
+              'fill-extrusion-height': [
+                'coalesce',
+                ['get', 'height'],
+                ['*', ['coalesce', ['get', 'numberOfFloors'], 4], 3.2],
+              ],
+              'fill-extrusion-base': 0,
+              'fill-extrusion-opacity': 0.92,
+            },
+          },
         ],
       },
       center: [initialLon, initialLat],
@@ -465,7 +771,19 @@ export function MapView({
       setCurrentZoom(Math.round(map.getZoom()));
     });
 
-    map.on('move', () => {
+    map.on('rotate', () => {
+      if (typeof map.getBearing === 'function') {
+        setCurrentBearing(Math.round(map.getBearing()));
+      }
+    });
+
+    map.on('pitch', () => {
+      if (typeof map.getPitch === 'function') {
+        setCurrentPitch(Math.round(map.getPitch()));
+      }
+    });
+
+    map.on('moveend', () => {
       const center = map.getCenter();
       setMapCenter({
         lat: parseFloat(center.lat.toFixed(6)),
@@ -475,16 +793,97 @@ export function MapView({
 
     map.getCanvas().style.cursor = 'crosshair';
 
+    let clickTimeout: ReturnType<typeof setTimeout> | null = null;
     map.on('click', (e: MapMouseEvent) => {
+      // In 3D mode, do not trigger coordinate re-selection on orbital navigation clicks
+      if (is3DModeRef.current) return;
       const lat = parseFloat(e.lngLat.lat.toFixed(6));
       const lon = parseFloat(e.lngLat.lng.toFixed(6));
-      onMapClickRef.current(lat, lon);
+      if (clickTimeout) clearTimeout(clickTimeout);
+      clickTimeout = setTimeout(() => {
+        onMapClickRef.current(lat, lon);
+      }, 250);
+    });
+
+    map.on('dblclick', () => {
+      if (clickTimeout) {
+        clearTimeout(clickTimeout);
+        clickTimeout = null;
+      }
+    });
+
+    // Interactive Hover Popup for Civic Facilities (Zero DOM Drift)
+    const hoverFacilityPopup = new maplibregl.Popup({
+      closeButton: false,
+      closeOnClick: false,
+      offset: 14,
+      className: 'stitch-dark-popup',
+    });
+
+    const handleFacilityMouseEnter = (e: any) => {
+      map.getCanvas().style.cursor = 'pointer';
+      if (!e.features || !e.features[0]) return;
+      const feat = e.features[0];
+      const props = feat.properties as any;
+      const geom = feat.geometry as any;
+      if (!geom || !geom.coordinates) return;
+      const coords = geom.coordinates.slice() as [number, number];
+
+      const html = `
+        <div class="p-2.5 rounded-lg backdrop-blur-md shadow-2xl min-w-[210px] max-w-[280px] text-left select-none"
+             style="background: rgba(19, 27, 46, 0.95); border: 1px solid ${props.color || '#68dba9'}; box-shadow: 0 10px 25px rgba(0,0,0,0.6);">
+          <div class="flex items-center justify-between pb-1 mb-1.5 gap-2" style="border-bottom: 1px solid rgba(255,255,255,0.15);">
+            <span class="text-[9px] font-bold uppercase tracking-wider font-mono flex items-center gap-1" style="color: ${props.color};">
+              <span style="display:inline-block; width:6px; height:6px; border-radius:9999px; background:${props.color};"></span>
+              ${escapeHtml(props.badge || 'Equipamiento')}
+            </span>
+            <span class="text-[9px] font-bold font-mono" style="color: #68dba9;">
+              ~${props.walkTimeMinutes} min a pie
+            </span>
+          </div>
+          <p class="font-bold text-white text-[11px] truncate mb-1 leading-snug">${escapeHtml(props.name || '')}</p>
+          <div class="space-y-0.5 text-[9px] font-mono" style="color: rgba(255,255,255,0.75);">
+            <div class="flex justify-between">
+              <span>Distancia directa:</span>
+              <span class="font-bold text-white">${props.distanceMeters} m</span>
+            </div>
+            <div class="flex justify-between">
+              <span>Tiempo a pie:</span>
+              <span class="font-bold text-white">${props.walkTimeMinutes} min (4.5 km/h)</span>
+            </div>
+            <div class="pt-1 text-[8px] truncate" style="border-top: 1px solid rgba(255,255,255,0.1); color: rgba(255,255,255,0.5);">
+              ${escapeHtml(props.sourceText || 'Datos oficiales')}
+            </div>
+          </div>
+        </div>
+      `;
+
+      hoverFacilityPopup.setLngLat(coords).setHTML(html).addTo(map);
+    };
+
+    const handleFacilityMouseLeave = () => {
+      map.getCanvas().style.cursor = is3DModeRef.current ? 'grab' : 'crosshair';
+      hoverFacilityPopup.remove();
+    };
+
+    map.on('mouseenter', 'civic-facilities-symbol', handleFacilityMouseEnter);
+    map.on('mouseenter', 'civic-facilities-point', handleFacilityMouseEnter);
+    map.on('mouseleave', 'civic-facilities-symbol', handleFacilityMouseLeave);
+    map.on('mouseleave', 'civic-facilities-point', handleFacilityMouseLeave);
+
+    map.on('click', 'civic-facilities-symbol', (e) => {
+      e.originalEvent?.stopPropagation();
+    });
+    map.on('click', 'civic-facilities-point', (e) => {
+      e.originalEvent?.stopPropagation();
     });
 
     map.on('load', () => {
+      registerFacilityMapImages(map);
       map.resize();
     });
 
+    registerFacilityMapImages(map);
     mapRef.current = map;
 
     let resizeObserver: ResizeObserver | null = null;
@@ -496,6 +895,7 @@ export function MapView({
     }
 
     return () => {
+      hoverFacilityPopup.remove();
       resizeObserver?.disconnect();
       map.remove();
       mapRef.current = null;
@@ -558,20 +958,196 @@ export function MapView({
     };
   }, [activeBasemap, showCatastroWms, showIneIncome, showMitecoNoise, showSncziFlood]);
 
-  // Toggle 3D Axonometric Tilt
-  const toggle3DMode = () => {
+  // Toggle 3D Axonometric Tilt & Building Volumetric Extrusion
+  const toggle3DMode = (forceState?: boolean) => {
     const map = mapRef.current;
     if (!map) return;
 
-    const nextMode = !is3DMode;
+    const nextMode = forceState !== undefined ? forceState : !is3DMode;
     setIs3DMode(nextMode);
 
-    map.easeTo({
-      pitch: nextMode ? 55 : 0,
-      bearing: nextMode ? -15 : 0,
-      duration: 1000,
-    });
+    if (nextMode) {
+      setIsSolarHudOpen(true);
+      map.easeTo({
+        pitch: 55,
+        bearing: -15,
+        offset: [0, -80],
+        duration: 1000,
+      });
+    } else {
+      map.easeTo({
+        pitch: 0,
+        bearing: 0,
+        offset: [0, 0],
+        duration: 800,
+      });
+    }
   };
+
+  // Synchronize 3D building extrusion layer visibility with 3D mode
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+
+    const applyExtrusionVis = () => {
+      try {
+        const hasExtrusion = typeof map.getLayer === 'function' ? Boolean(map.getLayer('building-3d-extrusion')) : true;
+        if (hasExtrusion && typeof map.setLayoutProperty === 'function') {
+          map.setLayoutProperty('building-3d-extrusion', 'visibility', is3DMode ? 'visible' : 'none');
+        }
+        const hasShadows = typeof map.getLayer === 'function' ? Boolean(map.getLayer('building-3d-ground-shadows')) : true;
+        if (hasShadows && typeof map.setLayoutProperty === 'function') {
+          map.setLayoutProperty('building-3d-ground-shadows', 'visibility', is3DMode ? 'visible' : 'none');
+        }
+      } catch {
+        // Ignore during style transitions
+      }
+    };
+
+    applyExtrusionVis();
+    if (typeof map.on === 'function') {
+      map.on('load', applyExtrusionVis);
+      map.on('styledata', applyExtrusionVis);
+    }
+    return () => {
+      if (typeof map.off === 'function') {
+        map.off('load', applyExtrusionVis);
+        map.off('styledata', applyExtrusionVis);
+      }
+    };
+  }, [is3DMode]);
+
+  // Synchronize dynamic MapLibre light with astronomical solar position when 3D mode toggles
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !is3DMode) return;
+
+    try {
+      if (typeof map.setLight === 'function') {
+        const solar = currentSolarRef.current;
+        const lightCfg = getMapLightConfig(solar.altitude, solar.azimuth);
+        map.setLight({
+          anchor: 'map',
+          color: lightCfg.color,
+          intensity: lightCfg.intensity,
+          position: [1.5, solar.azimuth, Math.max(0, 90 - solar.altitude)],
+        });
+      }
+    } catch {
+      // Ignore during style transitions
+    }
+  }, [is3DMode]);
+
+  // Update 3D building extrusion footprints when target parcel changes
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+
+    let isSubscribed = true;
+    const lat = selectedCoords?.lat ?? mapCenter.lat;
+    const lon = selectedCoords?.lon ?? mapCenter.lon;
+    const refcat = report?.property.cadastralReference;
+    const floors = report?.property.building?.unitsCount
+      ? Math.min(18, Math.max(4, Math.round(report.property.building.unitsCount / 2)))
+      : 14;
+    const height = report?.property.building?.builtSurfaceM2
+      ? Math.min(90, Math.max(16, floors * 3.2))
+      : 44.8;
+    const name = propertyName || 'Edificio en Auditoría';
+
+    const updateExtrusion = (customPolygon?: number[][][], overrideFloors?: number, overrideHeight?: number) => {
+      if (!customPolygon || customPolygon.length === 0 || !customPolygon[0] || customPolygon[0].length < 4) {
+        try {
+          const source = map.getSource('building-3d-source');
+          if (source && typeof (source as any).setData === 'function') {
+            (source as any).setData({ type: 'FeatureCollection', features: [] });
+          }
+          const shadowSource = map.getSource('building-3d-shadows-source');
+          if (shadowSource && typeof (shadowSource as any).setData === 'function') {
+            (shadowSource as any).setData({ type: 'FeatureCollection', features: [] });
+          }
+        } catch {}
+        return;
+      }
+      const effFloors = overrideFloors ?? floors;
+      const effHeight = overrideHeight ?? height;
+      currentBuildingHeightRef.current = effHeight;
+
+      try {
+        const source = map.getSource('building-3d-source');
+        if (source && typeof (source as any).setData === 'function') {
+          const footprints = generate3dBuildingFootprints(
+            lat,
+            lon,
+            effFloors,
+            effHeight,
+            name,
+            customPolygon
+          );
+          (source as any).setData(footprints);
+          currentBuildingCoordsRef.current = customPolygon;
+
+          // Immediately cast initial shadow
+          const shadowSource = map.getSource('building-3d-shadows-source');
+          if (
+            shadowSource &&
+            typeof (shadowSource as any).setData === 'function' &&
+            currentBuildingCoordsRef.current
+          ) {
+            const solar = currentSolarRef.current;
+            (shadowSource as any).setData(
+              calculateBuildingShadowPolygon(
+                currentBuildingCoordsRef.current,
+                effHeight,
+                solar.azimuth,
+                solar.altitude
+              )
+            );
+          }
+        }
+      } catch {
+        // Ignore during initialization
+      }
+    };
+
+    // If we have cached geometry for this refcat, use it immediately
+    if (refcat && cachedCadastralGeometryRef.current?.refcat === refcat) {
+      const cached = cachedCadastralGeometryRef.current;
+      updateExtrusion(cached.polygon, cached.floors, cached.height);
+      return;
+    }
+
+    // Do not draw artificial square box before real Catastro WFS geometry arrives
+
+    // Query official Catastro WFS geometry if cadastral reference is available
+    if (refcat) {
+      apiClient
+        .getCadastralGeometry(refcat)
+        .then((geom) => {
+          if (!isSubscribed) return;
+          if (geom && geom.geometry && geom.geometry.coordinates) {
+            cachedCadastralGeometryRef.current = {
+              refcat,
+              polygon: geom.geometry.coordinates,
+              floors: geom.properties.numberOfFloors,
+              height: geom.properties.height,
+            };
+            updateExtrusion(
+              geom.geometry.coordinates,
+              geom.properties.numberOfFloors,
+              geom.properties.height
+            );
+          }
+        })
+        .catch(() => {
+          // Keep existing polygon on error
+        });
+    }
+
+    return () => {
+      isSubscribed = false;
+    };
+  }, [selectedCoords?.lat, selectedCoords?.lon, report?.property.cadastralReference, propertyName]);
 
   const handleZoomIn = () => {
     mapRef.current?.zoomIn({ duration: 300 });
@@ -583,7 +1159,8 @@ export function MapView({
 
   const handleResetNorth = () => {
     mapRef.current?.resetNorthPitch({ duration: 600 });
-    setIs3DMode(false);
+    setCurrentBearing(0);
+    setCurrentPitch(0);
   };
 
   const resetToSpain = () => {
@@ -726,15 +1303,19 @@ export function MapView({
 
     markerRef.current = marker;
 
-    const center = map.getCenter();
-    const dist = Math.hypot(center.lat - lat, center.lng - lon);
-    if (dist > 0.001) {
-      map.flyTo({
-        center: [lon, lat],
-        zoom: Math.max(map.getZoom(), 16),
-        essential: true,
-        duration: 1000,
-      });
+    const last = lastCenteredCoordsRef.current;
+    if (!last || Math.abs(last.lat - lat) > 0.0005 || Math.abs(last.lon - lon) > 0.0005) {
+      lastCenteredCoordsRef.current = { lat, lon };
+      const center = map.getCenter();
+      const dist = Math.hypot(center.lat - lat, center.lng - lon);
+      if (dist > 0.001) {
+        map.flyTo({
+          center: [lon, lat],
+          zoom: Math.max(map.getZoom(), 16),
+          essential: true,
+          duration: 800,
+        });
+      }
     }
   }, [selectedCoords, propertyName, propertyAddress, report]);
 
@@ -748,7 +1329,7 @@ export function MapView({
         const source = map.getSource('walking-isochrones') as maplibregl.GeoJSONSource;
         if (!source || typeof source.setData !== 'function') return;
 
-        if (!showIsochrones || !selectedCoords) {
+        if (!showIsochrones || is3DMode || !selectedCoords) {
           source.setData({ type: 'FeatureCollection', features: [] });
           return;
         }
@@ -799,142 +1380,178 @@ export function MapView({
         map.off('styledata', updateIsochrones);
       }
     };
-  }, [selectedCoords, showIsochrones]);
+  }, [selectedCoords, showIsochrones, is3DMode]);
 
-  // Synchronize Civic Amenities POI Markers on Isochrones
+  // Synchronize Civic Amenities on GPU-Anchored Native WebGL Layer (Zero Zoom Drift)
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
 
-    // Clear existing amenity markers
-    for (const m of amenityMarkersRef.current) {
-      m.remove();
-    }
-    amenityMarkersRef.current = [];
+    const updateFacilities = () => {
+      try {
+        registerFacilityMapImages(map);
+        const source = map.getSource('civic-facilities-source') as maplibregl.GeoJSONSource;
+        if (!source || typeof source.setData !== 'function') return;
 
-    if (!showIsochrones || !selectedCoords || !report?.connectivity) return;
+        if (!selectedCoords || !report?.connectivity) {
+          source.setData({ type: 'FeatureCollection', features: [] });
+          return;
+        }
 
-    const conn = report.connectivity;
-    const { lat, lon } = selectedCoords;
+        const conn = report.connectivity;
 
-    const amenitiesList = [
-      {
-        facility: conn.nearestHealthcare,
-        type: 'healthcare',
-        icon: '🏥',
-        badge: 'Sanidad / CAP',
-        color: '#f43f5e',
-        bearing: 315, // NW
-        sourceText: 'Registro REPS · Ministerio de Sanidad',
-      },
-      {
-        facility: conn.nearestTransit,
-        type: 'transit',
-        icon: '🚇',
-        badge: 'Transporte Público',
-        color: '#f59e0b',
-        bearing: 45, // NE
-        sourceText: 'Consorcio Regional de Transportes',
-      },
-      {
-        facility: conn.nearestEducation,
-        type: 'education',
-        icon: '🏫',
-        badge: 'Colegio / Educación',
-        color: '#3b82f6',
-        bearing: 225, // SW
-        sourceText: 'Registro Estatal Centros Docentes (MEFP)',
-      },
-      {
-        facility: conn.nearestPark,
-        type: 'park',
-        icon: '🌳',
-        badge: 'Zonas Verdes',
-        color: '#10b981',
-        bearing: 135, // SE
-        sourceText: 'Inventario Municipal Áreas Verdes / IGN',
-      },
-    ].filter((item) => Boolean(item.facility));
+        // Collect essential facilities (health, education, transit, park)
+        const targetFacilities: CivicFacility[] = [];
 
-    const newMarkers: Marker[] = [];
+        if (conn.nearestHealthcare) targetFacilities.push(conn.nearestHealthcare);
+        if (conn.nearestEducation) targetFacilities.push(conn.nearestEducation);
+        if (conn.nearestPark) targetFacilities.push(conn.nearestPark);
 
-    for (const item of amenitiesList) {
-      const fac = item.facility!;
-      // Minimum visual clearance on map is 160m so amenities never overlap with the central parcel marker
-      const dMeters = Math.max(160, Math.min(1300, fac.distanceMeters));
-      const rad = (item.bearing * Math.PI) / 180;
-      const dKm = dMeters / 1000;
-      const dLat = (dKm / 110.574) * Math.cos(rad);
-      const dLon = (dKm / (111.32 * Math.cos((lat * Math.PI) / 180))) * Math.sin(rad);
+        // Transit: include nearest bus stop AND nearest train/metro station (if within 800m)
+        if (conn.nearestTransit) {
+          targetFacilities.push(conn.nearestTransit);
+        }
+        if (conn.nearbyFacilities && conn.nearbyFacilities.length > 0) {
+          const isTrain = (f: CivicFacility) => {
+            const n = (f.name || '').toLowerCase();
+            return (
+              f.subtype === 'train' ||
+              f.subtype === 'metro' ||
+              n.includes('cercan') ||
+              n.includes('renfe') ||
+              n.includes('estaci')
+            );
+          };
+          const nearestTrain = conn.nearbyFacilities.find(isTrain);
+          if (
+            nearestTrain &&
+            nearestTrain.id !== conn.nearestTransit?.id &&
+            nearestTrain.distanceMeters <= 800
+          ) {
+            targetFacilities.push(nearestTrain);
+          }
+        }
 
-      const fLat = lat + dLat;
-      const fLon = lon + dLon;
+        // Deduplicate facilities by ID
+        const seenIds = new Set<string>();
+        const uniqueFacilities = targetFacilities.filter((f) => {
+          if (!f || !f.id || seenIds.has(f.id)) return false;
+          seenIds.add(f.id);
+          return true;
+        });
 
-      const el = document.createElement('div');
-      el.className = 'group relative w-7 h-7 flex items-center justify-center cursor-pointer select-none';
-      el.style.zIndex = '20';
-      el.innerHTML = `
-        <div class="relative flex items-center justify-center">
-          <!-- Amenity Icon Node -->
-          <div class="w-7 h-7 rounded-full flex items-center justify-center text-xs shadow-xl border-2 transition-transform duration-150 group-hover:scale-125" style="background: #0b1326; border-color: ${item.color};">
-            <span class="leading-none">${item.icon}</span>
-          </div>
+        const resolveItemMeta = (fac: CivicFacility) => {
+          const nameLower = (fac.name || '').toLowerCase();
+          const subtype = (fac.subtype || '').toLowerCase();
 
-          <!-- Embedded Direct Map Tooltip (Appears immediately on hover above icon, matching precision marker) -->
-          <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:flex flex-col p-2.5 rounded-lg bg-surface-container-low/95 backdrop-blur-md border shadow-2xl min-w-[200px] max-w-[260px] pointer-events-none z-50 text-left" style="border-color: ${item.color}80;">
-            <div class="flex items-center justify-between border-b border-outline-variant/60 pb-1 mb-1.5 gap-2">
-              <span class="text-[9px] font-bold uppercase tracking-wider flex items-center gap-1 font-mono" style="color: ${item.color};">
-                <span class="w-1.5 h-1.5 rounded-full animate-pulse" style="background-color: ${item.color};"></span>
-                ${escapeHtml(item.badge)}
-              </span>
-              <span class="text-[9px] font-bold text-primary font-mono shrink-0">
-                ~${Math.round(fac.walkTimeMinutes)} min
-              </span>
-            </div>
-            <p class="font-bold text-on-surface text-[11px] truncate mb-1 leading-snug">${escapeHtml(fac.name)}</p>
-            <div class="space-y-0.5 text-[9px] text-on-surface-variant font-mono">
-              <div class="flex justify-between">
-                <span>Distancia directa:</span>
-                <span class="font-bold text-on-surface">${fac.distanceMeters} m</span>
-              </div>
-              <div class="flex justify-between">
-                <span>Tiempo a pie:</span>
-                <span class="font-bold text-on-surface">${Math.round(fac.walkTimeMinutes)} min (4.5 km/h)</span>
-              </div>
-              <div class="pt-1 text-[8px] text-outline border-t border-outline-variant/30 truncate">
-                ${escapeHtml(item.sourceText)}
-              </div>
-            </div>
-          </div>
-        </div>
-      `;
+          if (fac.type === 'transit') {
+            if (subtype === 'train' || nameLower.includes('cercan') || nameLower.includes('renfe')) {
+              return {
+                icon: 'fac-train',
+                shortBadge: 'Cercanías',
+                badge: 'Cercanías / Tren',
+                color: '#e11d48',
+                sourceText: 'Renfe Cercanías / Consorcio Regional de Transportes',
+              };
+            }
+            if (subtype === 'metro' || nameLower.includes('metro')) {
+              return {
+                icon: 'fac-metro',
+                shortBadge: 'Metro',
+                badge: 'Metro de Madrid',
+                color: '#0284c7',
+                sourceText: 'Metro / Consorcio Regional de Transportes',
+              };
+            }
+            return {
+              icon: 'fac-bus',
+              shortBadge: 'Bus EMT',
+              badge: 'Autobús EMT',
+              color: '#f59e0b',
+              sourceText: 'EMT Madrid / Consorcio Regional de Transportes',
+            };
+          }
 
-      // Dynamic stacking context elevation on hover & click isolation
-      el.addEventListener('mouseenter', () => {
-        el.style.zIndex = '999';
-        if (el.parentElement) el.parentElement.style.zIndex = '999';
-      });
-      el.addEventListener('mouseleave', () => {
-        el.style.zIndex = '20';
-        if (el.parentElement) el.parentElement.style.zIndex = '';
-      });
-      el.addEventListener('click', (e) => {
-        e.stopPropagation();
-      });
+          if (fac.type === 'healthcare') {
+            const isHospital = subtype === 'hospital' || nameLower.includes('hospital');
+            return {
+              icon: 'fac-health',
+              shortBadge: isHospital ? 'Hospital' : 'C. Salud',
+              badge: isHospital ? 'Hospital Universitario' : 'Centro de Salud / CAP',
+              color: '#f43f5e',
+              sourceText: 'Registro REPS · Ministerio de Sanidad',
+            };
+          }
 
-      const marker = new maplibregl.Marker({ element: el, anchor: 'center' })
-        .setLngLat([fLon, fLat])
-        .addTo(map);
+          if (fac.type === 'education') {
+            const isHighSchool =
+              subtype === 'high_school' || nameLower.includes('ies') || nameLower.includes('instituto');
+            return {
+              icon: 'fac-education',
+              shortBadge: isHighSchool ? 'IES' : 'Colegio',
+              badge: isHighSchool ? 'Instituto de Secundaria' : 'Colegio / Formación Profesional',
+              color: '#3b82f6',
+              sourceText: 'Registro Estatal Centros Docentes (MEFP)',
+            };
+          }
 
-      newMarkers.push(marker);
-    }
+          return {
+            icon: 'fac-park',
+            shortBadge: 'Parque',
+            badge: 'Parque / Zonas Verdes',
+            color: '#10b981',
+            sourceText: 'Inventario Municipal Áreas Verdes / IGN',
+          };
+        };
 
-    amenityMarkersRef.current = newMarkers;
+        const features = uniqueFacilities
+          .filter((fac) => typeof fac.latitude === 'number' && typeof fac.longitude === 'number' && !isNaN(fac.latitude) && !isNaN(fac.longitude))
+          .map((fac) => {
+            const meta = resolveItemMeta(fac);
+            const fLat = fac.latitude!;
+            const fLon = fac.longitude!;
 
-    return () => {
-      for (const m of newMarkers) m.remove();
+            return {
+              type: 'Feature' as const,
+              geometry: {
+                type: 'Point' as const,
+                coordinates: [fLon, fLat],
+              },
+            properties: {
+              id: fac.id,
+              name: fac.name,
+              icon: meta.icon,
+              type: fac.type,
+              subtype: fac.subtype,
+              distanceMeters: fac.distanceMeters,
+              walkTimeMinutes: Math.round(fac.walkTimeMinutes),
+              color: meta.color,
+              badge: meta.badge,
+              sourceText: meta.sourceText,
+              label: `${meta.shortBadge}: ${fac.name} (${fac.distanceMeters}m)`,
+            },
+          };
+        });
+
+        source.setData({
+          type: 'FeatureCollection',
+          features,
+        });
+      } catch {
+        // Source not ready yet
+      }
     };
-  }, [selectedCoords, showIsochrones, report]);
+
+    updateFacilities();
+    if (typeof map.on === 'function') {
+      map.on('styledata', updateFacilities);
+    }
+    return () => {
+      if (typeof map.off === 'function') {
+        map.off('styledata', updateFacilities);
+      }
+    };
+  }, [selectedCoords?.lat, selectedCoords?.lon, report?.connectivity, report?.property.cadastralReference]);
 
   return (
     <div className="relative w-full h-full min-h-[480px] rounded-xl overflow-hidden border border-outline-variant shadow-2xl bg-surface-container-lowest cadastral-grid select-none">
@@ -1255,93 +1872,175 @@ export function MapView({
         </div>
       </div>
 
-      {/* ================= FLOATING MAP CONTROLS: DESKTOP (Top-Right) ================= */}
+      {/* ================= FLOATING MAP CONTROLS & 3D COMPASS GIZMO (Top-Right, Desktop) ================= */}
       <div
         onClick={(e) => e.stopPropagation()}
-        className="hidden lg:flex absolute top-3 right-3 z-20 flex-col gap-1.5 no-print"
+        className="hidden lg:flex absolute top-3 right-3 z-30 flex-col gap-2.5 items-end no-print"
       >
-        {/* Zoom Controls */}
-        <div className="bg-surface-container-low/95 backdrop-blur-md border border-outline-variant rounded flex flex-col overflow-hidden shadow-xl">
+        {/* 3D Navigation Gizmo & Orientation Control */}
+        <div
+          data-testid="3d-compass-gizmo"
+          className="bg-surface-container-low/95 border border-outline-variant rounded-xl p-2.5 shadow-2xl backdrop-blur-md flex items-center gap-3 select-none"
+        >
+          {/* Interactive Compass Disc */}
+          <div
+            className="relative w-12 h-12 rounded-full border border-outline-variant bg-surface-container flex items-center justify-center cursor-pointer transition-transform hover:scale-105"
+            onClick={handleResetNorth}
+            title={
+              is3DMode
+                ? `Alinear al Norte · Sol: ${Math.round(currentSolarAzimuth)}° (${getCardinalOrientation(currentSolarAzimuth)})`
+                : 'Alinear al Norte (0°)'
+            }
+            aria-label="Alinear al Norte (0°)"
+          >
+            <div className="absolute inset-1 rounded-full border border-dashed border-outline-variant/60" />
+
+            {/* Sun Direction Ray & Icon (Shown in 3D Mode) */}
+            {is3DMode && (
+              <div
+                className="absolute inset-0 flex items-center justify-center pointer-events-none transition-transform duration-100"
+                style={{
+                  transform: `rotate(${((currentSolarAzimuth - currentBearing + 360) % 360)}deg)`,
+                }}
+                title={`Sol: Azimut ${Math.round(currentSolarAzimuth)}° · Elevación ${currentSolarAltitude.toFixed(1)}°`}
+              >
+                {/* Sun icon at perimeter */}
+                <div className="absolute -top-2 flex flex-col items-center">
+                  <span className="text-[11px] filter drop-shadow-[0_0_4px_#f59e0b]">☀️</span>
+                </div>
+                {/* Ray line pointing from Sun to Center */}
+                <div className="h-4 w-0.5 bg-gradient-to-b from-amber-400 to-transparent" />
+              </div>
+            )}
+
+            {/* Arrow pointing to True North (-currentBearing deg rotation) */}
+            <div
+              className="w-1 h-8 flex flex-col justify-between items-center origin-center transition-transform duration-150 pointer-events-none"
+              style={{ transform: `rotate(${-currentBearing}deg)` }}
+            >
+              <span className="text-[9px] text-rose-500 font-bold font-mono leading-none">N</span>
+              <div className="w-1.5 h-1.5 rounded-full bg-primary" />
+              <span className="text-[8px] text-outline font-mono leading-none">S</span>
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-1">
+            <div className="flex items-center gap-1">
+              <button
+                type="button"
+                onClick={handleResetNorth}
+                className="w-7 h-7 bg-surface-container hover:bg-surface-container-high rounded text-on-surface border border-outline-variant flex items-center justify-center transition-colors cursor-pointer"
+                title="Alinear al Norte"
+                aria-label="Alinear al Norte"
+              >
+                <Compass className="w-3.5 h-3.5 text-secondary" />
+              </button>
+              <button
+                type="button"
+                onClick={() => toggle3DMode(false)}
+                className={`w-7 h-7 rounded border border-outline-variant flex items-center justify-center transition-colors cursor-pointer ${
+                  !is3DMode
+                    ? 'bg-primary/20 text-primary border-primary/40 font-bold'
+                    : 'bg-surface-container hover:bg-surface-container-high text-on-surface'
+                }`}
+                title="Vista Cenital 2D"
+                aria-label="Vista Cenital 2D"
+              >
+                <span className="text-[10px] font-mono">2D</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => toggle3DMode(true)}
+                className={`w-7 h-7 rounded border border-outline-variant flex items-center justify-center transition-colors cursor-pointer ${
+                  is3DMode
+                    ? 'bg-primary text-on-primary font-bold shadow-sm'
+                    : 'bg-surface-container hover:bg-surface-container-high text-on-surface'
+                }`}
+                title="3D Extrusión"
+                aria-label="3D Extrusión"
+              >
+                <Box className="w-3.5 h-3.5" />
+              </button>
+            </div>
+            <span
+              className="text-[9px] font-mono text-outline text-center uppercase tracking-wider"
+              title={`Inclinación Pitch: ${currentPitch}° · Orientación Bearing: ${currentBearing}°`}
+            >
+              {is3DMode ? 'ÓRBITA 3D ACTIVA' : 'VISTA 2D CENITAL'}
+            </span>
+          </div>
+        </div>
+
+        {/* Desktop Vertical Tool Palette */}
+        <div className="flex items-center gap-1.5 bg-surface-container-low/95 backdrop-blur-md border border-outline-variant p-1 rounded-lg shadow-xl">
+          {/* Zoom In / Out Pair */}
           <button
             type="button"
             onClick={handleZoomIn}
-            className="w-8 h-8 flex items-center justify-center text-on-surface-variant hover:text-on-surface hover:bg-surface-container transition-colors cursor-pointer"
+            className="w-7 h-7 rounded hover:bg-surface-container text-on-surface-variant hover:text-on-surface flex items-center justify-center transition-colors cursor-pointer"
             title="Acercar (+)"
           >
-            <Plus className="w-4 h-4" />
+            <Plus className="w-3.5 h-3.5" />
           </button>
-          <div className="h-px bg-outline-variant" />
           <button
             type="button"
             onClick={handleZoomOut}
-            className="w-8 h-8 flex items-center justify-center text-on-surface-variant hover:text-on-surface hover:bg-surface-container transition-colors cursor-pointer"
+            className="w-7 h-7 rounded hover:bg-surface-container text-on-surface-variant hover:text-on-surface flex items-center justify-center transition-colors cursor-pointer"
             title="Alejar (-)"
           >
-            <Minus className="w-4 h-4" />
+            <Minus className="w-3.5 h-3.5" />
+          </button>
+
+          {/* Reset North Compass */}
+          <button
+            type="button"
+            onClick={handleResetNorth}
+            className="w-7 h-7 bg-surface-container-low/95 hover:bg-surface-container border border-outline-variant rounded flex items-center justify-center text-secondary transition-colors cursor-pointer"
+            title="Orientación Norte (0°)"
+          >
+            <Compass className="w-3.5 h-3.5" />
+          </button>
+
+          {/* Reset to Spain View */}
+          <button
+            type="button"
+            onClick={resetToSpain}
+            className="w-7 h-7 rounded hover:bg-surface-container text-on-surface-variant hover:text-primary flex items-center justify-center transition-colors cursor-pointer"
+            title="Vista General España"
+          >
+            <Maximize2 className="w-3.5 h-3.5" />
           </button>
         </div>
-
-        {/* Reset North Compass */}
-        <button
-          type="button"
-          onClick={handleResetNorth}
-          className="w-8 h-8 bg-surface-container-low/95 backdrop-blur-md border border-outline-variant rounded flex items-center justify-center text-secondary hover:text-white transition-colors shadow-xl cursor-pointer"
-          title="Orientación Norte (0°)"
-        >
-          <Compass className="w-4 h-4" />
-        </button>
-
-        {/* 3D Axonometric Tilt Button */}
-        <button
-          type="button"
-          onClick={toggle3DMode}
-          className={`w-8 h-8 bg-surface-container-low/95 backdrop-blur-md border rounded flex items-center justify-center text-[10px] font-mono font-bold transition-colors shadow-xl cursor-pointer ${
-            is3DMode
-              ? 'border-primary text-primary bg-primary/10 shadow-primary/20'
-              : 'border-outline-variant text-on-surface-variant hover:text-primary'
-          }`}
-          title="Alternar Perspectiva 3D / Axonometría"
-        >
-          3D
-        </button>
-
-        {/* Reset to Spain View */}
-        <button
-          type="button"
-          onClick={resetToSpain}
-          className="w-8 h-8 bg-surface-container-low/95 backdrop-blur-md border border-outline-variant rounded flex items-center justify-center text-on-surface-variant hover:text-primary transition-colors shadow-xl cursor-pointer"
-          title="Vista General España"
-        >
-          <Maximize2 className="w-3.5 h-3.5" />
-        </button>
       </div>
 
       {/* ================= SPATIAL TELEMETRY & SCALE OVERLAY (Bottom HUD) ================= */}
-      <div className="absolute bottom-2 left-3 right-3 z-20 hidden sm:flex flex-row items-center justify-between gap-2 pointer-events-none no-print">
-        {/* Bottom-Left Real-time ETRS89 / UTM Coordinates Readout */}
-        <div className="pointer-events-auto bg-surface-container-low/95 backdrop-blur-md border border-outline-variant px-3 py-1 rounded text-[10px] font-mono text-on-surface-variant flex items-center gap-2.5 shadow-md">
-          <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse shrink-0" />
-          <span className="text-on-surface font-semibold">UTM ETRS89:</span>
-          <span>X: {utmCoords.x.toLocaleString()}</span>
-          <span>Y: {utmCoords.y.toLocaleString()}</span>
-          <span className="text-outline">|</span>
-          <span>Huso: {utmCoords.zone}</span>
-          <span className="text-outline">|</span>
-          <span>Cota: {estimatedElevation}m s.n.m.</span>
-        </div>
-
-        {/* Bottom-Right Scale Bar & Official Attribution */}
-        <div className="pointer-events-auto bg-surface-container-low/95 backdrop-blur-md border border-outline-variant px-3 py-1 rounded text-[10px] font-mono text-on-surface-variant flex items-center gap-3 shadow-md">
-          <div className="flex flex-col items-center">
-            <span className="text-[9px] leading-tight text-on-surface-variant">50 m</span>
-            <div className="w-16 h-1 border-b-2 border-l-2 border-r-2 border-primary" />
+      {!is3DMode && (
+        <div className="absolute bottom-2 left-3 right-3 z-20 hidden sm:flex flex-row items-center justify-between gap-2 pointer-events-none no-print">
+          {/* Bottom-Left Real-time ETRS89 / UTM Coordinates Readout */}
+          <div className="pointer-events-auto bg-surface-container-low/95 backdrop-blur-md border border-outline-variant px-3 py-1 rounded text-[10px] font-mono text-on-surface-variant flex items-center gap-2.5 shadow-md">
+            <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse shrink-0" />
+            <span className="text-on-surface font-semibold">UTM ETRS89:</span>
+            <span>X: {utmCoords.x.toLocaleString()}</span>
+            <span>Y: {utmCoords.y.toLocaleString()}</span>
+            <span className="text-outline">|</span>
+            <span>Huso: {utmCoords.zone}</span>
+            <span className="text-outline">|</span>
+            <span>Cota: {estimatedElevation}m s.n.m.</span>
           </div>
-          <span className="text-outline text-[9px]">Sede Electrónica Catastro · INE ADRH</span>
+
+          {/* Bottom-Right Scale Bar & Official Attribution */}
+          <div className="pointer-events-auto bg-surface-container-low/95 backdrop-blur-md border border-outline-variant px-3 py-1 rounded text-[10px] font-mono text-on-surface-variant flex items-center gap-3 shadow-md">
+            <div className="flex flex-col items-center">
+              <span className="text-[9px] leading-tight text-on-surface-variant">50 m</span>
+              <div className="w-16 h-1 border-b-2 border-l-2 border-r-2 border-primary" />
+            </div>
+            <span className="text-outline text-[9px]">Sede Electrónica Catastro · INE ADRH</span>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* ================= FLOATING DUE DILIGENCE AUDIT CARD (Bottom Dock) ================= */}
-      {showFloatingAuditCard && (isLoading ? (
+      {!is3DMode && showFloatingAuditCard && (isLoading ? (
         <div
           onClick={(e) => e.stopPropagation()}
           className="absolute bottom-12 sm:bottom-10 left-3 right-3 sm:left-auto sm:right-3 z-30 bg-surface-container/95 backdrop-blur-md px-4 py-3 rounded-lg shadow-2xl border border-outline-variant hidden lg:flex items-center space-x-3 text-xs text-on-surface animate-in fade-in"
@@ -1381,7 +2080,7 @@ export function MapView({
             </div>
           </div>
           <div className="flex items-center gap-1.5 shrink-0">
-            {onOpenUnitPicker && (
+            {onOpenUnitPicker && Boolean(report.property.unit || (report.property.building?.unitsCount && report.property.building.unitsCount > 1)) && (
               <button
                 onClick={(e) => {
                   e.stopPropagation();
@@ -1720,6 +2419,39 @@ export function MapView({
               </div>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* ================= FLOATING SOLAR EXPOSURE & DAYLIGHT SIMULATION HUD ================= */}
+      {is3DMode && isSolarHudOpen && (
+        <SolarSimulationHud
+          lat={selectedCoords?.lat ?? mapCenter.lat}
+          lon={selectedCoords?.lon ?? mapCenter.lon}
+          facadeAzimuthDeg={198}
+          roofAreaM2={
+            report?.property.building?.builtSurfaceM2
+              ? Math.min(600, Math.max(120, Math.round(report.property.building.builtSurfaceM2 / 6)))
+              : 200
+          }
+          isOpen={isSolarHudOpen}
+          onClose={() => setIsSolarHudOpen(false)}
+          onSolarChange={handleSolarChange}
+        />
+      )}
+
+      {/* Floating Re-Open Solar HUD Button (when minimized/closed in 3D mode) */}
+      {is3DMode && !isSolarHudOpen && (
+        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-40 no-print">
+          <button
+            type="button"
+            onClick={() => setIsSolarHudOpen(true)}
+            className="bg-surface-container/95 border border-primary/40 hover:border-primary text-primary px-3.5 py-1.5 rounded-full text-xs font-mono flex items-center gap-2 shadow-2xl backdrop-blur-md cursor-pointer hover:bg-surface-container-high transition"
+            title="Abrir Simulador Solar & Sombras"
+            aria-label="Abrir Simulador Solar & Sombras"
+          >
+            <Sun className="w-4 h-4 text-secondary" />
+            <span className="font-semibold">Simulador Solar & Sombras</span>
+          </button>
         </div>
       )}
     </div>

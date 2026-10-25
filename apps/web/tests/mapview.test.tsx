@@ -19,6 +19,9 @@ vi.mock('maplibre-gl', () => {
     getCenter: vi.fn().mockReturnValue({ lat: 40.42028, lng: -3.70379 }),
     setLayoutProperty: vi.fn(),
     setPaintProperty: vi.fn(),
+    setLight: vi.fn(),
+    getBearing: vi.fn().mockReturnValue(-15),
+    getPitch: vi.fn().mockReturnValue(55),
     getLayer: vi.fn().mockReturnValue({}),
     getSource: vi.fn().mockReturnValue({ setData: vi.fn() }),
     isStyleLoaded: vi.fn().mockReturnValue(true),
@@ -124,7 +127,7 @@ describe('MapView Component (Stitch Civic Precision)', () => {
         />
       );
 
-      const btn3D = screen.getByTitle(/Alternar Perspectiva 3D/i);
+      const btn3D = screen.getByTitle(/3D Extrusión/i);
       expect(btn3D).toBeTruthy();
       fireEvent.click(btn3D);
     });
@@ -352,6 +355,107 @@ describe('MapView Component (Stitch Civic Precision)', () => {
       const mapConstructor = maplibreMock.Map as unknown as ReturnType<typeof vi.fn>;
       const mapInstance = mapConstructor.mock.results[0]?.value;
       expect(mapInstance.resetNorthPitch).toHaveBeenCalled();
+    });
+  });
+
+  describe('Phase 12A & 12B: 3D Building Extrusion & Solar Simulation HUD Integration', () => {
+    it('should configure building-3d-source and building-3d-extrusion layer in MapLibre', async () => {
+      const maplibreMock = await import('maplibre-gl');
+      render(
+        <MapView
+          selectedCoords={{ lat: 40.42028, lon: -3.70379 }}
+          onMapClick={vi.fn()}
+        />
+      );
+
+      const mapConstructor = maplibreMock.Map as unknown as ReturnType<typeof vi.fn>;
+      const lastCallArgs = mapConstructor.mock.calls[mapConstructor.mock.calls.length - 1][0];
+
+      // Verify GeoJSON Source
+      const buildingSource = lastCallArgs.style.sources['building-3d-source'];
+      expect(buildingSource).toBeTruthy();
+      expect(buildingSource.type).toBe('geojson');
+      expect(buildingSource.data.features.length).toBeGreaterThanOrEqual(1);
+
+      // Verify 3D fill-extrusion layer
+      const extrusionLayer = lastCallArgs.style.layers.find(
+        (l: any) => l.id === 'building-3d-extrusion'
+      );
+      expect(extrusionLayer).toBeTruthy();
+      expect(extrusionLayer.type).toBe('fill-extrusion');
+      expect(extrusionLayer.source).toBe('building-3d-source');
+      expect(extrusionLayer.paint['fill-extrusion-height']).toBeDefined();
+    });
+
+    it('should render 3D Compass Gizmo and 2D/3D Extrusión mode switchers', () => {
+      render(
+        <MapView
+          selectedCoords={{ lat: 40.42028, lon: -3.70379 }}
+          onMapClick={vi.fn()}
+        />
+      );
+
+      // Verify Compass Gizmo exists
+      const gizmo = screen.getByTestId('3d-compass-gizmo');
+      expect(gizmo).toBeTruthy();
+      expect(screen.getByText('VISTA 2D CENITAL')).toBeTruthy();
+
+      // Verify Mode Switcher
+      expect(screen.getByTitle('3D Extrusión')).toBeTruthy();
+    });
+
+    it('should toggle 3D mode, update camera pitch to 55 and bearing to -15, and open Solar HUD', async () => {
+      const maplibreMock = await import('maplibre-gl');
+      render(
+        <MapView
+          selectedCoords={{ lat: 40.42028, lon: -3.70379 }}
+          onMapClick={vi.fn()}
+        />
+      );
+
+      const btn3D = screen.getByTitle('3D Extrusión');
+      fireEvent.click(btn3D);
+
+      const mapConstructor = maplibreMock.Map as unknown as ReturnType<typeof vi.fn>;
+      const mapInstance = mapConstructor.mock.results[0]?.value;
+
+      // Verify camera easeTo
+      expect(mapInstance.easeTo).toHaveBeenCalledWith(
+        expect.objectContaining({ pitch: 55, bearing: -15 })
+      );
+
+      // Verify Solar HUD is mounted
+      expect(screen.getByTestId('solar-simulation-hud')).toBeTruthy();
+      expect(screen.getByText('SIMULADOR SOLAR & SOMBRAS')).toBeTruthy();
+      expect(screen.getByText('ÓRBITA 3D ACTIVA')).toBeTruthy();
+    });
+
+    it('should allow closing Solar HUD in 3D mode and re-opening it via the floating pill', () => {
+      render(
+        <MapView
+          selectedCoords={{ lat: 40.42028, lon: -3.70379 }}
+          onMapClick={vi.fn()}
+        />
+      );
+
+      // Enable 3D mode
+      const btn3D = screen.getByTitle('3D Extrusión');
+      fireEvent.click(btn3D);
+
+      expect(screen.getByTestId('solar-simulation-hud')).toBeTruthy();
+
+      // Close Solar HUD
+      const closeBtn = screen.getByLabelText(/Cerrar Simulador Solar/i);
+      fireEvent.click(closeBtn);
+
+      // HUD is unmounted, floating pill is displayed
+      expect(screen.queryByTestId('solar-simulation-hud')).toBeNull();
+      const reopenBtn = screen.getByTitle(/Abrir Simulador Solar & Sombras/i);
+      expect(reopenBtn).toBeTruthy();
+
+      // Click to re-open
+      fireEvent.click(reopenBtn);
+      expect(screen.getByTestId('solar-simulation-hud')).toBeTruthy();
     });
   });
 });

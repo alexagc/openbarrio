@@ -23,7 +23,9 @@ import { CadastralBottomSheet, SheetSnapPoint } from './components/CadastralBott
 import { useUrlSync, parseUrlState } from './hooks/useUrlSync';
 import { apiClient, ExtendedAuditReport, auditDataToReport } from './services/api.client';
 import { ProblemDetails, isCadastralReference, CadastralUnitsResponse } from '@openbarrio/core';
-import { ArrowLeft, MapPin, Download, Printer } from 'lucide-react';
+import { PropertyDuelModal } from './components/comparator/PropertyDuelModal';
+import { PropertyAuditReport } from '@openbarrio/core';
+import { ArrowLeft, MapPin, Download, Printer, Sparkles } from 'lucide-react';
 import { downloadCadastralGML } from './utils/gml';
 
 
@@ -93,6 +95,10 @@ export function AppContent() {
   const [unitsData, setUnitsData] = useState<CadastralUnitsResponse | null>(null);
   const [isLoadingUnits, setIsLoadingUnits] = useState<boolean>(false);
 
+  // Side-by-Side Property Duel Comparator State (Phase 12C)
+  const [isDuelOpen, setIsDuelOpen] = useState<boolean>(Boolean(initialUrlState.vs));
+  const [duelCandidateB, setDuelCandidateB] = useState<PropertyAuditReport | null>(null);
+
   // URL Deep-Linking & History State Synchronization (Phase 10E)
   useUrlSync(
     {
@@ -100,6 +106,7 @@ export function AppContent() {
       activeTab,
       refcat: report?.property.cadastralReference,
       coords: report ? selectedCoords : undefined,
+      vs: isDuelOpen && duelCandidateB ? duelCandidateB.property.cadastralReference : undefined,
     },
     (newState) => {
       setViewMode(newState.viewMode);
@@ -128,16 +135,52 @@ export function AppContent() {
     }
   }, []);
 
-  const handleOpenUnitPicker = async (targetRefcat?: string) => {
-    const ref = targetRefcat || report?.property.cadastralReference;
-    if (!ref || ref === 'Consultando...') return;
+  useEffect(() => {
+    if (initialUrlState.vs && !duelCandidateB) {
+      try {
+        const b = apiClient.generateDeterministicAuditFromRefcat(initialUrlState.vs);
+        setDuelCandidateB(b);
+      } catch {
+        // Fallback
+      }
+    }
+  }, [initialUrlState.vs]);
+
+  const handleOpenDuel = (candidateB?: PropertyAuditReport | string) => {
+    if (candidateB) {
+      if (typeof candidateB === 'string') {
+        try {
+          const b = apiClient.generateDeterministicAuditFromRefcat(candidateB);
+          setDuelCandidateB(b);
+        } catch {
+          // Fallback
+        }
+      } else {
+        setDuelCandidateB(candidateB);
+      }
+    }
+    setIsDuelOpen(true);
+  };
+
+  const handleOpenUnitPicker = async (targetRefcat?: unknown) => {
+    const rawRef =
+      typeof targetRefcat === 'string' && targetRefcat.trim() && targetRefcat !== 'Consultando...'
+        ? targetRefcat.trim()
+        : report?.property.cadastralReference;
+    if (!rawRef || rawRef === 'Consultando...') return;
+    const cleanRef = String(rawRef).replace(/[\s\-_.]/g, '').toUpperCase();
+    const parcelRef = cleanRef.slice(0, 14);
+
     setIsUnitPickerOpen(true);
     setIsLoadingUnits(true);
+    setUnitsData(null);
+
     try {
-      const data = await apiClient.getCadastralUnits(ref);
+      const data = await apiClient.getCadastralUnits(parcelRef);
       setUnitsData(data);
-    } catch {
-      const fallback = apiClient.generateDeterministicUnits(ref);
+    } catch (err) {
+      console.warn('[UnitPicker] Failed to load units from OVC, using deterministic fallback:', err);
+      const fallback = apiClient.generateDeterministicUnits(parcelRef);
       setUnitsData(fallback);
     } finally {
       setIsLoadingUnits(false);
@@ -477,6 +520,19 @@ export function AppContent() {
             {report && (
               <button
                 type="button"
+                data-testid="topbar-duel-btn"
+                onClick={() => handleOpenDuel()}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-surface-container-high border border-primary/50 text-primary hover:bg-primary/20 rounded text-xs font-mono font-semibold transition-colors cursor-pointer min-h-[36px]"
+                title="Comparar este inmueble en duelo 1 vs 1"
+              >
+                <Sparkles className="w-3.5 h-3.5 text-primary" />
+                <span className="hidden sm:inline">Comparar</span>
+              </button>
+            )}
+
+            {report && (
+              <button
+                type="button"
                 onClick={() => downloadCadastralGML(report)}
                 className="hidden lg:flex bg-surface-container-low hover:bg-surface-container-high text-on-surface border border-outline-variant text-xs font-mono px-3 py-1.5 rounded items-center gap-1.5 transition-colors cursor-pointer min-h-[36px]"
                 title="Descargar archivo GML INSPIRE oficial de la parcela"
@@ -537,7 +593,7 @@ export function AppContent() {
                 setSheetSnapPoint('full');
                 setMobileNavDestination('report');
               }}
-              onOpenUnitPicker={handleOpenUnitPicker}
+              onOpenUnitPicker={() => handleOpenUnitPicker()}
               isMobileLayersOpen={isMobileLayersOpen}
               onToggleMobileLayers={(open) =>
                 setIsMobileLayersOpen((prev) => (typeof open === 'boolean' ? open : !prev))
@@ -555,8 +611,9 @@ export function AppContent() {
                     isLoading={isLoading}
                     snapPoint={sheetSnapPoint}
                     onSnapChange={handleSheetSnapChange}
-                    onOpenUnitPicker={handleOpenUnitPicker}
+                    onOpenUnitPicker={() => handleOpenUnitPicker()}
                     onExportPdf={() => window.print()}
+                    onOpenDuel={() => handleOpenDuel()}
                   />
                 </div>
               </div>
@@ -583,7 +640,7 @@ export function AppContent() {
                 <SkeletonDossier />
               </div>
             ) : report ? (
-              <AuditDossier report={report} onOpenUnitPicker={handleOpenUnitPicker} />
+              <AuditDossier report={report} onOpenUnitPicker={() => handleOpenUnitPicker()} onOpenDuel={() => handleOpenDuel()} />
             ) : (
               <div className="text-center py-16 bg-surface-container rounded border border-dashed border-outline-variant p-8 m-4">
                 <MapPin className="w-10 h-10 text-outline mx-auto mb-3" />
@@ -608,6 +665,7 @@ export function AppContent() {
           isOpen={isUnitPickerOpen}
           onClose={() => setIsUnitPickerOpen(false)}
           unitsData={unitsData}
+          isLoading={isLoadingUnits}
           currentRefcat={report?.property.cadastralReference}
           buildingAddress={
             report
@@ -615,6 +673,11 @@ export function AppContent() {
               : undefined
           }
           onSelectUnit={(unit) => {
+            setIsUnitPickerOpen(false);
+            setViewMode('map');
+            setActiveTab('dossier');
+            setSheetSnapPoint('full');
+            setMobileNavDestination('report');
             const currentCoords = selectedCoords || (report ? {
               lat: report.property.coordinates.latitude,
               lon: report.property.coordinates.longitude,
@@ -622,7 +685,12 @@ export function AppContent() {
             loadAuditByRefcat(unit.cadastralReference, currentCoords);
           }}
           onSelectBuilding={() => {
+            setIsUnitPickerOpen(false);
             if (report) {
+              setViewMode('map');
+              setActiveTab('dossier');
+              setSheetSnapPoint('full');
+              setMobileNavDestination('report');
               const currentCoords = selectedCoords || {
                 lat: report.property.coordinates.latitude,
                 lon: report.property.coordinates.longitude,
@@ -630,8 +698,31 @@ export function AppContent() {
               loadAuditByRefcat(report.property.cadastralReference.slice(0, 14), currentCoords);
             }
           }}
-          isLoading={isLoadingUnits}
+          onCompareUnit={(unit) => {
+            setIsUnitPickerOpen(false);
+            setViewMode('map');
+            setActiveTab('dossier');
+            handleOpenDuel(unit.cadastralReference);
+          }}
         />
+
+        {/* Side-by-Side Property Duel & Dual Radar Comparator Modal (Phase 12C) */}
+        {isDuelOpen && report && (
+          <PropertyDuelModal
+            reportA={report}
+            reportB={duelCandidateB || undefined}
+            isOpen={isDuelOpen}
+            onClose={() => setIsDuelOpen(false)}
+            onSelectCandidateB={(cand) => {
+              if (typeof cand === 'string') {
+                const b = apiClient.generateDeterministicAuditFromRefcat(cand);
+                setDuelCandidateB(b);
+              } else {
+                setDuelCandidateB(cand);
+              }
+            }}
+          />
+        )}
 
         {/* Vectorized Certified Due Diligence PDF Export Layout (Phase 10F) */}
         {report && <CertifiedPdfReport report={report} />}
@@ -667,46 +758,21 @@ export function AppContent() {
         }}
       />
 
-      {/* Horizontal Division Unit Picker Modal (Phase 10B) */}
-      <UnitPickerModal
-        isOpen={isUnitPickerOpen}
-        onClose={() => setIsUnitPickerOpen(false)}
-        unitsData={unitsData}
-        currentRefcat={report?.property.cadastralReference}
-        buildingAddress={
-          report
-            ? `${report.property.address.street} ${report.property.address.number}, ${report.property.address.municipality}`
-            : undefined
-        }
-        onSelectUnit={(unit) => {
-          setViewMode('map');
-          setActiveTab('dossier');
-          setSheetSnapPoint('full');
-          setMobileNavDestination('report');
-          const currentCoords = selectedCoords || (report ? {
-            lat: report.property.coordinates.latitude,
-            lon: report.property.coordinates.longitude,
-          } : undefined);
-          loadAuditByRefcat(unit.cadastralReference, currentCoords);
-        }}
-        onSelectBuilding={() => {
-          if (report) {
-            setViewMode('map');
-            setActiveTab('dossier');
-            setSheetSnapPoint('full');
-            setMobileNavDestination('report');
-            const currentCoords = selectedCoords || {
-              lat: report.property.coordinates.latitude,
-              lon: report.property.coordinates.longitude,
-            };
-            loadAuditByRefcat(report.property.cadastralReference.slice(0, 14), currentCoords);
-          }
-        }}
-        isLoading={isLoadingUnits}
-      />
+      
 
       {/* Vectorized Certified Due Diligence PDF Export Layout (Phase 10F) */}
       {report && <CertifiedPdfReport report={report} />}
+
+      {/* Side-by-Side Property Duel Comparator Modal (Phase 12C) */}
+      {isDuelOpen && report && (
+        <PropertyDuelModal
+          reportA={report}
+          reportB={duelCandidateB || undefined}
+          isOpen={isDuelOpen}
+          onClose={() => setIsDuelOpen(false)}
+          onSelectCandidateB={(candidate) => handleOpenDuel(candidate)}
+        />
+      )}
     </div>
   );
 }

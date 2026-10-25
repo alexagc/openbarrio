@@ -1,4 +1,10 @@
-import { CadastralProperty, CadastralUnitsResponse, CadastralUnit, CadastralCoordinates } from '@openbarrio/core';
+import {
+  CadastralProperty,
+  CadastralUnitsResponse,
+  CadastralUnit,
+  CadastralCoordinates,
+  CadastralGeometry,
+} from '@openbarrio/core';
 import { ICatastroProvider } from './types.js';
 import { CadastralNotFoundError } from '../errors/problem-details.js';
 
@@ -346,6 +352,56 @@ export class MockCatastroProvider implements ICatastroProvider {
       parcelCadastralReference: parcelRef,
       totalUnits: units.length,
       units,
+    };
+  }
+
+  async getGeometryByCadastralReference(refcat: string): Promise<CadastralGeometry> {
+    const normalized = refcat.trim().toUpperCase();
+    let prop: CadastralProperty;
+    try {
+      prop = await this.getByCadastralReference(normalized);
+    } catch {
+      prop = await this.getByCadastralReference('9872023VH5797S0001WX');
+    }
+
+    const lat = prop.coordinates.latitude;
+    const lon = prop.coordinates.longitude;
+    const floors = prop.building.unitsCount > 0 ? Math.min(18, Math.max(3, Math.round(prop.building.unitsCount / 3))) : 5;
+    const height = Number((floors * 3.2).toFixed(1));
+
+    // Create an irregular building polygon based on refcat hash to avoid uniform rectangles
+    const hash = normalized.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+    const dLat = 0.00018 + (hash % 8) * 0.00001;
+    const dLon = 0.00022 + (hash % 10) * 0.00001;
+    const cut = 0.00006 + (hash % 4) * 0.00001;
+
+    // L-shaped or stepped realistic footprint
+    const coords = [
+      [
+        [Number((lon - dLon).toFixed(6)), Number((lat - dLat).toFixed(6))],
+        [Number((lon + dLon).toFixed(6)), Number((lat - dLat).toFixed(6))],
+        [Number((lon + dLon).toFixed(6)), Number((lat + dLat - cut).toFixed(6))],
+        [Number((lon + dLon - cut).toFixed(6)), Number((lat + dLat - cut).toFixed(6))],
+        [Number((lon + dLon - cut).toFixed(6)), Number((lat + dLat).toFixed(6))],
+        [Number((lon - dLon).toFixed(6)), Number((lat + dLat).toFixed(6))],
+        [Number((lon - dLon).toFixed(6)), Number((lat - dLat).toFixed(6))],
+      ],
+    ];
+
+    return {
+      cadastralReference: normalized,
+      type: 'building',
+      geometry: {
+        type: 'Polygon',
+        coordinates: coords,
+      },
+      properties: {
+        name: `${prop.address.street} ${prop.address.number}`,
+        numberOfFloors: floors,
+        height,
+        constructionYear: prop.building.constructionYear,
+        areaM2: prop.building.builtSurfaceM2,
+      },
     };
   }
 }

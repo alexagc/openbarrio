@@ -77,6 +77,37 @@ export function createAuditRoutes(providers: ProviderContainer): Hono {
     return c.json(unitsResponse, 200);
   });
 
+  // GET /refcat/:refcat/geometry - Real 3D building/parcel footprint from Catastro WFS
+  router.get('/refcat/:refcat/geometry', async (c) => {
+    const rawRefcat = c.req.param('refcat') || '';
+    const cleanRefcat = rawRefcat.replace(/[\s\-_.]/g, '').toUpperCase();
+    const validatedParams = { refcat: cleanRefcat };
+    const errors = [...Value.Errors(AuditRefcatParamsSchema, validatedParams)];
+
+    if (errors.length > 0) {
+      let instance: string;
+      try {
+        const url = new URL(c.req.url);
+        instance = url.pathname + url.search;
+      } catch {
+        instance = c.req.path;
+      }
+
+      throw new InvalidParametersError(
+        'Invalid cadastral reference parameter format for geometry lookup',
+        errors.map((err) => ({
+          name: err.path.replace(/^\//, '') || 'refcat',
+          reason: err.message,
+        })),
+        instance
+      );
+    }
+
+    const geometry = await auditService.getCadastralGeometry(cleanRefcat);
+    c.header('Cache-Control', 'public, max-age=604800, stale-while-revalidate=86400');
+    return c.json(geometry, 200);
+  });
+
   // GET /refcat/:refcat
   router.get('/refcat/:refcat', async (c) => {
     const rawRefcat = c.req.param('refcat') || '';
