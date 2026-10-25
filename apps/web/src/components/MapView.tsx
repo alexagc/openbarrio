@@ -162,7 +162,6 @@ export function MapView({
   const mapRef = useRef<MapLibreMap | null>(null);
   const markerRef = useRef<Marker | null>(null);
   const lastCenteredCoordsRef = useRef<{ lat: number; lon: number } | null>(null);
-  const amenityMarkersRef = useRef<Marker[]>([]);
   const onMapClickRef = useRef(onMapClick);
 
   useEffect(() => {
@@ -322,6 +321,7 @@ export function MapView({
       container: mapContainerRef.current,
       style: {
         version: 8,
+        glyphs: 'https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf',
         sources: {
           // Esri World Dark Gray Canvas (High-precision dark GIS basemap, 100% free, zero API key)
           // Native server tiles are available up to zoom 16; setting maxzoom: 16 allows MapLibre to overzoom smoothly at z>=17
@@ -404,6 +404,14 @@ export function MapView({
           },
           // 3D Projected Ground Shadows Source
           'building-3d-shadows-source': {
+            type: 'geojson',
+            data: {
+              type: 'FeatureCollection',
+              features: [],
+            },
+          },
+          // Civic Amenity Facilities Points (GPU-Anchored GeoJSON Source)
+          'civic-facilities-source': {
             type: 'geojson',
             data: {
               type: 'FeatureCollection',
@@ -557,6 +565,85 @@ export function MapView({
             },
             layout: { visibility: 'visible' },
           },
+          // Civic Amenities - GPU-Anchored Native WebGL Layers (Zero Zoom Drift)
+          {
+            id: 'civic-facilities-glow',
+            type: 'circle',
+            source: 'civic-facilities-source',
+            minzoom: 11,
+            paint: {
+              'circle-radius': [
+                'interpolate',
+                ['linear'],
+                ['zoom'],
+                12,
+                6,
+                15,
+                12,
+                18,
+                18,
+              ],
+              'circle-color': ['get', 'color'],
+              'circle-opacity': 0.35,
+              'circle-blur': 0.6,
+              'circle-pitch-alignment': 'map',
+            },
+          },
+          {
+            id: 'civic-facilities-point',
+            type: 'circle',
+            source: 'civic-facilities-source',
+            minzoom: 11,
+            paint: {
+              'circle-radius': [
+                'interpolate',
+                ['linear'],
+                ['zoom'],
+                12,
+                4,
+                15,
+                7,
+                18,
+                10,
+              ],
+              'circle-color': ['get', 'color'],
+              'circle-stroke-width': 2.5,
+              'circle-stroke-color': '#ffffff',
+              'circle-pitch-alignment': 'map',
+            },
+          },
+          {
+            id: 'civic-facilities-label',
+            type: 'symbol',
+            source: 'civic-facilities-source',
+            minzoom: 13,
+            layout: {
+              'text-field': ['get', 'label'],
+              'text-font': ['Open Sans Regular'],
+              'text-size': [
+                'interpolate',
+                ['linear'],
+                ['zoom'],
+                13,
+                10,
+                16,
+                11,
+                19,
+                12,
+              ],
+              'text-offset': [0, 1.2],
+              'text-anchor': 'top',
+              'text-allow-overlap': true,
+              'text-ignore-placement': true,
+              'text-pitch-alignment': 'viewport',
+            },
+            paint: {
+              'text-color': '#ffffff',
+              'text-halo-color': '#0b1326',
+              'text-halo-width': 2.5,
+              'text-halo-blur': 0.5,
+            },
+          },
           // 9. Projected Ground Shadows Layer (Cast below 3D Extrusion)
           {
             id: 'building-3d-ground-shadows',
@@ -651,6 +738,64 @@ export function MapView({
       }
     });
 
+    // Interactive Hover Popup for Civic Facilities (Zero DOM Drift)
+    const hoverFacilityPopup = new maplibregl.Popup({
+      closeButton: false,
+      closeOnClick: false,
+      offset: 14,
+      className: 'stitch-dark-popup',
+    });
+
+    map.on('mouseenter', 'civic-facilities-point', (e) => {
+      map.getCanvas().style.cursor = 'pointer';
+      if (!e.features || !e.features[0]) return;
+      const feat = e.features[0];
+      const props = feat.properties as any;
+      const geom = feat.geometry as any;
+      if (!geom || !geom.coordinates) return;
+      const coords = geom.coordinates.slice() as [number, number];
+
+      const html = `
+        <div class="p-2.5 rounded-lg backdrop-blur-md shadow-2xl min-w-[210px] max-w-[280px] text-left select-none"
+             style="background: rgba(19, 27, 46, 0.95); border: 1px solid ${props.color || '#68dba9'}; box-shadow: 0 10px 25px rgba(0,0,0,0.6);">
+          <div class="flex items-center justify-between pb-1 mb-1.5 gap-2" style="border-bottom: 1px solid rgba(255,255,255,0.15);">
+            <span class="text-[9px] font-bold uppercase tracking-wider font-mono flex items-center gap-1" style="color: ${props.color};">
+              <span style="display:inline-block; width:6px; height:6px; border-radius:9999px; background:${props.color};"></span>
+              ${escapeHtml(props.badge || 'Equipamiento')}
+            </span>
+            <span class="text-[9px] font-bold font-mono" style="color: #68dba9;">
+              ~${props.walkTimeMinutes} min a pie
+            </span>
+          </div>
+          <p class="font-bold text-white text-[11px] truncate mb-1 leading-snug">${escapeHtml(props.name || '')}</p>
+          <div class="space-y-0.5 text-[9px] font-mono" style="color: rgba(255,255,255,0.75);">
+            <div class="flex justify-between">
+              <span>Distancia directa:</span>
+              <span class="font-bold text-white">${props.distanceMeters} m</span>
+            </div>
+            <div class="flex justify-between">
+              <span>Tiempo a pie:</span>
+              <span class="font-bold text-white">${props.walkTimeMinutes} min (4.5 km/h)</span>
+            </div>
+            <div class="pt-1 text-[8px] truncate" style="border-top: 1px solid rgba(255,255,255,0.1); color: rgba(255,255,255,0.5);">
+              ${escapeHtml(props.sourceText || 'Datos oficiales')}
+            </div>
+          </div>
+        </div>
+      `;
+
+      hoverFacilityPopup.setLngLat(coords).setHTML(html).addTo(map);
+    });
+
+    map.on('mouseleave', 'civic-facilities-point', () => {
+      map.getCanvas().style.cursor = is3DModeRef.current ? 'grab' : 'crosshair';
+      hoverFacilityPopup.remove();
+    });
+
+    map.on('click', 'civic-facilities-point', (e) => {
+      e.originalEvent?.stopPropagation();
+    });
+
     map.on('load', () => {
       map.resize();
     });
@@ -666,6 +811,7 @@ export function MapView({
     }
 
     return () => {
+      hoverFacilityPopup.remove();
       resizeObserver?.disconnect();
       map.remove();
       mapRef.current = null;
@@ -1153,229 +1299,170 @@ export function MapView({
     };
   }, [selectedCoords, showIsochrones, is3DMode]);
 
-  // Synchronize Civic Amenities POI Markers on Isochrones
+  // Synchronize Civic Amenities on GPU-Anchored Native WebGL Layer (Zero Zoom Drift)
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
 
-    // Clear existing amenity markers
-    for (const m of amenityMarkersRef.current) {
-      m.remove();
-    }
-    amenityMarkersRef.current = [];
+    const updateFacilities = () => {
+      try {
+        const source = map.getSource('civic-facilities-source') as maplibregl.GeoJSONSource;
+        if (!source || typeof source.setData !== 'function') return;
 
-    if (!selectedCoords || !report?.connectivity) return;
-
-    const conn = report.connectivity;
-    const { lat, lon } = selectedCoords;
-
-    // Show ONLY the nearest facility per essential civic pillar (transit, health, school, park)
-    const targetFacilities: CivicFacility[] = [];
-
-    if (conn.nearestHealthcare) targetFacilities.push(conn.nearestHealthcare);
-    if (conn.nearestEducation) targetFacilities.push(conn.nearestEducation);
-    if (conn.nearestPark) targetFacilities.push(conn.nearestPark);
-
-    // Transit pillar: If there is a high-capacity Cercanías / Metro train station within 500m,
-    // prefer it as the primary transit node so it never overlaps with adjacent bus stop pins!
-    let chosenTransit = conn.nearestTransit;
-    if (conn.nearbyFacilities && conn.nearbyFacilities.length > 0) {
-      const isTrain = (f: CivicFacility) => {
-        const n = (f.name || '').toLowerCase();
-        return f.type === 'transit' && (f.subtype === 'train' || f.subtype === 'metro' || n.includes('cercan') || n.includes('renfe') || n.includes('estaci'));
-      };
-      const nearestTrain = conn.nearbyFacilities.find(isTrain);
-      if (nearestTrain && nearestTrain.distanceMeters <= 600) {
-        chosenTransit = nearestTrain;
-      }
-    }
-    if (chosenTransit) {
-      targetFacilities.push(chosenTransit);
-    }
-
-    // Deduplicate facilities by ID
-    const seenIds = new Set<string>();
-    const uniqueFacilities = targetFacilities.filter((f) => {
-      if (!f || !f.id || seenIds.has(f.id)) return false;
-      seenIds.add(f.id);
-      return true;
-    });
-
-    const resolveItemMeta = (fac: CivicFacility, index: number) => {
-      const nameLower = (fac.name || '').toLowerCase();
-      const subtype = (fac.subtype || '').toLowerCase();
-
-      if (fac.type === 'transit') {
-        if (subtype === 'train' || nameLower.includes('cercan') || nameLower.includes('renfe')) {
-          return {
-            svgIcon: '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="3" width="16" height="16" rx="2"/><path d="M4 11h16"/><path d="M12 3v8"/><path d="m8 19-2 3"/><path d="m18 22-2-3"/><circle cx="8" cy="15" r="1"/><circle cx="16" cy="15" r="1"/></svg>',
-            badge: 'Cercanías / Tren',
-            color: '#e11d48',
-            zIndex: 35,
-            bearing: 45 + index * 30,
-            sourceText: 'Renfe Cercanías / Consorcio Regional de Transportes',
-          };
+        if (!selectedCoords || !report?.connectivity) {
+          source.setData({ type: 'FeatureCollection', features: [] });
+          return;
         }
-        if (subtype === 'metro' || nameLower.includes('metro')) {
-          return {
-            svgIcon: '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="14" rx="2"/><path d="M7 21l3-4"/><path d="M17 21l-3-4"/><circle cx="7" cy="13" r="1"/><circle cx="17" cy="13" r="1"/><path d="M3 9h18"/></svg>',
-            badge: 'Metro de Madrid',
-            color: '#0284c7',
-            zIndex: 34,
-            bearing: 60 + index * 30,
-            sourceText: 'Metro / Consorcio Regional de Transportes',
-          };
+
+        const conn = report.connectivity;
+        const { lat, lon } = selectedCoords;
+
+        // Collect essential facilities (health, education, transit, park)
+        const targetFacilities: CivicFacility[] = [];
+
+        if (conn.nearestHealthcare) targetFacilities.push(conn.nearestHealthcare);
+        if (conn.nearestEducation) targetFacilities.push(conn.nearestEducation);
+        if (conn.nearestPark) targetFacilities.push(conn.nearestPark);
+
+        // Transit: include nearest bus stop AND nearest train/metro station (if within 800m)
+        if (conn.nearestTransit) {
+          targetFacilities.push(conn.nearestTransit);
         }
-        return {
-          svgIcon: '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 6v6"/><path d="M15 6v6"/><path d="M2 12h19.6"/><path d="M18 18h3s.5-1.7.8-2.8c.1-.4.2-.8.2-1.2 0-.4-.1-.8-.2-1.2l-1.4-5C20.1 6.8 19.1 6 18 6H4a2 2 0 0 0-2 2v10h3"/><circle cx="7" cy="18" r="2"/><path d="M9 18h5"/><circle cx="16" cy="18" r="2"/></svg>',
-          badge: 'Autobús EMT',
-          color: '#f59e0b',
-          zIndex: 25,
-          bearing: 30 + index * 40,
-          sourceText: 'EMT Madrid / Consorcio Regional de Transportes',
-        };
-      }
+        if (conn.nearbyFacilities && conn.nearbyFacilities.length > 0) {
+          const isTrain = (f: CivicFacility) => {
+            const n = (f.name || '').toLowerCase();
+            return (
+              f.subtype === 'train' ||
+              f.subtype === 'metro' ||
+              n.includes('cercan') ||
+              n.includes('renfe') ||
+              n.includes('estaci')
+            );
+          };
+          const nearestTrain = conn.nearbyFacilities.find(isTrain);
+          if (
+            nearestTrain &&
+            nearestTrain.id !== conn.nearestTransit?.id &&
+            nearestTrain.distanceMeters <= 800
+          ) {
+            targetFacilities.push(nearestTrain);
+          }
+        }
 
-      if (fac.type === 'healthcare') {
-        const isHospital = subtype === 'hospital' || nameLower.includes('hospital');
-        return {
-          svgIcon: '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/><path d="M12 7v6"/><path d="M9 10h6"/></svg>',
-          badge: isHospital ? 'Hospital Universitario' : 'Centro de Salud / CAP',
-          color: '#f43f5e',
-          zIndex: 30,
-          bearing: 315 + index * 20,
-          sourceText: 'Registro REPS · Ministerio de Sanidad',
-        };
-      }
+        // Deduplicate facilities by ID
+        const seenIds = new Set<string>();
+        const uniqueFacilities = targetFacilities.filter((f) => {
+          if (!f || !f.id || seenIds.has(f.id)) return false;
+          seenIds.add(f.id);
+          return true;
+        });
 
-      if (fac.type === 'education') {
-        const isHighSchool = subtype === 'high_school' || nameLower.includes('ies') || nameLower.includes('instituto');
-        return {
-          svgIcon: '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg>',
-          badge: isHighSchool ? 'Instituto de Secundaria' : 'Colegio Infantil y Primaria',
-          color: '#3b82f6',
-          zIndex: 28,
-          bearing: 225 + index * 25,
-          sourceText: 'Registro Estatal Centros Docentes (MEFP)',
-        };
-      }
+        const resolveItemMeta = (fac: CivicFacility) => {
+          const nameLower = (fac.name || '').toLowerCase();
+          const subtype = (fac.subtype || '').toLowerCase();
 
-      return {
-        svgIcon: '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 10v.2A3 3 0 0 1 8.9 16H5a3 3 0 0 1-1-5.8V10a3 3 0 0 1 6 0Z"/><path d="M7 16v6"/><path d="M13 19v3"/><path d="M12 19h8.3a1 1 0 0 0 .7-1.7L18 14h.3a1 1 0 0 0 .7-1.7L16 9h.2a1 1 0 0 0 .8-1.7l-3.3-4.4a1 1 0 0 0-1.4 0L9 7.3"/></svg>',
-        badge: 'Parque / Zonas Verdes',
-        color: '#10b981',
-        zIndex: 24,
-        bearing: 135 + index * 30,
-        sourceText: 'Inventario Municipal Áreas Verdes / IGN',
-      };
+          if (fac.type === 'transit') {
+            if (subtype === 'train' || nameLower.includes('cercan') || nameLower.includes('renfe')) {
+              return {
+                shortBadge: 'Cercanías',
+                badge: 'Cercanías / Tren',
+                color: '#e11d48',
+                sourceText: 'Renfe Cercanías / Consorcio Regional de Transportes',
+              };
+            }
+            if (subtype === 'metro' || nameLower.includes('metro')) {
+              return {
+                shortBadge: 'Metro',
+                badge: 'Metro de Madrid',
+                color: '#0284c7',
+                sourceText: 'Metro / Consorcio Regional de Transportes',
+              };
+            }
+            return {
+              shortBadge: 'Bus EMT',
+              badge: 'Autobús EMT',
+              color: '#f59e0b',
+              sourceText: 'EMT Madrid / Consorcio Regional de Transportes',
+            };
+          }
+
+          if (fac.type === 'healthcare') {
+            const isHospital = subtype === 'hospital' || nameLower.includes('hospital');
+            return {
+              shortBadge: isHospital ? 'Hospital' : 'C. Salud',
+              badge: isHospital ? 'Hospital Universitario' : 'Centro de Salud / CAP',
+              color: '#f43f5e',
+              sourceText: 'Registro REPS · Ministerio de Sanidad',
+            };
+          }
+
+          if (fac.type === 'education') {
+            const isHighSchool =
+              subtype === 'high_school' || nameLower.includes('ies') || nameLower.includes('instituto');
+            return {
+              shortBadge: isHighSchool ? 'IES' : 'Colegio',
+              badge: isHighSchool ? 'Instituto de Secundaria' : 'Colegio / Formación Profesional',
+              color: '#3b82f6',
+              sourceText: 'Registro Estatal Centros Docentes (MEFP)',
+            };
+          }
+
+          return {
+            shortBadge: 'Parque',
+            badge: 'Parque / Zonas Verdes',
+            color: '#10b981',
+            sourceText: 'Inventario Municipal Áreas Verdes / IGN',
+          };
+        };
+
+        const features = uniqueFacilities.map((fac) => {
+          const meta = resolveItemMeta(fac);
+          let fLat = fac.latitude;
+          let fLon = fac.longitude;
+
+          if (typeof fLat !== 'number' || typeof fLon !== 'number' || isNaN(fLat) || isNaN(fLon)) {
+            fLat = lat;
+            fLon = lon;
+          }
+
+          return {
+            type: 'Feature' as const,
+            geometry: {
+              type: 'Point' as const,
+              coordinates: [fLon, fLat],
+            },
+            properties: {
+              id: fac.id,
+              name: fac.name,
+              type: fac.type,
+              subtype: fac.subtype,
+              distanceMeters: fac.distanceMeters,
+              walkTimeMinutes: Math.round(fac.walkTimeMinutes),
+              color: meta.color,
+              badge: meta.badge,
+              sourceText: meta.sourceText,
+              label: `${meta.shortBadge}: ${fac.name} (${fac.distanceMeters}m)`,
+            },
+          };
+        });
+
+        source.setData({
+          type: 'FeatureCollection',
+          features,
+        });
+      } catch {
+        // Source not ready yet
+      }
     };
 
-    const newMarkers: Marker[] = [];
-
-    uniqueFacilities.forEach((fac, index) => {
-      const meta = resolveItemMeta(fac, index);
-      let fLat = fac.latitude;
-      let fLon = fac.longitude;
-
-      if (typeof fLat !== 'number' || typeof fLon !== 'number' || isNaN(fLat) || isNaN(fLon)) {
-        const dMeters = Math.max(30, Math.min(1300, fac.distanceMeters));
-        const rad = (meta.bearing * Math.PI) / 180;
-        const dKm = dMeters / 1000;
-        const dLat = (dKm / 110.574) * Math.cos(rad);
-        const dLon = (dKm / (111.32 * Math.cos((lat * Math.PI) / 180))) * Math.sin(rad);
-        fLat = lat + dLat;
-        fLon = lon + dLon;
-      }
-
-      // Rigid container strictly 32px wide by 42px high:
-      // MapLibre's anchor: 'bottom' translates by [-16px, -42px].
-      // The tip of the needle touches the ground at (16px, 42px), exactly at [fLon, fLat] without subpixel drift!
-      const el = document.createElement('div');
-      el.className = 'openbarrio-amenity-marker group select-none cursor-pointer';
-      el.style.width = '32px';
-      el.style.height = '42px';
-      el.style.position = 'relative';
-      el.style.zIndex = String(meta.zIndex || 25);
-      el.innerHTML = `
-        <!-- Absolute Label Chip positioned above the pin without altering container bounds -->
-        <div style="position: absolute; bottom: 48px; left: 50%; transform: translateX(-50%); pointer-events: auto; white-space: nowrap; z-index: 10;">
-          <div class="flex items-center gap-1.5 px-2.5 py-1 rounded-full shadow-2xl border backdrop-blur-md transition-transform group-hover:scale-105"
-               style="background: #0b1326f2; border-color: ${meta.color}; box-shadow: 0 4px 14px rgba(0,0,0,0.5);">
-            <span class="flex items-center text-white shrink-0">${meta.svgIcon}</span>
-            <span class="text-[11px] font-semibold text-white tracking-tight truncate max-w-[150px] sm:max-w-[180px]" title="${escapeHtml(fac.name)}">
-              ${escapeHtml(fac.name)}
-            </span>
-            <span class="text-[9px] font-mono font-bold shrink-0 border-l border-white/20 pl-1.5" style="color: ${meta.color};">
-              ${fac.distanceMeters}m
-            </span>
-          </div>
-        </div>
-
-        <!-- Distinct Map Pin Circle: exactly 32px by 32px at top: 0, left: 0 -->
-        <div style="position: absolute; top: 0; left: 0; width: 32px; height: 32px; border-radius: 9999px; background-color: ${meta.color}; border: 2px solid #ffffff; box-shadow: 0 4px 10px rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; transition: transform 0.15s ease;"
-             class="group-hover:scale-110">
-          <span class="flex items-center justify-center text-white">${meta.svgIcon}</span>
-        </div>
-
-        <!-- Pointer Needle Tip pointing directly down to (16px, 42px) -->
-        <div style="position: absolute; top: 31px; left: 11px; width: 0; height: 0; border-left: 5px solid transparent; border-right: 5px solid transparent; border-top: 10px solid ${meta.color};"></div>
-
-        <!-- Ground Impact Dot touching the exact asphalt/curb -->
-        <div style="position: absolute; top: 38px; left: 13px; width: 6px; height: 6px; border-radius: 9999px; background-color: #ffffff; box-shadow: 0 1px 3px rgba(0,0,0,0.6);"></div>
-
-        <!-- Detailed Hover Flyout Card -->
-        <div style="position: absolute; bottom: 84px; left: 50%; transform: translateX(-50%); pointer-events: none; z-index: 50;"
-             class="hidden group-hover:flex flex-col p-2.5 rounded-lg bg-surface-container-low/95 backdrop-blur-md border shadow-2xl min-w-[220px] max-w-[280px] text-left border-outline-variant">
-          <div class="flex items-center justify-between border-b border-outline-variant/60 pb-1 mb-1.5 gap-2">
-            <span class="text-[9px] font-bold uppercase tracking-wider flex items-center gap-1 font-mono" style="color: ${meta.color};">
-              <span class="w-1.5 h-1.5 rounded-full animate-pulse" style="background-color: ${meta.color};"></span>
-              ${escapeHtml(meta.badge)}
-            </span>
-            <span class="text-[9px] font-bold text-primary font-mono shrink-0">
-              ~${Math.round(fac.walkTimeMinutes)} min
-            </span>
-          </div>
-          <p class="font-bold text-on-surface text-[11px] truncate mb-1 leading-snug">${escapeHtml(fac.name)}</p>
-          <div class="space-y-0.5 text-[9px] text-on-surface-variant font-mono">
-            <div class="flex justify-between">
-              <span>Distancia directa:</span>
-              <span class="font-bold text-on-surface">${fac.distanceMeters} m</span>
-            </div>
-            <div class="flex justify-between">
-              <span>Tiempo a pie:</span>
-              <span class="font-bold text-on-surface">${Math.round(fac.walkTimeMinutes)} min (4.5 km/h)</span>
-            </div>
-            <div class="pt-1 text-[8px] text-outline border-t border-outline-variant/30 truncate">
-              ${escapeHtml(meta.sourceText)}
-            </div>
-          </div>
-        </div>
-      `;
-
-      // Dynamic stacking context elevation on hover & click isolation
-      el.addEventListener('mouseenter', () => {
-        el.style.zIndex = '999';
-        if (el.parentElement) el.parentElement.style.zIndex = '999';
-      });
-      el.addEventListener('mouseleave', () => {
-        el.style.zIndex = String(meta.zIndex || 25);
-        if (el.parentElement) el.parentElement.style.zIndex = '';
-      });
-      el.addEventListener('click', (e) => {
-        e.stopPropagation();
-      });
-
-      const marker = new maplibregl.Marker({ element: el, anchor: 'bottom' })
-        .setLngLat([fLon, fLat])
-        .addTo(map);
-
-      newMarkers.push(marker);
-    });
-
-    amenityMarkersRef.current = newMarkers;
-
+    updateFacilities();
+    if (typeof map.on === 'function') {
+      map.on('styledata', updateFacilities);
+    }
     return () => {
-      for (const m of newMarkers) m.remove();
+      if (typeof map.off === 'function') {
+        map.off('styledata', updateFacilities);
+      }
     };
   }, [selectedCoords?.lat, selectedCoords?.lon, report?.connectivity, report?.property.cadastralReference]);
 

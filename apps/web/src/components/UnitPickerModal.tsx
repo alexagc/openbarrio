@@ -277,7 +277,7 @@ export function UnitPickerModal({
                               )}
                             </div>
                             <span className="text-[11px] text-on-surface-variant font-mono mt-0.5 inline-block">
-                              {u.builtSurfaceM2} m² privativos
+                              {u.builtSurfaceM2 > 0 ? `${u.builtSurfaceM2} m² privativos` : 'Finca registrada'}
                               {u.participationCoefficient ? ` · cpt: ${u.participationCoefficient}%` : ''}
                             </span>
                           </div>
