@@ -37,21 +37,44 @@ export function UnitPickerModal({
 }: UnitPickerModalProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedUseFilter, setSelectedUseFilter] = useState<string>('all');
+  const [selectedPortalFilter, setSelectedPortalFilter] = useState<string>('all');
   const [selectedUnit, setSelectedUnit] = useState<CadastralUnit | null>(null);
 
   useEffect(() => {
     if (isOpen) {
       setSearchQuery('');
       setSelectedUseFilter('all');
+      setSelectedPortalFilter('all');
       setSelectedUnit(null);
     }
   }, [isOpen]);
 
   const units = unitsData?.units || [];
 
-  // Filter units by search query and usage category
+  // Extract distinct portals / blocks / staircases
+  const availablePortals = useMemo(() => {
+    const set = new Set<string>();
+    for (const u of units) {
+      if (u.block) {
+        set.add(u.block);
+      } else if (u.staircase) {
+        set.add(`Esc. ${u.staircase}`);
+      }
+    }
+    return Array.from(set).sort();
+  }, [units]);
+
+  // Filter units by search query, usage category and portal/block
   const filteredUnits = useMemo(() => {
     return units.filter((u) => {
+      // Portal / Bloque filter
+      if (selectedPortalFilter !== 'all') {
+        const portalLabel = u.block || (u.staircase ? `Esc. ${u.staircase}` : '');
+        if (portalLabel !== selectedPortalFilter) {
+          return false;
+        }
+      }
+
       // Use filter
       if (selectedUseFilter !== 'all') {
         const uUse = u.use.toLowerCase();
@@ -79,7 +102,7 @@ export function UnitPickerModal({
 
       return true;
     });
-  }, [units, selectedUseFilter, searchQuery]);
+  }, [units, selectedUseFilter, selectedPortalFilter, searchQuery]);
 
   // Group units by floor for clean cartographic scanning
   const groupedByFloor = useMemo(() => {
@@ -135,6 +158,7 @@ export function UnitPickerModal({
             </h2>
             <p className="text-xs text-on-surface-variant mt-0.5">
               {unitsData?.totalUnits || units.length} inmuebles registrados en la Sede Electrónica del Catastro
+              {availablePortals.length > 1 && ` · ${availablePortals.length} portales (${availablePortals.map((p) => p.startsWith('Esc.') ? p : `Portal ${p}`).join(', ')})`}
             </p>
           </div>
 
@@ -149,71 +173,110 @@ export function UnitPickerModal({
         </div>
 
         {/* ================= CONTROLS & FILTER BAR ================= */}
-        <div className="p-3 sm:p-4 bg-surface-container-lowest border-b border-outline-variant flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
-          {/* Use filter tabs */}
-          <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0 scrollbar-none">
-            <button
-              type="button"
-              onClick={() => setSelectedUseFilter('all')}
-              className={`px-3 py-1.5 rounded text-xs font-medium transition-colors whitespace-nowrap cursor-pointer ${
-                selectedUseFilter === 'all'
-                  ? 'bg-primary text-on-primary font-semibold'
-                  : 'bg-surface-container hover:bg-surface-container-high text-on-surface-variant'
-              }`}
-            >
-              Todos ({isLoading || !unitsData ? '...' : counts.all})
-            </button>
-            <button
-              type="button"
-              onClick={() => setSelectedUseFilter('vivienda')}
-              className={`px-3 py-1.5 rounded text-xs font-medium transition-colors whitespace-nowrap cursor-pointer flex items-center gap-1 ${
-                selectedUseFilter === 'vivienda'
-                  ? 'bg-primary text-on-primary font-semibold'
-                  : 'bg-surface-container hover:bg-surface-container-high text-on-surface-variant'
-              }`}
-            >
-              <Home className="w-3 h-3" />
-              Viviendas ({isLoading || !unitsData ? '...' : counts.viviendas})
-            </button>
-            <button
-              type="button"
-              onClick={() => setSelectedUseFilter('comercial')}
-              className={`px-3 py-1.5 rounded text-xs font-medium transition-colors whitespace-nowrap cursor-pointer flex items-center gap-1 ${
-                selectedUseFilter === 'comercial'
-                  ? 'bg-primary text-on-primary font-semibold'
-                  : 'bg-surface-container hover:bg-surface-container-high text-on-surface-variant'
-              }`}
-            >
-              <Store className="w-3 h-3" />
-              Locales ({isLoading || !unitsData ? '...' : counts.comerciales})
-            </button>
-            {counts.otros > 0 && (
+        <div className="p-3 sm:p-4 bg-surface-container-lowest border-b border-outline-variant flex flex-col gap-2.5">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+            {/* Use filter tabs */}
+            <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0 scrollbar-none">
               <button
                 type="button"
-                onClick={() => setSelectedUseFilter('otros')}
-                className={`px-3 py-1.5 rounded text-xs font-medium transition-colors whitespace-nowrap cursor-pointer flex items-center gap-1 ${
-                  selectedUseFilter === 'otros'
+                onClick={() => setSelectedUseFilter('all')}
+                className={`px-3 py-1.5 rounded text-xs font-medium transition-colors whitespace-nowrap cursor-pointer ${
+                  selectedUseFilter === 'all'
                     ? 'bg-primary text-on-primary font-semibold'
                     : 'bg-surface-container hover:bg-surface-container-high text-on-surface-variant'
                 }`}
               >
-                <Warehouse className="w-3 h-3" />
-                Otros ({isLoading || !unitsData ? '...' : counts.otros})
+                Todos ({isLoading || !unitsData ? '...' : counts.all})
               </button>
-            )}
+              <button
+                type="button"
+                onClick={() => setSelectedUseFilter('vivienda')}
+                className={`px-3 py-1.5 rounded text-xs font-medium transition-colors whitespace-nowrap cursor-pointer flex items-center gap-1 ${
+                  selectedUseFilter === 'vivienda'
+                    ? 'bg-primary text-on-primary font-semibold'
+                    : 'bg-surface-container hover:bg-surface-container-high text-on-surface-variant'
+                }`}
+              >
+                <Home className="w-3 h-3" />
+                Viviendas ({isLoading || !unitsData ? '...' : counts.viviendas})
+              </button>
+              <button
+                type="button"
+                onClick={() => setSelectedUseFilter('comercial')}
+                className={`px-3 py-1.5 rounded text-xs font-medium transition-colors whitespace-nowrap cursor-pointer flex items-center gap-1 ${
+                  selectedUseFilter === 'comercial'
+                    ? 'bg-primary text-on-primary font-semibold'
+                    : 'bg-surface-container hover:bg-surface-container-high text-on-surface-variant'
+                }`}
+              >
+                <Store className="w-3 h-3" />
+                Locales ({isLoading || !unitsData ? '...' : counts.comerciales})
+              </button>
+              {counts.otros > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setSelectedUseFilter('otros')}
+                  className={`px-3 py-1.5 rounded text-xs font-medium transition-colors whitespace-nowrap cursor-pointer flex items-center gap-1 ${
+                    selectedUseFilter === 'otros'
+                      ? 'bg-primary text-on-primary font-semibold'
+                      : 'bg-surface-container hover:bg-surface-container-high text-on-surface-variant'
+                  }`}
+                >
+                  <Warehouse className="w-3 h-3" />
+                  Otros ({isLoading || !unitsData ? '...' : counts.otros})
+                </button>
+              )}
+            </div>
+
+            {/* Quick search input */}
+            <div className="relative w-full sm:w-64">
+              <Search className="w-4 h-4 text-outline absolute left-3 top-1/2 -translate-y-1/2" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Buscar planta, puerta (ej. 3º B)..."
+                className="w-full bg-surface-container border border-outline-variant rounded-lg pl-9 pr-3 py-1.5 text-xs text-on-surface placeholder:text-outline focus:outline-none focus:border-primary font-mono transition-colors"
+              />
+            </div>
           </div>
 
-          {/* Quick search input */}
-          <div className="relative w-full sm:w-64">
-            <Search className="w-4 h-4 text-outline absolute left-3 top-1/2 -translate-y-1/2" />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Buscar planta, puerta (ej. 3º B)..."
-              className="w-full bg-surface-container border border-outline-variant rounded-lg pl-9 pr-3 py-1.5 text-xs text-on-surface placeholder:text-outline focus:outline-none focus:border-primary font-mono transition-colors"
-            />
-          </div>
+          {/* Portal / Bloque filter bar (when multi-portal building detected) */}
+          {availablePortals.length > 1 && (
+            <div className="flex items-center gap-1.5 pt-2 border-t border-outline-variant/60 overflow-x-auto scrollbar-none">
+              <span className="text-[10px] font-mono text-outline uppercase shrink-0 font-semibold mr-1">
+                Portales / Bloques:
+              </span>
+              <button
+                type="button"
+                onClick={() => setSelectedPortalFilter('all')}
+                className={`px-2.5 py-1 rounded text-xs font-mono transition-colors whitespace-nowrap cursor-pointer ${
+                  selectedPortalFilter === 'all'
+                    ? 'bg-secondary text-on-secondary font-semibold'
+                    : 'bg-surface-container hover:bg-surface-container-high text-on-surface-variant'
+                }`}
+              >
+                Todos ({units.length})
+              </button>
+              {availablePortals.map((p) => {
+                const pCount = units.filter((u) => (u.block || (u.staircase ? `Esc. ${u.staircase}` : '')) === p).length;
+                return (
+                  <button
+                    key={p}
+                    type="button"
+                    onClick={() => setSelectedPortalFilter(p)}
+                    className={`px-2.5 py-1 rounded text-xs font-mono transition-colors whitespace-nowrap cursor-pointer ${
+                      selectedPortalFilter === p
+                        ? 'bg-secondary text-on-secondary font-semibold'
+                        : 'bg-surface-container hover:bg-surface-container-high text-on-surface-variant'
+                    }`}
+                  >
+                    {p.startsWith('Esc.') ? p : `Portal ${p}`} ({pCount})
+                  </button>
+                );
+              })}
+            </div>
+          )}
         </div>
 
         {/* ================= UNIT LIST / GRID BODY ================= */}
@@ -235,7 +298,11 @@ export function UnitPickerModal({
               <div key={floor} className="space-y-2">
                 <div className="flex items-center gap-2">
                   <span className="text-[11px] font-bold font-mono uppercase tracking-wider text-outline px-2 py-0.5 rounded bg-surface-container border border-outline-variant/60">
-                    {floor === 'PB' || floor === '00' ? 'Planta Baja / Acceso' : `Planta ${floor}ªª`}
+                    {floor.startsWith('-')
+                      ? `Planta Sótano ${floor.replace('-', '')}`
+                      : floor === 'PB' || floor === '00'
+                      ? 'Planta Baja / Acceso'
+                      : `Planta ${floor}ª`}
                   </span>
                   <div className="h-px flex-1 bg-outline-variant/40" />
                   <span className="text-[10px] font-mono text-outline">{floorUnits.length} inmuebles</span>

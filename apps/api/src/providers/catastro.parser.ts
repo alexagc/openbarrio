@@ -377,8 +377,13 @@ export function parseCatastroDnprcXml(
   const tv = extractTag(xml, 'tv') || '';
   const nv = extractTag(xml, 'nv') || '';
   let number = extractTag(xml, 'pnp') || '';
+  const snp = extractTag(xml, 'snp') || '';
+  if (snp && snp !== '0') {
+    number = `${number} ${snp}`;
+  }
   const plp = extractTag(xml, 'plp') || '';
-  if (number && plp) {
+  const isMultiUnitBuilding = queriedRefcat && queriedRefcat.length === 14 && (metadata?.unitsCount || 0) > 1;
+  if (number && plp && !isMultiUnitBuilding) {
     number = `${number} ${plp}`;
   }
   const ldt = extractTag(xml, 'ldt') || '';

@@ -40,7 +40,19 @@ export function AuditDossier({ report, onOpenUnitPicker, onOpenDuel }: AuditDoss
     generatedAt,
   } = report;
 
-  const fullAddress = `${property.address.street} ${property.address.number}, ${property.address.postalCode} ${property.address.municipality}`;
+  const fullAddress = property.unit
+    ? `${property.address.street} ${property.address.number}${property.unit.block ? `, Portal ${property.unit.block}` : ''}${property.unit.floor ? `, Pl. ${property.unit.floor}` : ''}${property.unit.door ? ` Pta. ${property.unit.door}` : ''}, ${property.address.postalCode} ${property.address.municipality}`
+    : `${property.address.street} ${property.address.number}, ${property.address.postalCode} ${property.address.municipality}`;
+
+  const unitDetail = property.unit
+    ? [
+        property.unit.block ? `Portal ${property.unit.block}` : null,
+        property.unit.floor ? `Planta ${property.unit.floor}` : null,
+        property.unit.door ? `Puerta ${property.unit.door}` : null,
+      ]
+        .filter(Boolean)
+        .join(' · ')
+    : null;
   const formattedDate = new Date(generatedAt).toLocaleDateString('es-ES', {
     day: '2-digit',
     month: 'long',
@@ -95,10 +107,13 @@ export function AuditDossier({ report, onOpenUnitPicker, onOpenDuel }: AuditDoss
               <Building className="w-4 h-4 text-outline shrink-0" />
               <span>
                 {property.address.province} ·{' '}
-                {property.building.builtSurfaceM2.toLocaleString('es-ES')} m²{' '}
-                {property.building.constructionYear > 0
-                  ? `construidos (Año ${property.building.constructionYear})`
-                  : 'superficie (Suelo sin edificar)'}
+                {property.unit
+                  ? `${property.unit.builtSurfaceM2.toLocaleString('es-ES')} m² privativos (Edificio Año ${property.building.constructionYear || '—'})`
+                  : `${property.building.builtSurfaceM2.toLocaleString('es-ES')} m² ${
+                      property.building.constructionYear > 0
+                        ? `construidos (Año ${property.building.constructionYear})`
+                        : 'superficie (Suelo sin edificar)'
+                    }`}
               </span>
             </p>
           </div>
@@ -170,7 +185,7 @@ export function AuditDossier({ report, onOpenUnitPicker, onOpenDuel }: AuditDoss
               <div className="min-w-0">
                 {property.unit ? (
                   <p className="font-semibold text-on-surface truncate">
-                    Inmueble Privativo: Planta {property.unit.floor} · Puerta {property.unit.door} ({property.unit.builtSurfaceM2} m²
+                    Inmueble Privativo: {unitDetail} ({property.unit.builtSurfaceM2} m²
                     {property.unit.participationCoefficient ? ` · cpt: ${property.unit.participationCoefficient}%` : ''})
                   </p>
                 ) : (

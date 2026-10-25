@@ -3,6 +3,7 @@ import {
   CadastralUnitsResponse,
   CadastralCoordinates,
   CadastralGeometry,
+  CadastralUnit,
 } from '@openbarrio/core';
 import { ICatastroProvider } from './types.js';
 import {
@@ -36,7 +37,7 @@ export class CatastroProvider implements ICatastroProvider {
     this.callejeroBaseUrl =
       options.callejeroBaseUrl ||
       'https://ovc.catastro.meh.es/ovcservweb/ovcswlocalizacionrc/ovccallejero.asmx';
-    this.timeoutMs = options.timeoutMs || 8000;
+    this.timeoutMs = options.timeoutMs || 15000;
   }
 
   async getByCoordinates(latitude: number, longitude: number): Promise<CadastralProperty> {
@@ -214,7 +215,7 @@ export class CatastroProvider implements ICatastroProvider {
             let totalBuildingSurface: number | undefined;
 
             // When queried as a 14-char building, calculate total building constructed surface across all units
-            if (cleanRef.length === 14 && summary.totalUnits > 1) {
+            if (cleanRef.length === 14 && summary.totalUnits > 1 && summary.totalUnits <= 30) {
               try {
                 const unitsResp = await this.getUnitsByCadastralReference(cleanRef);
                 const sumSurface = unitsResp.units.reduce((acc, u) => acc + (u.builtSurfaceM2 || 0), 0);
@@ -271,51 +272,58 @@ export class CatastroProvider implements ICatastroProvider {
       return parsed;
     }
 
-    // Hydrate each individual unit's real built surface (<sfc>) and official use (<luso>) from Catastro OVC in parallel
-    const hydratedUnits = await Promise.all(
-      parsed.units.map(async (u) => {
-        if (!u.cadastralReference || u.cadastralReference.length !== 20) {
-          return u;
-        }
-        try {
-          const unitUrl = `${this.callejeroBaseUrl}/Consulta_DNPRC?Provincia=&Municipio=&RC=${encodeURIComponent(u.cadastralReference)}`;
-          const unitController = new AbortController();
-          const unitTimer = setTimeout(() => unitController.abort(), 4000);
-          const unitRes = await fetch(unitUrl, {
-            signal: unitController.signal,
-            headers: { 'User-Agent': 'OpenBarrio-DueDiligence/0.1' },
-            ...({ cf: { cacheTtl: 7776000, cacheEverything: true } } as any),
-          });
-          clearTimeout(unitTimer);
+    // Hydrate each individual unit's real built surface (<sfc>) and official use (<luso>) from Catastro OVC in controlled batches
+    const BATCH_SIZE = 15;
+    const hydratedUnits: CadastralUnit[] = [];
 
-          if (unitRes.ok) {
-            const uXml = await unitRes.text();
-            const sfcMatch = uXml.match(/<sfc>([^<]+)<\/sfc>/i) || uXml.match(/<stl>([^<]+)<\/stl>/i);
-            const lusoMatch = uXml.match(/<luso>([^<]+)<\/luso>/i);
-
-            const sfc = sfcMatch ? parseInt(sfcMatch[1], 10) : 0;
-            let use = u.use;
-            if (lusoMatch) {
-              const rawLuso = lusoMatch[1].trim();
-              if (/comercial|local|oficina/i.test(rawLuso)) use = 'Comercial';
-              else if (/garaje|aparcamiento|estacionamiento/i.test(rawLuso)) use = 'Aparcamiento';
-              else if (/almacen|almacén|trastero/i.test(rawLuso)) use = 'Almacén';
-              else if (/residencial|vivienda/i.test(rawLuso)) use = 'Residencial';
-              else use = rawLuso;
-            }
-
-            return {
-              ...u,
-              use,
-              builtSurfaceM2: sfc > 0 ? sfc : u.builtSurfaceM2,
-            };
+    for (let i = 0; i < parsed.units.length; i += BATCH_SIZE) {
+      const batch = parsed.units.slice(i, i + BATCH_SIZE);
+      const batchHydrated = await Promise.all(
+        batch.map(async (u) => {
+          if (!u.cadastralReference || u.cadastralReference.length !== 20) {
+            return u;
           }
-        } catch {
-          // Keep unit as-is on network/timeout error
-        }
-        return u;
-      })
-    );
+          try {
+            const unitUrl = `${this.callejeroBaseUrl}/Consulta_DNPRC?Provincia=&Municipio=&RC=${encodeURIComponent(u.cadastralReference)}`;
+            const unitController = new AbortController();
+            const unitTimer = setTimeout(() => unitController.abort(), 4000);
+            const unitRes = await fetch(unitUrl, {
+              signal: unitController.signal,
+              headers: { 'User-Agent': 'OpenBarrio-DueDiligence/0.1' },
+              ...({ cf: { cacheTtl: 7776000, cacheEverything: true } } as any),
+            });
+            clearTimeout(unitTimer);
+
+            if (unitRes.ok) {
+              const uXml = await unitRes.text();
+              const sfcMatch = uXml.match(/<sfc>([^<]+)<\/sfc>/i) || uXml.match(/<stl>([^<]+)<\/stl>/i);
+              const lusoMatch = uXml.match(/<luso>([^<]+)<\/luso>/i);
+
+              const sfc = sfcMatch ? parseInt(sfcMatch[1], 10) : 0;
+              let use = u.use;
+              if (lusoMatch) {
+                const rawLuso = lusoMatch[1].trim();
+                if (/comercial|local|oficina/i.test(rawLuso)) use = 'Comercial';
+                else if (/garaje|aparcamiento|estacionamiento/i.test(rawLuso)) use = 'Aparcamiento';
+                else if (/almacen|almacén|trastero/i.test(rawLuso)) use = 'Almacén';
+                else if (/residencial|vivienda/i.test(rawLuso)) use = 'Residencial';
+                else use = rawLuso;
+              }
+
+              return {
+                ...u,
+                use,
+                builtSurfaceM2: sfc > 0 ? sfc : u.builtSurfaceM2,
+              };
+            }
+          } catch {
+            // Keep unit as-is on network/timeout error
+          }
+          return u;
+        })
+      );
+      hydratedUnits.push(...batchHydrated);
+    }
 
     // Compute accurate participation coefficients based on real square meters
     const totalSurface = hydratedUnits.reduce((acc, u) => acc + (u.builtSurfaceM2 || 0), 0);
