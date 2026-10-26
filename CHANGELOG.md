@@ -5,6 +5,23 @@ All notable changes to the **OpenBarrio** platform are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.1] - 2026-10-26
+
+### Fixed
+- **Walking Isochrones Expression Syntax (`apps/web`)**:
+  - Fixed MapLibre GL v4/v5/v6 layer filter evaluation by migrating from legacy literal matching `['==', 'ring', '15m']` to standard expressions `['==', ['get', 'ring'], '15m']`.
+  - Pre-populated `walking-isochrones` GeoJSON source directly with geodesic polygons upon style initialization for instant zero-flicker rendering.
+  - Enhanced isochrone contour stroke width (`2.0px`) and color opacities for distinct visual contrast against cadastral raster parcels and satellite basemaps.
+- **MITECO SICA Noise & SNCZI Flood Cartography (`apps/api`, `apps/web`)**:
+  - Removed malformed `&STYLES=&` query parameters preventing OGC style mismatch errors in upstream GeoServer WMS 1.3.0 requests.
+  - Configured `maxzoom: 18` on raster tile sources with overzooming up to `maxzoom: 22` on layers, eliminating layer cut-off at building-level zoom.
+  - Added Cloudflare Edge 30-day tile caching (`cf: { cacheTtl: 2592000, cacheEverything: true }`) for sub-10ms response times.
+- **Map Viewport & Canvas Stability on Tab Switching (`apps/web`)**:
+  - Removed cascading `styledata` event listeners from `MapView` that triggered recursive GeoJSON updates and WebGL canvas repainting whenever browser tabs gained focus.
+  - Added delta threshold check (`Math.abs(diff) > 2px`) to `ResizeObserver` preventing unnecessary `map.resize()` calls when switching browser tabs.
+  - Deduplicated `setMapCenter` state updates on `moveend` to prevent superfluous React re-renders.
+  - Stabilized `useUrlSync` popstate handler reference across renders.
+
 ## [0.6.0] - 2026-10-25
 
 ### Added

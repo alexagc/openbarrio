@@ -458,4 +458,76 @@ describe('MapView Component (Stitch Civic Precision)', () => {
       expect(screen.getByTestId('solar-simulation-hud')).toBeTruthy();
     });
   });
+
+  describe('Isochrones and Noise Layer Reliability (Bugfix Verification)', () => {
+    it('should configure walking isochrones layers with valid MapLibre expressions', async () => {
+      const maplibreMock = await import('maplibre-gl');
+      render(
+        <MapView
+          selectedCoords={{ lat: 40.42028, lon: -3.70379 }}
+          onMapClick={vi.fn()}
+        />
+      );
+
+      const mapConstructor = maplibreMock.Map as unknown as ReturnType<typeof vi.fn>;
+      const lastCallArgs = mapConstructor.mock.calls[mapConstructor.mock.calls.length - 1][0];
+
+      // Verify GeoJSON isochrones source
+      const isochroneSource = lastCallArgs.style.sources['walking-isochrones'];
+      expect(isochroneSource).toBeTruthy();
+      expect(isochroneSource.type).toBe('geojson');
+
+      // Verify layers have valid expression filters (['==', ['get', 'ring'], '<time>'])
+      const fill15 = lastCallArgs.style.layers.find((l: any) => l.id === 'isochrone-15m-fill');
+      const fill10 = lastCallArgs.style.layers.find((l: any) => l.id === 'isochrone-10m-fill');
+      const fill5 = lastCallArgs.style.layers.find((l: any) => l.id === 'isochrone-5m-fill');
+
+      expect(fill15).toBeTruthy();
+      expect(fill15.filter).toEqual(['==', ['get', 'ring'], '15m']);
+      expect(fill10).toBeTruthy();
+      expect(fill10.filter).toEqual(['==', ['get', 'ring'], '10m']);
+      expect(fill5).toBeTruthy();
+      expect(fill5.filter).toEqual(['==', ['get', 'ring'], '5m']);
+
+      const line15 = lastCallArgs.style.layers.find((l: any) => l.id === 'isochrone-15m-line');
+      expect(line15).toBeTruthy();
+      expect(line15.filter).toEqual(['==', ['get', 'ring'], '15m']);
+    });
+
+    it('should configure MITECO SICA and SNCZI raster sources and overzoom up to z22', async () => {
+      const maplibreMock = await import('maplibre-gl');
+      render(
+        <MapView
+          selectedCoords={{ lat: 40.42028, lon: -3.70379 }}
+          onMapClick={vi.fn()}
+        />
+      );
+
+      const mapConstructor = maplibreMock.Map as unknown as ReturnType<typeof vi.fn>;
+      const lastCallArgs = mapConstructor.mock.calls[mapConstructor.mock.calls.length - 1][0];
+
+      const sicaSource = lastCallArgs.style.sources['miteco-sica'];
+      expect(sicaSource).toBeTruthy();
+      expect(sicaSource.type).toBe('raster');
+      expect(sicaSource.maxzoom).toBe(18);
+      // Ensure no malformed empty STYLES parameter in any tile URL
+      sicaSource.tiles.forEach((url: string) => {
+        expect(url).not.toContain('&STYLES=&');
+      });
+
+      const sncziSource = lastCallArgs.style.sources['miteco-snczi'];
+      expect(sncziSource).toBeTruthy();
+      expect(sncziSource.type).toBe('raster');
+      expect(sncziSource.maxzoom).toBe(18);
+
+      // Verify layers allow zooming past z19 (up to z22)
+      const sicaLayer = lastCallArgs.style.layers.find((l: any) => l.id === 'sica-layer');
+      expect(sicaLayer).toBeTruthy();
+      expect(sicaLayer.maxzoom).toBe(22);
+
+      const sncziLayer = lastCallArgs.style.layers.find((l: any) => l.id === 'snczi-layer');
+      expect(sncziLayer).toBeTruthy();
+      expect(sncziLayer.maxzoom).toBe(22);
+    });
+  });
 });

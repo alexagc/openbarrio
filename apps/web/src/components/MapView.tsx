@@ -123,7 +123,7 @@ function escapeHtml(str: string): string {
   });
 }
 
-export function createGeodesicCircle(
+function createGeodesicCircle(
   center: [number, number],
   radiusMeters: number,
   points = 64
@@ -141,6 +141,39 @@ export function createGeodesicCircle(
     coords.push([lon + x, lat + y]);
   }
   return coords;
+}
+
+function generateIsochronesGeoJson(lat: number, lon: number) {
+  const center: [number, number] = [lon, lat];
+  return {
+    type: 'FeatureCollection' as const,
+    features: [
+      {
+        type: 'Feature' as const,
+        properties: { ring: '15m' },
+        geometry: {
+          type: 'Polygon' as const,
+          coordinates: [createGeodesicCircle(center, 1200)],
+        },
+      },
+      {
+        type: 'Feature' as const,
+        properties: { ring: '10m' },
+        geometry: {
+          type: 'Polygon' as const,
+          coordinates: [createGeodesicCircle(center, 800)],
+        },
+      },
+      {
+        type: 'Feature' as const,
+        properties: { ring: '5m' },
+        geometry: {
+          type: 'Polygon' as const,
+          coordinates: [createGeodesicCircle(center, 400)],
+        },
+      },
+    ],
+  };
 }
 
 const FACILITY_MAP_ICONS: Record<string, { color: string; path: string }> = {
@@ -430,31 +463,32 @@ export function MapView({
             tileSize: 256,
             attribution: '&copy; Instituto Nacional de Estadística (INE ADRH)',
           },
-          // MITECO SICA Noise WMS (Official MITECO GeoServer)
+          // MITECO SICA Noise WMS (Official MITECO GeoServer with OpenBarrio Edge Cache proxy)
           'miteco-sica': {
             type: 'raster',
             tiles: [
-              'https://gis.miteco.gob.es/geoserver/evaluacionambiental/wms?SERVICE=WMS&VERSION=1.3.0&REQUEST=GetMap&FORMAT=image/png&TRANSPARENT=TRUE&LAYERS=mer_carretera_lden,mer_aglomeracion_lden,mer_ferrocarril_lden,mer_aeropuerto_lden&STYLES=&CRS=EPSG:3857&WIDTH=256&HEIGHT=256&BBOX={bbox-epsg-3857}',
+              `${(import.meta.env.VITE_API_URL || '').replace(/\/$/, '')}/api/v1/tiles/miteco/noise?bbox={bbox-epsg-3857}&width=256&height=256`,
+              'https://gis.miteco.gob.es/geoserver/evaluacionambiental/wms?SERVICE=WMS&VERSION=1.3.0&REQUEST=GetMap&FORMAT=image/png&TRANSPARENT=TRUE&LAYERS=mer_carretera_lden,mer_aglomeracion_lden,mer_ferrocarril_lden,mer_aeropuerto_lden&CRS=EPSG:3857&WIDTH=256&HEIGHT=256&BBOX={bbox-epsg-3857}',
             ],
             tileSize: 256,
+            maxzoom: 18,
             attribution: '&copy; MITECO SICA / MER',
           },
-          // MITECO SNCZI Flood Risk WMS (Official MITECO GeoServer - T=10, 50, 100, 500 & ZFP)
+          // MITECO SNCZI Flood Risk WMS (Official MITECO GeoServer with OpenBarrio Edge Cache proxy)
           'miteco-snczi': {
             type: 'raster',
             tiles: [
-              'https://gis.miteco.gob.es/geoserver/agua/wms?SERVICE=WMS&VERSION=1.3.0&REQUEST=GetMap&FORMAT=image/png&TRANSPARENT=TRUE&LAYERS=Zi_laminas_q10,Zi_laminas_q50,Zi_laminas_q100,Zi_laminas_q500,ZI_Laminas_ZFP&STYLES=&CRS=EPSG:3857&WIDTH=256&HEIGHT=256&BBOX={bbox-epsg-3857}',
+              `${(import.meta.env.VITE_API_URL || '').replace(/\/$/, '')}/api/v1/tiles/miteco/flood?bbox={bbox-epsg-3857}&width=256&height=256`,
+              'https://gis.miteco.gob.es/geoserver/agua/wms?SERVICE=WMS&VERSION=1.3.0&REQUEST=GetMap&FORMAT=image/png&TRANSPARENT=TRUE&LAYERS=Zi_laminas_q10,Zi_laminas_q50,Zi_laminas_q100,Zi_laminas_q500,ZI_Laminas_ZFP&CRS=EPSG:3857&WIDTH=256&HEIGHT=256&BBOX={bbox-epsg-3857}',
             ],
             tileSize: 256,
+            maxzoom: 18,
             attribution: '&copy; MITECO SNCZI',
           },
           // 15-Minute Walking Catchment Rings (GeoJSON Source)
           'walking-isochrones': {
             type: 'geojson',
-            data: {
-              type: 'FeatureCollection',
-              features: [],
-            },
+            data: generateIsochronesGeoJson(initialLat, initialLon),
           },
           // 3D Building Extrusion Footprints (GeoJSON Source)
           'building-3d-source': {
@@ -522,7 +556,7 @@ export function MapView({
             type: 'raster',
             source: 'miteco-snczi',
             minzoom: 7,
-            maxzoom: 19,
+            maxzoom: 22,
             paint: { 'raster-opacity': 0.75 },
             layout: { visibility: 'none' },
           },
@@ -532,7 +566,7 @@ export function MapView({
             type: 'raster',
             source: 'miteco-sica',
             minzoom: 7,
-            maxzoom: 19,
+            maxzoom: 22,
             paint: { 'raster-opacity': 0.75 },
             layout: { visibility: 'none' },
           },
@@ -556,10 +590,10 @@ export function MapView({
             id: 'isochrone-15m-fill',
             type: 'fill',
             source: 'walking-isochrones',
-            filter: ['==', 'ring', '15m'],
+            filter: ['==', ['get', 'ring'], '15m'],
             paint: {
               'fill-color': '#6366f1',
-              'fill-opacity': 0.08,
+              'fill-opacity': 0.12,
             },
             layout: { visibility: 'visible' },
           },
@@ -567,12 +601,12 @@ export function MapView({
             id: 'isochrone-15m-line',
             type: 'line',
             source: 'walking-isochrones',
-            filter: ['==', 'ring', '15m'],
+            filter: ['==', ['get', 'ring'], '15m'],
             paint: {
               'line-color': '#6366f1',
-              'line-width': 1.5,
+              'line-width': 2.0,
               'line-dasharray': [4, 2],
-              'line-opacity': 0.6,
+              'line-opacity': 0.85,
             },
             layout: { visibility: 'visible' },
           },
@@ -580,10 +614,10 @@ export function MapView({
             id: 'isochrone-10m-fill',
             type: 'fill',
             source: 'walking-isochrones',
-            filter: ['==', 'ring', '10m'],
+            filter: ['==', ['get', 'ring'], '10m'],
             paint: {
               'fill-color': '#06b6d4',
-              'fill-opacity': 0.10,
+              'fill-opacity': 0.16,
             },
             layout: { visibility: 'visible' },
           },
@@ -591,12 +625,12 @@ export function MapView({
             id: 'isochrone-10m-line',
             type: 'line',
             source: 'walking-isochrones',
-            filter: ['==', 'ring', '10m'],
+            filter: ['==', ['get', 'ring'], '10m'],
             paint: {
               'line-color': '#06b6d4',
-              'line-width': 1.5,
+              'line-width': 2.0,
               'line-dasharray': [3, 2],
-              'line-opacity': 0.7,
+              'line-opacity': 0.90,
             },
             layout: { visibility: 'visible' },
           },
@@ -604,10 +638,10 @@ export function MapView({
             id: 'isochrone-5m-fill',
             type: 'fill',
             source: 'walking-isochrones',
-            filter: ['==', 'ring', '5m'],
+            filter: ['==', ['get', 'ring'], '5m'],
             paint: {
               'fill-color': '#10b981',
-              'fill-opacity': 0.15,
+              'fill-opacity': 0.22,
             },
             layout: { visibility: 'visible' },
           },
@@ -615,12 +649,12 @@ export function MapView({
             id: 'isochrone-5m-line',
             type: 'line',
             source: 'walking-isochrones',
-            filter: ['==', 'ring', '5m'],
+            filter: ['==', ['get', 'ring'], '5m'],
             paint: {
               'line-color': '#10b981',
-              'line-width': 1.5,
+              'line-width': 2.0,
               'line-dasharray': [2, 2],
-              'line-opacity': 0.85,
+              'line-opacity': 0.95,
             },
             layout: { visibility: 'visible' },
           },
@@ -785,9 +819,13 @@ export function MapView({
 
     map.on('moveend', () => {
       const center = map.getCenter();
-      setMapCenter({
-        lat: parseFloat(center.lat.toFixed(6)),
-        lon: parseFloat(center.lng.toFixed(6)),
+      const newLat = parseFloat(center.lat.toFixed(6));
+      const newLon = parseFloat(center.lng.toFixed(6));
+      setMapCenter((prev) => {
+        if (Math.abs(prev.lat - newLat) < 0.00001 && Math.abs(prev.lon - newLon) < 0.00001) {
+          return prev;
+        }
+        return { lat: newLat, lon: newLon };
       });
     });
 
@@ -888,8 +926,17 @@ export function MapView({
 
     let resizeObserver: ResizeObserver | null = null;
     if (typeof ResizeObserver !== 'undefined' && mapContainerRef.current) {
-      resizeObserver = new ResizeObserver(() => {
-        map.resize();
+      let lastW = 0;
+      let lastH = 0;
+      resizeObserver = new ResizeObserver((entries) => {
+        for (const entry of entries) {
+          const { width, height } = entry.contentRect;
+          if (width > 0 && height > 0 && (Math.abs(width - lastW) > 2 || Math.abs(height - lastH) > 2)) {
+            lastW = width;
+            lastH = height;
+            map.resize();
+          }
+        }
       });
       resizeObserver.observe(mapContainerRef.current);
     }
@@ -927,6 +974,18 @@ export function MapView({
       setVis('sica-layer', showMitecoNoise);
       setVis('snczi-layer', showSncziFlood);
 
+      const isochroneLayers = [
+        'isochrone-15m-fill',
+        'isochrone-15m-line',
+        'isochrone-10m-fill',
+        'isochrone-10m-line',
+        'isochrone-5m-fill',
+        'isochrone-5m-line',
+      ];
+      for (const id of isochroneLayers) {
+        setVis(id, showIsochrones && !is3DMode);
+      }
+
       // Adjust Catastro parcel line contrast dynamically:
       // Dark GIS and Satellite: brighten parcel boundary lines so they contrast sharply as white lines
       // IGN base (light): standard contrast (crisp dark parcel lines)
@@ -943,20 +1002,12 @@ export function MapView({
       }
     };
 
-    applyVisibility();
-
-    if (typeof map.on === 'function') {
-      map.on('load', applyVisibility);
-      map.on('styledata', applyVisibility);
+    if (typeof map.isStyleLoaded === 'function' ? map.isStyleLoaded() : true) {
+      applyVisibility();
+    } else if (typeof map.once === 'function') {
+      map.once('load', applyVisibility);
     }
-
-    return () => {
-      if (typeof map.off === 'function') {
-        map.off('load', applyVisibility);
-        map.off('styledata', applyVisibility);
-      }
-    };
-  }, [activeBasemap, showCatastroWms, showIneIncome, showMitecoNoise, showSncziFlood]);
+  }, [activeBasemap, showCatastroWms, showIneIncome, showMitecoNoise, showSncziFlood, showIsochrones, is3DMode]);
 
   // Toggle 3D Axonometric Tilt & Building Volumetric Extrusion
   const toggle3DMode = (forceState?: boolean) => {
@@ -1004,17 +1055,11 @@ export function MapView({
       }
     };
 
-    applyExtrusionVis();
-    if (typeof map.on === 'function') {
-      map.on('load', applyExtrusionVis);
-      map.on('styledata', applyExtrusionVis);
+    if (typeof map.isStyleLoaded === 'function' ? map.isStyleLoaded() : true) {
+      applyExtrusionVis();
+    } else if (typeof map.once === 'function') {
+      map.once('load', applyExtrusionVis);
     }
-    return () => {
-      if (typeof map.off === 'function') {
-        map.off('load', applyExtrusionVis);
-        map.off('styledata', applyExtrusionVis);
-      }
-    };
   }, [is3DMode]);
 
   // Synchronize dynamic MapLibre light with astronomical solar position when 3D mode toggles
@@ -1329,58 +1374,30 @@ export function MapView({
         const source = map.getSource('walking-isochrones') as maplibregl.GeoJSONSource;
         if (!source || typeof source.setData !== 'function') return;
 
-        if (!showIsochrones || is3DMode || !selectedCoords) {
+        const activeCoords =
+          selectedCoords ||
+          (report
+            ? { lat: report.property.coordinates.latitude, lon: report.property.coordinates.longitude }
+            : mapCenter);
+
+        if (!showIsochrones || is3DMode || !activeCoords) {
           source.setData({ type: 'FeatureCollection', features: [] });
           return;
         }
 
-        const center: [number, number] = [selectedCoords.lon, selectedCoords.lat];
-        const isochronesGeoJson = {
-          type: 'FeatureCollection',
-          features: [
-            {
-              type: 'Feature',
-              properties: { ring: '15m' },
-              geometry: {
-                type: 'Polygon',
-                coordinates: [createGeodesicCircle(center, 1200)],
-              },
-            },
-            {
-              type: 'Feature',
-              properties: { ring: '10m' },
-              geometry: {
-                type: 'Polygon',
-                coordinates: [createGeodesicCircle(center, 800)],
-              },
-            },
-            {
-              type: 'Feature',
-              properties: { ring: '5m' },
-              geometry: {
-                type: 'Polygon',
-                coordinates: [createGeodesicCircle(center, 400)],
-              },
-            },
-          ],
-        };
-
+        const isochronesGeoJson = generateIsochronesGeoJson(activeCoords.lat, activeCoords.lon);
         source.setData(isochronesGeoJson as any);
       } catch {
         // Source not ready yet
       }
     };
 
-    updateIsochrones();
-    if (typeof map.on === 'function') {
-      map.on('styledata', updateIsochrones);
+    if (typeof map.isStyleLoaded === 'function' ? map.isStyleLoaded() : true) {
+      updateIsochrones();
+    } else if (typeof map.once === 'function') {
+      map.once('load', updateIsochrones);
     }
-    return () => {
-      if (typeof map.off === 'function') {
-        map.off('styledata', updateIsochrones);
-      }
-    };
-  }, [selectedCoords, showIsochrones, is3DMode]);
+  }, [selectedCoords, showIsochrones, is3DMode, report]);
 
   // Synchronize Civic Amenities on GPU-Anchored Native WebGL Layer (Zero Zoom Drift)
   useEffect(() => {
@@ -1542,15 +1559,11 @@ export function MapView({
       }
     };
 
-    updateFacilities();
-    if (typeof map.on === 'function') {
-      map.on('styledata', updateFacilities);
+    if (typeof map.isStyleLoaded === 'function' ? map.isStyleLoaded() : true) {
+      updateFacilities();
+    } else if (typeof map.once === 'function') {
+      map.once('load', updateFacilities);
     }
-    return () => {
-      if (typeof map.off === 'function') {
-        map.off('styledata', updateFacilities);
-      }
-    };
   }, [selectedCoords?.lat, selectedCoords?.lon, report?.connectivity, report?.property.cadastralReference]);
 
   return (
@@ -2116,7 +2129,7 @@ export function MapView({
           income: showIneIncome,
           isochrones: showIsochrones,
         }}
-        defaultCollapsed={true}
+        defaultCollapsed={false}
       />
 
       {/* Floating Error Alert */}

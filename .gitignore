@@ -68,4 +68,5 @@ Thumbs.db
 # Local databases and runtime state
 data/
 *.sqlite*
+*.pmtiles
 .wrangler/

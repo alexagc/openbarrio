@@ -109,20 +109,25 @@ export function useUrlSync(
     syncToUrl(state, false);
   }, [state.viewMode, state.activeTab, state.refcat, state.coords?.lat, state.coords?.lon, state.vs, syncToUrl]);
 
+  const onUrlStateChangeRef = useRef(onUrlStateChange);
+  useEffect(() => {
+    onUrlStateChangeRef.current = onUrlStateChange;
+  }, [onUrlStateChange]);
+
   // Handle native browser back/forward buttons (popstate)
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
     const handlePopState = () => {
       const parsed = parseUrlState();
-      if (onUrlStateChange) {
-        onUrlStateChange(parsed);
+      if (onUrlStateChangeRef.current) {
+        onUrlStateChangeRef.current(parsed);
       }
     };
 
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
-  }, [onUrlStateChange]);
+  }, []);
 
   return {
     syncToUrl,
