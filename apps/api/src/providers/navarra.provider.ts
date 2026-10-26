@@ -25,72 +25,80 @@ export class NavarraCatastroProvider implements ICatastroProvider {
   }
 
   async getByCoordinates(latitude: number, longitude: number): Promise<CadastralProperty> {
-    // 1. Attempt live IDENA WMS GetFeatureInfo query
+    // 1. Resolve human street address & postal metadata via CartoCiudad IGN
+    let cartoStreet: string | undefined;
+    let cartoNumber: string | undefined;
+    let cartoPostal: string | undefined;
+    let cartoMuni: string | undefined;
+    let cartoRef: string | undefined;
+
+    try {
+      const cartoUrl = `https://www.cartociudad.es/geocoder/api/geocoder/reverseGeocode?lat=${latitude}&lon=${longitude}`;
+      const cRes = await fetch(cartoUrl, { signal: AbortSignal.timeout(this.timeoutMs) });
+      if (cRes.ok) {
+        const cData = (await cRes.json()) as any;
+        if (cData && cData.address) {
+          const type = cData.tip_via ? `${cData.tip_via} ` : '';
+          cartoStreet = `${type}${cData.address}`.trim();
+          cartoNumber = cData.portalNumber ? String(cData.portalNumber) : '1';
+          cartoPostal = cData.postalCode || '31001';
+          cartoMuni = cData.muni || 'Pamplona / Iruña';
+          if (cData.refCatastral) {
+            cartoRef = String(cData.refCatastral).trim();
+          }
+        }
+      }
+    } catch {
+      // Non-critical: continue to IDENA / fallback
+    }
+
+    // 2. Query IDENA WMS GetFeatureInfo for official Navarra Cadastral subparcel
+    let idenaRef: string | undefined;
+    let idenaArea: number | undefined;
+
     try {
       const [x, y] = toEPSG3857(latitude, longitude);
       const delta = 25; // 50m bounding box
       const bbox = `${(x - delta).toFixed(2)},${(y - delta).toFixed(2)},${(x + delta).toFixed(2)},${(y + delta).toFixed(2)}`;
 
-      const url = `https://idena.navarra.es/ogc/wms?SERVICE=WMS&VERSION=1.3.0&REQUEST=GetFeatureInfo&LAYERS=catastro&QUERY_LAYERS=catastro&CRS=EPSG:3857&WIDTH=256&HEIGHT=256&BBOX=${bbox}&I=128&J=128&INFO_FORMAT=text/xml`;
+      const url = `https://idena.navarra.es/ogc/wms?SERVICE=WMS&VERSION=1.3.0&REQUEST=GetFeatureInfo&LAYERS=CATAST_Pol_SubparUrba&QUERY_LAYERS=CATAST_Pol_SubparUrba&CRS=EPSG:3857&WIDTH=256&HEIGHT=256&BBOX=${bbox}&I=128&J=128&INFO_FORMAT=text/xml`;
       const res = await fetch(url, { signal: AbortSignal.timeout(this.timeoutMs) });
 
       if (res.ok) {
         const xml = await res.text();
         const idMatch = xml.match(/<IDENA:IDCATASTRO>([^<]+)<\/IDENA:IDCATASTRO>/);
-        const muniMatch = xml.match(/<IDENA:MUNICIPIO>([^<]+)<\/IDENA:MUNICIPIO>/);
-        const viaMatch = xml.match(/<IDENA:VIA>([^<]+)<\/IDENA:VIA>/);
         const areaMatch = xml.match(/<IDENA:GEOM_AREA>([^<]+)<\/IDENA:GEOM_AREA>/);
-
-        if (idMatch && idMatch[1]) {
-          const liveRef = idMatch[1].trim();
-          const rawMuni = muniMatch ? muniMatch[1].trim() : 'Pamplona / Iruña';
-          const muni = rawMuni.toUpperCase().includes('PAMPLONA') ? 'Pamplona / Iruña' : rawMuni;
-          const street = viaMatch ? viaMatch[1].trim() : 'Calle Mayor';
-          const area = areaMatch ? Math.round(parseFloat(areaMatch[1])) : 2400;
-
-          return {
-            cadastralReference: liveRef,
-            jurisdiction: 'navarra',
-            address: {
-              street,
-              number: '1',
-              postalCode: '31001',
-              municipality: muni,
-              province: 'Navarra',
-              provinceCode: '31',
-              municipalityCode: '201',
-            },
-            coordinates: { latitude, longitude, srs: 'EPSG:4326' },
-            building: {
-              constructionYear: 1960,
-              builtSurfaceM2: area || 2400,
-              primaryUse: 'Residencial',
-              unitsCount: Math.max(1, Math.round((area || 2400) / 120)),
-              hasCommercialGroundFloor: true,
-            },
-            hasHorizontalDivision: false,
-            units: [],
-          };
-        }
+        if (idMatch && idMatch[1]) idenaRef = idMatch[1].trim();
+        if (areaMatch && areaMatch[1]) idenaArea = Math.round(parseFloat(areaMatch[1]));
       }
     } catch {
-      // Fall through to deterministic coordinate-derived fallback
+      // Non-critical: continue
     }
 
-    // 2. Coordinate-derived fallback (unique per coordinate location)
-    const latInt = Math.abs(Math.round(latitude * 10000));
-    const lonInt = Math.abs(Math.round(longitude * 10000));
-    const coordHash = (latInt * 37 + lonInt) % 900000;
-    const dynamicRef = `31${String(100000 + coordHash)}0001`;
+    // Determine final reference (CartoCiudad > IDENA > Dynamic coordinate hash)
+    let finalRef = cartoRef || idenaRef;
+    if (!finalRef) {
+      const latInt = Math.abs(Math.round(latitude * 10000));
+      const lonInt = Math.abs(Math.round(longitude * 10000));
+      const coordHash = (latInt * 37 + lonInt) % 900000;
+      finalRef = `31201${String(100000 + coordHash)}`;
+    }
+
+    const street = cartoStreet || 'Plaza del Castillo';
+    const streetNumber = cartoNumber || '1';
+    const postalCode = cartoPostal || '31001';
+    const rawMuni = cartoMuni || 'Pamplona / Iruña';
+    const municipality = rawMuni.toUpperCase().includes('PAMPLONA') ? 'Pamplona / Iruña' : rawMuni;
+    const surfaceM2 = idenaArea || 2400;
 
     return {
-      cadastralReference: dynamicRef,
+      cadastralReference: finalRef,
       jurisdiction: 'navarra',
       address: {
-        street: 'Plaza del Castillo',
-        number: String(1 + (coordHash % 50)),
-        postalCode: '31001',
-        municipality: 'Pamplona / Iruña',
+        street,
+        number: streetNumber,
+        postalCode,
+        municipality,
         province: 'Navarra',
         provinceCode: '31',
         municipalityCode: '201',
@@ -101,10 +109,10 @@ export class NavarraCatastroProvider implements ICatastroProvider {
         srs: 'EPSG:4326',
       },
       building: {
-        constructionYear: 1950 + (coordHash % 45),
-        builtSurfaceM2: 2400 + (coordHash % 1200),
+        constructionYear: 1960,
+        builtSurfaceM2: surfaceM2,
         primaryUse: 'Residencial',
-        unitsCount: 10 + (coordHash % 15),
+        unitsCount: Math.max(1, Math.round(surfaceM2 / 120)),
         hasCommercialGroundFloor: true,
       },
       hasHorizontalDivision: false,
@@ -119,14 +127,39 @@ export class NavarraCatastroProvider implements ICatastroProvider {
     const lat = fallbackCoords?.latitude || 42.8169;
     const lon = fallbackCoords?.longitude || -1.6432;
 
+    let street = 'Plaza del Castillo';
+    let streetNumber = '1';
+    let postalCode = '31001';
+    let municipality = 'Pamplona / Iruña';
+
+    if (fallbackCoords) {
+      try {
+        const cartoUrl = `https://www.cartociudad.es/geocoder/api/geocoder/reverseGeocode?lat=${fallbackCoords.latitude}&lon=${fallbackCoords.longitude}`;
+        const cRes = await fetch(cartoUrl, { signal: AbortSignal.timeout(this.timeoutMs) });
+        if (cRes.ok) {
+          const cData = (await cRes.json()) as any;
+          if (cData && cData.address) {
+            const type = cData.tip_via ? `${cData.tip_via} ` : '';
+            street = `${type}${cData.address}`.trim();
+            streetNumber = cData.portalNumber ? String(cData.portalNumber) : '1';
+            postalCode = cData.postalCode || postalCode;
+            const rawMuni = cData.muni || municipality;
+            municipality = rawMuni.toUpperCase().includes('PAMPLONA') ? 'Pamplona / Iruña' : rawMuni;
+          }
+        }
+      } catch {
+        // Fall through
+      }
+    }
+
     return {
       cadastralReference: refcat.toUpperCase(),
       jurisdiction: 'navarra',
       address: {
-        street: 'Plaza del Castillo',
-        number: '1',
-        postalCode: '31001',
-        municipality: 'Pamplona / Iruña',
+        street,
+        number: streetNumber,
+        postalCode,
+        municipality,
         province: 'Navarra',
         provinceCode: '31',
         municipalityCode: '201',
