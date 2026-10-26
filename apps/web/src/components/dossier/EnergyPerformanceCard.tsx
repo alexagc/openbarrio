@@ -1,5 +1,5 @@
 import { EnergyPerformanceCertificate } from '@openbarrio/core';
-import { Zap, Leaf, AlertCircle, ShieldCheck, HelpCircle } from 'lucide-react';
+import { Zap, Leaf, AlertCircle, ShieldCheck, HelpCircle, Wrench } from 'lucide-react';
 
 interface EnergyPerformanceCardProps {
   energy?: EnergyPerformanceCertificate;
@@ -17,11 +17,42 @@ const RATING_COLORS: Record<string, { bg: string; text: string; border: string }
 
 const RATING_STEPS = ['A', 'B', 'C', 'D', 'E', 'F', 'G'] as const;
 
+function getRecommendedActions(rating: string): { title: string; subsidy: string }[] {
+  switch (rating) {
+    case 'G':
+    case 'F':
+      return [
+        { title: 'Sustitución de carpinterías por PVC con doble/triple acristalamiento bajo emisivo', subsidy: 'Subvencionable hasta 40% (Fondos NextGen / PREE 5000)' },
+        { title: 'Sustitución de caldera por Aerotermia de alta eficiencia o bomba de calor A+++', subsidy: 'Deducción IRPF hasta 40% por reducción de demanda' },
+        { title: 'Aislamiento térmico interior o trasdosado en fachadas frías', subsidy: 'Ahorro estimado en factura de calefacción > 45%' },
+      ];
+    case 'E':
+      return [
+        { title: 'Sustitución de caldera estándar por bomba de calor / aerotermia', subsidy: 'Deducción IRPF del 20-40%' },
+        { title: 'Mejora de aislamiento en cajones de persiana y sellado de infiltraciones', subsidy: 'Retorno de inversión < 3 años' },
+      ];
+    case 'D':
+      return [
+        { title: 'Instalación de termostatos modulantes inteligentes y válvulas termostáticas', subsidy: 'Optimización de consumo ~15%' },
+        { title: 'Apoyo solar fotovoltaico para autoconsumo comunitario o individual', subsidy: 'Bonificación IBI hasta 50% según municipio' },
+      ];
+    case 'C':
+    case 'B':
+    case 'A':
+      return [
+        { title: 'Inmueble de alta eficiencia energética conforme a directiva europea EPBD 2030', subsidy: 'Exento de penalizaciones y con hipoteca verde bonificada' },
+      ];
+    default:
+      return [];
+  }
+}
+
 export function EnergyPerformanceCard({ energy }: EnergyPerformanceCardProps) {
   if (!energy) return null;
 
   const currentRating = energy.ratingEmissions || 'E';
   const isEstimated = energy.isEstimated;
+  const actions = getRecommendedActions(currentRating);
 
   return (
     <div
@@ -101,7 +132,7 @@ export function EnergyPerformanceCard({ energy }: EnergyPerformanceCardProps) {
       </div>
 
       {/* Key Energy Telemetry Grid */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs font-mono">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs font-mono mb-3">
         <div className="p-2.5 rounded bg-surface-container-high border border-outline-variant/50">
           <span className="text-[10px] text-outline uppercase block">Emisiones CO₂</span>
           <span className="text-sm font-semibold text-on-surface">
@@ -133,6 +164,32 @@ export function EnergyPerformanceCard({ energy }: EnergyPerformanceCardProps) {
           </span>
         </div>
       </div>
+
+      {/* Recommended Renovation & Upgrade Actions */}
+      {actions.length > 0 && (
+        <div className="pt-2 border-t border-outline-variant/40">
+          <div className="text-[11px] font-mono text-outline mb-2 flex items-center gap-1.5">
+            <Wrench className="w-3.5 h-3.5 text-primary" />
+            <span>Medidas de Mejora y Rehabilitación Energética Recomendadas:</span>
+          </div>
+          <div className="space-y-1.5">
+            {actions.map((act, idx) => (
+              <div
+                key={idx}
+                className="p-2 rounded bg-surface-container-high/60 border border-outline-variant/40 text-xs font-mono flex items-start justify-between gap-2 flex-wrap sm:flex-nowrap"
+              >
+                <div className="flex items-start gap-2">
+                  <span className="w-1.5 h-1.5 rounded-full bg-primary mt-1.5 shrink-0" />
+                  <span className="text-on-surface text-[12px]">{act.title}</span>
+                </div>
+                <span className="text-[10px] text-primary/90 font-medium shrink-0 bg-primary/10 px-2 py-0.5 rounded border border-primary/20">
+                  {act.subsidy}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
