@@ -5,6 +5,15 @@ All notable changes to the **OpenBarrio** platform are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.4] - 2026-10-26
+
+### Fixed
+- **MapLibre GL Lifecycle & Cloudflare Production Worker Parity (`apps/web`)**:
+  - Restored proven v0.6.0 map event lifecycle (`updateFacilities`, `updateIsochrones`, `applyVisibility`, `applyExtrusionVis` with `styledata` listeners), resolving stalled layers and click updates.
+  - Eliminated external worker URL dependencies in favor of MapLibre GL's native inline blob worker, permanently resolving 404/MIME type (`text/html`) errors on Cloudflare Pages.
+  - Restored real geographic coordinates and SVG icons for civic facilities, preserving authentic positioning.
+  - Modernized isochrone filter expressions to `['==', ['get', 'ring'], '15m']` and added `maxzoom: 22` layer overzooming for MITECO environmental overlays.
+
 ## [0.6.3] - 2026-10-26
 
 ### Fixed

@@ -2,12 +2,6 @@ import { useEffect, useRef, useState, useMemo, useCallback } from 'react';
 import * as maplibregl from 'maplibre-gl';
 import type { Map as MapLibreMap, Marker, MapMouseEvent } from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
-
-// Point MapLibre directly to the clean static worker script in /assets/
-// Avoids Vite dev server injecting @vite/client into the Web Worker thread
-if (typeof (maplibregl as any).setWorkerUrl === 'function') {
-  (maplibregl as any).setWorkerUrl('/assets/maplibre-gl-worker.mjs');
-}
 import {
   Layers,
   Maximize2,
@@ -129,7 +123,7 @@ function escapeHtml(str: string): string {
   });
 }
 
-function createGeodesicCircle(
+export function createGeodesicCircle(
   center: [number, number],
   radiusMeters: number,
   points = 64
@@ -147,39 +141,6 @@ function createGeodesicCircle(
     coords.push([lon + x, lat + y]);
   }
   return coords;
-}
-
-function generateIsochronesGeoJson(lat: number, lon: number) {
-  const center: [number, number] = [lon, lat];
-  return {
-    type: 'FeatureCollection' as const,
-    features: [
-      {
-        type: 'Feature' as const,
-        properties: { ring: '15m' },
-        geometry: {
-          type: 'Polygon' as const,
-          coordinates: [createGeodesicCircle(center, 1200)],
-        },
-      },
-      {
-        type: 'Feature' as const,
-        properties: { ring: '10m' },
-        geometry: {
-          type: 'Polygon' as const,
-          coordinates: [createGeodesicCircle(center, 800)],
-        },
-      },
-      {
-        type: 'Feature' as const,
-        properties: { ring: '5m' },
-        geometry: {
-          type: 'Polygon' as const,
-          coordinates: [createGeodesicCircle(center, 400)],
-        },
-      },
-    ],
-  };
 }
 
 const FACILITY_MAP_ICONS: Record<string, { color: string; path: string }> = {
@@ -494,7 +455,10 @@ export function MapView({
           // 15-Minute Walking Catchment Rings (GeoJSON Source)
           'walking-isochrones': {
             type: 'geojson',
-            data: generateIsochronesGeoJson(initialLat, initialLon),
+            data: {
+              type: 'FeatureCollection',
+              features: [],
+            },
           },
           // 3D Building Extrusion Footprints (GeoJSON Source)
           'building-3d-source': {
@@ -599,7 +563,7 @@ export function MapView({
             filter: ['==', ['get', 'ring'], '15m'],
             paint: {
               'fill-color': '#6366f1',
-              'fill-opacity': 0.12,
+              'fill-opacity': 0.08,
             },
             layout: { visibility: 'visible' },
           },
@@ -610,9 +574,9 @@ export function MapView({
             filter: ['==', ['get', 'ring'], '15m'],
             paint: {
               'line-color': '#6366f1',
-              'line-width': 2.0,
+              'line-width': 1.5,
               'line-dasharray': [4, 2],
-              'line-opacity': 0.85,
+              'line-opacity': 0.6,
             },
             layout: { visibility: 'visible' },
           },
@@ -623,7 +587,7 @@ export function MapView({
             filter: ['==', ['get', 'ring'], '10m'],
             paint: {
               'fill-color': '#06b6d4',
-              'fill-opacity': 0.16,
+              'fill-opacity': 0.10,
             },
             layout: { visibility: 'visible' },
           },
@@ -634,9 +598,9 @@ export function MapView({
             filter: ['==', ['get', 'ring'], '10m'],
             paint: {
               'line-color': '#06b6d4',
-              'line-width': 2.0,
+              'line-width': 1.5,
               'line-dasharray': [3, 2],
-              'line-opacity': 0.90,
+              'line-opacity': 0.7,
             },
             layout: { visibility: 'visible' },
           },
@@ -647,7 +611,7 @@ export function MapView({
             filter: ['==', ['get', 'ring'], '5m'],
             paint: {
               'fill-color': '#10b981',
-              'fill-opacity': 0.22,
+              'fill-opacity': 0.15,
             },
             layout: { visibility: 'visible' },
           },
@@ -658,9 +622,9 @@ export function MapView({
             filter: ['==', ['get', 'ring'], '5m'],
             paint: {
               'line-color': '#10b981',
-              'line-width': 2.0,
+              'line-width': 1.5,
               'line-dasharray': [2, 2],
-              'line-opacity': 0.95,
+              'line-opacity': 0.85,
             },
             layout: { visibility: 'visible' },
           },
@@ -825,13 +789,9 @@ export function MapView({
 
     map.on('moveend', () => {
       const center = map.getCenter();
-      const newLat = parseFloat(center.lat.toFixed(6));
-      const newLon = parseFloat(center.lng.toFixed(6));
-      setMapCenter((prev) => {
-        if (Math.abs(prev.lat - newLat) < 0.00001 && Math.abs(prev.lon - newLon) < 0.00001) {
-          return prev;
-        }
-        return { lat: newLat, lon: newLon };
+      setMapCenter({
+        lat: parseFloat(center.lat.toFixed(6)),
+        lon: parseFloat(center.lng.toFixed(6)),
       });
     });
 
@@ -932,17 +892,8 @@ export function MapView({
 
     let resizeObserver: ResizeObserver | null = null;
     if (typeof ResizeObserver !== 'undefined' && mapContainerRef.current) {
-      let lastW = 0;
-      let lastH = 0;
-      resizeObserver = new ResizeObserver((entries) => {
-        for (const entry of entries) {
-          const { width, height } = entry.contentRect;
-          if (width > 0 && height > 0 && (Math.abs(width - lastW) > 2 || Math.abs(height - lastH) > 2)) {
-            lastW = width;
-            lastH = height;
-            map.resize();
-          }
-        }
+      resizeObserver = new ResizeObserver(() => {
+        map.resize();
       });
       resizeObserver.observe(mapContainerRef.current);
     }
@@ -980,18 +931,6 @@ export function MapView({
       setVis('sica-layer', showMitecoNoise);
       setVis('snczi-layer', showSncziFlood);
 
-      const isochroneLayers = [
-        'isochrone-15m-fill',
-        'isochrone-15m-line',
-        'isochrone-10m-fill',
-        'isochrone-10m-line',
-        'isochrone-5m-fill',
-        'isochrone-5m-line',
-      ];
-      for (const id of isochroneLayers) {
-        setVis(id, showIsochrones && !is3DMode);
-      }
-
       // Adjust Catastro parcel line contrast dynamically:
       // Dark GIS and Satellite: brighten parcel boundary lines so they contrast sharply as white lines
       // IGN base (light): standard contrast (crisp dark parcel lines)
@@ -1008,12 +947,20 @@ export function MapView({
       }
     };
 
-    if (typeof map.isStyleLoaded === 'function' ? map.isStyleLoaded() : true) {
-      applyVisibility();
-    } else if (typeof map.once === 'function') {
-      map.once('load', applyVisibility);
+    applyVisibility();
+
+    if (typeof map.on === 'function') {
+      map.on('load', applyVisibility);
+      map.on('styledata', applyVisibility);
     }
-  }, [activeBasemap, showCatastroWms, showIneIncome, showMitecoNoise, showSncziFlood, showIsochrones, is3DMode]);
+
+    return () => {
+      if (typeof map.off === 'function') {
+        map.off('load', applyVisibility);
+        map.off('styledata', applyVisibility);
+      }
+    };
+  }, [activeBasemap, showCatastroWms, showIneIncome, showMitecoNoise, showSncziFlood]);
 
   // Toggle 3D Axonometric Tilt & Building Volumetric Extrusion
   const toggle3DMode = (forceState?: boolean) => {
@@ -1061,11 +1008,17 @@ export function MapView({
       }
     };
 
-    if (typeof map.isStyleLoaded === 'function' ? map.isStyleLoaded() : true) {
-      applyExtrusionVis();
-    } else if (typeof map.once === 'function') {
-      map.once('load', applyExtrusionVis);
+    applyExtrusionVis();
+    if (typeof map.on === 'function') {
+      map.on('load', applyExtrusionVis);
+      map.on('styledata', applyExtrusionVis);
     }
+    return () => {
+      if (typeof map.off === 'function') {
+        map.off('load', applyExtrusionVis);
+        map.off('styledata', applyExtrusionVis);
+      }
+    };
   }, [is3DMode]);
 
   // Synchronize dynamic MapLibre light with astronomical solar position when 3D mode toggles
@@ -1380,30 +1333,58 @@ export function MapView({
         const source = map.getSource('walking-isochrones') as maplibregl.GeoJSONSource;
         if (!source || typeof source.setData !== 'function') return;
 
-        const activeCoords =
-          selectedCoords ||
-          (report
-            ? { lat: report.property.coordinates.latitude, lon: report.property.coordinates.longitude }
-            : mapCenter);
-
-        if (!showIsochrones || is3DMode || !activeCoords) {
+        if (!showIsochrones || is3DMode || !selectedCoords) {
           source.setData({ type: 'FeatureCollection', features: [] });
           return;
         }
 
-        const isochronesGeoJson = generateIsochronesGeoJson(activeCoords.lat, activeCoords.lon);
+        const center: [number, number] = [selectedCoords.lon, selectedCoords.lat];
+        const isochronesGeoJson = {
+          type: 'FeatureCollection',
+          features: [
+            {
+              type: 'Feature',
+              properties: { ring: '15m' },
+              geometry: {
+                type: 'Polygon',
+                coordinates: [createGeodesicCircle(center, 1200)],
+              },
+            },
+            {
+              type: 'Feature',
+              properties: { ring: '10m' },
+              geometry: {
+                type: 'Polygon',
+                coordinates: [createGeodesicCircle(center, 800)],
+              },
+            },
+            {
+              type: 'Feature',
+              properties: { ring: '5m' },
+              geometry: {
+                type: 'Polygon',
+                coordinates: [createGeodesicCircle(center, 400)],
+              },
+            },
+          ],
+        };
+
         source.setData(isochronesGeoJson as any);
       } catch {
         // Source not ready yet
       }
     };
 
-    if (typeof map.isStyleLoaded === 'function' ? map.isStyleLoaded() : true) {
-      updateIsochrones();
-    } else if (typeof map.once === 'function') {
-      map.once('load', updateIsochrones);
+    updateIsochrones();
+    if (typeof map.on === 'function') {
+      map.on('styledata', updateIsochrones);
     }
-  }, [selectedCoords, showIsochrones, is3DMode, report]);
+    return () => {
+      if (typeof map.off === 'function') {
+        map.off('styledata', updateIsochrones);
+      }
+    };
+  }, [selectedCoords, showIsochrones, is3DMode]);
 
   // Synchronize Civic Amenities on GPU-Anchored Native WebGL Layer (Zero Zoom Drift)
   useEffect(() => {
@@ -1565,11 +1546,15 @@ export function MapView({
       }
     };
 
-    if (typeof map.isStyleLoaded === 'function' ? map.isStyleLoaded() : true) {
-      updateFacilities();
-    } else if (typeof map.once === 'function') {
-      map.once('load', updateFacilities);
+    updateFacilities();
+    if (typeof map.on === 'function') {
+      map.on('styledata', updateFacilities);
     }
+    return () => {
+      if (typeof map.off === 'function') {
+        map.off('styledata', updateFacilities);
+      }
+    };
   }, [selectedCoords?.lat, selectedCoords?.lon, report?.connectivity, report?.property.cadastralReference]);
 
   return (
@@ -2135,7 +2120,7 @@ export function MapView({
           income: showIneIncome,
           isochrones: showIsochrones,
         }}
-        defaultCollapsed={false}
+        defaultCollapsed={true}
       />
 
       {/* Floating Error Alert */}
