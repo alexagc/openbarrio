@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { NeighborhoodTrends } from '@openbarrio/core';
-import { TrendingUp } from 'lucide-react';
+import { TrendingUp, Info } from 'lucide-react';
 
 interface NeighborhoodTrendsCardProps {
   trends?: NeighborhoodTrends;
@@ -9,6 +9,7 @@ interface NeighborhoodTrendsCardProps {
 export function NeighborhoodTrendsCard({ trends }: NeighborhoodTrendsCardProps) {
   const [metric, setMetric] = useState<'income' | 'ipv'>('income');
   const [windowYears, setWindowYears] = useState<3 | 5>(5);
+  const [activeIdx, setActiveIdx] = useState<number | null>(null);
 
   if (!trends || !trends.timeSeries || trends.timeSeries.length === 0) {
     return null;
@@ -26,24 +27,31 @@ export function NeighborhoodTrendsCard({ trends }: NeighborhoodTrendsCardProps) 
   const range = maxVal - minVal || 1;
 
   // SVG Chart Geometry
-  const width = 360;
-  const height = 90;
-  const paddingX = 24;
-  const paddingY = 16;
+  const width = 380;
+  const height = 120;
+  const paddingX = 32;
+  const paddingTop = 26;
+  const paddingBottom = 22;
   const innerWidth = width - paddingX * 2;
-  const innerHeight = height - paddingY * 2;
+  const innerHeight = height - paddingTop - paddingBottom;
 
   const points = values.map((val, idx) => {
     const x = paddingX + (idx / (values.length - 1 || 1)) * innerWidth;
-    const y = paddingY + innerHeight - ((val - minVal) / range) * innerHeight;
-    return { x, y, val, period: series[idx].period };
+    const y = paddingTop + innerHeight - ((val - minVal) / range) * innerHeight;
+    return {
+      x,
+      y,
+      val,
+      period: series[idx].period,
+      annualVar: series[idx].annualVariationPct,
+    };
   });
 
   const pathD = points.reduce((acc, pt, idx) => {
     return idx === 0 ? `M ${pt.x} ${pt.y}` : `${acc} L ${pt.x} ${pt.y}`;
   }, '');
 
-  const areaD = `${pathD} L ${points[points.length - 1].x} ${height - paddingY} L ${points[0].x} ${height - paddingY} Z`;
+  const areaD = `${pathD} L ${points[points.length - 1].x} ${height - paddingBottom} L ${points[0].x} ${height - paddingBottom} Z`;
 
   const gentrificationLabels: Record<string, { label: string; color: string }> = {
     high: { label: 'Revalorización Rápida / Gentrificación', color: 'text-amber-400 border-amber-500/40 bg-amber-500/10' },
@@ -53,6 +61,15 @@ export function NeighborhoodTrendsCard({ trends }: NeighborhoodTrendsCardProps) 
   };
 
   const status = gentrificationLabels[trends.summary.gentrificationIndicator] || gentrificationLabels.moderate;
+
+  const formatPointValue = (val: number) => {
+    if (metric === 'income') {
+      return val >= 1000 ? `${(val / 1000).toFixed(1)}k €` : `${val} €`;
+    }
+    return val.toFixed(1);
+  };
+
+  const activePoint = activeIdx !== null ? points[activeIdx] : null;
 
   return (
     <div
@@ -73,16 +90,22 @@ export function NeighborhoodTrendsCard({ trends }: NeighborhoodTrendsCardProps) 
           <div className="flex rounded bg-surface-container-high p-0.5 border border-outline-variant/60">
             <button
               type="button"
-              onClick={() => setMetric('income')}
+              onClick={() => {
+                setMetric('income');
+                setActiveIdx(null);
+              }}
               className={`px-2 py-0.5 rounded transition-colors ${
                 metric === 'income' ? 'bg-primary text-on-primary font-semibold' : 'text-outline hover:text-on-surface'
               }`}
             >
-              Renta (€)
+              Renta Media (€)
             </button>
             <button
               type="button"
-              onClick={() => setMetric('ipv')}
+              onClick={() => {
+                setMetric('ipv');
+                setActiveIdx(null);
+              }}
               className={`px-2 py-0.5 rounded transition-colors ${
                 metric === 'ipv' ? 'bg-primary text-on-primary font-semibold' : 'text-outline hover:text-on-surface'
               }`}
@@ -95,7 +118,10 @@ export function NeighborhoodTrendsCard({ trends }: NeighborhoodTrendsCardProps) 
           <div className="flex rounded bg-surface-container-high p-0.5 border border-outline-variant/60">
             <button
               type="button"
-              onClick={() => setWindowYears(3)}
+              onClick={() => {
+                setWindowYears(3);
+                setActiveIdx(null);
+              }}
               className={`px-1.5 py-0.5 rounded transition-colors ${
                 windowYears === 3 ? 'bg-surface-variant text-on-surface font-semibold' : 'text-outline hover:text-on-surface'
               }`}
@@ -104,7 +130,10 @@ export function NeighborhoodTrendsCard({ trends }: NeighborhoodTrendsCardProps) 
             </button>
             <button
               type="button"
-              onClick={() => setWindowYears(5)}
+              onClick={() => {
+                setWindowYears(5);
+                setActiveIdx(null);
+              }}
               className={`px-1.5 py-0.5 rounded transition-colors ${
                 windowYears === 5 ? 'bg-surface-variant text-on-surface font-semibold' : 'text-outline hover:text-on-surface'
               }`}
@@ -115,19 +144,29 @@ export function NeighborhoodTrendsCard({ trends }: NeighborhoodTrendsCardProps) 
         </div>
       </div>
 
-      {/* SVG Time Series Chart */}
-      <div className="relative w-full h-[100px] bg-surface-container-high/40 rounded border border-outline-variant/40 overflow-hidden mb-3">
+      {/* SVG Time Series Chart with explicit data point values */}
+      <div className="relative w-full bg-surface-container-high/40 rounded border border-outline-variant/40 p-2 mb-3">
         <svg
           viewBox={`0 0 ${width} ${height}`}
-          className="w-full h-full preserve-3d"
-          preserveAspectRatio="none"
+          className="w-full h-[120px]"
         >
           <defs>
             <linearGradient id="trendGradient" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#00E5FF" stopOpacity="0.3" />
+              <stop offset="0%" stopColor="#00E5FF" stopOpacity="0.35" />
               <stop offset="100%" stopColor="#00E5FF" stopOpacity="0.0" />
             </linearGradient>
           </defs>
+
+          {/* Horizontal grid baseline */}
+          <line
+            x1={paddingX}
+            y1={height - paddingBottom}
+            x2={width - paddingX}
+            y2={height - paddingBottom}
+            stroke="#334155"
+            strokeDasharray="3 3"
+            strokeWidth="1"
+          />
 
           {/* Fill Area */}
           <path d={areaD} fill="url(#trendGradient)" />
@@ -135,27 +174,88 @@ export function NeighborhoodTrendsCard({ trends }: NeighborhoodTrendsCardProps) 
           {/* Stroke Line */}
           <path d={pathD} fill="none" stroke="#00E5FF" strokeWidth="2.5" strokeLinecap="round" />
 
-          {/* Data Points */}
-          {points.map((pt, idx) => (
-            <g key={idx} className="cursor-pointer group">
-              <circle cx={pt.x} cy={pt.y} r="3.5" fill="#00E5FF" stroke="#0B1326" strokeWidth="1.5" />
-              <text
-                x={pt.x}
-                y={height - 3}
-                textAnchor="middle"
-                fontSize="9"
-                fill="#94A3B8"
-                fontFamily="monospace"
+          {/* Vertical Guides & Data Points with Explicit Values */}
+          {points.map((pt, idx) => {
+            const isHovered = activeIdx === idx;
+            return (
+              <g
+                key={idx}
+                className="cursor-pointer group"
+                onMouseEnter={() => setActiveIdx(idx)}
+                onMouseLeave={() => setActiveIdx(null)}
+                onClick={() => setActiveIdx(idx)}
               >
-                {pt.period}
-              </text>
-            </g>
-          ))}
+                {/* Vertical helper line to bottom */}
+                <line
+                  x1={pt.x}
+                  y1={pt.y}
+                  x2={pt.x}
+                  y2={height - paddingBottom}
+                  stroke={isHovered ? '#00E5FF' : '#334155'}
+                  strokeWidth={isHovered ? '1.5' : '1'}
+                  strokeDasharray={isHovered ? 'none' : '2 2'}
+                  opacity={isHovered ? 0.9 : 0.4}
+                />
+
+                {/* Point Value (Always visible above point) */}
+                <text
+                  x={pt.x}
+                  y={pt.y - 7}
+                  textAnchor="middle"
+                  fontSize="10"
+                  fontWeight="bold"
+                  fill={isHovered ? '#FFFFFF' : '#38BDF8'}
+                  fontFamily="monospace"
+                >
+                  {formatPointValue(pt.val)}
+                </text>
+
+                {/* Point Circle */}
+                <circle
+                  cx={pt.x}
+                  cy={pt.y}
+                  r={isHovered ? 5.5 : 4}
+                  fill={isHovered ? '#FFFFFF' : '#00E5FF'}
+                  stroke="#0B1326"
+                  strokeWidth="2"
+                  className="transition-all duration-150"
+                />
+
+                {/* Period Label (Year) */}
+                <text
+                  x={pt.x}
+                  y={height - 5}
+                  textAnchor="middle"
+                  fontSize="10"
+                  fontWeight={isHovered ? 'bold' : 'normal'}
+                  fill={isHovered ? '#FFFFFF' : '#94A3B8'}
+                  fontFamily="monospace"
+                >
+                  {pt.period}
+                </text>
+              </g>
+            );
+          })}
         </svg>
+
+        {/* Dynamic Hover/Click Inspection Pill */}
+        {activePoint && (
+          <div className="absolute top-2 right-2 px-2.5 py-1 rounded bg-surface-container-lowest/90 border border-primary/50 text-xs font-mono shadow-md backdrop-blur flex items-center gap-2">
+            <span className="text-on-surface font-semibold">{activePoint.period}:</span>
+            <span className="text-primary font-bold">
+              {metric === 'income' ? `${activePoint.val.toLocaleString('es-ES')} € / año` : `${activePoint.val.toFixed(1)} pts`}
+            </span>
+            {activePoint.annualVar !== undefined && activePoint.annualVar !== 0 && (
+              <span className={`text-[11px] font-semibold ${activePoint.annualVar > 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                ({activePoint.annualVar > 0 ? '+' : ''}{activePoint.annualVar}%)
+              </span>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Telemetry Summary Chips */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs font-mono">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs font-mono mb-2.5">
         <div className="p-2 rounded bg-surface-container-high border border-outline-variant/40">
           <span className="text-[10px] text-outline uppercase block">Crecimiento Renta (5A)</span>
           <span className="text-sm font-semibold text-emerald-400">
@@ -178,6 +278,14 @@ export function NeighborhoodTrendsCard({ trends }: NeighborhoodTrendsCardProps) 
             {status.label}
           </span>
         </div>
+      </div>
+
+      {/* Official Data Source Provenance Footnote */}
+      <div className="flex items-start gap-1.5 text-[10px] text-outline font-mono pt-1 border-t border-outline-variant/30">
+        <Info className="w-3 h-3 text-primary shrink-0 mt-0.5" />
+        <span>
+          <strong>Fuentes Oficiales INE:</strong> Renta de Hogares del <em>Atlas ADRH</em> (sección censal {trends.censusSectionId}) e <em>Índice de Precios de Vivienda (IPV)</em> de {trends.autonomousCommunity || trends.provinceName}.
+        </span>
       </div>
     </div>
   );
