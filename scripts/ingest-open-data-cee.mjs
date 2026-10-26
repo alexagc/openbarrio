@@ -1,12 +1,11 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import readline from 'node:readline';
 import https from 'node:https';
 import { DatabaseSync } from 'node:sqlite';
 
 const DB_PATH = path.resolve(process.cwd(), 'data/openbarrio.sqlite');
 
-console.log('⚡ [OpenBarrio ETL] Ingesting official Open Data Energy Certificates (CEE)...');
+console.log('⚡ [OpenBarrio ETL] Multi-region Open Data Energy Certificates (CEE) Ingestion...');
 
 if (!fs.existsSync(DB_PATH)) {
   console.error('❌ Database not found at', DB_PATH);
@@ -25,7 +24,7 @@ const insertStmt = db.prepare(`
   VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0)
 `);
 
-// 1. Ingest priority / seed certificates
+// 1. Ingest Priority Reference Certificates
 const priorityCertificates = [
   {
     refcat: '0269303VK4606G0077SR',
@@ -115,166 +114,77 @@ for (const cert of priorityCertificates) {
 db.exec('COMMIT;');
 console.log(`✅ Seeded ${priorityCertificates.length} reference certificates.`);
 
-// 2. Ingest Open Data Euskadi
-async function ingestEuskadiOpenData() {
-  const url = 'https://opendata.euskadi.eus/contenidos/ds_geograficos/certificados_eficiencia_edif/opendata/certificados-edificios.csv';
-  console.log('📡 Fetching Open Data Euskadi CEE dataset (~44,000 certificates)...');
-
-  try {
-    const res = await fetch(url);
-    if (!res.ok) {
-      console.warn('⚠️ Could not download Euskadi dataset:', res.statusText);
-      return;
-    }
-
-    const text = await res.text();
-    const lines = text.split('\n');
-    console.log(`📥 Read ${lines.length} lines from Euskadi Open Data.`);
-
-    let inserted = 0;
-    db.exec('BEGIN TRANSACTION;');
-
-    for (let i = 1; i < lines.length; i++) {
-      const line = lines[i].trim();
-      if (!line) continue;
-
-      const parts = line.split(';').map(p => p.replace(/^"|"$/g, '').trim());
-      if (parts.length < 41) continue;
-
-      const regNum = parts[0];
-      const refcatRaw = parts[15];
-      const validUntil = parts[19];
-      const primaryEnergy = parseFloat(parts[29]) || null;
-      const co2 = parseFloat(parts[30]) || null;
-      const consumption = parts[39]?.toUpperCase();
-      const emissions = parts[40]?.toUpperCase();
-
-      if (!refcatRaw || !emissions || !consumption) continue;
-      if (!['A', 'B', 'C', 'D', 'E', 'F', 'G'].includes(emissions)) continue;
-      if (!['A', 'B', 'C', 'D', 'E', 'F', 'G'].includes(consumption)) continue;
-
-      const cleanRefcat = refcatRaw.replace(/[\s\-_.]/g, '').toUpperCase();
-      if (cleanRefcat.length < 5) continue;
-
-      try {
-        insertStmt.run(
-          cleanRefcat,
-          emissions,
-          consumption,
-          co2,
-          primaryEnergy,
-          regNum,
-          cleanRefcat.length === 20 ? 'unit' : 'building',
-          validUntil
-        );
-        inserted++;
-      } catch {
-        // Ignore duplicate primary key collisions
-      }
-
-      if (inserted % 10000 === 0 && inserted > 0) {
-        db.exec('COMMIT;');
-        db.exec('BEGIN TRANSACTION;');
-        console.log(`  ⏳ Euskadi: Ingested ${inserted} certificates...`);
-      }
-    }
-
-    db.exec('COMMIT;');
-    console.log(`🎉 Successfully ingested ${inserted} official Euskadi certificates.`);
-  } catch (err) {
-    console.error('⚠️ Error ingesting Euskadi dataset:', err.message);
-  }
-}
-
-// 3. Ingest Open Data Madrid (2026 dataset - 125k records)
-async function ingestMadridOpenData() {
-  const url = 'https://datos.comunidad.madrid/dataset/971ee067-8ec1-47a1-a973-f1f3704d5d20/resource/4e42b49c-bb6b-485a-a7b7-8f760f356855/download/registro_certificados_eficiencia_energetica_2026.csv';
-  console.log('📡 Fetching Open Data Madrid CEE dataset (~125,000 certificates)...');
-
+// 2. Ingest Catalunya (ICAEN Socrata) in fast streaming chunks
+function fetchJson(url) {
   return new Promise((resolve) => {
     https.get(url, (res) => {
-      if (res.statusCode !== 200) {
-        console.warn('⚠️ Could not download Madrid dataset, status:', res.statusCode);
-        return resolve();
-      }
-
-      const rl = readline.createInterface({ input: res, crlfDelay: Infinity });
-      let count = 0;
-      let inserted = 0;
-      let header = true;
-
-      db.exec('BEGIN TRANSACTION;');
-
-      rl.on('line', (line) => {
-        if (header) {
-          header = false;
-          return;
-        }
-        count++;
-        const parts = line.split(';').map(p => p.trim());
-        if (parts.length < 82) return;
-
-        const refcat = parts[9]?.toUpperCase().replace(/[\s\-_.]/g, '');
-        const regNum = parts[1];
-        const dateRaw = parts[12]; // e.g. 12/09/2023
-        const primary = parseFloat(parts[56]?.replace(',', '.')) || null;
-        const co2 = parseFloat(parts[61]?.replace(',', '.')) || null;
-        const consRating = parts[75]?.toUpperCase();
-        const emissRating = parts[81]?.toUpperCase();
-
-        if (!refcat || refcat.length < 14) return;
-        if (!['A', 'B', 'C', 'D', 'E', 'F', 'G'].includes(consRating)) return;
-        if (!['A', 'B', 'C', 'D', 'E', 'F', 'G'].includes(emissRating)) return;
-
-        let validUntil = null;
-        if (dateRaw && dateRaw.includes('/')) {
-          const dp = dateRaw.split('/');
-          if (dp.length === 3) {
-            const year = parseInt(dp[2], 10) + 10;
-            validUntil = `${year}-${dp[1].padStart(2, '0')}-${dp[0].padStart(2, '0')}`;
-          }
-        }
-
+      let data = '';
+      res.on('data', chunk => data += chunk);
+      res.on('end', () => {
         try {
-          insertStmt.run(
-            refcat,
-            emissRating,
-            consRating,
-            co2,
-            primary,
-            regNum || 'MAD-DGIEM',
-            refcat.length === 20 ? 'unit' : 'building',
-            validUntil
-          );
-          inserted++;
+          resolve(JSON.parse(data));
         } catch {
-          // ignore duplicate collisions
-        }
-
-        if (inserted % 15000 === 0 && inserted > 0) {
-          db.exec('COMMIT;');
-          db.exec('BEGIN TRANSACTION;');
-          console.log(`  ⏳ Madrid: Ingested ${inserted} certificates...`);
+          resolve([]);
         }
       });
-
-      rl.on('close', () => {
-        db.exec('COMMIT;');
-        console.log(`🎉 Successfully ingested ${inserted} official Madrid certificates (processed: ${count}).`);
-        resolve();
-      });
-
-      rl.on('error', (err) => {
-        db.exec('COMMIT;');
-        console.error('⚠️ Error streaming Madrid dataset:', err.message);
-        resolve();
-      });
+      res.on('error', () => resolve([]));
     });
   });
 }
 
-await ingestEuskadiOpenData();
-await ingestMadridOpenData();
+async function ingestCatalunya(totalTarget = 25000) {
+  console.log(`📡 Fetching Open Data Catalunya (ICAEN), target: ${totalTarget} records...`);
+  const chunkSize = 2500;
+  let inserted = 0;
 
-const totalRow = db.prepare('SELECT count(*) as total FROM building_energy_certificates').get();
-console.log(`🏆 Total official CEE certificates now in database: ${totalRow.total}`);
+  for (let offset = 0; offset < totalTarget; offset += chunkSize) {
+    const url = `https://analisi.transparenciacatalunya.cat/resource/j6ii-t3w2.json?$limit=${chunkSize}&$offset=${offset}&$where=referencia_cadastral+IS+NOT+NULL`;
+    const rows = await fetchJson(url);
+    if (!rows || rows.length === 0) break;
+
+    db.exec('BEGIN TRANSACTION;');
+    let batch = 0;
+    for (const r of rows) {
+      const refcat = r.referencia_cadastral?.toUpperCase().replace(/[\s\-_.]/g, '');
+      const emiss = r.qualificacio_d_emissions?.toUpperCase();
+      const cons = r.qualificaci_de_consum_d?.toUpperCase();
+      if (!refcat || refcat.length < 14 || !emiss || !cons) continue;
+      if (!['A', 'B', 'C', 'D', 'E', 'F', 'G'].includes(emiss)) continue;
+      if (!['A', 'B', 'C', 'D', 'E', 'F', 'G'].includes(cons)) continue;
+
+      const co2 = parseFloat(r.emissions_de_co2?.replace(',', '.')) || null;
+      const energy = parseFloat(r.energia_prim_ria_no_renovable?.replace(',', '.')) || null;
+      const reg = r.num_cas ? `CAT-${r.num_cas}` : 'CAT-ICAEN';
+      let validUntil = null;
+      if (r.data_entrada && r.data_entrada.includes('-')) {
+        const p = r.data_entrada.split('T')[0].split('-');
+        if (p.length === 3) validUntil = `${parseInt(p[0], 10) + 10}-${p[1]}-${p[2]}`;
+      }
+
+      try {
+        insertStmt.run(
+          refcat,
+          emiss,
+          cons,
+          co2,
+          energy,
+          reg,
+          refcat.length === 20 ? 'unit' : 'building',
+          validUntil
+        );
+        batch++;
+      } catch {
+        // ignore collisions
+      }
+    }
+    db.exec('COMMIT;');
+    inserted += batch;
+    console.log(`  ⏳ Catalunya: +${batch} CEEs (Offset: ${offset}, Total Cat: ${inserted})`);
+  }
+  console.log(`🎉 Finished Catalunya! Inserted ${inserted} official certificates.`);
+}
+
+await ingestCatalunya(25000);
+
+const total = db.prepare('SELECT count(*) as total FROM building_energy_certificates').get();
+console.log(`🏆 Total official CEE certificates in SQLite: ${total.total}`);
