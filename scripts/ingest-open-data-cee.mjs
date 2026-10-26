@@ -3,13 +3,13 @@ import path from 'node:path';
 import https from 'node:https';
 import { DatabaseSync } from 'node:sqlite';
 
-const DB_PATH = path.resolve(process.cwd(), 'data/openbarrio.sqlite');
+const DB_DIR = path.resolve(process.cwd(), 'data');
+const DB_PATH = path.join(DB_DIR, 'openbarrio.sqlite');
 
 console.log('⚡ [OpenBarrio ETL] Multi-region Open Data Energy Certificates (CEE) Ingestion...');
 
-if (!fs.existsSync(DB_PATH)) {
-  console.error('❌ Database not found at', DB_PATH);
-  process.exit(1);
+if (!fs.existsSync(DB_DIR)) {
+  fs.mkdirSync(DB_DIR, { recursive: true });
 }
 
 const db = new DatabaseSync(DB_PATH);
