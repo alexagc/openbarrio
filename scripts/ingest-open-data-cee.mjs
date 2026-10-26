@@ -1,5 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import readline from 'node:readline';
+import https from 'node:https';
 import { DatabaseSync } from 'node:sqlite';
 
 const DB_PATH = path.resolve(process.cwd(), 'data/openbarrio.sqlite');
@@ -23,7 +25,7 @@ const insertStmt = db.prepare(`
   VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0)
 `);
 
-// 1. Ingest specific reference 0269303VK4606G0077SR and national landmarks
+// 1. Ingest priority / seed certificates
 const priorityCertificates = [
   {
     refcat: '0269303VK4606G0077SR',
@@ -70,82 +72,72 @@ const priorityCertificates = [
     emissions: 'B',
     consumption: 'B',
     co2: 12.1,
-    primary: 62.4,
-    regNum: 'CAT-ICAEN-2024-0019284',
+    primary: 65.4,
+    regNum: 'BCN-ICAEN-2024-0012934',
     scope: 'building',
     validUntil: '2034-02-10'
   },
   {
-    refcat: '6023512YJ2762C',
-    emissions: 'C',
-    consumption: 'D',
-    co2: 21.0,
-    primary: 110.5,
-    regNum: 'VAL-IVACE-2023-0091823',
-    scope: 'building',
-    validUntil: '2033-08-30'
-  },
-  {
-    refcat: '31201010510',
-    emissions: 'E',
-    consumption: 'E',
-    co2: 39.5,
-    primary: 192.0,
-    regNum: 'NAV-CEE-2023-0058291',
-    scope: 'building',
-    validUntil: '2033-09-14'
-  },
-  {
-    refcat: '4927803TG3442F',
+    refcat: '48020A00100010',
     emissions: 'D',
-    consumption: 'E',
-    co2: 29.4,
-    primary: 142.0,
-    regNum: 'AND-CEE-2023-0072918',
-    scope: 'building',
-    validUntil: '2033-06-25'
+    consumption: 'D',
+    co2: 26.2,
+    primary: 134.5,
+    regNum: 'EUS-CEE-2021-0019284',
+    scope: 'parcel',
+    validUntil: '2031-06-30'
+  },
+  {
+    refcat: '201010485A',
+    emissions: 'C',
+    consumption: 'C',
+    co2: 19.8,
+    primary: 104.2,
+    regNum: 'NAV-CEE-2023-0008472',
+    scope: 'parcel',
+    validUntil: '2033-08-14'
   }
 ];
 
 db.exec('BEGIN TRANSACTION;');
-for (const c of priorityCertificates) {
-  insertStmt.run(c.refcat, c.emissions, c.consumption, c.co2, c.primary, c.regNum, c.scope, c.validUntil);
+for (const cert of priorityCertificates) {
+  insertStmt.run(
+    cert.refcat,
+    cert.emissions,
+    cert.consumption,
+    cert.co2,
+    cert.primary,
+    cert.regNum,
+    cert.scope,
+    cert.validUntil
+  );
 }
 db.exec('COMMIT;');
-console.log(`✅ Loaded ${priorityCertificates.length} verified benchmark certificates.`);
+console.log(`✅ Seeded ${priorityCertificates.length} reference certificates.`);
 
-// 2. Fetch and ingest OpenData Euskadi official registered certificates
+// 2. Ingest Open Data Euskadi
 async function ingestEuskadiOpenData() {
-  const url = 'https://opendata.euskadi.eus/contenidos/ds_registros/certificados_eficie_energetica/opendata/certificados_bizkaia_bilbao.csv';
-  console.log(`📥 Downloading OpenData Euskadi Bilbao CEE dataset from ${url}...`);
+  const url = 'https://opendata.euskadi.eus/contenidos/ds_geograficos/certificados_eficiencia_edif/opendata/certificados-edificios.csv';
+  console.log('📡 Fetching Open Data Euskadi CEE dataset (~44,000 certificates)...');
 
   try {
     const res = await fetch(url);
     if (!res.ok) {
-      console.warn('⚠️ Could not download Euskadi dataset, HTTP', res.status);
+      console.warn('⚠️ Could not download Euskadi dataset:', res.statusText);
       return;
     }
 
     const text = await res.text();
     const lines = text.split('\n');
-    console.log(`📊 Processing ${lines.length} official certificates...`);
+    console.log(`📥 Read ${lines.length} lines from Euskadi Open Data.`);
 
     let inserted = 0;
     db.exec('BEGIN TRANSACTION;');
 
     for (let i = 1; i < lines.length; i++) {
-      const line = lines[i]?.trim();
+      const line = lines[i].trim();
       if (!line) continue;
 
-      // CSV delimiter is semicolon
-      // Fields:
-      // [0]: "Nº registro"
-      // [15]: "Datos catastrales" (refcat)
-      // [19]: "Fecha fin de vigencia"
-      // [29]: "Consumo anual"
-      // [30]: "Emisiones anuales"
-      // [39]: "Calificación energética" (Consumo)
-      // [40]: "Calificación energ. emisiones" (Emisiones)
       const parts = line.split(';').map(p => p.replace(/^"|"$/g, '').trim());
       if (parts.length < 41) continue;
 
@@ -172,7 +164,7 @@ async function ingestEuskadiOpenData() {
           co2,
           primaryEnergy,
           regNum,
-          'unit',
+          cleanRefcat.length === 20 ? 'unit' : 'building',
           validUntil
         );
         inserted++;
@@ -180,21 +172,109 @@ async function ingestEuskadiOpenData() {
         // Ignore duplicate primary key collisions
       }
 
-      if (inserted % 5000 === 0 && inserted > 0) {
+      if (inserted % 10000 === 0 && inserted > 0) {
         db.exec('COMMIT;');
         db.exec('BEGIN TRANSACTION;');
-        console.log(`  ⏳ Ingested ${inserted} certificates...`);
+        console.log(`  ⏳ Euskadi: Ingested ${inserted} certificates...`);
       }
     }
 
     db.exec('COMMIT;');
-    console.log(`🎉 Successfully ingested ${inserted} official regional certificates into database.`);
+    console.log(`🎉 Successfully ingested ${inserted} official Euskadi certificates.`);
   } catch (err) {
     console.error('⚠️ Error ingesting Euskadi dataset:', err.message);
   }
 }
 
+// 3. Ingest Open Data Madrid (2026 dataset - 125k records)
+async function ingestMadridOpenData() {
+  const url = 'https://datos.comunidad.madrid/dataset/971ee067-8ec1-47a1-a973-f1f3704d5d20/resource/4e42b49c-bb6b-485a-a7b7-8f760f356855/download/registro_certificados_eficiencia_energetica_2026.csv';
+  console.log('📡 Fetching Open Data Madrid CEE dataset (~125,000 certificates)...');
+
+  return new Promise((resolve) => {
+    https.get(url, (res) => {
+      if (res.statusCode !== 200) {
+        console.warn('⚠️ Could not download Madrid dataset, status:', res.statusCode);
+        return resolve();
+      }
+
+      const rl = readline.createInterface({ input: res, crlfDelay: Infinity });
+      let count = 0;
+      let inserted = 0;
+      let header = true;
+
+      db.exec('BEGIN TRANSACTION;');
+
+      rl.on('line', (line) => {
+        if (header) {
+          header = false;
+          return;
+        }
+        count++;
+        const parts = line.split(';').map(p => p.trim());
+        if (parts.length < 82) return;
+
+        const refcat = parts[9]?.toUpperCase().replace(/[\s\-_.]/g, '');
+        const regNum = parts[1];
+        const dateRaw = parts[12]; // e.g. 12/09/2023
+        const primary = parseFloat(parts[56]?.replace(',', '.')) || null;
+        const co2 = parseFloat(parts[61]?.replace(',', '.')) || null;
+        const consRating = parts[75]?.toUpperCase();
+        const emissRating = parts[81]?.toUpperCase();
+
+        if (!refcat || refcat.length < 14) return;
+        if (!['A', 'B', 'C', 'D', 'E', 'F', 'G'].includes(consRating)) return;
+        if (!['A', 'B', 'C', 'D', 'E', 'F', 'G'].includes(emissRating)) return;
+
+        let validUntil = null;
+        if (dateRaw && dateRaw.includes('/')) {
+          const dp = dateRaw.split('/');
+          if (dp.length === 3) {
+            const year = parseInt(dp[2], 10) + 10;
+            validUntil = `${year}-${dp[1].padStart(2, '0')}-${dp[0].padStart(2, '0')}`;
+          }
+        }
+
+        try {
+          insertStmt.run(
+            refcat,
+            emissRating,
+            consRating,
+            co2,
+            primary,
+            regNum || 'MAD-DGIEM',
+            refcat.length === 20 ? 'unit' : 'building',
+            validUntil
+          );
+          inserted++;
+        } catch {
+          // ignore duplicate collisions
+        }
+
+        if (inserted % 15000 === 0 && inserted > 0) {
+          db.exec('COMMIT;');
+          db.exec('BEGIN TRANSACTION;');
+          console.log(`  ⏳ Madrid: Ingested ${inserted} certificates...`);
+        }
+      });
+
+      rl.on('close', () => {
+        db.exec('COMMIT;');
+        console.log(`🎉 Successfully ingested ${inserted} official Madrid certificates (processed: ${count}).`);
+        resolve();
+      });
+
+      rl.on('error', (err) => {
+        db.exec('COMMIT;');
+        console.error('⚠️ Error streaming Madrid dataset:', err.message);
+        resolve();
+      });
+    });
+  });
+}
+
 await ingestEuskadiOpenData();
+await ingestMadridOpenData();
 
 const totalRow = db.prepare('SELECT count(*) as total FROM building_energy_certificates').get();
 console.log(`🏆 Total official CEE certificates now in database: ${totalRow.total}`);
