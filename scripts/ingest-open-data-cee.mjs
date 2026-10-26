@@ -28,13 +28,13 @@ const insertStmt = db.prepare(`
 const priorityCertificates = [
   {
     refcat: '0269303VK4606G0077SR',
-    emissions: 'E',
-    consumption: 'E',
-    co2: 32.4,
-    primary: 154.0,
-    regNum: 'MAD-DGIEM-2023-0048192',
+    emissions: 'D',
+    consumption: 'D',
+    co2: 22.03,
+    primary: 107.06,
+    regNum: '10/339702.9/22',
     scope: 'unit',
-    validUntil: '2033-05-12'
+    validUntil: '2032-05-31'
   },
   {
     refcat: '0269303VK4606G',
