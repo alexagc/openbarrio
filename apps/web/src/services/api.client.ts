@@ -505,6 +505,8 @@ export class OpenBarrioApiClient {
     const isCatalunya = lat >= 40.5 && lat <= 42.8 && lon >= 0.2 && lon <= 3.3;
     const isValenciana = lat >= 37.8 && lat <= 40.8 && lon >= -1.5 && lon <= 0.6;
     const isAndalucia = lat >= 36.0 && lat <= 38.7 && lon >= -7.5 && lon <= -1.7;
+    const isNavarra = lat >= 41.9 && lat <= 43.4 && lon >= -2.55 && lon <= -0.7 && lon > -1.75;
+    const isEuskadi = !isNavarra && lat >= 42.4 && lat <= 43.6 && lon >= -3.5 && lon <= -1.7;
 
     let city = 'Madrid';
     let province = 'Madrid';
@@ -522,6 +524,16 @@ export class OpenBarrioApiClient {
       city = 'Sevilla';
       province = 'Sevilla';
       postalPrefix = '41';
+    } else if (isNavarra) {
+      city = 'Pamplona / Iruña';
+      province = 'Navarra';
+      postalPrefix = '31';
+    } else if (isEuskadi) {
+      const isBizkaia = lon < -2.40;
+      const isGipuzkoa = lon >= -2.40 && lon < -1.70;
+      city = isBizkaia ? 'Bilbao' : isGipuzkoa ? 'Donostia / San Sebastián' : 'Vitoria-Gasteiz';
+      province = isBizkaia ? 'Bizkaia' : isGipuzkoa ? 'Gipuzkoa' : 'Álava';
+      postalPrefix = isBizkaia ? '48' : isGipuzkoa ? '20' : '01';
     } else if (!isMadridRegion) {
       city = 'Toledo';
       province = 'Toledo';
