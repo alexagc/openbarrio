@@ -198,3 +198,49 @@ await ingestCatalunya(25000);
 
 const total = db.prepare('SELECT count(*) as total FROM building_energy_certificates').get();
 console.log(`🏆 Total official CEE certificates in SQLite: ${total.total}`);
+
+// 3. Export Cloudflare D1-compatible SQL file (no BEGIN TRANSACTION / COMMIT)
+const exportDir = path.resolve(process.cwd(), 'packages/etl/dist');
+if (!fs.existsSync(exportDir)) {
+  fs.mkdirSync(exportDir, { recursive: true });
+}
+const exportPath = path.join(exportDir, 'energy_certificates.sql');
+
+console.log(`📦 Generating Cloudflare D1 SQL script to: ${exportPath}...`);
+const rows = db.prepare('SELECT * FROM building_energy_certificates').all();
+
+let sqlContent = `-- Cloudflare D1 Schema for Building Energy Certificates
+CREATE TABLE IF NOT EXISTS building_energy_certificates (
+  cadastral_reference TEXT PRIMARY KEY,
+  rating_emissions TEXT NOT NULL,
+  rating_consumption TEXT NOT NULL,
+  co2_emissions REAL,
+  primary_energy REAL,
+  registration_number TEXT,
+  scope TEXT NOT NULL DEFAULT 'building',
+  valid_until TEXT,
+  is_estimated INTEGER NOT NULL DEFAULT 0,
+  created_at TEXT NOT NULL DEFAULT (CURRENT_TIMESTAMP)
+);
+
+CREATE INDEX IF NOT EXISTS idx_cee_refcat ON building_energy_certificates(cadastral_reference);
+
+-- Energy Certificates Batched Inserts
+`;
+
+const batchSize = 250;
+for (let i = 0; i < rows.length; i += batchSize) {
+  const batch = rows.slice(i, i + batchSize);
+  const values = batch.map(r => {
+    const reg = r.registration_number ? `'${r.registration_number.replace(/'/g, "''")}'` : 'NULL';
+    const valid = r.valid_until ? `'${r.valid_until}'` : 'NULL';
+    const co2 = r.co2_emissions != null ? r.co2_emissions : 'NULL';
+    const prim = r.primary_energy != null ? r.primary_energy : 'NULL';
+    return `('${r.cadastral_reference}', '${r.rating_emissions}', '${r.rating_consumption}', ${co2}, ${prim}, ${reg}, '${r.scope}', ${valid}, ${r.is_estimated})`;
+  }).join(',\n  ');
+  sqlContent += `INSERT OR REPLACE INTO building_energy_certificates (cadastral_reference, rating_emissions, rating_consumption, co2_emissions, primary_energy, registration_number, scope, valid_until, is_estimated) VALUES\n  ${values};\n\n`;
+}
+
+fs.writeFileSync(exportPath, sqlContent, 'utf8');
+console.log(`✅ Cloudflare D1 SQL export completed: ${rows.length} certificates (${Math.round(sqlContent.length / 1024)} KB written).`);
+
