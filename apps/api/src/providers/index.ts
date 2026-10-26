@@ -8,10 +8,19 @@ import {
   ICivicConnectivityProvider,
   IUrbanPlanningProvider,
   IAirQualityProvider,
+  ICEEProvider,
+  ILongitudinalMarketProvider,
 } from './types.js';
 import { D1Database, CloudflareEnv } from '../types/env.js';
 import { CatastroProvider } from './catastro.provider.js';
 import { MockCatastroProvider } from './catastro.mock.js';
+import { NavarraCatastroProvider } from './navarra.provider.js';
+import { EuskadiCatastroProvider } from './euskadi.provider.js';
+import { CadastralRouterProvider } from './cadastral-router.provider.js';
+import { CEEProvider } from './cee.provider.js';
+import { MockCEEProvider } from './cee.mock.js';
+import { LongitudinalMarketProvider } from './longitudinal-market.provider.js';
+import { MockLongitudinalMarketProvider } from './longitudinal-market.mock.js';
 import { INEProvider } from './ine.provider.js';
 import { MockINEProvider } from './ine.mock.js';
 import { SICAProvider } from './sica.provider.js';
@@ -53,6 +62,13 @@ export * from './connectivity.provider.js';
 export * from './urban-planning.provider.js';
 export * from './air-quality.provider.js';
 export * from './capex.provider.js';
+export * from './navarra.provider.js';
+export * from './euskadi.provider.js';
+export * from './cadastral-router.provider.js';
+export * from './cee.provider.js';
+export * from './cee.mock.js';
+export * from './longitudinal-market.provider.js';
+export * from './longitudinal-market.mock.js';
 
 export interface ProviderContainer {
   catastro: ICatastroProvider;
@@ -64,6 +80,8 @@ export interface ProviderContainer {
   connectivity: ICivicConnectivityProvider;
   urbanPlanning: IUrbanPlanningProvider;
   airQuality: IAirQualityProvider;
+  cee: ICEEProvider;
+  marketTrends: ILongitudinalMarketProvider;
 }
 
 export function createMockProviders(overrides?: Partial<ProviderContainer>): ProviderContainer {
@@ -75,6 +93,8 @@ export function createMockProviders(overrides?: Partial<ProviderContainer>): Pro
   const connectivity = new MockCivicConnectivityProvider();
   const urbanPlanning = new MockUrbanPlanningProvider();
   const airQuality = new MockAirQualityProvider();
+  const cee = new MockCEEProvider();
+  const marketTrends = new MockLongitudinalMarketProvider();
 
   const effectiveSica = overrides?.sica || sica;
   const effectiveSnczi = overrides?.snczi || snczi;
@@ -98,6 +118,8 @@ export function createMockProviders(overrides?: Partial<ProviderContainer>): Pro
     connectivity: overrides?.connectivity || connectivity,
     urbanPlanning: overrides?.urbanPlanning || urbanPlanning,
     airQuality: effectiveAirQuality,
+    cee: overrides?.cee || cee,
+    marketTrends: overrides?.marketTrends || marketTrends,
   };
 }
 
@@ -125,7 +147,11 @@ export function createProviders(
     return createMockProviders(overrides);
   }
 
-  const defaultCatastro = new CatastroProvider();
+  const defaultCatastro = new CadastralRouterProvider({
+    dgc: new CatastroProvider(),
+    navarra: new NavarraCatastroProvider(),
+    euskadi: new EuskadiCatastroProvider(),
+  });
   const defaultINE = new INEProvider({ db });
   const defaultSICA = new SICAProvider();
   const defaultSNCZI = new SNCZIProvider();
@@ -133,6 +159,8 @@ export function createProviders(
   const defaultAirQuality = new AirQualityProvider();
   const defaultConnectivity = new D1CivicConnectivityProvider({ db });
   const defaultUrbanPlanning = new UrbanPlanningProvider();
+  const defaultCEE = new CEEProvider({ db });
+  const defaultMarket = new LongitudinalMarketProvider({ db });
 
   const effectiveSica = overrides?.sica || defaultSICA;
   const effectiveSnczi = overrides?.snczi || defaultSNCZI;
@@ -156,5 +184,7 @@ export function createProviders(
     connectivity: overrides?.connectivity || defaultConnectivity,
     urbanPlanning: overrides?.urbanPlanning || defaultUrbanPlanning,
     airQuality: effectiveAirQuality,
+    cee: overrides?.cee || defaultCEE,
+    marketTrends: overrides?.marketTrends || defaultMarket,
   };
 }

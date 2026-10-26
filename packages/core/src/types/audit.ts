@@ -5,6 +5,8 @@ import { EnvironmentalDataSchema } from './environmental.js';
 import { CivicConnectivityDataSchema } from './connectivity.js';
 import { UrbanPlanningDataSchema } from './urban-planning.js';
 import { BuildingCapExRiskSchema } from './capex.js';
+import { EnergyPerformanceCertificateSchema } from './energy.js';
+import { NeighborhoodTrendsSchema } from './market.js';
 
 if (!FormatRegistry.Has('uuid')) {
   FormatRegistry.Set('uuid', (value) => typeof value === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value));
@@ -52,6 +54,8 @@ export const PropertyAuditReportSchema = Type.Object({
   score: AuditScoreBreakdownSchema,
   rentalBenchmark: Type.Optional(RentalBenchmarkSchema),
   capex: Type.Optional(BuildingCapExRiskSchema),
+  energy: Type.Optional(EnergyPerformanceCertificateSchema),
+  marketTrends: Type.Optional(NeighborhoodTrendsSchema),
 });
 
 export type AuditSubscores = Static<typeof AuditSubscoresSchema>;

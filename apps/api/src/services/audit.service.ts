@@ -9,6 +9,8 @@ import {
   RentalBenchmark,
   CivicConnectivityData,
   UrbanPlanningData,
+  EnergyPerformanceCertificate,
+  NeighborhoodTrends,
   calculateBarrioScore,
 } from '@openbarrio/core';
 import { ProviderContainer, calculateBuildingCapExRisk } from '../providers/index.js';
@@ -61,7 +63,7 @@ export class AuditService {
     const lon = property.coordinates.longitude;
 
     // 2. Fetch parallel provider metrics
-    const [neighborhood, environment, connectivity, urbanPlanning] = await Promise.all([
+    const [neighborhood, environment, connectivity, urbanPlanning, energy] = await Promise.all([
       this.resolveNeighborhood(property),
       this.resolveEnvironment(property),
       this.resolveConnectivity(lat, lon, {
@@ -69,6 +71,7 @@ export class AuditService {
         street: property.address.street,
       }),
       this.resolveUrbanPlanning(property),
+      this.resolveEnergy(property),
     ]);
 
     // 3. Calculate MIVAU SERPAVI rental benchmark & check stressed market status
@@ -82,17 +85,30 @@ export class AuditService {
       rentalBenchmark = undefined;
     }
 
-    // 4. Calculate Barrio Due Diligence Score (5 calibrated pillars)
+    // 4. Longitudinal Market Trends (INE IPV + ADRH income history)
+    let marketTrends: NeighborhoodTrends | undefined;
+    try {
+      marketTrends = await this.providers.marketTrends.getMarketTrends(
+        property,
+        neighborhood.censusSectionCode
+      );
+    } catch {
+      marketTrends = undefined;
+    }
+
+    // 5. Calculate Barrio Due Diligence Score (5 calibrated pillars)
     const score = calculateBarrioScore(
       property,
       neighborhood,
       environment,
       rentalBenchmark,
       connectivity,
-      urbanPlanning
+      urbanPlanning,
+      undefined,
+      energy
     );
 
-    // 5. Calculate Building CapEx & Community Risk Intelligence
+    // 6. Calculate Building CapEx & Community Risk Intelligence
     const capex = calculateBuildingCapExRisk(property);
 
     return {
@@ -106,7 +122,19 @@ export class AuditService {
       score,
       rentalBenchmark,
       capex,
+      energy,
+      marketTrends,
     };
+  }
+
+  private async resolveEnergy(
+    property: CadastralProperty
+  ): Promise<EnergyPerformanceCertificate | undefined> {
+    try {
+      return await this.providers.cee.getEnergyCertificate(property);
+    } catch {
+      return undefined;
+    }
   }
 
   private async resolveNeighborhood(property: CadastralProperty): Promise<CensusTractIncome> {

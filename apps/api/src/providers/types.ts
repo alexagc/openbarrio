@@ -11,6 +11,8 @@ import {
   CivicConnectivityData,
   UrbanPlanningData,
   AirQualityData,
+  EnergyPerformanceCertificate,
+  NeighborhoodTrends,
 } from '@openbarrio/core';
 
 export interface ICatastroProvider {
@@ -122,4 +124,21 @@ export interface IEnvironmentalProvider {
    * Aggregates environmental indicators (acoustic noise, fluvial flood risk, air quality).
    */
   getEnvironmentalData(latitude: number, longitude: number): Promise<EnvironmentalData>;
+}
+
+export interface ICEEProvider {
+  /**
+   * Look up official Energy Performance Certificate (CEE) or compute normative thermal CTE fallback.
+   */
+  getEnergyCertificate(property: CadastralProperty): Promise<EnergyPerformanceCertificate>;
+}
+
+export interface ILongitudinalMarketProvider {
+  /**
+   * Retrieve historical housing price index (INE IPV) and income evolution (INE ADRH) for census tract.
+   */
+  getMarketTrends(
+    property: CadastralProperty,
+    censusSectionCode: string
+  ): Promise<NeighborhoodTrends>;
 }

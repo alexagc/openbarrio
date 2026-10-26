@@ -3,6 +3,7 @@ import { CensusTractIncome } from '../types/ine.js';
 import { EnvironmentalData } from '../types/environmental.js';
 import { CivicConnectivityData } from '../types/connectivity.js';
 import { UrbanPlanningData } from '../types/urban-planning.js';
+import { EnergyPerformanceCertificate } from '../types/energy.js';
 import { AuditScoreBreakdown, RentalBenchmark } from '../types/audit.js';
 
 export interface ScoringWeights {
@@ -67,7 +68,8 @@ export function calculateBarrioScore(
   rentalBenchmark?: RentalBenchmark,
   connectivity?: Partial<CivicConnectivityData>,
   urbanPlanning?: Partial<UrbanPlanningData>,
-  weights: ScoringWeights = DEFAULT_SCORING_WEIGHTS
+  weights: ScoringWeights = DEFAULT_SCORING_WEIGHTS,
+  energy?: Partial<EnergyPerformanceCertificate>
 ): AuditScoreBreakdown {
   const highlights: string[] = [];
   const risks: string[] = [];
@@ -119,6 +121,21 @@ export function calculateBarrioScore(
   // Commercial ground floor vitality
   if (property.building.hasCommercialGroundFloor) {
     highlights.push(`Commercial street-level presence providing neighborhood services and pedestrian vitality`);
+  }
+
+  // Energy efficiency rating impact on Building Health
+  if (energy?.ratingEmissions) {
+    if (['A', 'B'].includes(energy.ratingEmissions)) {
+      buildingScore = Math.min(100, buildingScore + 5);
+      highlights.push(
+        `High Energy Performance Certificate: Class ${energy.ratingEmissions} emissions (${energy.isEstimated ? 'estimated from CTE regulations' : 'official registry'})`
+      );
+    } else if (['F', 'G'].includes(energy.ratingEmissions)) {
+      buildingScore = Math.max(20, buildingScore - 5);
+      risks.push(
+        `Low Energy Performance rating (Class ${energy.ratingEmissions}): high thermal loss and significant energy rehabilitation potential`
+      );
+    }
   }
 
   const buildingHealthScore = Math.min(100, Math.max(0, buildingScore));

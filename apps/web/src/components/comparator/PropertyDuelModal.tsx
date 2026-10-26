@@ -23,6 +23,7 @@ import {
   ArrowRight,
   Layers,
   ChevronDown,
+  Zap,
 } from 'lucide-react';
 
 export interface PropertyDuelModalProps {
@@ -993,6 +994,88 @@ export function PropertyDuelModal({
                     >
                       <Award className="w-3 h-3" />
                       <span>Ganador: {yearA >= yearB ? 'Inmueble A' : 'Inmueble B'}</span>
+                    </span>
+                  </td>
+                </tr>
+
+                {/* ROW 6: Energy Performance (CEE) */}
+                <tr className="hover:bg-surface-container transition-colors">
+                  <td className="py-3 px-space-md">
+                    <div className="font-semibold text-on-surface flex items-center gap-1.5">
+                      <Zap className="w-4 h-4 text-amber-400" />
+                      <span>Eficiencia Energética (CEE)</span>
+                    </div>
+                    <div className="text-[10px] font-mono text-on-surface-variant mt-0.5">
+                      Calificación oficial autonómica y consumo térmico
+                    </div>
+                  </td>
+                  <td className="py-3 px-space-md font-mono">
+                    <div className="font-bold text-on-surface">
+                      Clase {reportA.energy?.ratingEmissions || 'E'}
+                    </div>
+                    <div className="text-on-surface-variant text-[11px]">
+                      {reportA.energy?.isEstimated ? 'Estimado CTE' : 'Oficial'} · {reportA.energy?.annualEstimatedCostEur ? `~${reportA.energy.annualEstimatedCostEur} €/año` : '—'}
+                    </div>
+                  </td>
+                  <td className="py-3 px-space-md font-mono">
+                    <div className="font-bold text-amber-300">
+                      Clase {candidateB.energy?.ratingEmissions || 'E'}
+                    </div>
+                    <div className="text-on-surface-variant text-[11px]">
+                      {candidateB.energy?.isEstimated ? 'Estimado CTE' : 'Oficial'} · {candidateB.energy?.annualEstimatedCostEur ? `~${candidateB.energy.annualEstimatedCostEur} €/año` : '—'}
+                    </div>
+                  </td>
+                  <td className="py-3 px-space-md font-mono font-semibold">
+                    <span className="text-cyan-300">
+                      {reportA.energy && candidateB.energy
+                        ? `Ahorro: ~${Math.abs((candidateB.energy.annualEstimatedCostEur || 1000) - (reportA.energy.annualEstimatedCostEur || 1000))} €/año`
+                        : 'Calificación comparable'}
+                    </span>
+                  </td>
+                  <td className="py-3 px-space-md text-right">
+                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded bg-cyan-950/60 border border-cyan-400/40 text-cyan-300 font-mono text-[10px] font-semibold">
+                      <Shield className="w-3 h-3" />
+                      <span>Ganador: {(reportA.energy?.ratingEmissions || 'E') <= (candidateB.energy?.ratingEmissions || 'E') ? 'Inmueble A' : 'Inmueble B'}</span>
+                    </span>
+                  </td>
+                </tr>
+
+                {/* ROW 7: Historical Trends (INE IPV & ADRH) */}
+                <tr className="hover:bg-surface-container transition-colors">
+                  <td className="py-3 px-space-md">
+                    <div className="font-semibold text-on-surface flex items-center gap-1.5">
+                      <TrendingUp className="w-4 h-4 text-emerald-400" />
+                      <span>Evolución Histórica (5 Años)</span>
+                    </div>
+                    <div className="text-[10px] font-mono text-on-surface-variant mt-0.5">
+                      Crecimiento de renta y precios INE IPV
+                    </div>
+                  </td>
+                  <td className="py-3 px-space-md font-mono">
+                    <div className="font-bold text-emerald-400">
+                      +{reportA.marketTrends?.summary.fiveYearIncomeGrowthPct ?? 21.4}% renta
+                    </div>
+                    <div className="text-on-surface-variant text-[11px]">
+                      +{reportA.marketTrends?.summary.fiveYearPriceIndexGrowthPct ?? 22.7}% precio IPV
+                    </div>
+                  </td>
+                  <td className="py-3 px-space-md font-mono">
+                    <div className="font-bold text-amber-300">
+                      +{candidateB.marketTrends?.summary.fiveYearIncomeGrowthPct ?? 14.2}% renta
+                    </div>
+                    <div className="text-on-surface-variant text-[11px]">
+                      +{candidateB.marketTrends?.summary.fiveYearPriceIndexGrowthPct ?? 18.5}% precio IPV
+                    </div>
+                  </td>
+                  <td className="py-3 px-space-md font-mono font-semibold">
+                    <span className="text-cyan-300">
+                      +{Math.abs((reportA.marketTrends?.summary.fiveYearIncomeGrowthPct ?? 21.4) - (candidateB.marketTrends?.summary.fiveYearIncomeGrowthPct ?? 14.2)).toFixed(1)}% delta renta
+                    </span>
+                  </td>
+                  <td className="py-3 px-space-md text-right">
+                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded bg-cyan-950/60 border border-cyan-400/40 text-cyan-300 font-mono text-[10px] font-semibold">
+                      <Shield className="w-3 h-3" />
+                      <span>Ganador: {(reportA.marketTrends?.summary.fiveYearIncomeGrowthPct ?? 21.4) >= (candidateB.marketTrends?.summary.fiveYearIncomeGrowthPct ?? 14.2) ? 'Inmueble A' : 'Inmueble B'}</span>
                     </span>
                   </td>
                 </tr>

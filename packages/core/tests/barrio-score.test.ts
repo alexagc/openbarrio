@@ -327,4 +327,44 @@ describe('Barrio Scoring Engine v0.3.0', () => {
     expect(score.overallScore).toBeGreaterThanOrEqual(0);
     expect(score.overallScore).toBeLessThanOrEqual(100);
   });
+
+  it('incorporates Energy Performance Certificate (CEE) ratings into building score and key highlights/risks', () => {
+    const scoreWithHighCee = calculateBarrioScore(
+      mockModernProperty,
+      mockWealthyNeighborhood,
+      mockSafeEnvironment,
+      undefined,
+      mockCivicConnectivity,
+      mockUrbanPlanning,
+      undefined,
+      {
+        ratingEmissions: 'A',
+        ratingConsumption: 'A',
+        co2Emissions: 7.2,
+        isEstimated: false,
+        scope: 'building',
+      }
+    );
+
+    expect(scoreWithHighCee.keyHighlights.some((h) => h.includes('High Energy Performance Certificate'))).toBe(true);
+
+    const scoreWithLowCee = calculateBarrioScore(
+      mockModernProperty,
+      mockWealthyNeighborhood,
+      mockSafeEnvironment,
+      undefined,
+      mockCivicConnectivity,
+      mockUrbanPlanning,
+      undefined,
+      {
+        ratingEmissions: 'G',
+        ratingConsumption: 'G',
+        co2Emissions: 62.5,
+        isEstimated: true,
+        scope: 'building',
+      }
+    );
+
+    expect(scoreWithLowCee.keyRisks.some((r) => r.includes('Low Energy Performance rating'))).toBe(true);
+  });
 });

@@ -4,6 +4,8 @@ export * from './types/environmental.js';
 export * from './types/connectivity.js';
 export * from './types/urban-planning.js';
 export * from './types/capex.js';
+export * from './types/energy.js';
+export * from './types/market.js';
 export * from './types/audit.js';
 export * from './types/http.js';
 export * from './scoring/barrio-score.js';

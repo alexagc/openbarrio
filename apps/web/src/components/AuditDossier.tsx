@@ -5,6 +5,8 @@ import { PillarCards } from './PillarCard';
 import { RentalModule } from './RentalModule';
 import { HighlightsAndRisks } from './HighlightsAndRisks';
 import { BuildingCapExCard } from './dossier/BuildingCapExCard';
+import { EnergyPerformanceCard } from './dossier/EnergyPerformanceCard';
+import { NeighborhoodTrendsCard } from './dossier/NeighborhoodTrendsCard';
 import { downloadCadastralGML } from '../utils/gml';
 import {
   Printer,
@@ -37,6 +39,8 @@ export function AuditDossier({ report, onOpenUnitPicker, onOpenDuel }: AuditDoss
     rentalBenchmark,
     connectivity,
     urbanPlanning,
+    energy,
+    marketTrends,
     generatedAt,
   } = report;
 
@@ -284,7 +288,21 @@ export function AuditDossier({ report, onOpenUnitPicker, onOpenDuel }: AuditDoss
         <BuildingCapExCard report={report} />
       </div>
 
-      {/* 6. DUE DILIGENCE CLEARANCE & RISKS */}
+      {/* 6. CEE ENERGY PERFORMANCE CERTIFICATE */}
+      {energy && (
+        <div className="page-break-inside-avoid">
+          <EnergyPerformanceCard energy={energy} />
+        </div>
+      )}
+
+      {/* 7. LONGITUDINAL MARKET & NEIGHBORHOOD TRENDS */}
+      {marketTrends && (
+        <div className="page-break-inside-avoid">
+          <NeighborhoodTrendsCard trends={marketTrends} />
+        </div>
+      )}
+
+      {/* 8. DUE DILIGENCE CLEARANCE & RISKS */}
       <div className="page-break-inside-avoid">
         <HighlightsAndRisks
           highlights={score.keyHighlights}

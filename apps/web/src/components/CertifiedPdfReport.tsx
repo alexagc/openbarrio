@@ -21,7 +21,7 @@ export function CertifiedPdfReport({ report }: CertifiedPdfReportProps) {
     };
   }, [report]);
 
-  const { property, score, rentalBenchmark, connectivity } = report;
+  const { property, score, rentalBenchmark, connectivity, energy, marketTrends } = report;
   const unit = property.unit;
 
   // Generate SVG QR matrix pattern
@@ -266,6 +266,77 @@ export function CertifiedPdfReport({ report }: CertifiedPdfReportProps) {
               </tr>
             </tbody>
           </table>
+        </div>
+      </div>
+
+      {/* ================= SECTION 5: ENERGY PERFORMANCE (CEE) & MARKET TRENDS ================= */}
+      <div className="grid grid-cols-2 gap-4 mb-6">
+        <div>
+          <h2 className="text-xs font-bold uppercase tracking-wider text-slate-700 border-b border-slate-300 pb-1 mb-2 font-mono">
+            5. Eficiencia Energética (CEE)
+          </h2>
+          {energy ? (
+            <table className="w-full text-[10px] border border-slate-200">
+              <tbody>
+                <tr className="border-b border-slate-200">
+                  <td className="p-1.5 bg-slate-100 font-semibold">Calificación Emisiones</td>
+                  <td className="p-1.5 font-bold font-mono">
+                    Clase {energy.ratingEmissions} ({energy.isEstimated ? 'Estimación Normativa CTE' : 'Oficial Registrado'})
+                  </td>
+                </tr>
+                <tr className="border-b border-slate-200">
+                  <td className="p-1.5 bg-slate-100 font-semibold">Consumo Energía Primaria</td>
+                  <td className="p-1.5 font-mono">
+                    {energy.primaryEnergyConsumption || '—'} kWh/m²·año
+                  </td>
+                </tr>
+                <tr>
+                  <td className="p-1.5 bg-slate-100 font-semibold">Gasto Estimado</td>
+                  <td className="p-1.5 font-mono">
+                    ~{energy.annualEstimatedCostEur ? energy.annualEstimatedCostEur.toLocaleString('es-ES') : '—'} €/año
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          ) : (
+            <p className="text-[10px] text-slate-500">Datos CEE no disponibles.</p>
+          )}
+        </div>
+
+        <div>
+          <h2 className="text-xs font-bold uppercase tracking-wider text-slate-700 border-b border-slate-300 pb-1 mb-2 font-mono">
+            6. Serie Histórica de Mercado (INE IPV & ADRH)
+          </h2>
+          {marketTrends ? (
+            <table className="w-full text-[10px] border border-slate-200">
+              <tbody>
+                <tr className="border-b border-slate-200">
+                  <td className="p-1.5 bg-slate-100 font-semibold">Crecimiento Renta (5A)</td>
+                  <td className="p-1.5 font-bold text-emerald-800 font-mono">
+                    +{marketTrends.summary.fiveYearIncomeGrowthPct}% en sección censal
+                  </td>
+                </tr>
+                <tr className="border-b border-slate-200">
+                  <td className="p-1.5 bg-slate-100 font-semibold">Crecimiento IPV Vivienda</td>
+                  <td className="p-1.5 font-mono font-bold">
+                    +{marketTrends.summary.fiveYearPriceIndexGrowthPct}% en {marketTrends.autonomousCommunity}
+                  </td>
+                </tr>
+                <tr>
+                  <td className="p-1.5 bg-slate-100 font-semibold">Dinámica del Vecindario</td>
+                  <td className="p-1.5 font-semibold capitalize">
+                    {marketTrends.summary.gentrificationIndicator === 'high'
+                      ? 'Revalorización Rápida / Gentrificación'
+                      : marketTrends.summary.gentrificationIndicator === 'moderate'
+                      ? 'Crecimiento Sostenido'
+                      : 'Estable'}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          ) : (
+            <p className="text-[10px] text-slate-500">Series históricas no disponibles.</p>
+          )}
         </div>
       </div>
 

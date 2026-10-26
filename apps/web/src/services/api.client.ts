@@ -780,13 +780,45 @@ export class OpenBarrioApiClient {
       isStressedHousingZone: isStressed,
     };
 
+    const energy = {
+      ratingEmissions: (year >= 2020 ? 'A' : year >= 2007 ? 'D' : year >= 1980 ? 'E' : 'G') as any,
+      ratingConsumption: (year >= 2020 ? 'A' : year >= 2007 ? 'D' : year >= 1980 ? 'E' : 'G') as any,
+      co2Emissions: year >= 2020 ? 7.1 : year >= 2007 ? 23.5 : year >= 1980 ? 38.9 : 59.2,
+      primaryEnergyConsumption: year >= 2020 ? 34.0 : year >= 2007 ? 115.0 : year >= 1980 ? 190.0 : 290.0,
+      scope: 'building' as const,
+      isEstimated: isGranVia ? false : true,
+      registrationNumber: isGranVia ? 'MDR-2023-CEE-09412' : undefined,
+      annualEstimatedCostEur: Math.round((property.building.builtSurfaceM2 || 90) * (year >= 2020 ? 34 : 190) * 0.16),
+      estimationBasis: year >= 2020 ? 'CTE DB-HE 2019 nZEB' : year >= 2007 ? 'CTE DB-HE 2006' : year >= 1980 ? 'NBE-CT-79' : 'Pre-1979 Uninsulated',
+    };
+
+    const marketTrends = {
+      censusSectionId: neighborhood.censusSectionCode,
+      provinceName: finalAddress.province,
+      autonomousCommunity: finalAddress.province === 'Barcelona' ? 'Cataluña' : finalAddress.province === 'Bizkaia' ? 'País Vasco' : 'Comunidad de Madrid',
+      timeSeries: [
+        { period: '2018', housingPriceIndex: 116.8, householdIncome: Math.round(income * 0.84) },
+        { period: '2019', housingPriceIndex: 122.8, householdIncome: Math.round(income * 0.88) },
+        { period: '2020', housingPriceIndex: 125.4, householdIncome: Math.round(income * 0.90) },
+        { period: '2021', housingPriceIndex: 133.4, householdIncome: Math.round(income * 0.94) },
+        { period: '2022', housingPriceIndex: 143.3, householdIncome: income },
+      ],
+      summary: {
+        fiveYearIncomeGrowthPct: 19.0,
+        fiveYearPriceIndexGrowthPct: 22.7,
+        gentrificationIndicator: 'moderate' as const,
+      },
+    };
+
     const score = calculateBarrioScore(
       property,
       neighborhood,
       environment,
       rentalBenchmark,
       connectivity,
-      urbanPlanning
+      urbanPlanning,
+      undefined,
+      energy
     );
 
     return {
@@ -799,6 +831,8 @@ export class OpenBarrioApiClient {
       urbanPlanning,
       score,
       rentalBenchmark,
+      energy,
+      marketTrends,
       isOfflineDemo: true,
     };
   }

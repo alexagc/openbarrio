@@ -205,6 +205,9 @@ export function renderAuditCard(report: PropertyAuditReport, webUrl: string): st
       <span class="ob-telemetry-chip" title="Zona verde o parque urbano más próximo">
         ${parkLabel}
       </span>
+      <span class="ob-telemetry-chip" title="CEE">
+        ⚡ CEE ${report.energy?.ratingEmissions || 'E'}
+      </span>
     </div>
   `;
 

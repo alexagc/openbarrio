@@ -51,7 +51,53 @@ export const CadastralPropertySchema = Type.Object({
   coordinates: CadastralCoordinatesSchema,
   building: CadastralBuildingSchema,
   unit: Type.Optional(CadastralUnitSchema),
+  jurisdiction: Type.Optional(
+    Type.Union([
+      Type.Literal('dgc'),
+      Type.Literal('bizkaia'),
+      Type.Literal('gipuzkoa'),
+      Type.Literal('araba'),
+      Type.Literal('navarra'),
+    ], { description: 'Cadastral jurisdiction: dgc (national), bizkaia, gipuzkoa, araba, navarra' })
+  ),
+  hasHorizontalDivision: Type.Optional(
+    Type.Boolean({ description: 'Whether the parcel supports horizontal unit division' })
+  ),
 });
+
+export type CadastralJurisdiction = 'dgc' | 'bizkaia' | 'gipuzkoa' | 'araba' | 'navarra';
+
+export function detectCadastralJurisdiction(
+  refcat?: string | null,
+  coords?: { latitude: number; longitude: number }
+): CadastralJurisdiction {
+  if (coords) {
+    const { latitude: lat, longitude: lon } = coords;
+    // Bounding box heuristic for Spanish foral territories
+    if (lat >= 41.90 && lat <= 43.35 && lon >= -2.55 && lon <= -0.70 && lon > -1.75) {
+      return 'navarra';
+    }
+    if (lat >= 42.95 && lat <= 43.50 && lon >= -3.50 && lon <= -2.40) {
+      return 'bizkaia';
+    }
+    if (lat >= 42.85 && lat <= 43.45 && lon >= -2.60 && lon <= -1.70) {
+      return 'gipuzkoa';
+    }
+    if (lat >= 42.40 && lat <= 43.15 && lon >= -3.15 && lon <= -2.15) {
+      return 'araba';
+    }
+  }
+
+  if (refcat) {
+    const clean = refcat.replace(/[\s\-_.]/g, '').toUpperCase();
+    if (clean.startsWith('48') || clean.startsWith('A48') || clean.startsWith('BI')) return 'bizkaia';
+    if (clean.startsWith('20') || clean.startsWith('SS') || clean.startsWith('GI')) return 'gipuzkoa';
+    if (clean.startsWith('01') || clean.startsWith('VI') || clean.startsWith('AR')) return 'araba';
+    if (clean.startsWith('31') || clean.startsWith('NA')) return 'navarra';
+  }
+
+  return 'dgc';
+}
 
 export type CadastralUnit = Static<typeof CadastralUnitSchema>;
 export type CadastralUnitsResponse = Static<typeof CadastralUnitsResponseSchema>;
@@ -113,17 +159,19 @@ export function isCadastralReference(value: string | null | undefined): boolean 
     return false;
   }
 
-  // 6. Spanish cadastral reference structural patterns:
+  // 6. Spanish cadastral reference structural patterns (DGC and Foral):
   // Urban 14-char: 7 alphanumeric (parcel) + 7 alphanumeric (sheet)
   // Urban 20-char: 14 chars + 4 digits (unit) + 2 letters (control)
   // Rural 14-char: 5 digits (prov+mun) + 1 letter (sector) + 8 digits (poly+parcel)
   // Rural 20-char: 14 rural chars + 4 digits (subparcel) + 2 letters (control)
+  // Foral (Euskadi & Navarra): province/regional prefixes (01, 20, 48, 31, A48, etc.)
+  const isForal = /^(01|20|48|31|A48|BI|SS|GI|VI|AR|NA)[0-9A-Z]{8,18}$/.test(clean);
   const isUrban14 = /^[0-9A-Z]{7}[0-9A-Z]{7}$/.test(clean);
   const isUrban20 = /^[0-9A-Z]{7}[0-9A-Z]{7}[0-9]{4}[A-Z]{2}$/.test(clean);
   const isRural14 = /^\d{5}[A-Z]\d{8}$/.test(clean);
   const isRural20 = /^\d{5}[A-Z]\d{8}\d{4}[A-Z]{2}$/.test(clean);
 
-  return isUrban14 || isUrban20 || isRural14 || isRural20;
+  return isUrban14 || isUrban20 || isRural14 || isRural20 || isForal;
 }
 
 export const CadastralGeometrySchema = Type.Object({

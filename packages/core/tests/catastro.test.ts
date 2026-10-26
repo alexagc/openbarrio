@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { Value } from '@sinclair/typebox/value';
 import {
   isCadastralReference,
+  detectCadastralJurisdiction,
   CadastralUnitSchema,
   CadastralUnitsResponseSchema,
 } from '../src/types/catastro.js';
@@ -114,6 +115,38 @@ describe('isCadastralReference Validation Engine', () => {
       };
 
       expect(Value.Check(CadastralUnitsResponseSchema, invalidResponse)).toBe(false);
+    });
+  });
+
+  describe('Foral Cadastre & Multi-Region Jurisdiction Router', () => {
+    it('should detect foral cadastral references (Bizkaia, Gipuzkoa, Álava, Navarra)', () => {
+      expect(isCadastralReference('48020A00100010')).toBe(true);
+      expect(isCadastralReference('A4802000000001')).toBe(true);
+      expect(isCadastralReference('20001B00100020')).toBe(true);
+      expect(isCadastralReference('01001A00200030')).toBe(true);
+      expect(isCadastralReference('31001A00500050')).toBe(true);
+    });
+
+    it('should route jurisdictions correctly by reference prefix', () => {
+      expect(detectCadastralJurisdiction('48020A00100010')).toBe('bizkaia');
+      expect(detectCadastralJurisdiction('A4802000000001')).toBe('bizkaia');
+      expect(detectCadastralJurisdiction('20001B00100020')).toBe('gipuzkoa');
+      expect(detectCadastralJurisdiction('01001A00200030')).toBe('araba');
+      expect(detectCadastralJurisdiction('31001A00500050')).toBe('navarra');
+      expect(detectCadastralJurisdiction('9872023VH5797S')).toBe('dgc');
+    });
+
+    it('should route jurisdictions correctly by GPS coordinates', () => {
+      // Bilbao: 43.2630, -2.9350 -> Bizkaia
+      expect(detectCadastralJurisdiction(undefined, { latitude: 43.263, longitude: -2.935 })).toBe('bizkaia');
+      // Donostia: 43.3183, -1.9812 -> Gipuzkoa
+      expect(detectCadastralJurisdiction(undefined, { latitude: 43.3183, longitude: -1.9812 })).toBe('gipuzkoa');
+      // Vitoria-Gasteiz: 42.8467, -2.6716 -> Álava
+      expect(detectCadastralJurisdiction(undefined, { latitude: 42.8467, longitude: -2.6716 })).toBe('araba');
+      // Pamplona-Iruña: 42.8125, -1.6458 -> Navarra
+      expect(detectCadastralJurisdiction(undefined, { latitude: 42.8125, longitude: -1.6458 })).toBe('navarra');
+      // Madrid: 40.4168, -3.7038 -> DGC
+      expect(detectCadastralJurisdiction(undefined, { latitude: 40.4168, longitude: -3.7038 })).toBe('dgc');
     });
   });
 });

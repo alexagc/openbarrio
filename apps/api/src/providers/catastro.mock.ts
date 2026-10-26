@@ -85,12 +85,70 @@ export class MockCatastroProvider implements ICatastroProvider {
       },
     };
 
+    const bilbaoProp: CadastralProperty = {
+      cadastralReference: '48020A00100010',
+      jurisdiction: 'bizkaia',
+      hasHorizontalDivision: false,
+      address: {
+        street: 'Gran Vía de Don Diego López de Haro',
+        number: '25',
+        postalCode: '48009',
+        municipality: 'Bilbao',
+        province: 'Bizkaia',
+        provinceCode: '48',
+        municipalityCode: '020',
+      },
+      coordinates: {
+        latitude: 43.2630,
+        longitude: -2.9350,
+        srs: 'EPSG:4326',
+      },
+      building: {
+        constructionYear: 1972,
+        builtSurfaceM2: 4200,
+        primaryUse: 'Residencial',
+        unitsCount: 24,
+        hasCommercialGroundFloor: true,
+      },
+    };
+
+    const pamplonaProp: CadastralProperty = {
+      cadastralReference: '312010000100010000AA',
+      jurisdiction: 'navarra',
+      hasHorizontalDivision: false,
+      address: {
+        street: 'Plaza del Castillo',
+        number: '8',
+        postalCode: '31001',
+        municipality: 'Pamplona / Iruña',
+        province: 'Navarra',
+        provinceCode: '31',
+        municipalityCode: '201',
+      },
+      coordinates: {
+        latitude: 42.8169,
+        longitude: -1.6432,
+        srs: 'EPSG:4326',
+      },
+      building: {
+        constructionYear: 1958,
+        builtSurfaceM2: 2900,
+        primaryUse: 'Residencial',
+        unitsCount: 16,
+        hasCommercialGroundFloor: true,
+      },
+    };
+
     this.propertiesByRef.set(madridProp.cadastralReference, madridProp);
     this.propertiesByRef.set(madridProp.cadastralReference.slice(0, 14), madridProp);
     this.propertiesByRef.set(bcnProp.cadastralReference, bcnProp);
     this.propertiesByRef.set(bcnProp.cadastralReference.slice(0, 14), bcnProp);
     this.propertiesByRef.set(valenciaProp.cadastralReference, valenciaProp);
     this.propertiesByRef.set(valenciaProp.cadastralReference.slice(0, 14), valenciaProp);
+    this.propertiesByRef.set(bilbaoProp.cadastralReference, bilbaoProp);
+    this.propertiesByRef.set(bilbaoProp.cadastralReference.slice(0, 14), bilbaoProp);
+    this.propertiesByRef.set(pamplonaProp.cadastralReference, pamplonaProp);
+    this.propertiesByRef.set(pamplonaProp.cadastralReference.slice(0, 14), pamplonaProp);
   }
 
   async getByCoordinates(latitude: number, longitude: number): Promise<CadastralProperty> {
@@ -117,6 +175,22 @@ export class MockCatastroProvider implements ICatastroProvider {
 
     if (Math.abs(latitude - 39.4699) < 0.00015 && Math.abs(longitude - -0.3735) < 0.00015) {
       const prop = this.propertiesByRef.get('4625001VK4722E0001AZ')!;
+      return {
+        ...prop,
+        coordinates: { latitude, longitude, srs: 'EPSG:4326' },
+      };
+    }
+
+    if (Math.abs(latitude - 43.2630) < 0.00015 && Math.abs(longitude - -2.9350) < 0.00015) {
+      const prop = this.propertiesByRef.get('48020A00100010')!;
+      return {
+        ...prop,
+        coordinates: { latitude, longitude, srs: 'EPSG:4326' },
+      };
+    }
+
+    if (Math.abs(latitude - 42.8169) < 0.00015 && Math.abs(longitude - -1.6432) < 0.00015) {
+      const prop = this.propertiesByRef.get('312010000100010000AA')!;
       return {
         ...prop,
         coordinates: { latitude, longitude, srs: 'EPSG:4326' },

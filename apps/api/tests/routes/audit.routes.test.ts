@@ -98,6 +98,16 @@ describe('Hono Audit Routes Integration', () => {
       expect(report.capex.iteStatus).toBeDefined();
       expect(report.capex.capexRiskScore).toBeGreaterThanOrEqual(0);
       expect(report.capex.estimatedCommunityExpenseRangeEurMonth.min).toBeGreaterThan(0);
+
+      // v0.7.0 Energy Performance Certificate (CEE)
+      expect(report.energy).toBeDefined();
+      expect(report.energy.ratingEmissions).toBeDefined();
+      expect(report.energy.ratingConsumption).toBeDefined();
+
+      // v0.7.0 Longitudinal Market Trends
+      expect(report.marketTrends).toBeDefined();
+      expect(report.marketTrends.timeSeries.length).toBeGreaterThan(0);
+      expect(report.marketTrends.summary).toBeDefined();
     });
 
     it('returns 400 Bad Request with RFC 7807 Problem Details on invalid coordinates query', async () => {
