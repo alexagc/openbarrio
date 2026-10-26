@@ -412,7 +412,7 @@ export function MapView({
             tileSize: 256,
             attribution: '&copy; Instituto Geográfico Nacional (PNOA)',
           },
-          // Sede Electrónica del Catastro (OVC) Live WMS
+          // Sede Electrónica del Catastro (OVC) Live WMS (Common Territory)
           'catastro-wms': {
             type: 'raster',
             tiles: [
@@ -420,6 +420,42 @@ export function MapView({
             ],
             tileSize: 256,
             attribution: '&copy; Dirección General del Catastro (España)',
+          },
+          // Bizkaia Foral Cadastre WMS
+          'catastro-bizkaia-wms': {
+            type: 'raster',
+            tiles: [
+              'https://geo.bizkaia.eus/arcgisserverinspire/rest/services/Catastro/Annex1/MapServer/exts/InspireView/service?SERVICE=WMS&VERSION=1.3.0&REQUEST=GetMap&FORMAT=image/png&TRANSPARENT=TRUE&LAYERS=CP.CadastralParcel&CRS=EPSG:3857&WIDTH=256&HEIGHT=256&BBOX={bbox-epsg-3857}',
+            ],
+            tileSize: 256,
+            attribution: '&copy; Catastro Foral de Bizkaia',
+          },
+          // Navarra Foral Cadastre WMS (IDENA)
+          'catastro-navarra-wms': {
+            type: 'raster',
+            tiles: [
+              'https://idena.navarra.es/ogc/wms?SERVICE=WMS&VERSION=1.3.0&REQUEST=GetMap&FORMAT=image/png&TRANSPARENT=TRUE&LAYERS=catastro&CRS=EPSG:3857&WIDTH=256&HEIGHT=256&BBOX={bbox-epsg-3857}',
+            ],
+            tileSize: 256,
+            attribution: '&copy; IDENA / Catastro de Navarra',
+          },
+          // Álava Foral Cadastre WMS
+          'catastro-araba-wms': {
+            type: 'raster',
+            tiles: [
+              'https://geo.araba.eus/WMS_Katastroa?SERVICE=WMS&VERSION=1.3.0&REQUEST=GetMap&FORMAT=image/png&TRANSPARENT=TRUE&LAYERS=PartzelaHiritarrak_ParcelasUrbanas,Eraikinak_Edificios&CRS=EPSG:3857&WIDTH=256&HEIGHT=256&BBOX={bbox-epsg-3857}&STYLES=',
+            ],
+            tileSize: 256,
+            attribution: '&copy; Catastro Foral de Álava',
+          },
+          // Gipuzkoa Foral Cadastre WMS
+          'catastro-gipuzkoa-wms': {
+            type: 'raster',
+            tiles: [
+              'https://b5m.gipuzkoa.eus/inspire/wms/gipuzkoa_wms?SERVICE=WMS&VERSION=1.3.0&REQUEST=GetMap&FORMAT=image/png&TRANSPARENT=TRUE&LAYERS=CP.CadastralParcel&CRS=EPSG:3857&WIDTH=256&HEIGHT=256&BBOX={bbox-epsg-3857}',
+            ],
+            tileSize: 256,
+            attribution: '&copy; Catastro Foral de Gipuzkoa (b5m)',
           },
           // INE Atlas de Distribución de Renta de los Hogares (Official INE ADRH Income Choropleth MapServer)
           'ine-income-wms': {
@@ -540,11 +576,67 @@ export function MapView({
             paint: { 'raster-opacity': 0.75 },
             layout: { visibility: 'none' },
           },
-          // 7. Catastro Parcels Official WMS
+          // 7. Catastro Parcels Official WMS (National DGC & Foral Euskadi/Navarra)
           {
             id: 'catastro-layer',
             type: 'raster',
             source: 'catastro-wms',
+            minzoom: 12,
+            maxzoom: 20,
+            paint: {
+              'raster-opacity': 0.95,
+              'raster-brightness-min': 0.85,
+              'raster-brightness-max': 1.0,
+              'raster-contrast': 0.5,
+            },
+            layout: { visibility: 'visible' },
+          },
+          {
+            id: 'catastro-bizkaia-layer',
+            type: 'raster',
+            source: 'catastro-bizkaia-wms',
+            minzoom: 12,
+            maxzoom: 20,
+            paint: {
+              'raster-opacity': 0.95,
+              'raster-brightness-min': 0.85,
+              'raster-brightness-max': 1.0,
+              'raster-contrast': 0.5,
+            },
+            layout: { visibility: 'visible' },
+          },
+          {
+            id: 'catastro-navarra-layer',
+            type: 'raster',
+            source: 'catastro-navarra-wms',
+            minzoom: 12,
+            maxzoom: 20,
+            paint: {
+              'raster-opacity': 0.95,
+              'raster-brightness-min': 0.85,
+              'raster-brightness-max': 1.0,
+              'raster-contrast': 0.5,
+            },
+            layout: { visibility: 'visible' },
+          },
+          {
+            id: 'catastro-araba-layer',
+            type: 'raster',
+            source: 'catastro-araba-wms',
+            minzoom: 12,
+            maxzoom: 20,
+            paint: {
+              'raster-opacity': 0.95,
+              'raster-brightness-min': 0.85,
+              'raster-brightness-max': 1.0,
+              'raster-contrast': 0.5,
+            },
+            layout: { visibility: 'visible' },
+          },
+          {
+            id: 'catastro-gipuzkoa-layer',
+            type: 'raster',
+            source: 'catastro-gipuzkoa-wms',
             minzoom: 12,
             maxzoom: 20,
             paint: {
@@ -927,6 +1019,10 @@ export function MapView({
       setVis('pnoa-layer', activeBasemap === 'pnoa-satellite');
       setVis('ign-layer', activeBasemap === 'ign-base');
       setVis('catastro-layer', showCatastroWms);
+      setVis('catastro-bizkaia-layer', showCatastroWms);
+      setVis('catastro-navarra-layer', showCatastroWms);
+      setVis('catastro-araba-layer', showCatastroWms);
+      setVis('catastro-gipuzkoa-layer', showCatastroWms);
       setVis('ine-income-layer', showIneIncome);
       setVis('sica-layer', showMitecoNoise);
       setVis('snczi-layer', showSncziFlood);
@@ -935,12 +1031,15 @@ export function MapView({
       // Dark GIS and Satellite: brighten parcel boundary lines so they contrast sharply as white lines
       // IGN base (light): standard contrast (crisp dark parcel lines)
       try {
-        const hasCatastro = typeof map.getLayer === 'function' ? Boolean(map.getLayer('catastro-layer')) : true;
-        if (hasCatastro && typeof map.setPaintProperty === 'function') {
-          const isDark = activeBasemap === 'dark-gis' || activeBasemap === 'pnoa-satellite';
-          map.setPaintProperty('catastro-layer', 'raster-brightness-min', isDark ? 0.85 : 0.0);
-          map.setPaintProperty('catastro-layer', 'raster-brightness-max', 1.0);
-          map.setPaintProperty('catastro-layer', 'raster-contrast', isDark ? 0.5 : 0.0);
+        const isDark = activeBasemap === 'dark-gis' || activeBasemap === 'pnoa-satellite';
+        const catastroLayers = ['catastro-layer', 'catastro-bizkaia-layer', 'catastro-navarra-layer', 'catastro-araba-layer', 'catastro-gipuzkoa-layer'];
+        for (const cLayer of catastroLayers) {
+          const hasLayer = typeof map.getLayer === 'function' ? Boolean(map.getLayer(cLayer)) : true;
+          if (hasLayer && typeof map.setPaintProperty === 'function') {
+            map.setPaintProperty(cLayer, 'raster-brightness-min', isDark ? 0.85 : 0.0);
+            map.setPaintProperty(cLayer, 'raster-brightness-max', 1.0);
+            map.setPaintProperty(cLayer, 'raster-contrast', isDark ? 0.5 : 0.0);
+          }
         }
       } catch {
         // Gracefully ignore during style reloads
@@ -1187,8 +1286,11 @@ export function MapView({
       if (typeof map.setPaintProperty === 'function') {
         const getL =
           typeof map.getLayer === 'function' ? (id: string) => Boolean(map.getLayer(id)) : () => true;
-        if (getL('catastro-layer')) {
-          map.setPaintProperty('catastro-layer', 'raster-opacity', catastroOpacity);
+        const catastroLayers = ['catastro-layer', 'catastro-bizkaia-layer', 'catastro-navarra-layer', 'catastro-araba-layer', 'catastro-gipuzkoa-layer'];
+        for (const cLayer of catastroLayers) {
+          if (getL(cLayer)) {
+            map.setPaintProperty(cLayer, 'raster-opacity', catastroOpacity);
+          }
         }
         if (getL('ine-income-layer')) {
           map.setPaintProperty('ine-income-layer', 'raster-opacity', ineOpacity);

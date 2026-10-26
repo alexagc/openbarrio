@@ -85,14 +85,14 @@ export function AuditDossier({ report, onOpenUnitPicker, onOpenDuel }: AuditDoss
 
     if (jurisdiction === 'bizkaia' || clean.startsWith('48') || clean.startsWith('A48')) {
       return {
-        url: 'https://www.bizkaia.eus/es/web/catastro/consulta-de-datos-catastrales',
+        url: 'https://www.bizkaia.eus/es/catastro-de-bizkaia',
         label: 'Sede Bizkaia',
         fullTitle: 'Ver en Sede del Catastro Foral de Bizkaia',
       };
     }
     if (jurisdiction === 'gipuzkoa' || clean.startsWith('20')) {
       return {
-        url: 'https://egoitza.gipuzkoa.eus/es/catastro',
+        url: 'https://www.gipuzkoa.eus/es/web/ogasuna/catastro',
         label: 'Sede Gipuzkoa',
         fullTitle: 'Ver en Sede del Catastro Foral de Gipuzkoa',
       };

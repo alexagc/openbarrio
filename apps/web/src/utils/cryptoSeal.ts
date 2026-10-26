@@ -44,10 +44,10 @@ export function buildCatastroVerificationUrl(
   const clean = refcat.replace(/[^A-Za-z0-9]/g, '').toUpperCase();
 
   if (jurisdiction === 'bizkaia' || clean.startsWith('48') || clean.startsWith('A48')) {
-    return 'https://www.bizkaia.eus/es/web/catastro/consulta-de-datos-catastrales';
+    return 'https://www.bizkaia.eus/es/catastro-de-bizkaia';
   }
   if (jurisdiction === 'gipuzkoa' || clean.startsWith('20')) {
-    return 'https://egoitza.gipuzkoa.eus/es/catastro';
+    return 'https://www.gipuzkoa.eus/es/web/ogasuna/catastro';
   }
   if (jurisdiction === 'araba' || clean.startsWith('01')) {
     return 'https://geo.araba.eus/';
