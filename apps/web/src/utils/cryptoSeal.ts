@@ -37,8 +37,25 @@ export async function computeAuditSha256(report: PropertyAuditReport): Promise<s
 /**
  * Builds the official Sede Electrónica del Catastro verification URL.
  */
-export function buildCatastroVerificationUrl(refcat: string): string {
+export function buildCatastroVerificationUrl(
+  refcat: string,
+  jurisdiction?: 'dgc' | 'bizkaia' | 'gipuzkoa' | 'araba' | 'navarra'
+): string {
   const clean = refcat.replace(/[^A-Za-z0-9]/g, '').toUpperCase();
+
+  if (jurisdiction === 'bizkaia' || clean.startsWith('48') || clean.startsWith('A48')) {
+    return 'https://www.bizkaia.eus/es/web/catastro/consulta-de-datos-catastrales';
+  }
+  if (jurisdiction === 'gipuzkoa' || clean.startsWith('20')) {
+    return 'https://egoitza.gipuzkoa.eus/es/catastro';
+  }
+  if (jurisdiction === 'araba' || clean.startsWith('01')) {
+    return 'https://geo.araba.eus/';
+  }
+  if (jurisdiction === 'navarra' || clean.startsWith('31')) {
+    return 'https://catastro.navarra.es/';
+  }
+
   const rc1 = clean.slice(0, 7);
   const rc2 = clean.slice(7, 14);
   return `https://www1.sedecatastro.gob.es/CYCBienInmueble/OVCListaBienes.aspx?rc1=${encodeURIComponent(

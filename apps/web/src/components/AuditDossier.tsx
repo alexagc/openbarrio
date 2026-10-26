@@ -77,12 +77,48 @@ export function AuditDossier({ report, onOpenUnitPicker, onOpenDuel }: AuditDoss
     downloadCadastralGML(report);
   };
 
-  const getCatastroUrl = (rc: string): string => {
-    const sanitized = rc.replace(/[^A-Za-z0-9]/g, '');
-    const url = new URL('https://www1.sedecatastro.gob.es/CYCBienInmueble/OVCListaBienes.aspx');
-    url.searchParams.set('rc1', sanitized.slice(0, 7));
-    url.searchParams.set('rc2', sanitized.slice(7, 14));
-    return url.toString();
+  const getCatastroInfo = (
+    rc: string,
+    jurisdiction?: string
+  ): { url: string; label: string; fullTitle: string } => {
+    const clean = rc.replace(/[^A-Za-z0-9]/g, '').toUpperCase();
+
+    if (jurisdiction === 'bizkaia' || clean.startsWith('48') || clean.startsWith('A48')) {
+      return {
+        url: 'https://www.bizkaia.eus/es/web/catastro/consulta-de-datos-catastrales',
+        label: 'Sede Bizkaia',
+        fullTitle: 'Ver en Sede del Catastro Foral de Bizkaia',
+      };
+    }
+    if (jurisdiction === 'gipuzkoa' || clean.startsWith('20')) {
+      return {
+        url: 'https://egoitza.gipuzkoa.eus/es/catastro',
+        label: 'Sede Gipuzkoa',
+        fullTitle: 'Ver en Sede del Catastro Foral de Gipuzkoa',
+      };
+    }
+    if (jurisdiction === 'araba' || clean.startsWith('01')) {
+      return {
+        url: 'https://geo.araba.eus/',
+        label: 'Sede Álava',
+        fullTitle: 'Ver en GeoAraba / Catastro de Álava',
+      };
+    }
+    if (jurisdiction === 'navarra' || clean.startsWith('31')) {
+      return {
+        url: 'https://catastro.navarra.es/',
+        label: 'Sede Navarra',
+        fullTitle: 'Ver en Sede del Catastro de Navarra (SITNA)',
+      };
+    }
+
+    const rc1 = clean.slice(0, 7);
+    const rc2 = clean.slice(7, 14);
+    return {
+      url: `https://www1.sedecatastro.gob.es/CYCBienInmueble/OVCListaBienes.aspx?rc1=${encodeURIComponent(rc1)}&rc2=${encodeURIComponent(rc2)}`,
+      label: 'Sede',
+      fullTitle: 'Ver en Sede Electrónica del Catastro (Ministerio de Hacienda)',
+    };
   };
 
   const usageLabel = property.building.primaryUse || 'Residencial Colectivo';
@@ -168,16 +204,21 @@ export function AuditDossier({ report, onOpenUnitPicker, onOpenDuel }: AuditDoss
               )}
             </button>
 
-            <a
-              href={getCatastroUrl(property.cadastralReference)}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="px-2.5 py-1 bg-surface-container-high hover:bg-surface-variant text-on-surface text-xs font-mono rounded border border-outline-variant transition-colors flex items-center gap-1"
-              title="Ver en Sede Electrónica del Catastro"
-            >
-              <ExternalLink className="w-3.5 h-3.5 text-tertiary" />
-              <span className="hidden sm:inline">Sede</span>
-            </a>
+            {(() => {
+              const sedeInfo = getCatastroInfo(property.cadastralReference, property.jurisdiction);
+              return (
+                <a
+                  href={sedeInfo.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-2.5 py-1 bg-surface-container-high hover:bg-surface-variant text-on-surface text-xs font-mono rounded border border-outline-variant transition-colors flex items-center gap-1"
+                  title={sedeInfo.fullTitle}
+                >
+                  <ExternalLink className="w-3.5 h-3.5 text-tertiary" />
+                  <span className="hidden sm:inline">{sedeInfo.label}</span>
+                </a>
+              );
+            })()}
           </div>
         </div>
 

@@ -9,7 +9,10 @@ interface CertifiedPdfReportProps {
 
 export function CertifiedPdfReport({ report }: CertifiedPdfReportProps) {
   const [shaSeal, setShaSeal] = useState<string>('Calculando sello criptográfico...');
-  const catastroUrl = buildCatastroVerificationUrl(report.property.cadastralReference);
+  const catastroUrl = buildCatastroVerificationUrl(
+    report.property.cadastralReference,
+    report.property.jurisdiction
+  );
 
   useEffect(() => {
     let isMounted = true;
