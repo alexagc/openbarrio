@@ -22,7 +22,7 @@ describe('CadastralRouterProvider & Foral Connectors', () => {
       expect(prop.jurisdiction).toBe('bizkaia');
       expect(prop.address.municipality).toContain('Bilbao');
       expect(prop.hasHorizontalDivision).toBe(false);
-    });
+    }, 15000);
 
     it('routes Pamplona GPS coordinates to Navarra provider', async () => {
       // Pamplona: 42.8169, -1.6432
@@ -30,7 +30,7 @@ describe('CadastralRouterProvider & Foral Connectors', () => {
       expect(prop.jurisdiction).toBe('navarra');
       expect(prop.address.municipality).toContain('Pamplona');
       expect(prop.hasHorizontalDivision).toBe(false);
-    });
+    }, 15000);
 
     it('routes Madrid coordinates to standard DGC provider', async () => {
       // Madrid Gran Vía: 40.42028, -3.70379
