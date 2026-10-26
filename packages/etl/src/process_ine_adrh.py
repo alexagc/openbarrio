@@ -113,8 +113,8 @@ def process_ine_adrh(input_path: str, output_sql: str, output_db: str = None) ->
                 COALESCE(raw_household, raw_person * 2.2, 32000.0) AS avg_household,
                 COALESCE(raw_person, raw_household / 2.2, 14500.0) AS avg_person,
                 COALESCE(raw_median, raw_household * 0.88, 28000.0) AS median_household,
-                COALESCE(raw_age, ROUND(38.0 + LEAST(14.0, GREATEST(0.0, (2.6 - (COALESCE(raw_household, 32000.0) / GREATEST(1000.0, COALESCE(raw_person, 14500.0)))) * 12.0)), 44.0) AS median_age,
-                COALESCE(raw_single, ROUND(18.0 + LEAST(24.0, GREATEST(0.0, (2.5 - (COALESCE(raw_household, 32000.0) / GREATEST(1000.0, COALESCE(raw_person, 14500.0)))) * 20.0)), 28.0) AS single_pct
+                COALESCE(raw_age, 44.0) AS median_age,
+                COALESCE(raw_single, 28.0) AS single_pct
             FROM pivoted
             WHERE census_section_code IS NOT NULL AND LENGTH(census_section_code) = 10
         ),
