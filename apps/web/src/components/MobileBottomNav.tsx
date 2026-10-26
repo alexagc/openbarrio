@@ -24,7 +24,7 @@ const DESTINATIONS: DestinationItem[] = [
 ];
 
 /**
- * Mobile Bottom Navigation Bar for OpenBarrio (Stitch Civic Precision v0.6.1)
+ * Mobile Bottom Navigation Bar for OpenBarrio (Stitch Civic Precision v0.6.2)
  * Adheres strictly to the Stitch Shell Border Ban (prohibits border-t, uses tonal elevation).
  */
 export function MobileBottomNav({

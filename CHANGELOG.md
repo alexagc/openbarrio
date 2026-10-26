@@ -5,6 +5,15 @@ All notable changes to the **OpenBarrio** platform are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.2] - 2026-10-26
+
+### Fixed
+- **MapLibre Web Worker Bundling & MIME Type on Cloudflare Pages (`apps/web`)**:
+  - Explicitly registered MapLibre Web Worker bundle URL using Vite's native `?worker&url` import and `setWorkerUrl`.
+  - Added standalone `public/assets/maplibre-gl-worker.mjs` asset guaranteeing static availability on Cloudflare Pages with valid JavaScript MIME type (`application/javascript; charset=utf-8`).
+  - Updated `_worker.js` and `_headers` to strip query params (`?v=6.16.0`) for static asset resolution and enforce proper MIME headers for module worker scripts, resolving "Failed to load module script" and worker initialization failures.
+  - Added `setWorkerUrl` mock in unit test suite.
+
 ## [0.6.1] - 2026-10-26
 
 ### Fixed

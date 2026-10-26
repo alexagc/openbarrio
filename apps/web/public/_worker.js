@@ -51,13 +51,30 @@ export default {
     }
 
     // 2. Serve static assets via Cloudflare Pages asset handler
-    const response = await env.ASSETS.fetch(request);
+    // If worker or static script has cache-busting query params (e.g. ?v=6.16.0), normalize url for ASSETS fetch
+    let assetRequest = request;
+    if (url.search && (url.pathname.endsWith('.mjs') || url.pathname.endsWith('.js'))) {
+      assetRequest = new Request(new URL(url.pathname, request.url), request);
+    }
+    const response = await env.ASSETS.fetch(assetRequest);
+
+    // Ensure .mjs files are always served with valid JavaScript MIME type per HTML module spec
+    if (response.ok && url.pathname.endsWith('.mjs')) {
+      const headers = new Headers(response.headers);
+      headers.set('Content-Type', 'application/javascript; charset=utf-8');
+      return new Response(response.body, {
+        status: response.status,
+        statusText: response.statusText,
+        headers,
+      });
+    }
 
     // 3. Single-Page Application (SPA) HTML fallback for non-file GET requests
     if (
       response.status === 404 &&
       request.method === 'GET' &&
-      request.headers.get('accept')?.includes('text/html')
+      request.headers.get('accept')?.includes('text/html') &&
+      !url.pathname.includes('.')
     ) {
       return env.ASSETS.fetch(new Request(new URL('/index.html', request.url), request));
     }

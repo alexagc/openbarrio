@@ -10,6 +10,8 @@ export default tseslint.config(
       '**/coverage/**',
       '**/.devcontainer/**',
       '**/.notes/**',
+      '**/public/**',
+      '**/*worker*.mjs',
       '**/*.d.ts',
       '**/icons/**',
       '**/*.min.js',
