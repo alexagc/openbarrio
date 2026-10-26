@@ -5,6 +5,13 @@ All notable changes to the **OpenBarrio** platform are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.3] - 2026-10-26
+
+### Fixed
+- **Local Dev & Production MapLibre Worker Parity (`apps/web`)**:
+  - Replaced Vite dynamic `?worker&url` query with direct path `/assets/maplibre-gl-worker.mjs`, avoiding Vite injecting HMR client (`/@vite/client`) into the worker thread in local development.
+  - Ensures clean, un-polluted Web Worker execution in both local dev server (`http://localhost:5173`) and Cloudflare Pages production (`https://openbarrio-web.pages.dev`).
+
 ## [0.6.2] - 2026-10-26
 
 ### Fixed

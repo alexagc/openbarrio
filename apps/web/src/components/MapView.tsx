@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState, useMemo, useCallback } from 'react';
 import * as maplibregl from 'maplibre-gl';
 import type { Map as MapLibreMap, Marker, MapMouseEvent } from 'maplibre-gl';
-import maplibreWorkerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url';
 import 'maplibre-gl/dist/maplibre-gl.css';
 
+// Point MapLibre directly to the clean static worker script in /assets/
+// Avoids Vite dev server injecting @vite/client into the Web Worker thread
 if (typeof (maplibregl as any).setWorkerUrl === 'function') {
-  (maplibregl as any).setWorkerUrl(maplibreWorkerUrl);
+  (maplibregl as any).setWorkerUrl('/assets/maplibre-gl-worker.mjs');
 }
 import {
   Layers,

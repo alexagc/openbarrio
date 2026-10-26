@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "OpenBarrio - Due Diligence Inmobiliario Oficial",
-  "version": "0.6.2",
+  "version": "0.6.3",
   "description": "Companion widget oficial para Idealista y Fotocasa. Auditoría instantánea de Catastro, INE, MITECO y MIVAU.",
   "icons": {
     "16": "icons/icon-16.png",
