@@ -164,7 +164,6 @@ export class EuskadiCatastroProvider implements ICatastroProvider {
         hasCommercialGroundFloor: true,
       },
       hasHorizontalDivision: false,
-      units: [],
     };
   }
 
@@ -232,7 +231,6 @@ export class EuskadiCatastroProvider implements ICatastroProvider {
         hasCommercialGroundFloor: true,
       },
       hasHorizontalDivision: false,
-      units: [],
     };
   }
 

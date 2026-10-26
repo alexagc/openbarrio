@@ -116,7 +116,6 @@ export class NavarraCatastroProvider implements ICatastroProvider {
         hasCommercialGroundFloor: true,
       },
       hasHorizontalDivision: false,
-      units: [],
     };
   }
 
@@ -177,7 +176,6 @@ export class NavarraCatastroProvider implements ICatastroProvider {
         hasCommercialGroundFloor: true,
       },
       hasHorizontalDivision: false,
-      units: [],
     };
   }
 

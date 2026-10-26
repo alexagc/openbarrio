@@ -22,7 +22,6 @@ describe('CadastralRouterProvider & Foral Connectors', () => {
       expect(prop.jurisdiction).toBe('bizkaia');
       expect(prop.address.municipality).toContain('Bilbao');
       expect(prop.hasHorizontalDivision).toBe(false);
-      expect(prop.units).toEqual([]);
     });
 
     it('routes Pamplona GPS coordinates to Navarra provider', async () => {
