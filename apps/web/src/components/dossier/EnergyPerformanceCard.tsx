@@ -165,8 +165,8 @@ export function EnergyPerformanceCard({ energy }: EnergyPerformanceCardProps) {
         </div>
       </div>
 
-      {/* Recommended Renovation & Upgrade Actions */}
-      {actions.length > 0 && (
+      {/* Recommended Renovation & Upgrade Actions (Only displayed for Official Registered Certificates) */}
+      {!isEstimated && actions.length > 0 && (
         <div className="pt-2 border-t border-outline-variant/40">
           <div className="text-[11px] font-mono text-outline mb-2 flex items-center gap-1.5">
             <Wrench className="w-3.5 h-3.5 text-primary" />
