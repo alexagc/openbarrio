@@ -37,6 +37,16 @@ const priorityCertificates = [
     validUntil: '2032-05-31'
   },
   {
+    refcat: '0269303VK4606G0079FY',
+    emissions: 'G',
+    consumption: 'G',
+    co2: 84.34,
+    primary: 405.61,
+    regNum: '45/345077.9/18',
+    scope: 'unit',
+    validUntil: '2028-07-02'
+  },
+  {
     refcat: '0269303VK4606G',
     emissions: 'E',
     consumption: 'E',
