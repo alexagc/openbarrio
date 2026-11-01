@@ -87,7 +87,7 @@ describe('Phase 15C & 15D: Responsive Viewports (Mobile & Tablet Precision Revam
       estimatedMonthlyRentUpperEur: 1140,
       isStressedHousingZone: true,
     },
-  };
+  } as unknown as ExtendedAuditReport;
 
   it('notifies onDraggingChange when pointer gestures occur on bottom sheet', () => {
     const onDraggingChange = vi.fn();
