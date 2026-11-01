@@ -8,6 +8,8 @@ import { BuildingCapExCard } from './dossier/BuildingCapExCard';
 import { EnergyPerformanceCard } from './dossier/EnergyPerformanceCard';
 import { NeighborhoodTrendsCard } from './dossier/NeighborhoodTrendsCard';
 import { downloadCadastralGML } from '../utils/gml';
+import { DossierTab } from '../hooks/useUrlSync';
+import { useWorkspaceStore } from '../store/workspace.store';
 import {
   Printer,
   Copy,
@@ -19,17 +21,43 @@ import {
   MapPin,
   Download,
   Sparkles,
+  BarChart3,
+  Coins,
+  ShieldCheck,
 } from 'lucide-react';
 
 interface AuditDossierProps {
   report: PropertyAuditReport;
   onOpenUnitPicker?: () => void;
   onOpenDuel?: () => void;
+  activeTab?: DossierTab;
+  onTabChange?: (tab: DossierTab) => void;
 }
 
-export function AuditDossier({ report, onOpenUnitPicker, onOpenDuel }: AuditDossierProps) {
+export function AuditDossier({
+  report,
+  onOpenUnitPicker,
+  onOpenDuel,
+  activeTab: controlledTab,
+  onTabChange,
+}: AuditDossierProps) {
+  const storeDossierTab = useWorkspaceStore((s) => s.dossierTab);
+  const setStoreDossierTab = useWorkspaceStore((s) => s.setDossierTab);
+
+  const [internalTab, setInternalTab] = useState<DossierTab>('summary');
   const [copied, setCopied] = useState(false);
   const [bookmarked, setBookmarked] = useState(false);
+
+  const currentTab: DossierTab = controlledTab ?? storeDossierTab ?? internalTab;
+
+  const handleTabClick = (tab: DossierTab) => {
+    if (onTabChange) {
+      onTabChange(tab);
+    } else {
+      setStoreDossierTab(tab);
+      setInternalTab(tab);
+    }
+  };
 
   const {
     property,
@@ -57,6 +85,7 @@ export function AuditDossier({ report, onOpenUnitPicker, onOpenDuel }: AuditDoss
         .filter(Boolean)
         .join(' · ')
     : null;
+
   const formattedDate = new Date(generatedAt).toLocaleDateString('es-ES', {
     day: '2-digit',
     month: 'long',
@@ -127,7 +156,7 @@ export function AuditDossier({ report, onOpenUnitPicker, onOpenDuel }: AuditDoss
   return (
     <div className="dossier-container w-full h-full bg-surface overflow-y-auto flex flex-col divide-y divide-outline-variant text-on-surface">
       {/* 1. PROPERTY DOSSIER HEADER (Stitch Civic Precision) */}
-      <div className="p-space-lg bg-surface-container-low">
+      <div className="p-space-lg bg-surface-container-low shrink-0">
         <div className="flex items-start justify-between gap-2">
           <div>
             <div className="flex items-center gap-2 mb-1.5 flex-wrap">
@@ -188,7 +217,7 @@ export function AuditDossier({ report, onOpenUnitPicker, onOpenDuel }: AuditDoss
             <button
               type="button"
               onClick={handleCopyRefcat}
-              className="px-2.5 py-1 bg-surface-container-high hover:bg-surface-variant text-on-surface text-xs font-mono rounded border border-outline-variant transition-colors flex items-center gap-1"
+              className="px-2.5 py-1 bg-surface-container-high hover:bg-surface-variant text-on-surface text-xs font-mono rounded border border-outline-variant transition-colors flex items-center gap-1 cursor-pointer"
               title="Copiar Referencia Catastral"
             >
               {copied ? (
@@ -211,7 +240,7 @@ export function AuditDossier({ report, onOpenUnitPicker, onOpenDuel }: AuditDoss
                   href={sedeInfo.url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="px-2.5 py-1 bg-surface-container-high hover:bg-surface-variant text-on-surface text-xs font-mono rounded border border-outline-variant transition-colors flex items-center gap-1"
+                  className="px-2.5 py-1 bg-surface-container-high hover:bg-surface-variant text-on-surface text-xs font-mono rounded border border-outline-variant transition-colors flex items-center gap-1 cursor-pointer"
                   title={sedeInfo.fullTitle}
                 >
                   <ExternalLink className="w-3.5 h-3.5 text-tertiary" />
@@ -244,15 +273,13 @@ export function AuditDossier({ report, onOpenUnitPicker, onOpenDuel }: AuditDoss
               </div>
             </div>
 
-            {onOpenUnitPicker && (
-              <button
-                type="button"
-                onClick={() => onOpenUnitPicker?.()}
-                className="px-2.5 py-1.5 rounded bg-primary/20 hover:bg-primary/30 text-primary border border-primary/40 font-semibold text-[11px] font-mono transition-colors shrink-0 cursor-pointer flex items-center gap-1"
-              >
-                <span>{property.unit ? 'Cambiar inmueble ▾' : 'Ver inmuebles ▾'}</span>
-              </button>
-            )}
+            <button
+              type="button"
+              onClick={() => onOpenUnitPicker?.()}
+              className="px-2.5 py-1.5 rounded bg-primary/20 hover:bg-primary/30 text-primary border border-primary/40 font-semibold text-[11px] font-mono transition-colors shrink-0 cursor-pointer flex items-center gap-1"
+            >
+              <span>{property.unit ? 'Cambiar inmueble ▾' : 'Ver inmuebles ▾'}</span>
+            </button>
           </div>
         )}
 
@@ -296,65 +323,197 @@ export function AuditDossier({ report, onOpenUnitPicker, onOpenDuel }: AuditDoss
         </div>
       </div>
 
-      {/* 2. HERO BENTO CELL: BARRIO SCORE + 5-AXIS RADAR */}
-      <div className="page-break-inside-avoid">
-        <ScoreGauge
-          score={score}
-          cityOrProvince={property.address.province}
-          percentile={neighborhood.percentileInMunicipality}
-        />
-      </div>
+      {/* 2. SEGMENTED DOSSIER TAB NAVIGATION BAR (Fase 15B) */}
+      <nav className="flex items-center border-b border-outline-variant bg-surface-container shrink-0 px-2 no-print" role="tablist">
+        <button
+          type="button"
+          role="tab"
+          aria-selected={currentTab === 'summary'}
+          onClick={() => handleTabClick('summary')}
+          className={`flex-1 py-3 text-center font-mono text-xs font-semibold transition-all duration-150 flex items-center justify-center gap-1.5 cursor-pointer border-b-2 ${
+            currentTab === 'summary'
+              ? 'text-primary border-primary bg-surface-container-low/50'
+              : 'text-on-surface-variant hover:text-on-surface border-transparent'
+          }`}
+        >
+          <BarChart3 className="w-3.5 h-3.5" />
+          <span>Resumen & Score</span>
+        </button>
 
-      {/* 3. BENTO GRID: 5 DEDICATED PILLARS */}
-      <div className="page-break-inside-avoid p-space-lg">
-        <PillarCards
-          property={property}
-          neighborhood={neighborhood}
-          environment={environment}
-          connectivity={connectivity}
-          urbanPlanning={urbanPlanning}
-          rentalBenchmark={rentalBenchmark}
-        />
-      </div>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={currentTab === 'building'}
+          onClick={() => handleTabClick('building')}
+          className={`flex-1 py-3 text-center font-mono text-xs font-semibold transition-all duration-150 flex items-center justify-center gap-1.5 cursor-pointer border-b-2 ${
+            currentTab === 'building'
+              ? 'text-primary border-primary bg-surface-container-low/50'
+              : 'text-on-surface-variant hover:text-on-surface border-transparent'
+          }`}
+        >
+          <Building className="w-3.5 h-3.5" />
+          <span>Edificio & Sostenibilidad</span>
+        </button>
 
-      {/* 4. MIVAU SERPAVI RENTAL MODULE */}
-      {rentalBenchmark && (
-        <div className="page-break-inside-avoid">
-          <RentalModule rental={rentalBenchmark} />
+        <button
+          type="button"
+          role="tab"
+          aria-selected={currentTab === 'environment'}
+          onClick={() => handleTabClick('environment')}
+          className={`flex-1 py-3 text-center font-mono text-xs font-semibold transition-all duration-150 flex items-center justify-center gap-1.5 cursor-pointer border-b-2 ${
+            currentTab === 'environment'
+              ? 'text-primary border-primary bg-surface-container-low/50'
+              : 'text-on-surface-variant hover:text-on-surface border-transparent'
+          }`}
+        >
+          <MapPin className="w-3.5 h-3.5" />
+          <span>Entorno & Conectividad</span>
+        </button>
+
+        <button
+          type="button"
+          role="tab"
+          aria-selected={currentTab === 'market'}
+          onClick={() => handleTabClick('market')}
+          className={`flex-1 py-3 text-center font-mono text-xs font-semibold transition-all duration-150 flex items-center justify-center gap-1.5 cursor-pointer border-b-2 ${
+            currentTab === 'market'
+              ? 'text-primary border-primary bg-surface-container-low/50'
+              : 'text-on-surface-variant hover:text-on-surface border-transparent'
+          }`}
+        >
+          <Coins className="w-3.5 h-3.5" />
+          <span>Mercado & Finanzas</span>
+        </button>
+      </nav>
+
+      {/* 3. TAB PANELS CONTENT AREA */}
+      <div className="flex-1 overflow-y-auto">
+        {/* ================= TAB 1: RESUMEN & SCORE ================= */}
+        <div
+          role="tabpanel"
+          data-testid="tab-summary"
+          className={currentTab === 'summary' ? 'space-y-4' : 'hidden'}
+        >
+          <div className="page-break-inside-avoid">
+            <ScoreGauge
+              score={score}
+              cityOrProvince={property.address.province}
+              percentile={neighborhood.percentileInMunicipality}
+            />
+          </div>
+
+          <div className="px-space-lg">
+            <div className="p-3 rounded-lg bg-surface-container-low border border-outline-variant flex items-center justify-between text-xs">
+              <span className="text-on-surface-variant flex items-center gap-1.5">
+                <ShieldCheck className="w-4 h-4 text-primary" />
+                <span>Régimen Urbanístico del Suelo:</span>
+              </span>
+              <span className="font-mono text-primary font-bold">
+                {urbanPlanning?.landClassification === 'URBAN_CONSOLIDATED'
+                  ? 'Régimen SUC Consolidado · INSPIRE Compliant'
+                  : 'Suelo Urbano'}
+              </span>
+            </div>
+          </div>
+
+          <div className="page-break-inside-avoid">
+            <HighlightsAndRisks
+              highlights={score.keyHighlights}
+              risks={score.keyRisks}
+              refcat={property.cadastralReference}
+              municipality={property.address.municipality}
+            />
+          </div>
         </div>
-      )}
 
-      {/* 5. CAPEX & BUILDING HEALTH DIAGNOSTICS */}
-      <div className="page-break-inside-avoid">
-        <BuildingCapExCard report={report} />
+        {/* ================= TAB 2: EDIFICIO & SOSTENIBILIDAD ================= */}
+        <div
+          role="tabpanel"
+          data-testid="tab-building"
+          className={currentTab === 'building' ? 'space-y-4 p-space-lg' : 'hidden'}
+        >
+          {/* Cadastral Building Technical Overview */}
+          <div className="p-4 rounded-lg bg-surface-container-low border border-outline-variant space-y-3">
+            <div className="flex items-center justify-between border-b border-outline-variant pb-2">
+              <span className="font-headline text-sm font-bold text-on-surface">Datos Registrales Catastro</span>
+              <span className="font-mono text-xs text-primary font-semibold">Año {property.building.constructionYear}</span>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+              <div>
+                <span className="text-on-surface-variant block">Superficie Construida</span>
+                <span className="font-mono font-bold text-on-surface">{property.building.builtSurfaceM2.toLocaleString('es-ES')} m²</span>
+              </div>
+              <div>
+                <span className="text-on-surface-variant block">Uso Principal</span>
+                <span className="font-semibold text-on-surface">{property.building.primaryUse}</span>
+              </div>
+              <div>
+                <span className="text-on-surface-variant block">Inmuebles Registrados</span>
+                <span className="font-mono font-bold text-on-surface">{property.building.unitsCount || 1} unidades</span>
+              </div>
+              <div>
+                <span className="text-on-surface-variant block">Planta Baja Comercial</span>
+                <span className="font-semibold text-on-surface">{property.building.hasCommercialGroundFloor ? 'Sí (Local PB)' : 'No'}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Building CapEx Diagnostics */}
+          <div className="page-break-inside-avoid">
+            <BuildingCapExCard report={report} />
+          </div>
+
+          {/* CEE Energy Performance */}
+          {energy && (
+            <div className="page-break-inside-avoid">
+              <EnergyPerformanceCard energy={energy} />
+            </div>
+          )}
+        </div>
+
+        {/* ================= TAB 3: ENTORNO & CONECTIVIDAD ================= */}
+        <div
+          role="tabpanel"
+          data-testid="tab-environment"
+          className={currentTab === 'environment' ? 'space-y-4 p-space-lg' : 'hidden'}
+        >
+          {/* 5 Dedicated Pillars */}
+          <div className="page-break-inside-avoid">
+            <PillarCards
+              property={property}
+              neighborhood={neighborhood}
+              environment={environment}
+              connectivity={connectivity}
+              urbanPlanning={urbanPlanning}
+              rentalBenchmark={rentalBenchmark}
+            />
+          </div>
+        </div>
+
+        {/* ================= TAB 4: MERCADO & FINANZAS ================= */}
+        <div
+          role="tabpanel"
+          data-testid="tab-market"
+          className={currentTab === 'market' ? 'space-y-4 p-space-lg' : 'hidden'}
+        >
+          {/* MIVAU SERPAVI Rental Module */}
+          {rentalBenchmark && (
+            <div className="page-break-inside-avoid">
+              <RentalModule rental={rentalBenchmark} />
+            </div>
+          )}
+
+          {/* Longitudinal Market & Neighborhood Trends */}
+          {marketTrends && (
+            <div className="page-break-inside-avoid">
+              <NeighborhoodTrendsCard trends={marketTrends} />
+            </div>
+          )}
+        </div>
       </div>
 
-      {/* 6. CEE ENERGY PERFORMANCE CERTIFICATE */}
-      {energy && (
-        <div className="page-break-inside-avoid">
-          <EnergyPerformanceCard energy={energy} />
-        </div>
-      )}
-
-      {/* 7. LONGITUDINAL MARKET & NEIGHBORHOOD TRENDS */}
-      {marketTrends && (
-        <div className="page-break-inside-avoid">
-          <NeighborhoodTrendsCard trends={marketTrends} />
-        </div>
-      )}
-
-      {/* 8. DUE DILIGENCE CLEARANCE & RISKS */}
-      <div className="page-break-inside-avoid">
-        <HighlightsAndRisks
-          highlights={score.keyHighlights}
-          risks={score.keyRisks}
-          refcat={property.cadastralReference}
-          municipality={property.address.municipality}
-        />
-      </div>
-
-      {/* 6. METHODOLOGICAL & LEGAL DISCLAIMER */}
-      <div className="p-space-lg bg-surface text-[11px] text-outline font-mono leading-relaxed space-y-1">
+      {/* 4. METHODOLOGICAL & LEGAL DISCLAIMER */}
+      <div className="p-space-lg bg-surface text-[11px] text-outline font-mono leading-relaxed space-y-1 shrink-0">
         <p className="font-semibold text-on-surface-variant">
           Nota Metodológica & Descargo Cívico:
         </p>

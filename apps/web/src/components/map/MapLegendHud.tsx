@@ -3,13 +3,15 @@ import { CartographicLegendsHud, ActiveLayersState } from '../CartographicLegend
 export interface MapLegendHudProps {
   activeLayers: ActiveLayersState;
   defaultCollapsed?: boolean;
+  isDragging?: boolean;
 }
 
-export function MapLegendHud({ activeLayers, defaultCollapsed = true }: MapLegendHudProps) {
+export function MapLegendHud({ activeLayers, defaultCollapsed = true, isDragging = false }: MapLegendHudProps) {
   return (
     <CartographicLegendsHud
       activeLayers={activeLayers}
       defaultCollapsed={defaultCollapsed}
+      isDragging={isDragging}
     />
   );
 }

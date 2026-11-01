@@ -1,8 +1,11 @@
 import { useEffect, useCallback, useRef } from 'react';
 
+export type DossierTab = 'summary' | 'building' | 'environment' | 'market';
+
 export interface UrlParamsState {
   viewMode: 'landing' | 'map';
   activeTab: 'dossier' | 'map';
+  dossierTab: DossierTab;
   refcat?: string;
   coords?: { lat: number; lon: number };
   vs?: string;
@@ -10,7 +13,7 @@ export interface UrlParamsState {
 
 export function parseUrlState(): UrlParamsState {
   if (typeof window === 'undefined') {
-    return { viewMode: 'landing', activeTab: 'dossier' };
+    return { viewMode: 'landing', activeTab: 'dossier', dossierTab: 'summary' };
   }
 
   const path = window.location.pathname;
@@ -33,11 +36,19 @@ export function parseUrlState(): UrlParamsState {
 
   const isMapPath = path.startsWith('/map');
   const viewMode: 'landing' | 'map' = isMapPath || Boolean(refcatParam) ? 'map' : 'landing';
+
+  // Support both mobile map tab toggle ('map' | 'dossier') and 4-way dossier tabs
+  const validDossierTabs: DossierTab[] = ['summary', 'building', 'environment', 'market'];
+  const dossierTab: DossierTab = validDossierTabs.includes(tabParam as DossierTab)
+    ? (tabParam as DossierTab)
+    : 'summary';
+
   const activeTab: 'dossier' | 'map' = tabParam === 'map' ? 'map' : 'dossier';
 
   return {
     viewMode,
     activeTab,
+    dossierTab,
     refcat: refcatParam ? refcatParam.toUpperCase().trim() : undefined,
     coords,
     vs: vsParam ? vsParam.toUpperCase().trim() : undefined,
@@ -78,6 +89,8 @@ export function useUrlSync(
 
       if (newState.activeTab === 'map') {
         params.set('tab', 'map');
+      } else if (newState.dossierTab && newState.dossierTab !== 'summary') {
+        params.set('tab', newState.dossierTab);
       }
 
       if (newState.vs) {
@@ -107,7 +120,16 @@ export function useUrlSync(
       return;
     }
     syncToUrl(state, false);
-  }, [state.viewMode, state.activeTab, state.refcat, state.coords?.lat, state.coords?.lon, state.vs, syncToUrl]);
+  }, [
+    state.viewMode,
+    state.activeTab,
+    state.dossierTab,
+    state.refcat,
+    state.coords?.lat,
+    state.coords?.lon,
+    state.vs,
+    syncToUrl,
+  ]);
 
   const onUrlStateChangeRef = useRef(onUrlStateChange);
   useEffect(() => {

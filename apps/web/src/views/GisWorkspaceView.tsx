@@ -1,4 +1,5 @@
-import { ArrowLeft, MapPin, Download, Printer, Sparkles } from 'lucide-react';
+import { useState, useRef } from 'react';
+import { ArrowLeft, MapPin, Download, Printer, Sparkles, ChevronLeft, ChevronRight } from 'lucide-react';
 import { SearchBar, SAMPLE_PRESETS } from '../components/SearchBar';
 import { MapView } from '../components/map/MapView';
 import { AuditDossier } from '../components/AuditDossier';
@@ -41,6 +42,46 @@ export function GisWorkspaceView() {
   const setIsDuelOpen = useWorkspaceStore((s) => s.setIsDuelOpen);
   const setDuelCandidateB = useWorkspaceStore((s) => s.setDuelCandidateB);
   const setError = useWorkspaceStore((s) => s.setError);
+
+  // Tablet & Desktop Split Divider and Gestures
+  const [splitRatio, setSplitRatio] = useState<number>(52);
+  const [isSheetDragging, setIsSheetDragging] = useState<boolean>(false);
+  const mainContainerRef = useRef<HTMLDivElement>(null);
+
+  const handleDividerPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (e.button !== 0) return;
+    const startX = e.clientX;
+    const containerWidth = mainContainerRef.current?.getBoundingClientRect().width || window.innerWidth;
+    const initialRatio = splitRatio;
+
+    const handlePointerMove = (moveEvent: PointerEvent) => {
+      const deltaX = moveEvent.clientX - startX;
+      const deltaRatio = (deltaX / containerWidth) * 100;
+      const newRatio = Math.max(35, Math.min(65, initialRatio + deltaRatio));
+      setSplitRatio(Math.round(newRatio * 10) / 10);
+    };
+
+    const handlePointerUp = () => {
+      window.removeEventListener('pointermove', handlePointerMove);
+      window.removeEventListener('pointerup', handlePointerUp);
+    };
+
+    window.addEventListener('pointermove', handlePointerMove);
+    window.addEventListener('pointerup', handlePointerUp);
+  };
+
+  const handleDividerKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'ArrowLeft') {
+      e.preventDefault();
+      setSplitRatio((prev) => Math.max(35, Math.round((prev - 5) * 10) / 10));
+    } else if (e.key === 'ArrowRight') {
+      e.preventDefault();
+      setSplitRatio((prev) => Math.min(65, Math.round((prev + 5) * 10) / 10));
+    } else if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      setSplitRatio(50);
+    }
+  };
 
   const activeAddress = report
     ? `${report.property.address.street} ${report.property.address.number}`
@@ -196,9 +237,15 @@ export function GisWorkspaceView() {
       </div>
 
       {/* Tablet Adaptive Split Workspace */}
-      <main className="flex-1 flex flex-col md:flex-row overflow-hidden w-full relative">
+      <main
+        ref={mainContainerRef}
+        className="flex-1 flex flex-col md:flex-row overflow-hidden w-full relative"
+      >
         {/* Left: GIS Map Viewport */}
-        <section className="w-full md:w-[52%] xl:w-[60%] h-full relative bg-surface-container-lowest overflow-hidden flex flex-col md:border-r border-outline-variant cadastral-grid no-print">
+        <section
+          className="w-full md:w-[52%] xl:w-[60%] h-full relative bg-surface-container-lowest overflow-hidden flex flex-col cadastral-grid no-print"
+          style={splitRatio !== 52 ? { width: `${splitRatio}%` } : undefined}
+        >
           <MapView
             selectedCoords={selectedCoords}
             onMapClick={loadAuditByCoords}
@@ -229,6 +276,7 @@ export function GisWorkspaceView() {
             }
             showFloatingAuditCard={activeTab === 'map'}
             defaultLayersExpanded={false}
+            isDragging={isSheetDragging}
           />
 
           {/* Mobile Expandable Due Diligence Bottom Sheet */}
@@ -243,14 +291,73 @@ export function GisWorkspaceView() {
                   onOpenUnitPicker={() => loadCadastralUnits()}
                   onExportPdf={() => window.print()}
                   onOpenDuel={() => handleOpenDuel()}
+                  onDraggingChange={setIsSheetDragging}
                 />
               </div>
             </div>
           )}
         </section>
 
+        {/* Tablet & Desktop Draggable Split Divider */}
+        <div
+          role="separator"
+          aria-label="Ajustar división del espacio de trabajo"
+          aria-orientation="vertical"
+          aria-valuenow={Math.round(splitRatio)}
+          tabIndex={0}
+          onDoubleClick={() => setSplitRatio(50)}
+          onKeyDown={handleDividerKeyDown}
+          onPointerDown={handleDividerPointerDown}
+          className="hidden md:flex items-center justify-center relative w-2 hover:w-2.5 cursor-col-resize bg-surface-container-high border-x border-outline-variant hover:border-primary/50 hover:bg-primary/10 transition-colors z-20 group shrink-0 select-none"
+          title="Arrastrar para ajustar tamaño · Doble clic para 50/50"
+        >
+          <div className="w-0.5 h-8 rounded-full bg-outline-variant group-hover:bg-primary transition-colors" />
+
+          {/* Quick-collapse buttons popup on hover or focus */}
+          <div className="absolute top-3 -left-3.5 hidden group-hover:flex items-center gap-0.5 bg-surface-container border border-outline-variant rounded-md shadow-lg p-0.5 z-30 pointer-events-auto">
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                setSplitRatio(35);
+              }}
+              className="p-1 rounded hover:bg-surface-container-high text-on-surface-variant hover:text-primary transition-colors"
+              title="Colapsar panel izquierdo (35%)"
+              aria-label="Colapsar panel izquierdo a 35%"
+            >
+              <ChevronLeft className="w-3 h-3" />
+            </button>
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                setSplitRatio(50);
+              }}
+              className="px-1 py-0.5 rounded hover:bg-surface-container-high text-on-surface-variant hover:text-primary font-mono text-[9px] transition-colors"
+              title="Centrar 50/50"
+            >
+              50/50
+            </button>
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                setSplitRatio(65);
+              }}
+              className="p-1 rounded hover:bg-surface-container-high text-on-surface-variant hover:text-primary transition-colors"
+              title="Expandir panel izquierdo (65%)"
+              aria-label="Expandir panel izquierdo a 65%"
+            >
+              <ChevronRight className="w-3 h-3" />
+            </button>
+          </div>
+        </div>
+
         {/* Right: Property Audit Dossier Panel */}
-        <section className="hidden md:flex md:w-[48%] xl:w-[40%] h-full bg-surface overflow-y-auto flex-col">
+        <section
+          className="hidden md:flex md:w-[48%] xl:w-[40%] h-full bg-surface overflow-y-auto flex-col"
+          style={splitRatio !== 52 ? { width: `${100 - splitRatio}%` } : undefined}
+        >
           {error ? (
             <div className="p-4">
               <ErrorAlert

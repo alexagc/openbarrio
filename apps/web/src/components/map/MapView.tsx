@@ -1,4 +1,4 @@
-import { useRef, useState, useMemo, useCallback } from 'react';
+import { useRef, useState, useMemo, useCallback, useEffect } from 'react';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import {
   Layers,
@@ -45,6 +45,7 @@ export interface MapViewProps {
   onToggleMobileLayers?: (open?: boolean) => void;
   showFloatingAuditCard?: boolean;
   defaultLayersExpanded?: boolean;
+  isDragging?: boolean;
 }
 
 export function MapView({
@@ -60,8 +61,10 @@ export function MapView({
   onToggleMobileLayers,
   showFloatingAuditCard = true,
   defaultLayersExpanded = true,
+  isDragging = false,
 }: MapViewProps) {
   const containerRef = useRef<HTMLDivElement>(null);
+  const [isMapDragging, setIsMapDragging] = useState(false);
 
   // Basemap & Thematic Layer States
   const [activeBasemap, setActiveBasemap] = useState<BasemapType>('dark-gis');
@@ -134,6 +137,19 @@ export function MapView({
     selectedCoords,
     report,
   });
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || typeof map.on !== 'function') return;
+    const handleDragStart = () => setIsMapDragging(true);
+    const handleDragEnd = () => setIsMapDragging(false);
+    map.on('dragstart', handleDragStart);
+    map.on('dragend', handleDragEnd);
+    return () => {
+      map.off('dragstart', handleDragStart);
+      map.off('dragend', handleDragEnd);
+    };
+  }, [mapRef.current]);
 
   useEnvironmentalLayers({
     map: mapRef.current,
@@ -360,6 +376,7 @@ export function MapView({
 
       {/* Cartographic Legends HUD */}
       <MapLegendHud
+        isDragging={isDragging || isMapDragging}
         activeLayers={{
           cadastre: showCatastroWms,
           noise: showMitecoNoise,

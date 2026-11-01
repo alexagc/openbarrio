@@ -1,0 +1,34 @@
+/**
+ * OpenBarrio Design System 2.0 - "Civic Precision" CSS Variables
+ */
+:root {
+  /* Obsidian Palette */
+  --ob-surface: #0b1326;
+  --ob-surface-dim: #0b1326;
+  --ob-surface-bright: #31394d;
+  --ob-surface-lowest: #060e20;
+  --ob-surface-low: #131b2e;
+  --ob-surface-container: #171f33;
+  --ob-surface-high: #222a3d;
+  --ob-surface-highest: #2d3449;
+  --ob-surface-variant: #2d3449;
+
+  /* Text & On-Surface */
+  --ob-text-primary: #dae2fd;
+  --ob-text-secondary: #bccac0;
+  --ob-text-muted: #87948b;
+
+  /* Accents */
+  --ob-emerald: #10b981;
+  --ob-emerald-dim: #68dba9;
+  --ob-sky: #38bdf8;
+  --ob-sky-dim: #b4c5ff;
+  --ob-amber: #f59e0b;
+  --ob-amber-dim: #ffb77d;
+  --ob-coral: #ef4444;
+
+  /* Typography */
+  --ob-font-headline: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --ob-font-body: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --ob-font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+}
