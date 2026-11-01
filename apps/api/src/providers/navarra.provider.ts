@@ -221,7 +221,8 @@ export class NavarraCatastroProvider implements ICatastroProvider {
   async getSurroundingBuildings(
     lat: number,
     lon: number,
-    radiusMeters = 150
+    radiusMeters = 150,
+    _refcat?: string
   ): Promise<SurroundingBuildingsResponse> {
     return {
       center: { lat, lon },

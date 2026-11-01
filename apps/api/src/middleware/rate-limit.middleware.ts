@@ -71,6 +71,11 @@ export function rateLimitMiddleware(options: RateLimitOptions = {}): MiddlewareH
       return next();
     }
 
+    // Skip rate limiting during local development unless explicitly configured
+    if (process.env.NODE_ENV === 'development' && options.limit === undefined) {
+      return next();
+    }
+
     const path = c.req.path;
     if (path === '/health' || path.startsWith('/docs') || path.includes('/tiles/')) {
       return next();

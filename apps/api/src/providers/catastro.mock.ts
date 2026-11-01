@@ -483,7 +483,8 @@ export class MockCatastroProvider implements ICatastroProvider {
   async getSurroundingBuildings(
     lat: number,
     lon: number,
-    radiusMeters = 150
+    radiusMeters = 150,
+    _refcat?: string
   ): Promise<SurroundingBuildingsResponse> {
     const buildings: CadastralGeometry[] = [];
     const offsets = [

@@ -503,7 +503,7 @@ describe('MapView Component (Stitch Civic Precision)', () => {
       const btn3D = screen.getByTitle('3D Extrusión');
       fireEvent.click(btn3D);
 
-      expect(spy).toHaveBeenCalledWith(40.42028, -3.70379, 180);
+      expect(spy).toHaveBeenCalledWith(40.42028, -3.70379, 180, undefined);
       spy.mockRestore();
     });
   });

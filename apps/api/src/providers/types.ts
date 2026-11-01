@@ -44,7 +44,7 @@ export interface ICatastroProvider {
   /**
    * Look up surrounding buildings geometry in a spatial radius or bounding box around coordinates.
    */
-  getSurroundingBuildings(lat: number, lon: number, radiusMeters?: number): Promise<SurroundingBuildingsResponse>;
+  getSurroundingBuildings(lat: number, lon: number, radiusMeters?: number, refcat?: string): Promise<SurroundingBuildingsResponse>;
 }
 
 export interface IINEProvider {

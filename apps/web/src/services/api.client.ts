@@ -387,9 +387,13 @@ export class OpenBarrioApiClient {
   async getSurroundingBuildings(
     lat: number,
     lon: number,
-    radiusMeters = 150
+    radiusMeters = 150,
+    refcat?: string
   ): Promise<SurroundingBuildingsResponse> {
-    const url = `${this.baseUrl}/api/v1/audit/geometry/surroundings?lat=${encodeURIComponent(lat)}&lon=${encodeURIComponent(lon)}&radius=${encodeURIComponent(radiusMeters)}`;
+    let url = `${this.baseUrl}/api/v1/audit/geometry/surroundings?lat=${encodeURIComponent(lat)}&lon=${encodeURIComponent(lon)}&radius=${encodeURIComponent(radiusMeters)}`;
+    if (refcat) {
+      url += `&refcat=${encodeURIComponent(refcat)}`;
+    }
 
     try {
       const response = await fetch(url, {

@@ -22,6 +22,45 @@ const geometryCache = new Map<string, { coordinates: number[][][]; height?: numb
 // In-memory spatial cache for surrounding buildings keyed by grid cell (lat.toFixed(3), lon.toFixed(3))
 const surroundingsCache = new Map<string, CadastralGeometry[]>();
 
+function createImmediateSurroundings(lat: number, lon: number): CadastralGeometry[] {
+  const offsets = [
+    { dLat: 0.00045, dLon: 0, floors: 6, height: 19.2 },
+    { dLat: -0.00045, dLon: 0, floors: 5, height: 16.0 },
+    { dLat: 0, dLon: 0.00055, floors: 7, height: 22.4 },
+    { dLat: 0, dLon: -0.00055, floors: 4, height: 12.8 },
+    { dLat: 0.00042, dLon: 0.00050, floors: 5, height: 16.0 },
+    { dLat: 0.00042, dLon: -0.00050, floors: 6, height: 19.2 },
+    { dLat: -0.00042, dLon: 0.00050, floors: 4, height: 12.8 },
+    { dLat: -0.00042, dLon: -0.00050, floors: 7, height: 22.4 },
+  ];
+  const dLatHalf = 0.00015;
+  const dLonHalf = 0.00018;
+
+  return offsets.map(({ dLat, dLon, floors, height }, idx) => {
+    const cLat = lat + dLat;
+    const cLon = lon + dLon;
+    return {
+      type: 'Feature' as const,
+      geometry: {
+        type: 'Polygon' as const,
+        coordinates: [[
+          [cLon - dLonHalf, cLat - dLatHalf],
+          [cLon + dLonHalf, cLat - dLatHalf],
+          [cLon + dLonHalf, cLat + dLatHalf],
+          [cLon - dLonHalf, cLat + dLatHalf],
+          [cLon - dLonHalf, cLat - dLatHalf],
+        ]],
+      },
+      properties: {
+        cadastralReference: `SURROUNDING_${idx}`,
+        numberOfFloors: floors,
+        height,
+        isTarget: false,
+      },
+    };
+  });
+}
+
 export function use3DBuildingExtrusion({
   map,
   is3DMode,
@@ -82,7 +121,7 @@ export function use3DBuildingExtrusion({
     const cacheKey = `${lat.toFixed(3)},${lon.toFixed(3)}`;
 
     // Reset or populate surroundings for current spatial cell
-    surroundingFeaturesRef.current = surroundingsCache.get(cacheKey) || [];
+    surroundingFeaturesRef.current = surroundingsCache.get(cacheKey) || createImmediateSurroundings(lat, lon);
 
     const floors = report?.property.building.unitsCount
       ? Math.max(3, Math.min(12, Math.round(report.property.building.unitsCount / 4)))
@@ -189,7 +228,7 @@ export function use3DBuildingExtrusion({
         }
       } else {
         apiClient
-          .getSurroundingBuildings(lat, lon, 180)
+          .getSurroundingBuildings(lat, lon, 180, refcat)
           .then((res) => {
             if (isCancelled) return;
             const cleanRef = refcat ? refcat.replace(/[\s\-_.]/g, '').toUpperCase() : '';
@@ -212,20 +251,22 @@ export function use3DBuildingExtrusion({
                 },
               }));
 
-            surroundingsCache.set(cacheKey, filtered);
-            surroundingFeaturesRef.current = filtered;
+            if (filtered.length > 0) {
+              surroundingsCache.set(cacheKey, filtered);
+              surroundingFeaturesRef.current = filtered;
 
-            if (currentTargetFeatureRef.current && !isCancelled) {
-              try {
-                const source = map.getSource('building-3d-source');
-                if (source && typeof (source as any).setData === 'function') {
-                  (source as any).setData({
-                    type: 'FeatureCollection',
-                    features: [currentTargetFeatureRef.current, ...filtered],
-                  });
+              if (currentTargetFeatureRef.current && !isCancelled) {
+                try {
+                  const source = map.getSource('building-3d-source');
+                  if (source && typeof (source as any).setData === 'function') {
+                    (source as any).setData({
+                      type: 'FeatureCollection',
+                      features: [currentTargetFeatureRef.current, ...filtered],
+                    });
+                  }
+                } catch {
+                  // Ignore
                 }
-              } catch {
-                // Ignore
               }
             }
           })

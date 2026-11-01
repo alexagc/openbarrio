@@ -66,8 +66,8 @@ export class CadastralRouterProvider implements ICatastroProvider {
     return provider.getGeometryByCadastralReference(refcat);
   }
 
-  async getSurroundingBuildings(lat: number, lon: number, radiusMeters?: number): Promise<SurroundingBuildingsResponse> {
-    const provider = this.resolveProvider('', { latitude: lat, longitude: lon });
-    return provider.getSurroundingBuildings(lat, lon, radiusMeters);
+  async getSurroundingBuildings(lat: number, lon: number, radiusMeters?: number, refcat?: string): Promise<SurroundingBuildingsResponse> {
+    const provider = this.resolveProvider(refcat || '', { latitude: lat, longitude: lon });
+    return provider.getSurroundingBuildings(lat, lon, radiusMeters, refcat);
   }
 }

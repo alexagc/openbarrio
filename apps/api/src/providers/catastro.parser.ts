@@ -596,7 +596,7 @@ export function parseCatastroWfsBuildingsCollectionXml(
   targetCoords?: { lat: number; lon: number }
 ): CadastralGeometry[] {
   const buildings: CadastralGeometry[] = [];
-  const buildingChunks = xml.split(/<(?:[\w-]+:)?Building\b/i);
+  const buildingChunks = xml.split(/<(?:[\w-]+:)?(?:Building|CadastralParcel)\b/i);
 
   for (let i = 1; i < buildingChunks.length; i++) {
     const chunk = buildingChunks[i];
@@ -632,16 +632,29 @@ export function parseCatastroWfsBuildingsCollectionXml(
     }
 
     const refMatch =
-      chunk.match(/<(?:[\w-]+:)?reference[^>]*>([\s\S]*?)<\/(?:[\w-]+:)?reference>/i) ||
-      chunk.match(/gml:id=["'](?:Building_)?([A-Z0-9]+)["']/i);
+      chunk.match(/<(?:[\w-]+:)?(?:reference|localId)[^>]*>([\s\S]*?)<\/(?:[\w-]+:)?(?:reference|localId)>/i) ||
+      chunk.match(/gml:id=["'](?:[A-Za-z0-9_.]+\.)?([A-Z0-9]+)["']/i);
     const refcat = refMatch ? refMatch[1].trim() : `BUILDING_${i}`;
 
-    const floorsStr = extractTag(chunk, 'bu-ext2d:numberOfFloorsAboveGround') || extractTag(chunk, 'numberOfFloorsAboveGround');
-    const floors = floorsStr && !isNaN(parseInt(floorsStr, 10)) ? Math.max(1, parseInt(floorsStr, 10)) : 4;
-    const height = Number((floors * 3.2).toFixed(1));
-
-    const areaStr = extractTag(chunk, 'bu-ext2d:value') || extractTag(chunk, 'value');
+    const areaStr =
+      extractTag(chunk, 'bu-ext2d:value') ||
+      extractTag(chunk, 'value') ||
+      extractTag(chunk, 'cp:areaValue') ||
+      extractTag(chunk, 'areaValue');
     const areaM2 = areaStr && !isNaN(parseFloat(areaStr)) ? parseFloat(areaStr) : undefined;
+
+    const floorsStr =
+      extractTag(chunk, 'bu-ext2d:numberOfFloorsAboveGround') ||
+      extractTag(chunk, 'numberOfFloorsAboveGround');
+    let floors = 4;
+    if (floorsStr && !isNaN(parseInt(floorsStr, 10))) {
+      floors = Math.max(1, parseInt(floorsStr, 10));
+    } else if (areaM2) {
+      if (areaM2 > 600) floors = 7;
+      else if (areaM2 > 300) floors = 6;
+      else if (areaM2 > 150) floors = 5;
+    }
+    const height = Number((floors * 3.2).toFixed(1));
 
     const centroidLat = count > 0 ? sumLat / count : ring[0][1];
     const centroidLon = count > 0 ? sumLon / count : ring[0][0];

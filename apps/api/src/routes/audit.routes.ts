@@ -113,6 +113,7 @@ export function createAuditRoutes(providers: ProviderContainer): Hono {
     const rawLat = parseFloat(c.req.query('lat') || '');
     const rawLon = parseFloat(c.req.query('lon') || '');
     const rawRadius = c.req.query('radius') ? parseFloat(c.req.query('radius') || '') : 150;
+    const rawRefcat = c.req.query('refcat') || undefined;
 
     if (isNaN(rawLat) || isNaN(rawLon) || rawLat < -90 || rawLat > 90 || rawLon < -180 || rawLon > 180) {
       throw new InvalidParametersError(
@@ -126,7 +127,7 @@ export function createAuditRoutes(providers: ProviderContainer): Hono {
     }
 
     const radius = !isNaN(rawRadius) ? Math.max(50, Math.min(350, rawRadius)) : 150;
-    const response = await auditService.getSurroundingBuildings(rawLat, rawLon, radius);
+    const response = await auditService.getSurroundingBuildings(rawLat, rawLon, radius, rawRefcat);
     c.header('Cache-Control', 'public, max-age=604800, stale-while-revalidate=86400');
     return c.json(response, 200);
   });

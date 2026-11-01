@@ -59,8 +59,8 @@ export class AuditService {
   /**
    * Retrieves official surrounding buildings geometry from Catastro WFS for 3D urban context.
    */
-  async getSurroundingBuildings(lat: number, lon: number, radiusMeters?: number) {
-    return this.providers.catastro.getSurroundingBuildings(lat, lon, radiusMeters);
+  async getSurroundingBuildings(lat: number, lon: number, radiusMeters?: number, refcat?: string) {
+    return this.providers.catastro.getSurroundingBuildings(lat, lon, radiusMeters, refcat);
   }
 
   private async generateReportForProperty(
