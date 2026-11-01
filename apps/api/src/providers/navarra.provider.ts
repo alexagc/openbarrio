@@ -3,6 +3,7 @@ import {
   CadastralCoordinates,
   CadastralUnitsResponse,
   CadastralGeometry,
+  SurroundingBuildingsResponse,
 } from '@openbarrio/core';
 import { ICatastroProvider } from './types.js';
 
@@ -214,6 +215,19 @@ export class NavarraCatastroProvider implements ICatastroProvider {
         constructionYear: 1950,
         areaM2: 480,
       },
+    };
+  }
+
+  async getSurroundingBuildings(
+    lat: number,
+    lon: number,
+    radiusMeters = 150
+  ): Promise<SurroundingBuildingsResponse> {
+    return {
+      center: { lat, lon },
+      radiusMeters,
+      totalBuildings: 0,
+      buildings: [],
     };
   }
 }

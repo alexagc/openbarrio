@@ -3,6 +3,7 @@ import {
   CadastralCoordinates,
   CadastralUnitsResponse,
   CadastralGeometry,
+  SurroundingBuildingsResponse,
   detectCadastralJurisdiction,
 } from '@openbarrio/core';
 import { ICatastroProvider } from './types.js';
@@ -63,5 +64,10 @@ export class CadastralRouterProvider implements ICatastroProvider {
   async getGeometryByCadastralReference(refcat: string): Promise<CadastralGeometry> {
     const provider = this.resolveProvider(refcat);
     return provider.getGeometryByCadastralReference(refcat);
+  }
+
+  async getSurroundingBuildings(lat: number, lon: number, radiusMeters?: number): Promise<SurroundingBuildingsResponse> {
+    const provider = this.resolveProvider('', { latitude: lat, longitude: lon });
+    return provider.getSurroundingBuildings(lat, lon, radiusMeters);
   }
 }

@@ -187,7 +187,20 @@ export const CadastralGeometrySchema = Type.Object({
     height: Type.Optional(Type.Number()),
     constructionYear: Type.Optional(Type.Number()),
     areaM2: Type.Optional(Type.Number()),
+    isTarget: Type.Optional(Type.Boolean()),
   }),
 });
 
 export type CadastralGeometry = Static<typeof CadastralGeometrySchema>;
+
+export const SurroundingBuildingsResponseSchema = Type.Object({
+  center: Type.Object({
+    lat: Type.Number(),
+    lon: Type.Number(),
+  }),
+  radiusMeters: Type.Number(),
+  totalBuildings: Type.Number(),
+  buildings: Type.Array(CadastralGeometrySchema),
+});
+
+export type SurroundingBuildingsResponse = Static<typeof SurroundingBuildingsResponseSchema>;

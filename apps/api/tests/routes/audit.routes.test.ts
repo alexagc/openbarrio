@@ -301,4 +301,32 @@ describe('Hono Audit Routes Integration', () => {
       expect(problem.status).toBe(404);
     });
   });
+
+  describe('GET /api/v1/audit/geometry/surroundings', () => {
+    it('returns 200 with SurroundingBuildingsResponse containing 3D building polygons', async () => {
+      const response = await app.request('/api/v1/audit/geometry/surroundings?lat=40.4182&lon=-3.6989&radius=150');
+
+      expect(response.status).toBe(200);
+      const data = await response.json();
+
+      expect(data.center).toEqual({ lat: 40.4182, lon: -3.6989 });
+      expect(data.radiusMeters).toBe(150);
+      expect(data.totalBuildings).toBeGreaterThan(0);
+      expect(Array.isArray(data.buildings)).toBe(true);
+
+      const first = data.buildings[0];
+      expect(first.type).toBe('building');
+      expect(first.geometry.type).toBe('Polygon');
+      expect(first.properties.height).toBeGreaterThan(0);
+      expect(first.properties.numberOfFloors).toBeGreaterThan(0);
+    });
+
+    it('returns RFC 7807 400 Problem Details for missing or invalid coordinates', async () => {
+      const response = await app.request('/api/v1/audit/geometry/surroundings?lat=invalid&lon=-3.6989');
+
+      expect(response.status).toBe(400);
+      const problem = await response.json();
+      expect(problem.type).toBe('https://openbarrio.org/errors/invalid-parameters');
+    });
+  });
 });

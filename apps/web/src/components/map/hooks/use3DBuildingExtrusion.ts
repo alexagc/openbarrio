@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 import type { Map as MapLibreMap } from 'maplibre-gl';
+import type { CadastralGeometry } from '@openbarrio/core';
 import {
   generate3dBuildingFootprints,
   calculateBuildingShadowPolygon,
@@ -18,6 +19,8 @@ export interface Use3DBuildingExtrusionProps {
 
 // In-memory module cache for real cadastral geometry to prevent initial cube-pop glitch
 const geometryCache = new Map<string, { coordinates: number[][][]; height?: number }>();
+// In-memory spatial cache for surrounding buildings keyed by grid cell (lat.toFixed(3), lon.toFixed(3))
+const surroundingsCache = new Map<string, CadastralGeometry[]>();
 
 export function use3DBuildingExtrusion({
   map,
@@ -29,6 +32,8 @@ export function use3DBuildingExtrusion({
 }: Use3DBuildingExtrusionProps) {
   const currentBuildingCoordsRef = useRef<number[][][] | null>(null);
   const currentBuildingHeightRef = useRef<number>(44.8);
+  const currentTargetFeatureRef = useRef<any>(null);
+  const surroundingFeaturesRef = useRef<CadastralGeometry[]>([]);
 
   // Toggle 3D mode & animate pitch/bearing
   useEffect(() => {
@@ -67,13 +72,17 @@ export function use3DBuildingExtrusion({
     }
   }, [map, is3DMode]);
 
-  // Update building footprints and 3D geometry when selectedCoords or report changes
+  // Update building footprints and 3D geometry when selectedCoords, report, or 3D mode changes
   useEffect(() => {
     if (!map) return;
 
     let isCancelled = false;
     const lat = selectedCoords?.lat ?? 40.42028;
     const lon = selectedCoords?.lon ?? -3.70379;
+    const cacheKey = `${lat.toFixed(3)},${lon.toFixed(3)}`;
+
+    // Reset or populate surroundings for current spatial cell
+    surroundingFeaturesRef.current = surroundingsCache.get(cacheKey) || [];
 
     const floors = report?.property.building.unitsCount
       ? Math.max(3, Math.min(12, Math.round(report.property.building.unitsCount / 4)))
@@ -97,12 +106,18 @@ export function use3DBuildingExtrusion({
       const targetFeature = footprints.features.find((f: any) => f.properties.isTarget);
       if (targetFeature && targetFeature.geometry) {
         currentBuildingCoordsRef.current = targetFeature.geometry.coordinates as number[][][];
+        currentTargetFeatureRef.current = targetFeature;
       }
 
       try {
         const source = map.getSource('building-3d-source');
         if (source && typeof (source as any).setData === 'function') {
-          (source as any).setData(footprints);
+          (source as any).setData({
+            type: 'FeatureCollection',
+            features: targetFeature
+              ? [targetFeature, ...surroundingFeaturesRef.current]
+              : footprints.features,
+          });
         }
 
         const shadowSource = map.getSource('building-3d-shadows-source');
@@ -126,15 +141,12 @@ export function use3DBuildingExtrusion({
 
     const refcat = report?.property.cadastralReference;
 
-    // 1. If geometry is already cached, apply immediately without any placeholder
+    // 1. If target geometry is already cached, apply immediately
     if (refcat && geometryCache.has(refcat)) {
       const cached = geometryCache.get(refcat)!;
       applyFootprints(cached.coordinates, cached.height);
-      return;
-    }
-
-    // 2. If refcat exists but is not cached yet, fetch geometry directly without rendering a cube first
-    if (refcat) {
+    } else if (refcat) {
+      // 2. If refcat exists but is not cached yet, fetch geometry directly without rendering a placeholder
       apiClient
         .getCadastralGeometry(refcat)
         .then((geom) => {
@@ -158,10 +170,75 @@ export function use3DBuildingExtrusion({
       applyFootprints();
     }
 
+    // 4. In 3D mode, fetch surrounding buildings for context if not already cached
+    if (is3DMode) {
+      if (surroundingsCache.has(cacheKey)) {
+        surroundingFeaturesRef.current = surroundingsCache.get(cacheKey)!;
+        if (currentTargetFeatureRef.current) {
+          try {
+            const source = map.getSource('building-3d-source');
+            if (source && typeof (source as any).setData === 'function') {
+              (source as any).setData({
+                type: 'FeatureCollection',
+                features: [currentTargetFeatureRef.current, ...surroundingFeaturesRef.current],
+              });
+            }
+          } catch {
+            // Ignore during initial load
+          }
+        }
+      } else {
+        apiClient
+          .getSurroundingBuildings(lat, lon, 180)
+          .then((res) => {
+            if (isCancelled) return;
+            const cleanRef = refcat ? refcat.replace(/[\s\-_.]/g, '').toUpperCase() : '';
+            const filtered: CadastralGeometry[] = (res.buildings || [])
+              .filter((b) => {
+                if (b.properties?.isTarget) return false;
+                if (cleanRef && b.properties?.cadastralReference) {
+                  const bRef = b.properties.cadastralReference.replace(/[\s\-_.]/g, '').toUpperCase();
+                  if (bRef === cleanRef || bRef.slice(0, 14) === cleanRef.slice(0, 14)) {
+                    return false;
+                  }
+                }
+                return true;
+              })
+              .map((b) => ({
+                ...b,
+                properties: {
+                  ...b.properties,
+                  isTarget: false,
+                },
+              }));
+
+            surroundingsCache.set(cacheKey, filtered);
+            surroundingFeaturesRef.current = filtered;
+
+            if (currentTargetFeatureRef.current && !isCancelled) {
+              try {
+                const source = map.getSource('building-3d-source');
+                if (source && typeof (source as any).setData === 'function') {
+                  (source as any).setData({
+                    type: 'FeatureCollection',
+                    features: [currentTargetFeatureRef.current, ...filtered],
+                  });
+                }
+              } catch {
+                // Ignore
+              }
+            }
+          })
+          .catch(() => {
+            // Non-blocking surrounding buildings: visual context only
+          });
+      }
+    }
+
     return () => {
       isCancelled = true;
     };
-  }, [map, selectedCoords?.lat, selectedCoords?.lon, report, solarAzimuth, solarAltitude]);
+  }, [map, is3DMode, selectedCoords?.lat, selectedCoords?.lon, report, solarAzimuth, solarAltitude]);
 
   // Update shadows and lighting when solar position or geometry changes
   useEffect(() => {

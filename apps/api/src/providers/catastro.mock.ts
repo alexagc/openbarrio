@@ -4,6 +4,7 @@ import {
   CadastralUnit,
   CadastralCoordinates,
   CadastralGeometry,
+  SurroundingBuildingsResponse,
 } from '@openbarrio/core';
 import { ICatastroProvider } from './types.js';
 import { CadastralNotFoundError } from '../errors/problem-details.js';
@@ -476,6 +477,59 @@ export class MockCatastroProvider implements ICatastroProvider {
         constructionYear: prop.building.constructionYear,
         areaM2: prop.building.builtSurfaceM2,
       },
+    };
+  }
+
+  async getSurroundingBuildings(
+    lat: number,
+    lon: number,
+    radiusMeters = 150
+  ): Promise<SurroundingBuildingsResponse> {
+    const buildings: CadastralGeometry[] = [];
+    const offsets = [
+      { dLat: 0.00045, dLon: 0, floors: 6 },
+      { dLat: -0.00045, dLon: 0, floors: 5 },
+      { dLat: 0, dLon: 0.00055, floors: 7 },
+      { dLat: 0, dLon: -0.00055, floors: 4 },
+      { dLat: 0.00045, dLon: 0.00055, floors: 8 },
+      { dLat: 0.00045, dLon: -0.00055, floors: 5 },
+      { dLat: -0.00045, dLon: 0.00055, floors: 4 },
+      { dLat: -0.00045, dLon: -0.00055, floors: 6 },
+    ];
+
+    offsets.forEach((off, idx) => {
+      const bLat = lat + off.dLat;
+      const bLon = lon + off.dLon;
+      const dLat = 0.00015;
+      const dLon = 0.00018;
+      const height = Number((off.floors * 3.2).toFixed(1));
+
+      buildings.push({
+        cadastralReference: `28900A00100${idx + 20}XY`,
+        type: 'building',
+        geometry: {
+          type: 'Polygon',
+          coordinates: [[
+            [Number((bLon - dLon).toFixed(6)), Number((bLat - dLat).toFixed(6))],
+            [Number((bLon + dLon).toFixed(6)), Number((bLat - dLat).toFixed(6))],
+            [Number((bLon + dLon).toFixed(6)), Number((bLat + dLat).toFixed(6))],
+            [Number((bLon - dLon).toFixed(6)), Number((bLat + dLat).toFixed(6))],
+            [Number((bLon - dLon).toFixed(6)), Number((bLat - dLat).toFixed(6))],
+          ]],
+        },
+        properties: {
+          numberOfFloors: off.floors,
+          height,
+          isTarget: false,
+        },
+      });
+    });
+
+    return {
+      center: { lat, lon },
+      radiusMeters,
+      totalBuildings: buildings.length,
+      buildings,
     };
   }
 }

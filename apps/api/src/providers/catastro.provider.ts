@@ -3,6 +3,7 @@ import {
   CadastralUnitsResponse,
   CadastralCoordinates,
   CadastralGeometry,
+  SurroundingBuildingsResponse,
   CadastralUnit,
 } from '@openbarrio/core';
 import { ICatastroProvider } from './types.js';
@@ -14,6 +15,7 @@ import {
   isMultiUnitParcelXml,
   parseMultiUnitParcelSummary,
   parseCatastroWfsGeometryXml,
+  parseCatastroWfsBuildingsCollectionXml,
 } from './catastro.parser.js';
 import { UpstreamProviderError } from '../errors/problem-details.js';
 
@@ -453,6 +455,54 @@ export class CatastroProvider implements ICatastroProvider {
         numberOfFloors: 4,
         height: 12.8,
       },
+    };
+  }
+
+  async getSurroundingBuildings(
+    lat: number,
+    lon: number,
+    radiusMeters = 150
+  ): Promise<SurroundingBuildingsResponse> {
+    const clampedRadius = Math.max(50, Math.min(350, radiusMeters));
+    const latDelta = clampedRadius / 111320;
+    const lonDelta = clampedRadius / (111320 * Math.cos((lat * Math.PI) / 180));
+
+    const minLat = (lat - latDelta).toFixed(6);
+    const maxLat = (lat + latDelta).toFixed(6);
+    const minLon = (lon - lonDelta).toFixed(6);
+    const maxLon = (lon + lonDelta).toFixed(6);
+
+    const url = `https://ovc.catastro.meh.es/INSPIRE/wfsBU.aspx?service=WFS&version=2.0.0&request=GetFeature&STOREDQUERY_ID=GetBuildingByBoundingBox&bbox=${minLat},${minLon},${maxLat},${maxLon},urn:ogc:def:crs:EPSG::4326`;
+
+    try {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), this.timeoutMs);
+      const res = await fetch(url, {
+        signal: controller.signal,
+        headers: { 'User-Agent': 'OpenBarrio-DueDiligence/0.1' },
+        ...({ cf: { cacheTtl: 7776000, cacheEverything: true } } as any),
+      });
+      clearTimeout(timer);
+
+      if (res.ok) {
+        const xml = await res.text();
+        const buildings = parseCatastroWfsBuildingsCollectionXml(xml, { lat, lon });
+        return {
+          center: { lat, lon },
+          radiusMeters: clampedRadius,
+          totalBuildings: buildings.length,
+          buildings,
+        };
+      }
+    } catch {
+      // Fallback on error
+    }
+
+    return {
+      center: { lat, lon },
+      radiusMeters: clampedRadius,
+      totalBuildings: 0,
+      buildings: [],
     };
   }
 }

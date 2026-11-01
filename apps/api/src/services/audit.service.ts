@@ -56,6 +56,13 @@ export class AuditService {
     return this.providers.catastro.getGeometryByCadastralReference(refcat);
   }
 
+  /**
+   * Retrieves official surrounding buildings geometry from Catastro WFS for 3D urban context.
+   */
+  async getSurroundingBuildings(lat: number, lon: number, radiusMeters?: number) {
+    return this.providers.catastro.getSurroundingBuildings(lat, lon, radiusMeters);
+  }
+
   private async generateReportForProperty(
     property: CadastralProperty
   ): Promise<PropertyAuditReport> {

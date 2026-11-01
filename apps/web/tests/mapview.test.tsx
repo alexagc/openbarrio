@@ -461,6 +461,51 @@ describe('MapView Component (Stitch Civic Precision)', () => {
       fireEvent.click(reopenBtn);
       expect(screen.getByTestId('solar-simulation-hud')).toBeTruthy();
     });
+
+    it('should query surrounding buildings from Catastro WFS when 3D mode is toggled', async () => {
+      const { apiClient } = await import('../src/services/api.client');
+      const spy = vi.spyOn(apiClient, 'getSurroundingBuildings').mockResolvedValue({
+        center: { lat: 40.42028, lon: -3.70379 },
+        radiusMeters: 180,
+        totalBuildings: 2,
+        buildings: [
+          {
+            type: 'Feature',
+            properties: {
+              cadastralReference: 'SURROUNDING01',
+              numberOfFloors: 6,
+              height: 19.2,
+              isTarget: false,
+            },
+            geometry: {
+              type: 'Polygon',
+              coordinates: [
+                [
+                  [-3.704, 40.42],
+                  [-3.703, 40.42],
+                  [-3.703, 40.421],
+                  [-3.704, 40.421],
+                  [-3.704, 40.42],
+                ],
+              ],
+            },
+          },
+        ],
+      });
+
+      render(
+        <MapView
+          selectedCoords={{ lat: 40.42028, lon: -3.70379 }}
+          onMapClick={vi.fn()}
+        />
+      );
+
+      const btn3D = screen.getByTitle('3D Extrusión');
+      fireEvent.click(btn3D);
+
+      expect(spy).toHaveBeenCalledWith(40.42028, -3.70379, 180);
+      spy.mockRestore();
+    });
   });
 
   describe('Isochrones and Noise Layer Reliability (Bugfix Verification)', () => {

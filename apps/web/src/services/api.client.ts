@@ -3,6 +3,7 @@ import {
   ProblemDetails,
   CadastralUnitsResponse,
   CadastralGeometry,
+  SurroundingBuildingsResponse,
   CadastralProperty,
   CensusTractIncome,
   EnvironmentalData,
@@ -360,6 +361,35 @@ export class OpenBarrioApiClient {
   async getCadastralGeometry(refcat: string): Promise<CadastralGeometry> {
     const cleanRef = refcat.replace(/[\s\-_.]/g, '').toUpperCase();
     const url = `${this.baseUrl}/api/v1/audit/refcat/${encodeURIComponent(cleanRef)}/geometry`;
+
+    try {
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: { Accept: 'application/json' },
+      });
+
+      if (!response.ok) {
+        await this.handleHttpError(response);
+      }
+
+      return await response.json();
+    } catch (err) {
+      if (err instanceof ApiError) {
+        throw err;
+      }
+      throw new ApiError(0, err instanceof Error ? err.message : 'Network error');
+    }
+  }
+
+  /**
+   * Retrieves surrounding building geometries from Catastro WFS INSPIRE within a radius (default 150m).
+   */
+  async getSurroundingBuildings(
+    lat: number,
+    lon: number,
+    radiusMeters = 150
+  ): Promise<SurroundingBuildingsResponse> {
+    const url = `${this.baseUrl}/api/v1/audit/geometry/surroundings?lat=${encodeURIComponent(lat)}&lon=${encodeURIComponent(lon)}&radius=${encodeURIComponent(radiusMeters)}`;
 
     try {
       const response = await fetch(url, {

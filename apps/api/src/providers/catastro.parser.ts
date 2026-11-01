@@ -3,6 +3,7 @@ import {
   CadastralCoordinates,
   CadastralUnitsResponse,
   CadastralUnit,
+  CadastralGeometry,
 } from '@openbarrio/core';
 import { CadastralNotFoundError } from '../errors/problem-details.js';
 
@@ -584,5 +585,88 @@ export function parseCatastroWfsGeometryXml(
     numberOfFloors,
     areaM2,
   };
+}
+
+/**
+ * Parses Catastro WFS FeatureCollection XML containing multiple buildings (wfsBU).
+ * Converts GML posList coordinates (lat lon) to GeoJSON Polygon coordinates [lon, lat].
+ */
+export function parseCatastroWfsBuildingsCollectionXml(
+  xml: string,
+  targetCoords?: { lat: number; lon: number }
+): CadastralGeometry[] {
+  const buildings: CadastralGeometry[] = [];
+  const buildingChunks = xml.split(/<(?:[\w-]+:)?Building\b/i);
+
+  for (let i = 1; i < buildingChunks.length; i++) {
+    const chunk = buildingChunks[i];
+    const posListMatch = chunk.match(/<(?:[\w-]+:)?posList[^>]*>([\s\S]*?)<\/(?:[\w-]+:)?posList>/i);
+    if (!posListMatch || !posListMatch[1].trim()) continue;
+
+    const rawValues = posListMatch[1].trim().split(/\s+/).map((v) => parseFloat(v));
+    if (rawValues.length < 6) continue;
+
+    const ring: number[][] = [];
+    let sumLat = 0;
+    let sumLon = 0;
+    let count = 0;
+
+    for (let j = 0; j < rawValues.length - 1; j += 2) {
+      const lat = rawValues[j];
+      const lon = rawValues[j + 1];
+      if (!isNaN(lat) && !isNaN(lon)) {
+        ring.push([Number(lon.toFixed(6)), Number(lat.toFixed(6))]);
+        sumLat += lat;
+        sumLon += lon;
+        count++;
+      }
+    }
+
+    if (ring.length < 3) continue;
+
+    // Ensure ring is closed
+    const first = ring[0];
+    const last = ring[ring.length - 1];
+    if (first[0] !== last[0] || first[1] !== last[1]) {
+      ring.push([first[0], first[1]]);
+    }
+
+    const refMatch =
+      chunk.match(/<(?:[\w-]+:)?reference[^>]*>([\s\S]*?)<\/(?:[\w-]+:)?reference>/i) ||
+      chunk.match(/gml:id=["'](?:Building_)?([A-Z0-9]+)["']/i);
+    const refcat = refMatch ? refMatch[1].trim() : `BUILDING_${i}`;
+
+    const floorsStr = extractTag(chunk, 'bu-ext2d:numberOfFloorsAboveGround') || extractTag(chunk, 'numberOfFloorsAboveGround');
+    const floors = floorsStr && !isNaN(parseInt(floorsStr, 10)) ? Math.max(1, parseInt(floorsStr, 10)) : 4;
+    const height = Number((floors * 3.2).toFixed(1));
+
+    const areaStr = extractTag(chunk, 'bu-ext2d:value') || extractTag(chunk, 'value');
+    const areaM2 = areaStr && !isNaN(parseFloat(areaStr)) ? parseFloat(areaStr) : undefined;
+
+    const centroidLat = count > 0 ? sumLat / count : ring[0][1];
+    const centroidLon = count > 0 ? sumLon / count : ring[0][0];
+
+    // Determine if this building matches target coordinates (within ~25m)
+    const isTarget = targetCoords
+      ? Math.abs(centroidLat - targetCoords.lat) < 0.00025 && Math.abs(centroidLon - targetCoords.lon) < 0.00025
+      : false;
+
+    buildings.push({
+      cadastralReference: refcat,
+      type: 'building',
+      geometry: {
+        type: 'Polygon',
+        coordinates: [ring],
+      },
+      properties: {
+        numberOfFloors: floors,
+        height,
+        areaM2,
+        isTarget,
+      },
+    });
+  }
+
+  return buildings;
 }
 

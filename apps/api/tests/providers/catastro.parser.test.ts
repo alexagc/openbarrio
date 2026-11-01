@@ -10,6 +10,7 @@ import {
   isMultiUnitParcelXml,
   parseMultiUnitParcelSummary,
   extractConstructionYear,
+  parseCatastroWfsBuildingsCollectionXml,
 } from '../../src/providers/catastro.parser.js';
 import { CadastralNotFoundError } from '../../src/errors/problem-details.js';
 
@@ -358,5 +359,60 @@ describe('Catastro XML Parser', () => {
     const result = parseCadastralUnitsXml(multiPortalXml, '0269303VK4606G');
     expect(result.units[0].block).toBe('I');
     expect(result.units[1].block).toBe('F');
+  });
+
+  it('parses multi-building WFS feature collection XML into 3D geometries with heights and target identification', () => {
+    const wfsCollectionXml = `
+      <wfs:FeatureCollection xmlns:wfs="http://www.opengis.net/wfs/2.0" xmlns:gml="http://www.opengis.net/gml/3.2" xmlns:bu-ext2d="http://inspire.ec.europa.eu/schemas/bu-ext2d/2.0">
+        <wfs:member>
+          <bu-ext2d:Building gml:id="Building_28900A00100012">
+            <bu-ext2d:reference>28900A00100012</bu-ext2d:reference>
+            <bu-ext2d:geometry>
+              <gml:Polygon>
+                <gml:exterior>
+                  <gml:LinearRing>
+                    <gml:posList>40.4182 -3.6989 40.4184 -3.6989 40.4184 -3.6986 40.4182 -3.6986 40.4182 -3.6989</gml:posList>
+                  </gml:LinearRing>
+                </gml:exterior>
+              </gml:Polygon>
+            </bu-ext2d:geometry>
+            <bu-ext2d:numberOfFloorsAboveGround>6</bu-ext2d:numberOfFloorsAboveGround>
+            <bu-ext2d:value>840.5</bu-ext2d:value>
+          </bu-ext2d:Building>
+        </wfs:member>
+        <wfs:member>
+          <bu-ext2d:Building gml:id="Building_28900A00100013">
+            <bu-ext2d:reference>28900A00100013</bu-ext2d:reference>
+            <bu-ext2d:geometry>
+              <gml:Polygon>
+                <gml:exterior>
+                  <gml:LinearRing>
+                    <gml:posList>40.4190 -3.6995 40.4192 -3.6995 40.4192 -3.6992 40.4190 -3.6992 40.4190 -3.6995</gml:posList>
+                  </gml:LinearRing>
+                </gml:exterior>
+              </gml:Polygon>
+            </bu-ext2d:geometry>
+            <bu-ext2d:numberOfFloorsAboveGround>4</bu-ext2d:numberOfFloorsAboveGround>
+            <bu-ext2d:value>620.0</bu-ext2d:value>
+          </bu-ext2d:Building>
+        </wfs:member>
+      </wfs:FeatureCollection>
+    `;
+
+    const buildings = parseCatastroWfsBuildingsCollectionXml(wfsCollectionXml, { lat: 40.4183, lon: -3.69875 });
+    expect(buildings.length).toBe(2);
+
+    // First building (target)
+    expect(buildings[0].cadastralReference).toBe('28900A00100012');
+    expect(buildings[0].properties.numberOfFloors).toBe(6);
+    expect(buildings[0].properties.height).toBe(19.2);
+    expect(buildings[0].properties.isTarget).toBe(true);
+    expect(buildings[0].geometry.coordinates[0].length).toBe(5);
+
+    // Second building (neighbor)
+    expect(buildings[1].cadastralReference).toBe('28900A00100013');
+    expect(buildings[1].properties.numberOfFloors).toBe(4);
+    expect(buildings[1].properties.height).toBe(12.8);
+    expect(buildings[1].properties.isTarget).toBe(false);
   });
 });

@@ -108,6 +108,29 @@ export function createAuditRoutes(providers: ProviderContainer): Hono {
     return c.json(geometry, 200);
   });
 
+  // GET /geometry/surroundings - 3D urban context surrounding buildings from Catastro WFS
+  router.get('/geometry/surroundings', async (c) => {
+    const rawLat = parseFloat(c.req.query('lat') || '');
+    const rawLon = parseFloat(c.req.query('lon') || '');
+    const rawRadius = c.req.query('radius') ? parseFloat(c.req.query('radius') || '') : 150;
+
+    if (isNaN(rawLat) || isNaN(rawLon) || rawLat < -90 || rawLat > 90 || rawLon < -180 || rawLon > 180) {
+      throw new InvalidParametersError(
+        'Invalid latitude or longitude query parameters for surrounding buildings lookup',
+        [
+          { name: 'lat', reason: 'Must be a valid decimal number between -90 and 90' },
+          { name: 'lon', reason: 'Must be a valid decimal number between -180 and 180' },
+        ],
+        c.req.path
+      );
+    }
+
+    const radius = !isNaN(rawRadius) ? Math.max(50, Math.min(350, rawRadius)) : 150;
+    const response = await auditService.getSurroundingBuildings(rawLat, rawLon, radius);
+    c.header('Cache-Control', 'public, max-age=604800, stale-while-revalidate=86400');
+    return c.json(response, 200);
+  });
+
   // GET /refcat/:refcat
   router.get('/refcat/:refcat', async (c) => {
     const rawRefcat = c.req.param('refcat') || '';

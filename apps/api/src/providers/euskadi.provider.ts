@@ -3,6 +3,7 @@ import {
   CadastralCoordinates,
   CadastralUnitsResponse,
   CadastralGeometry,
+  SurroundingBuildingsResponse,
 } from '@openbarrio/core';
 import { ICatastroProvider } from './types.js';
 
@@ -269,6 +270,19 @@ export class EuskadiCatastroProvider implements ICatastroProvider {
         constructionYear: 1965,
         areaM2: 520,
       },
+    };
+  }
+
+  async getSurroundingBuildings(
+    lat: number,
+    lon: number,
+    radiusMeters = 150
+  ): Promise<SurroundingBuildingsResponse> {
+    return {
+      center: { lat, lon },
+      radiusMeters,
+      totalBuildings: 0,
+      buildings: [],
     };
   }
 }

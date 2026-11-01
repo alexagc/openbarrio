@@ -3,6 +3,7 @@ import {
   CadastralCoordinates,
   CadastralUnitsResponse,
   CadastralGeometry,
+  SurroundingBuildingsResponse,
   CensusTractIncome,
   EnvironmentalData,
   NoiseData,
@@ -39,6 +40,11 @@ export interface ICatastroProvider {
    * Look up real building or parcel geometry (WFS INSPIRE) for a given cadastral reference.
    */
   getGeometryByCadastralReference(refcat: string): Promise<CadastralGeometry>;
+
+  /**
+   * Look up surrounding buildings geometry in a spatial radius or bounding box around coordinates.
+   */
+  getSurroundingBuildings(lat: number, lon: number, radiusMeters?: number): Promise<SurroundingBuildingsResponse>;
 }
 
 export interface IINEProvider {
