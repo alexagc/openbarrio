@@ -12,11 +12,13 @@ export interface ActiveLayersState {
 interface CartographicLegendsHudProps {
   activeLayers: ActiveLayersState;
   defaultCollapsed?: boolean;
+  isDragging?: boolean;
 }
 
 export function CartographicLegendsHud({
   activeLayers,
   defaultCollapsed = false,
+  isDragging = false,
 }: CartographicLegendsHudProps) {
   const [isCollapsed, setIsCollapsed] = useState(defaultCollapsed);
 
@@ -26,8 +28,21 @@ export function CartographicLegendsHud({
 
   if (!hasThematicLayers) return null;
 
+  // Auto-minimize into floating badge during map drag gestures
+  if (isDragging) {
+    return (
+      <div
+        data-testid="hud-drag-badge"
+        className="absolute bottom-10 left-3 z-20 px-3 py-1.5 bg-surface-container/80 backdrop-blur-md border border-primary/40 rounded-full shadow-lg flex items-center gap-2 font-mono text-[11px] text-primary transition-all pointer-events-none opacity-80 animate-pulse no-print"
+      >
+        <span className="w-1.5 h-1.5 rounded-full bg-primary" />
+        <span>HUD: Cartografía Activa</span>
+      </div>
+    );
+  }
+
   return (
-    <div className="absolute bottom-10 left-3 z-20 max-w-xs w-64 bg-surface-container-lowest/95 backdrop-blur-md border border-outline-variant/80 rounded-xl shadow-2xl text-on-surface overflow-hidden font-sans transition-all no-print">
+    <div className="absolute bottom-10 left-3 z-20 max-w-xs w-64 bg-surface-container/95 backdrop-blur-md border border-outline-variant/80 rounded-xl shadow-2xl text-on-surface overflow-hidden font-sans transition-all no-print">
       {/* ================= HUD HEADER ================= */}
       <div className="px-3 py-2 bg-surface-container-low/90 border-b border-outline-variant/60 flex items-center justify-between gap-2">
         <div className="flex items-center gap-2">

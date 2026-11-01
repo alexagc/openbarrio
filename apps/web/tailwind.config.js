@@ -21,6 +21,28 @@ export default {
         'outline-variant': '#3d4a42',
         'surface-tint': '#68dba9',
         primary: '#68dba9',
+        emerald: {
+          DEFAULT: '#10b981',
+          dim: '#68dba9',
+          light: '#85f8c4',
+          dark: '#006c4a',
+        },
+        sky: {
+          DEFAULT: '#38bdf8',
+          dim: '#b4c5ff',
+          light: '#dbe1ff',
+          dark: '#003ea8',
+        },
+        amber: {
+          DEFAULT: '#f59e0b',
+          dim: '#ffb77d',
+          light: '#ffdcc3',
+          dark: '#6e3900',
+        },
+        coral: {
+          DEFAULT: '#ef4444',
+          dim: '#ffb4ab',
+        },
         'on-primary': '#003825',
         'primary-container': '#25a475',
         'on-primary-container': '#00311f',

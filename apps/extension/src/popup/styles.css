@@ -1,4 +1,4 @@
-/* OpenBarrio Extension Popup Styles */
+/* OpenBarrio Extension Popup Styles - Obsidian Theme (v0.8.0) */
 * {
   box-sizing: border-box;
   margin: 0;
@@ -6,12 +6,13 @@
 }
 
 body {
-  width: 340px;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-  background-color: #f8fafc;
-  color: #0f172a;
+  width: 360px;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  background-color: #0b1326;
+  color: #dae2fd;
   line-height: 1.4;
   font-size: 13px;
+  -webkit-font-smoothing: antialiased;
 }
 
 .popup-container {
@@ -19,6 +20,7 @@ body {
   flex-direction: column;
   padding: 16px;
   gap: 12px;
+  background-color: #0b1326;
 }
 
 /* Header */
@@ -27,7 +29,7 @@ body {
   align-items: center;
   justify-content: space-between;
   padding-bottom: 12px;
-  border-bottom: 1px solid #e2e8f0;
+  border-bottom: 1px solid #3d4a42;
 }
 
 .header-brand {
@@ -39,43 +41,48 @@ body {
 .header-logo {
   width: 28px;
   height: 28px;
-  background: #4f46e5;
-  color: #ffffff;
+  background: #25a475;
+  color: #002114;
   font-weight: 800;
   font-size: 13px;
+  font-family: 'Plus Jakarta Sans', sans-serif;
   border-radius: 8px;
   display: flex;
   align-items: center;
   justify-content: center;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
 }
 
 .header-title {
   font-size: 15px;
   font-weight: 700;
-  color: #0f172a;
+  color: #dae2fd;
+  font-family: 'Plus Jakarta Sans', sans-serif;
 }
 
 .header-subtitle {
   font-size: 11px;
-  color: #64748b;
+  color: #87948b;
 }
 
 .badge-version {
   font-size: 10px;
   font-weight: 600;
-  color: #64748b;
-  background: #e2e8f0;
+  color: #68dba9;
+  background: #171f33;
+  border: 1px solid rgba(104, 219, 169, 0.3);
   padding: 2px 6px;
   border-radius: 6px;
+  font-family: 'JetBrains Mono', monospace;
 }
 
 /* Cards */
 .card {
-  background: #ffffff;
+  background: #131b2e;
   border-radius: 12px;
-  border: 1px solid #e2e8f0;
+  border: 1px solid #3d4a42;
   padding: 12px 14px;
-  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.05);
+  box-shadow: 0 4px 12px rgba(6, 14, 32, 0.4);
 }
 
 .card-header {
@@ -96,20 +103,21 @@ body {
 .card-title {
   font-size: 12px;
   font-weight: 700;
-  color: #334155;
+  color: #bccac0;
   text-transform: uppercase;
   letter-spacing: 0.03em;
+  font-family: 'Plus Jakarta Sans', sans-serif;
 }
 
 .card-description {
   font-size: 12px;
-  color: #64748b;
+  color: #87948b;
   margin-bottom: 8px;
 }
 
 .toggle-icon {
   font-size: 12px;
-  color: #94a3b8;
+  color: #87948b;
   transition: transform 0.2s ease;
 }
 
@@ -123,20 +131,22 @@ body {
   align-items: center;
   gap: 6px;
   padding: 4px 10px;
-  background: #ecfdf5;
-  border: 1px solid #a7f3d0;
-  color: #065f46;
+  background: rgba(104, 219, 169, 0.15);
+  border: 1px solid rgba(104, 219, 169, 0.35);
+  color: #68dba9;
   border-radius: 9999px;
   font-size: 11px;
   font-weight: 600;
   margin-top: 4px;
+  font-family: 'JetBrains Mono', monospace;
 }
 
 .portal-indicator {
   width: 8px;
   height: 8px;
-  background-color: #10b981;
+  background-color: #68dba9;
   border-radius: 50%;
+  box-shadow: 0 0 6px rgba(104, 219, 169, 0.6);
 }
 
 /* Forms & Inputs */
@@ -149,15 +159,18 @@ body {
   flex: 1;
   padding: 7px 10px;
   font-size: 12px;
-  border: 1px solid #cbd5e1;
+  background: #0b1326;
+  border: 1px solid #3d4a42;
   border-radius: 6px;
+  color: #dae2fd;
+  font-family: 'JetBrains Mono', monospace;
   outline: none;
-  transition: border-color 0.15s ease;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
 .input-text:focus {
-  border-color: #4f46e5;
-  box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.15);
+  border-color: #68dba9;
+  box-shadow: 0 0 0 2px rgba(104, 219, 169, 0.2);
 }
 
 .form-group {
@@ -168,7 +181,7 @@ body {
   display: block;
   font-size: 11px;
   font-weight: 600;
-  color: #475569;
+  color: #bccac0;
   margin-bottom: 3px;
 }
 
@@ -190,25 +203,27 @@ body {
   border: none;
   cursor: pointer;
   transition: all 0.15s ease;
+  font-family: 'Plus Jakarta Sans', sans-serif;
 }
 
 .btn-primary {
-  background: #4f46e5;
-  color: #ffffff;
+  background: #25a475;
+  color: #002114;
 }
 
 .btn-primary:hover {
-  background: #4338ca;
+  background: #68dba9;
 }
 
 .btn-secondary {
-  background: #f1f5f9;
-  color: #334155;
-  border: 1px solid #cbd5e1;
+  background: #171f33;
+  color: #dae2fd;
+  border: 1px solid #3d4a42;
 }
 
 .btn-secondary:hover {
-  background: #e2e8f0;
+  background: #222a3d;
+  border-color: #68dba9;
 }
 
 .btn-sm {
@@ -222,9 +237,10 @@ body {
 
 .feedback-msg {
   font-size: 11px;
-  color: #16a34a;
+  color: #68dba9;
   margin-top: 6px;
   text-align: center;
+  font-family: 'JetBrains Mono', monospace;
 }
 
 /* Footer */
@@ -233,9 +249,9 @@ body {
   align-items: center;
   justify-content: space-between;
   padding-top: 8px;
-  border-top: 1px solid #e2e8f0;
+  border-top: 1px solid #3d4a42;
   font-size: 11px;
-  color: #64748b;
+  color: #87948b;
 }
 
 .footer-status {
@@ -251,19 +267,20 @@ body {
 }
 
 .status-online {
-  background-color: #10b981;
+  background-color: #68dba9;
+  box-shadow: 0 0 6px rgba(104, 219, 169, 0.6);
 }
 
 .status-offline {
-  background-color: #ef4444;
+  background-color: #ffb4ab;
 }
 
 .status-unknown {
-  background-color: #94a3b8;
+  background-color: #87948b;
 }
 
 .footer-links a {
-  color: #4f46e5;
+  color: #68dba9;
   text-decoration: none;
 }
 

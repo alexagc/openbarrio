@@ -5,7 +5,7 @@ import {
   PropertyAuditReport,
 } from '@openbarrio/core';
 import { apiClient, ExtendedAuditReport, ApiError } from '../services/api.client';
-import { parseUrlState } from '../hooks/useUrlSync';
+import { parseUrlState, DossierTab } from '../hooks/useUrlSync';
 import { AuditData } from '../components/landing';
 import { MobileNavDestination } from '../components/MobileBottomNav';
 import { SheetSnapPoint } from '../components/CadastralBottomSheet';
@@ -14,6 +14,7 @@ export interface WorkspaceState {
   // Navigation & Views
   viewMode: 'landing' | 'map';
   activeTab: 'dossier' | 'map';
+  dossierTab: DossierTab;
   mobileNavDestination: MobileNavDestination;
   sheetSnapPoint: SheetSnapPoint;
   isMobileLayersOpen: boolean;
@@ -41,6 +42,7 @@ export interface WorkspaceState {
   // Actions
   setViewMode: (mode: 'landing' | 'map') => void;
   setActiveTab: (tab: 'dossier' | 'map') => void;
+  setDossierTab: (tab: DossierTab) => void;
   setMobileNavDestination: (dest: MobileNavDestination) => void;
   setSheetSnapPoint: (snap: SheetSnapPoint) => void;
   setIsMobileLayersOpen: (open: boolean) => void;
@@ -54,11 +56,11 @@ export interface WorkspaceState {
 
   setIsUnitPickerOpen: (open: boolean) => void;
   setUnitsData: (data: CadastralUnitsResponse | null) => void;
-  setIsLoadingUnits: (isLoading: boolean) => void;
+  setIsLoadingUnits: (isLoadingUnits: boolean) => void;
 
   setIsDuelOpen: (open: boolean) => void;
   setDuelCandidateB: (candidate: PropertyAuditReport | null) => void;
-  setIsLoadingDuelB: (isLoading: boolean) => void;
+  setIsLoadingDuelB: (isLoadingDuelB: boolean) => void;
 
   setIsCertifiedPdfOpen: (open: boolean) => void;
 
@@ -82,6 +84,7 @@ const initialUrl = parseUrlState();
 export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
   viewMode: initialUrl.viewMode,
   activeTab: initialUrl.activeTab,
+  dossierTab: initialUrl.dossierTab,
   mobileNavDestination: initialUrl.activeTab === 'dossier' ? 'report' : 'map',
   sheetSnapPoint: initialUrl.activeTab === 'dossier' ? 'full' : 'peek',
   isMobileLayersOpen: false,
@@ -113,6 +116,11 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
       sheetSnapPoint: activeTab === 'dossier' ? 'full' : 'peek',
       mobileNavDestination: activeTab === 'dossier' ? 'report' : 'map',
     });
+    get().syncUrl();
+  },
+
+  setDossierTab: (dossierTab) => {
+    set({ dossierTab });
     get().syncUrl();
   },
 
@@ -270,7 +278,7 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
 
   syncUrl: (replace = false) => {
     if (typeof window === 'undefined') return;
-    const { viewMode, activeTab, report, selectedCoords, isDuelOpen, duelCandidateB } = get();
+    const { viewMode, activeTab, dossierTab, report, selectedCoords, isDuelOpen, duelCandidateB } = get();
 
     if (viewMode === 'landing') {
       const cur = window.location.pathname + window.location.search;
@@ -291,6 +299,8 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
 
     if (activeTab === 'map') {
       params.set('tab', 'map');
+    } else if (dossierTab && dossierTab !== 'summary') {
+      params.set('tab', dossierTab);
     }
 
     if (isDuelOpen && duelCandidateB?.property.cadastralReference) {
@@ -313,6 +323,7 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
     set({
       viewMode: state.viewMode,
       activeTab: state.activeTab,
+      dossierTab: state.dossierTab,
       sheetSnapPoint: state.activeTab === 'dossier' ? 'full' : 'peek',
       mobileNavDestination: state.activeTab === 'dossier' ? 'report' : 'map',
       isDuelOpen: Boolean(state.vs),
@@ -330,9 +341,10 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
   },
 }));
 
-// Precise Selectors to prevent unnecessary re-rendering of MapLibre GL canvas
+// Precise Selectors to prevent unnecessary re-rendering
 export const useViewMode = () => useWorkspaceStore((state) => state.viewMode);
 export const useActiveTab = () => useWorkspaceStore((state) => state.activeTab);
+export const useDossierTab = () => useWorkspaceStore((state) => state.dossierTab);
 export const useReport = () => useWorkspaceStore((state) => state.report);
 export const useSelectedCoords = () => useWorkspaceStore((state) => state.selectedCoords);
 export const useIsLoading = () => useWorkspaceStore((state) => state.isLoading);

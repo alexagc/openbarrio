@@ -529,14 +529,33 @@ export function useMapLibre({
 
     if (!markerRef.current) {
       const el = document.createElement('div');
-      el.className = 'radar-beacon-marker';
+      el.className = 'radar-beacon-marker group relative w-8 h-8 flex items-center justify-center cursor-pointer select-none';
       el.setAttribute('data-testid', 'map-marker');
+      el.style.zIndex = '30';
       el.innerHTML = `
-        <div style="position: relative; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; pointer-events: none;">
-          <div style="position: absolute; width: 32px; height: 32px; border-radius: 50%; background: rgba(16, 185, 129, 0.25); animation: ping 1.5s cubic-bezier(0, 0, 0.2, 1) infinite;"></div>
-          <div style="width: 14px; height: 14px; border-radius: 50%; background: #10b981; border: 2.5px solid #ffffff; box-shadow: 0 0 10px rgba(16, 185, 129, 0.8);"></div>
+        <div style="position: relative; display: flex; align-items: center; justify-content: center; pointer-events: none;">
+          <!-- Dual radar ping & pulse rings (high-visibility neon amber) -->
+          <div style="position: absolute; width: 56px; height: 56px; border-radius: 50%; background: rgba(245, 158, 11, 0.22); animation: ping 1.5s cubic-bezier(0, 0, 0.2, 1) infinite; pointer-events: none;"></div>
+          <div style="position: absolute; width: 36px; height: 36px; border-radius: 50%; background: rgba(245, 158, 11, 0.3); border: 1.5px solid rgba(251, 191, 36, 0.7); animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; pointer-events: none;"></div>
+
+          <!-- Precision reticle & glowing beacon core -->
+          <div style="position: relative; width: 26px; height: 26px; border-radius: 50%; background: #060e20; border: 2.5px solid #f59e0b; box-shadow: 0 0 16px rgba(245, 158, 11, 0.85), 0 0 4px rgba(251, 191, 36, 1); display: flex; align-items: center; justify-content: center;">
+            <div style="width: 10px; height: 10px; border-radius: 50%; background: #f59e0b; box-shadow: 0 0 8px #f59e0b; display: flex; align-items: center; justify-content: center;">
+              <div style="width: 3px; height: 3px; border-radius: 50%; background: #ffffff;"></div>
+            </div>
+          </div>
         </div>
       `;
+
+      el.addEventListener('mouseenter', () => {
+        el.style.zIndex = '999';
+        if (el.parentElement) el.parentElement.style.zIndex = '999';
+      });
+      el.addEventListener('mouseleave', () => {
+        el.style.zIndex = '30';
+        if (el.parentElement) el.parentElement.style.zIndex = '';
+      });
+
       markerRef.current = new maplibregl.Marker({ element: el, anchor: 'center' })
         .setLngLat([selectedCoords.lon, selectedCoords.lat])
         .addTo(map);

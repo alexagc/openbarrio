@@ -1,6 +1,9 @@
 import {
   Header,
   HeroSection,
+  InteractiveSandboxSection,
+  DataTransparencyMatrix,
+  HorizontalDivisionShowcase,
   PillarsSection,
   ExtensionShowcaseSection,
   CivicPrinciplesSection,
@@ -186,17 +189,28 @@ export function LandingView() {
 
   return (
     <div className="min-h-screen min-h-[100dvh] flex flex-col bg-background text-on-surface">
-      <Header onOpenMap={handleOpenMap} />
+      <Header onOpenMap={() => handleOpenMap()} />
 
-      <main className="flex-1 flex flex-col">
-        <HeroSection onAudit={handleAudit} />
+      <main className="flex-1 flex flex-col items-center">
+        <HeroSection onAudit={handleAudit} onOpenMap={() => handleOpenMap()} />
+        <InteractiveSandboxSection
+          onSelectPreset={(p) => {
+            handleAudit(p.address, 'address', p.coords);
+          }}
+        />
+        <HorizontalDivisionShowcase
+          onAuditUnit={(refcat, _address) => {
+            handleAudit(refcat, 'refcat');
+          }}
+        />
+        <DataTransparencyMatrix />
         <PillarsSection />
         <ExtensionShowcaseSection />
         <CivicPrinciplesSection />
-        <MapCtaSection onOpenMap={handleOpenMap} />
+        <MapCtaSection onOpenMap={() => handleOpenMap()} />
       </main>
 
-      <Footer onOpenMap={handleOpenMap} />
+      <Footer onOpenMap={() => handleOpenMap()} />
 
       <AuditModal
         data={activeAudit}

@@ -30,6 +30,7 @@ export interface CadastralBottomSheetProps {
   onOpenUnitPicker?: () => void;
   onExportPdf?: () => void;
   onOpenDuel?: () => void;
+  onDraggingChange?: (isDragging: boolean) => void;
   className?: string;
 }
 
@@ -41,6 +42,7 @@ export function CadastralBottomSheet({
   onOpenUnitPicker,
   onExportPdf,
   onOpenDuel,
+  onDraggingChange,
   className = '',
 }: CadastralBottomSheetProps) {
   const [copied, setCopied] = useState(false);
@@ -92,6 +94,7 @@ export function CadastralBottomSheet({
   const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
     if (e.button !== undefined && e.button !== 0) return;
     isDraggingRef.current = true;
+    onDraggingChange?.(true);
     startYRef.current = e.clientY ?? 0;
     setDragDeltaY(0);
     try {
@@ -111,6 +114,7 @@ export function CadastralBottomSheet({
   const handlePointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
     if (!isDraggingRef.current) return;
     isDraggingRef.current = false;
+    onDraggingChange?.(false);
     try {
       e.currentTarget.releasePointerCapture?.(e.pointerId);
     } catch {
@@ -140,6 +144,7 @@ export function CadastralBottomSheet({
   const handlePointerCancel = (e: React.PointerEvent<HTMLDivElement>) => {
     if (isDraggingRef.current) {
       isDraggingRef.current = false;
+      onDraggingChange?.(false);
       try {
         e.currentTarget.releasePointerCapture?.(e.pointerId);
       } catch {
@@ -149,11 +154,11 @@ export function CadastralBottomSheet({
     }
   };
 
-  // Height configurations per snap point
+  // Height configurations per snap point (Phase 15C 80px / 45vh / 90vh)
   const snapHeightClasses: Record<SheetSnapPoint, string> = {
-    peek: 'h-[148px] max-h-[156px]',
-    half: 'h-[50dvh]',
-    full: 'h-[88dvh] max-h-[calc(100dvh-56px)]',
+    peek: 'h-[80px] max-h-[80px]',
+    half: 'h-[45vh] max-h-[45vh]',
+    full: 'h-[90vh] max-h-[90vh]',
   };
 
   // Skeleton state
@@ -305,7 +310,7 @@ export function CadastralBottomSheet({
     <section
       role="region"
       aria-label="Auditoría Catastral"
-      className={`z-20 w-full bg-surface-container border-t border-outline-variant rounded-t-xl shadow-2xl flex flex-col shrink-0 overflow-hidden transition-transform duration-300 ${snapHeightClasses[snapPoint]} ${className}`}
+      className={`z-20 w-full bg-surface-container border-t border-outline-variant rounded-t-xl shadow-2xl flex flex-col shrink-0 overflow-hidden pb-[env(safe-area-inset-bottom)] transition-transform duration-300 ${snapHeightClasses[snapPoint]} ${className}`}
       style={{
         transform: dragDeltaY !== 0 ? `translateY(${Math.max(-80, Math.min(80, dragDeltaY))}px)` : undefined,
         transition: dragDeltaY !== 0 ? 'none' : undefined,

@@ -280,7 +280,7 @@ export function renderAuditCard(report: PropertyAuditReport, webUrl: string): st
         <!-- Reference Catastral Note -->
         <div style="font-size: 11px; color: #64748b; margin-bottom: 12px; display: flex; justify-content: space-between;">
           <span>Ref. Catastral:</span>
-          <strong style="font-family: monospace; color: #334155;">${property.cadastralReference.substring(0, 14)}...</strong>
+          <strong style="font-family: monospace; color: #dae2fd;">${property.cadastralReference.substring(0, 14)}...</strong>
         </div>
 
         <!-- CTA Button -->

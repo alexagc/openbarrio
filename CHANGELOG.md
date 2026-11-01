@@ -5,6 +5,32 @@ All notable changes to the **OpenBarrio** platform are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.0] - 2026-11-01
+
+### Added
+- **UI/UX Design System 2.0 ("Civic Precision" Canonical Tokens) (`packages/core`, `apps/web`, `apps/extension`)**:
+  - Implemented shared design tokens (`packages/core/src/tokens/index.ts` & `tokens.css`) with Obsidian palette (`#0B1326`, `surface-container-*`), Emerald (`#10B981` / `#68DBA9`), Sky (`#38BDF8`), and Amber (`#F59E0B`).
+  - Integrated typography hierarchy: Plus Jakarta Sans for headlines, Inter for UI body, and JetBrains Mono for telemetry/cadastral data.
+  - Aligned Tailwind configurations across `apps/web` and `apps/extension`.
+- **Civic Intelligence Landing Page Revamp (`apps/web`)**:
+  - Redesigned Hero with the Action Triad: Sovereign Address/RefCat Search with CartoCiudad autocomplete, Direct Free GIS Map access card, and Chrome Extension quick install CTA.
+  - Interactive Sandbox with preset Madrid Sol, Barcelona Eixample, and Valencia Ruzafa featuring real-time solar simulation (08:00–20:00), 15-min pedestrian isochrones, and CEE CapEx impact.
+  - Public Data Transparency Matrix highlighting official open datasets (Catastro DGC, INE ADRH, MITECO SICA/SNCZI, MIVAU SERPAVI).
+  - Horizontal Division dwelling showcase with unit breakdown and participation coefficients.
+- **Segmented Tabbed Due Diligence Dossier & Glassmorphic HUD (`apps/web`)**:
+  - Restructured monolithic dossier into 4 dedicated tabs: *Resumen & Score*, *Edificio & Sostenibilidad*, *Entorno & Conectividad*, and *Mercado & Finanzas*, eliminating vertical scroll fatigue.
+  - Symmetrical bidirectional URL sync with `?tab=summary|building|environment|market`.
+  - Floating Obsidian glassmorphic Cartographic Legends HUD dock with collapsible thematic micro-panels and automatic minimization to a discreet pill during map dragging.
+- **Multi-Device Responsive Precision & Ergonomics (`apps/web`)**:
+  - Mobile (15C): 3-height magnetic snap bottom sheet (`PEEK 80px`, `HALF 45vh`, `EXPANDED 90vh`) with `safe-area-inset` support and auto-hiding HUD during touch gestures.
+  - Tablet (15D): Adaptive split workspace (768px–1280px) with dynamic draggable divider (35/65 to 65/35), double-tap 50/50 reset, and quick collapse toggles.
+- **Chrome Extension MV3 Visual Alignment (`apps/extension`)**:
+  - Ported 360px popup and Idealista/Fotocasa Shadow DOM Companion Card to Obsidian `#0B1326` design system, featuring cadastral surface discrepancy alerts and SERPAVI rent caps.
+
+### Fixed
+- **High-Visibility Radar Beacon Marker (`apps/web`)**:
+  - Restored neon amber radar beacon marker on click with concentric dual ping waves (36px/48px) and glowing reticle in `useMapLibre.ts`.
+
 ## [0.7.1] - 2026-11-01
 
 ### Added

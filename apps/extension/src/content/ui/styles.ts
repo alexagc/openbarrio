@@ -6,8 +6,8 @@ export const WIDGET_STYLES = `
   bottom: 24px;
   right: 24px;
   z-index: 2147483647;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-  color: #0f172a;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  color: #dae2fd;
   box-sizing: border-box;
 }
 
@@ -16,14 +16,15 @@ export const WIDGET_STYLES = `
 }
 
 .ob-card {
-  width: 340px;
+  width: 360px;
   max-width: calc(100vw - 48px);
-  background: #ffffff;
+  background: #0b1326;
   border-radius: 16px;
-  box-shadow: 0 12px 32px -4px rgba(15, 23, 42, 0.18), 0 4px 12px -2px rgba(15, 23, 42, 0.08);
-  border: 1px solid #e2e8f0;
+  box-shadow: 0 12px 32px -4px rgba(6, 14, 32, 0.75), 0 4px 12px -2px rgba(6, 14, 32, 0.5);
+  border: 1px solid #3d4a42;
   overflow: hidden;
   transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  color: #dae2fd;
 }
 
 .ob-header {
@@ -31,8 +32,8 @@ export const WIDGET_STYLES = `
   align-items: center;
   justify-content: space-between;
   padding: 12px 16px;
-  background: #f8fafc;
-  border-bottom: 1px solid #f1f5f9;
+  background: #131b2e;
+  border-bottom: 1px solid #3d4a42;
 }
 
 .ob-brand {
@@ -42,30 +43,32 @@ export const WIDGET_STYLES = `
 }
 
 .ob-logo {
-  width: 22px;
-  height: 22px;
+  width: 24px;
+  height: 24px;
   border-radius: 6px;
-  background: #4f46e5;
+  background: #25a475;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #ffffff;
+  color: #002114;
   font-weight: 800;
   font-size: 11px;
+  font-family: 'Plus Jakarta Sans', sans-serif;
 }
 
 .ob-title {
   font-size: 13px;
   font-weight: 700;
-  color: #0f172a;
+  color: #dae2fd;
+  font-family: 'Plus Jakarta Sans', sans-serif;
 }
 
 .ob-badge-official {
   font-size: 10px;
   font-weight: 600;
-  color: #059669;
-  background: #ecfdf5;
-  border: 1px solid #a7f3d0;
+  color: #68dba9;
+  background: rgba(104, 219, 169, 0.15);
+  border: 1px solid rgba(104, 219, 169, 0.35);
   padding: 1px 6px;
   border-radius: 9999px;
   text-transform: uppercase;
@@ -80,7 +83,7 @@ export const WIDGET_STYLES = `
 .ob-btn-icon {
   background: transparent;
   border: none;
-  color: #64748b;
+  color: #bccac0;
   width: 24px;
   height: 24px;
   border-radius: 6px;
@@ -93,12 +96,13 @@ export const WIDGET_STYLES = `
 }
 
 .ob-btn-icon:hover {
-  background: #e2e8f0;
-  color: #0f172a;
+  background: #222a3d;
+  color: #dae2fd;
 }
 
 .ob-body {
   padding: 16px;
+  background: #0b1326;
 }
 
 /* Main Score Banner */
@@ -111,26 +115,29 @@ export const WIDGET_STYLES = `
   border-width: 1px;
   border-style: solid;
   margin-bottom: 10px;
+  background: #171f33;
 }
 
 .ob-score-circle {
   width: 52px;
   height: 52px;
   border-radius: 50%;
-  border-width: 4px;
+  border-width: 3px;
   border-style: solid;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  background: #131b2e !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
 }
 
 .ob-score-number {
   font-size: 18px;
   font-weight: 800;
   line-height: 1;
+  font-family: 'JetBrains Mono', monospace;
 }
 
 .ob-score-max {
@@ -152,6 +159,7 @@ export const WIDGET_STYLES = `
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  font-family: 'Plus Jakarta Sans', sans-serif;
 }
 
 .ob-score-desc {
@@ -174,21 +182,21 @@ export const WIDGET_STYLES = `
   justify-content: center;
   gap: 6px;
   padding: 6px 12px;
-  background: #f1f5f9;
-  border: 1px solid #cbd5e1;
+  background: #171f33;
+  border: 1px solid #3d4a42;
   border-radius: 9999px;
   font-size: 11px;
   font-weight: 600;
-  color: #334155;
+  color: #dae2fd;
   cursor: pointer;
   transition: all 0.15s ease;
   text-align: center;
 }
 
 .ob-unit-pill:hover {
-  background: #e2e8f0;
-  border-color: #94a3b8;
-  color: #0f172a;
+  background: #222a3d;
+  border-color: #68dba9;
+  color: #68dba9;
 }
 
 /* Stressed Housing Alert */
@@ -197,14 +205,14 @@ export const WIDGET_STYLES = `
   align-items: flex-start;
   gap: 10px;
   padding: 10px 12px;
-  background: #fffbeb;
-  border: 1px solid #fde68a;
+  background: rgba(217, 119, 7, 0.15);
+  border: 1px solid rgba(217, 119, 7, 0.45);
   border-radius: 10px;
   margin-bottom: 12px;
 }
 
 .ob-stressed-icon {
-  color: #b45309;
+  color: #ffb77d;
   font-size: 16px;
   line-height: 1;
   margin-top: 1px;
@@ -217,15 +225,30 @@ export const WIDGET_STYLES = `
 .ob-stressed-title {
   font-size: 11px;
   font-weight: 700;
-  color: #92400e;
+  color: #ffb77d;
   margin: 0 0 2px 0;
+  font-family: 'Plus Jakarta Sans', sans-serif;
 }
 
 .ob-stressed-detail {
   font-size: 11px;
-  color: #78350f;
+  color: #dae2fd;
   margin: 0;
   line-height: 1.3;
+}
+
+/* Discrepancy pill / card */
+.ob-discrepancy-alert {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 8px 10px;
+  background: rgba(255, 183, 125, 0.12);
+  border: 1px solid rgba(255, 183, 125, 0.4);
+  border-radius: 8px;
+  margin-bottom: 10px;
+  font-size: 11px;
+  color: #ffb77d;
 }
 
 /* Grid Breakdown */
@@ -237,8 +260,8 @@ export const WIDGET_STYLES = `
 }
 
 .ob-stat-box {
-  background: #f8fafc;
-  border: 1px solid #f1f5f9;
+  background: #171f33;
+  border: 1px solid #3d4a42;
   border-radius: 8px;
   padding: 8px 10px;
 }
@@ -246,7 +269,7 @@ export const WIDGET_STYLES = `
 .ob-stat-label {
   font-size: 10px;
   font-weight: 600;
-  color: #64748b;
+  color: #87948b;
   text-transform: uppercase;
   margin-bottom: 2px;
 }
@@ -254,7 +277,8 @@ export const WIDGET_STYLES = `
 .ob-stat-value {
   font-size: 12px;
   font-weight: 700;
-  color: #0f172a;
+  color: #dae2fd;
+  font-family: 'JetBrains Mono', monospace;
 }
 
 /* 5-Axis Mini-Radar & Telemetry Section */
@@ -270,13 +294,13 @@ export const WIDGET_STYLES = `
   width: 120px;
   height: 120px;
   background: #0b1326;
-  border: 1px solid #1e293b;
+  border: 1px solid #3d4a42;
   border-radius: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
   overflow: hidden;
-  box-shadow: 0 4px 12px rgba(11, 19, 38, 0.2);
+  box-shadow: 0 4px 12px rgba(6, 14, 32, 0.4);
 }
 
 .ob-mini-radar {
@@ -307,21 +331,22 @@ export const WIDGET_STYLES = `
   font-weight: 500;
   padding: 4px 7px;
   border-radius: 6px;
-  background: #f8fafc;
-  color: #334155;
-  border: 1px solid #e2e8f0;
+  background: #171f33;
+  color: #dae2fd;
+  border: 1px solid #3d4a42;
   display: inline-flex;
   align-items: center;
   gap: 4px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  font-family: 'JetBrains Mono', monospace;
 }
 
 .ob-telemetry-chip.highlight {
-  background: #f0fdf4;
-  color: #166534;
-  border-color: #bbf7d0;
+  background: rgba(104, 219, 169, 0.15);
+  color: #68dba9;
+  border-color: rgba(104, 219, 169, 0.4);
   font-weight: 700;
 }
 
@@ -337,19 +362,20 @@ export const WIDGET_STYLES = `
   gap: 6px;
   width: 100%;
   padding: 9px 12px;
-  background: #4f46e5;
-  color: #ffffff;
+  background: #25a475;
+  color: #002114;
   border-radius: 8px;
   text-decoration: none;
   font-size: 12px;
-  font-weight: 600;
+  font-weight: 700;
   transition: background 0.15s ease;
   border: none;
   cursor: pointer;
+  font-family: 'Plus Jakarta Sans', sans-serif;
 }
 
 .ob-btn-primary:hover {
-  background: #4338ca;
+  background: #68dba9;
 }
 
 /* Collapsed Pill */
@@ -358,17 +384,19 @@ export const WIDGET_STYLES = `
   align-items: center;
   gap: 8px;
   padding: 8px 14px;
-  background: #ffffff;
+  background: #0b1326;
   border-radius: 9999px;
-  box-shadow: 0 8px 24px -2px rgba(15, 23, 42, 0.2);
-  border: 1px solid #e2e8f0;
+  box-shadow: 0 8px 24px -2px rgba(6, 14, 32, 0.6);
+  border: 1px solid #3d4a42;
   cursor: pointer;
   transition: transform 0.15s ease, box-shadow 0.15s ease;
+  color: #dae2fd;
 }
 
 .ob-pill:hover {
   transform: translateY(-2px);
-  box-shadow: 0 12px 28px -2px rgba(15, 23, 42, 0.25);
+  box-shadow: 0 12px 28px -2px rgba(6, 14, 32, 0.8);
+  border-color: #68dba9;
 }
 
 .ob-pill-score {
@@ -376,17 +404,19 @@ export const WIDGET_STYLES = `
   font-weight: 800;
   padding: 2px 7px;
   border-radius: 9999px;
+  font-family: 'JetBrains Mono', monospace;
 }
 
 .ob-pill-label {
   font-size: 12px;
   font-weight: 700;
-  color: #0f172a;
+  color: #dae2fd;
+  font-family: 'Plus Jakarta Sans', sans-serif;
 }
 
 /* Skeleton Loading */
 .ob-skeleton-shimmer {
-  background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%);
+  background: linear-gradient(90deg, #131b2e 25%, #222a3d 50%, #131b2e 75%);
   background-size: 200% 100%;
   animation: ob-shimmer 1.5s infinite;
   border-radius: 6px;
