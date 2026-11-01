@@ -12,7 +12,7 @@ if (typeof window !== 'undefined') {
   }
 }
 
-vi.mock('../src/components/MapView', () => ({
+vi.mock('../src/components/map/MapView', () => ({
   MapView: (props: any) => (
     <div data-testid="mock-mapview" data-layers-open={props.isMobileLayersOpen}>
       <button

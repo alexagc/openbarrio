@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
-import { MapView, wgs84ToUtm30n } from '../src/components/MapView';
+import { MapView, wgs84ToUtm30n } from '../src/components/map/MapView';
 
 // Mock MapLibre GL
 vi.mock('maplibre-gl', () => {

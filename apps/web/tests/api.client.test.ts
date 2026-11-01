@@ -1,7 +1,12 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { OpenBarrioApiClient, ApiError, generateMockReport } from '../src/services/api.client';
+import { OpenBarrioApiClient, ApiError } from '../src/services/api.client';
+import {
+  generateMockReport,
+  generateDeterministicAudit,
+  generateDeterministicAuditFromRefcat,
+} from './mocks/offline-simulator';
 
-describe('OpenBarrioApiClient', () => {
+describe('OpenBarrioApiClient (Pure Transport Decoupled)', () => {
   let client: OpenBarrioApiClient;
 
   beforeEach(() => {
@@ -83,8 +88,9 @@ describe('OpenBarrioApiClient', () => {
     vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce({
       ok: true,
       status: 200,
+      headers: { get: () => 'application/json' },
       json: async () => mockReport,
-    } as Response);
+    } as unknown as Response);
 
     const report = await client.auditByCoordinates(40.42028, -3.70379);
     expect(report.property.cadastralReference).toBe('9872023VH5797S0001WX');
@@ -105,65 +111,15 @@ describe('OpenBarrioApiClient', () => {
       status: 404,
       statusText: 'Not Found',
       json: async () => problemJson,
-    } as Response);
+    } as unknown as Response);
 
     await expect(client.auditByCadastralReference('00000000000000')).rejects.toThrow(ApiError);
   });
 
-  it('falls back gracefully to deterministic audit generator when network fails', async () => {
+  it('throws ApiError when network is completely unreachable without synthetic data in production', async () => {
     vi.spyOn(globalThis, 'fetch').mockRejectedValueOnce(new TypeError('Failed to fetch'));
 
-    const report = await client.auditByCoordinates(40.42028, -3.70379);
-
-    expect(report).toBeDefined();
-    expect(report.isOfflineDemo).toBe(true);
-    expect(report.property.address.municipality).toBe('Madrid');
-    expect(report.score.overallScore).toBeGreaterThan(0);
-    expect(report.score.overallScore).toBeLessThanOrEqual(100);
-    expect(report.connectivity).toBeDefined();
-    expect(report.connectivity?.walkScore15Min).toBeGreaterThan(0);
-    expect(report.urbanPlanning).toBeDefined();
-    expect(report.score.subscores).toBeDefined();
-  });
-
-  it('correctly marks Barcelona property as Stressed Housing Zone in fallback mode', async () => {
-    vi.spyOn(globalThis, 'fetch').mockRejectedValueOnce(new TypeError('Failed to fetch'));
-
-    const report = await client.auditByCadastralReference('08019A002000050000AB');
-
-    expect(report.isOfflineDemo).toBe(true);
-    expect(report.property.address.municipality).toBe('Barcelona');
-    expect(report.rentalBenchmark?.isStressedHousingZone).toBe(true);
-    expect(report.urbanPlanning?.isStressedHousingZone).toBe(true);
-  });
-
-  it('generates distinct coordinates and refcat when clicking other points without snapping to Gran Vía', async () => {
-    vi.spyOn(globalThis, 'fetch').mockRejectedValueOnce(new TypeError('Failed to fetch'));
-
-    const chamberiLat = 40.435;
-    const chamberiLon = -3.69;
-    const report = await client.auditByCoordinates(chamberiLat, chamberiLon);
-
-    expect(report.isOfflineDemo).toBe(true);
-    expect(report.property.coordinates.latitude).toBe(chamberiLat);
-    expect(report.property.coordinates.longitude).toBe(chamberiLon);
-    expect(report.property.cadastralReference).not.toBe('0549711VK4704H');
-    expect(report.property.cadastralReference).not.toBe('9872023VH5797S0001WX');
-    expect(report.property.address.street).not.toBe('Calle Gran Vía');
-  });
-
-  it('generates deterministic coordinates and avoids Gran Vía snapping for arbitrary urban refcat', () => {
-    const customRefcat = '1234567AB1234C0001XY';
-    const report = client.generateDeterministicAuditFromRefcat(customRefcat);
-
-    expect(report.isOfflineDemo).toBe(true);
-    expect(report.property.cadastralReference).toBe(customRefcat);
-    expect(report.property.address.street).not.toBe('Calle Gran Vía');
-    expect(report.property.coordinates.latitude).not.toBe(40.42028);
-    expect(report.property.coordinates.longitude).not.toBe(-3.70379);
-    expect(report.connectivity).toBeDefined();
-    expect(report.urbanPlanning).toBeDefined();
-    expect(report.score.subscores.connectivity).toBeDefined();
+    await expect(client.auditByCoordinates(40.42028, -3.70379)).rejects.toThrow(ApiError);
   });
 
   it('normalizes multi-letter address queries and formats extension properly in searchAddress', async () => {
@@ -181,7 +137,7 @@ describe('OpenBarrioApiClient', () => {
     const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce({
       ok: true,
       json: async () => mockCartoData,
-    } as Response);
+    } as unknown as Response);
 
     const results = await client.searchAddress('Calle Serrano 44-B');
     expect(results).toHaveLength(1);
@@ -192,23 +148,6 @@ describe('OpenBarrioApiClient', () => {
     expect(fetchSpy).toHaveBeenCalledWith(
       expect.stringContaining('q=Calle%20Serrano%2044%20B')
     );
-  });
-
-  it('generateMockReport generates complete 5-pillar dossier reports seamlessly', () => {
-    const madridReport = generateMockReport('madrid');
-    expect(madridReport.property.address.municipality).toBe('Madrid');
-    expect(madridReport.connectivity).toBeDefined();
-    expect(madridReport.urbanPlanning).toBeDefined();
-    expect(madridReport.score.subscores.building).toBeGreaterThan(0);
-    expect(madridReport.score.subscores.connectivity).toBeGreaterThan(0);
-    expect(madridReport.score.subscores.environmental).toBeGreaterThan(0);
-    expect(madridReport.score.subscores.socioeconomic).toBeGreaterThan(0);
-    expect(madridReport.score.subscores.urbanPlanning).toBeGreaterThan(0);
-
-    const bcnReport = generateMockReport('barcelona');
-    expect(bcnReport.property.address.municipality).toBe('Barcelona');
-    expect(bcnReport.rentalBenchmark?.isStressedHousingZone).toBe(true);
-    expect(bcnReport.urbanPlanning?.isStressedHousingZone).toBe(true);
   });
 
   it('correctly ranks exact portal candidate (Arroyo Bueno 2F) to top position over other towns or portals', async () => {
@@ -226,7 +165,7 @@ describe('OpenBarrioApiClient', () => {
         address: 'CALLE ARROYO BUENO 2 F, Madrid',
         tip_via: 'CALLE',
         lat: 40.34881,
-        lng: -3.70450,
+        lng: -3.7045,
         portalNumber: 2,
         extension: 'F',
         refCatastral: '0269303VK4606G',
@@ -245,7 +184,7 @@ describe('OpenBarrioApiClient', () => {
     vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce({
       ok: true,
       json: async () => mockCartoData,
-    } as Response);
+    } as unknown as Response);
 
     const results = await client.searchAddress('arroyo bueno 2F');
     expect(results.length).toBeGreaterThan(0);
@@ -253,5 +192,58 @@ describe('OpenBarrioApiClient', () => {
     expect(results[0].label).toBe('CALLE ARROYO BUENO 2 F, Madrid');
     expect(results[0].refcat).toBe('0269303VK4606G');
     expect(results[0].portal).toBe('F');
+  });
+});
+
+describe('Offline Simulator (Dedicated Vitest Mock Engine)', () => {
+  it('generateDeterministicAudit generates valid 5-pillar report', () => {
+    const report = generateDeterministicAudit(40.42028, -3.70379);
+    expect(report).toBeDefined();
+    expect(report.isOfflineDemo).toBe(true);
+    expect(report.property.address.municipality).toBe('Madrid');
+    expect(report.score.overallScore).toBeGreaterThan(0);
+    expect(report.score.overallScore).toBeLessThanOrEqual(100);
+    expect(report.connectivity).toBeDefined();
+    expect(report.connectivity?.walkScore15Min).toBeGreaterThan(0);
+    expect(report.urbanPlanning).toBeDefined();
+    expect(report.score.subscores).toBeDefined();
+  });
+
+  it('correctly marks Barcelona property as Stressed Housing Zone in simulator', () => {
+    const report = generateDeterministicAuditFromRefcat('08019A002000050000AB');
+    expect(report.isOfflineDemo).toBe(true);
+    expect(report.property.address.municipality).toBe('Barcelona');
+    expect(report.rentalBenchmark?.isStressedHousingZone).toBe(true);
+    expect(report.urbanPlanning?.isStressedHousingZone).toBe(true);
+  });
+
+  it('generates deterministic coordinates and avoids Gran Vía snapping for arbitrary urban refcat', () => {
+    const customRefcat = '1234567AB1234C0001XY';
+    const report = generateDeterministicAuditFromRefcat(customRefcat);
+    expect(report.isOfflineDemo).toBe(true);
+    expect(report.property.cadastralReference).toBe(customRefcat);
+    expect(report.property.address.street).not.toBe('Calle Gran Vía');
+    expect(report.property.coordinates.latitude).not.toBe(40.42028);
+    expect(report.property.coordinates.longitude).not.toBe(-3.70379);
+    expect(report.connectivity).toBeDefined();
+    expect(report.urbanPlanning).toBeDefined();
+    expect(report.score.subscores.connectivity).toBeDefined();
+  });
+
+  it('generateMockReport generates complete 5-pillar dossier reports seamlessly', () => {
+    const madridReport = generateMockReport('madrid');
+    expect(madridReport.property.address.municipality).toBe('Madrid');
+    expect(madridReport.connectivity).toBeDefined();
+    expect(madridReport.urbanPlanning).toBeDefined();
+    expect(madridReport.score.subscores.building).toBeGreaterThan(0);
+    expect(madridReport.score.subscores.connectivity).toBeGreaterThan(0);
+    expect(madridReport.score.subscores.environmental).toBeGreaterThan(0);
+    expect(madridReport.score.subscores.socioeconomic).toBeGreaterThan(0);
+    expect(madridReport.score.subscores.urbanPlanning).toBeGreaterThan(0);
+
+    const bcnReport = generateMockReport('barcelona');
+    expect(bcnReport.property.address.municipality).toBe('Barcelona');
+    expect(bcnReport.rentalBenchmark?.isStressedHousingZone).toBe(true);
+    expect(bcnReport.urbanPlanning?.isStressedHousingZone).toBe(true);
   });
 });

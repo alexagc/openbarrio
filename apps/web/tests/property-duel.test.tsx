@@ -1,8 +1,8 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { PropertyDuelModal } from '../src/components/comparator/PropertyDuelModal';
 import { BuildingCapExCard, deriveBuildingCapEx } from '../src/components/dossier/BuildingCapExCard';
-import { apiClient } from '../src/services/api.client';
+import { generateDeterministicAudit } from './mocks/offline-simulator';
 import { PropertyAuditReport } from '@openbarrio/core';
 
 describe('Property Duel & Dual Radar Comparator (Phase 12C)', () => {
@@ -13,7 +13,7 @@ describe('Property Duel & Dual Radar Comparator (Phase 12C)', () => {
     window.history.replaceState({}, '', '/map?refcat=28900A010000420003DW');
 
     // Mock deterministic reports
-    reportA = apiClient.generateDeterministicAudit(40.4241, -3.7012, {
+    reportA = generateDeterministicAudit(40.4241, -3.7012, {
       cadastralReference: '28900A010000420003DW',
       address: {
         street: 'Calle Fuencarral',
@@ -31,7 +31,7 @@ describe('Property Duel & Dual Radar Comparator (Phase 12C)', () => {
       },
     });
 
-    reportB = apiClient.generateDeterministicAudit(40.42023, -3.70197, {
+    reportB = generateDeterministicAudit(40.42023, -3.70197, {
       cadastralReference: '9872023VH5797S0012AZ',
       address: {
         street: 'Calle Gran Vía',
@@ -187,7 +187,7 @@ describe('Property Duel & Dual Radar Comparator (Phase 12C)', () => {
     expect(callout.textContent).toContain('Resumen de Arbitraje Técnico:');
   });
 
-  it('allows switching Candidate B via presets or custom reference', () => {
+  it('allows switching Candidate B via presets or custom reference', async () => {
     const handleSelectB = vi.fn();
     render(
       <PropertyDuelModal
@@ -210,7 +210,7 @@ describe('Property Duel & Dual Radar Comparator (Phase 12C)', () => {
     const barcelonaPresetBtn = screen.getByText(/Passeig de Gràcia 43/i);
     fireEvent.click(barcelonaPresetBtn);
 
-    expect(handleSelectB).toHaveBeenCalled();
+    await waitFor(() => expect(handleSelectB).toHaveBeenCalled());
   });
 
   it('renders BuildingCapExCard with ITE status, derramas risk gauge, and formatted metrics', () => {

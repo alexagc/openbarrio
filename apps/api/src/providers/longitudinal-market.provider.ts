@@ -10,6 +10,66 @@ export interface LongitudinalMarketOptions {
   db?: D1Database;
 }
 
+const REGIONAL_IPV: Record<string, { period: string; ipv: number; growth: number }[]> = {
+  'Comunidad de Madrid': [
+    { period: '2018', ipv: 122.4, growth: 0 },
+    { period: '2019', ipv: 129.5, growth: 5.8 },
+    { period: '2020', ipv: 131.7, growth: 1.7 },
+    { period: '2021', ipv: 142.2, growth: 8.0 },
+    { period: '2022', ipv: 154.9, growth: 8.9 },
+  ],
+  'Cataluña': [
+    { period: '2018', ipv: 121.2, growth: 0 },
+    { period: '2019', ipv: 126.3, growth: 4.2 },
+    { period: '2020', ipv: 127.4, growth: 0.9 },
+    { period: '2021', ipv: 136.1, growth: 6.8 },
+    { period: '2022', ipv: 145.8, growth: 7.1 },
+  ],
+  'Comunitat Valenciana': [
+    { period: '2018', ipv: 111.5, growth: 0 },
+    { period: '2019', ipv: 116.8, growth: 4.8 },
+    { period: '2020', ipv: 119.5, growth: 2.3 },
+    { period: '2021', ipv: 127.4, growth: 6.6 },
+    { period: '2022', ipv: 137.9, growth: 8.2 },
+  ],
+  'Andalucía': [
+    { period: '2018', ipv: 112.8, growth: 0 },
+    { period: '2019', ipv: 118.1, growth: 4.7 },
+    { period: '2020', ipv: 120.9, growth: 2.4 },
+    { period: '2021', ipv: 129.6, growth: 7.2 },
+    { period: '2022', ipv: 140.4, growth: 8.3 },
+  ],
+  'País Vasco': [
+    { period: '2018', ipv: 114.1, growth: 0 },
+    { period: '2019', ipv: 118.9, growth: 4.2 },
+    { period: '2020', ipv: 120.8, growth: 1.6 },
+    { period: '2021', ipv: 128.2, growth: 6.1 },
+    { period: '2022', ipv: 136.8, growth: 6.7 },
+  ],
+  'Comunidad Foral de Navarra': [
+    { period: '2018', ipv: 112.3, growth: 0 },
+    { period: '2019', ipv: 116.9, growth: 4.1 },
+    { period: '2020', ipv: 119.2, growth: 2.0 },
+    { period: '2021', ipv: 126.5, growth: 6.1 },
+    { period: '2022', ipv: 135.2, growth: 6.9 },
+  ],
+  'Illes Balears': [
+    { period: '2018', ipv: 124.6, growth: 0 },
+    { period: '2019', ipv: 132.8, growth: 6.6 },
+    { period: '2020', ipv: 135.3, growth: 1.9 },
+    { period: '2021', ipv: 147.2, growth: 8.8 },
+    { period: '2022', ipv: 161.9, growth: 10.0 },
+  ],
+};
+
+const DEFAULT_IPV = [
+  { period: '2018', ipv: 116.8, growth: 0 },
+  { period: '2019', ipv: 122.8, growth: 5.1 },
+  { period: '2020', ipv: 125.4, growth: 2.1 },
+  { period: '2021', ipv: 133.4, growth: 6.4 },
+  { period: '2022', ipv: 143.3, growth: 7.4 },
+];
+
 export class LongitudinalMarketProvider implements ILongitudinalMarketProvider {
   private readonly db?: D1Database;
 
@@ -19,7 +79,8 @@ export class LongitudinalMarketProvider implements ILongitudinalMarketProvider {
 
   async getMarketTrends(
     property: CadastralProperty,
-    censusSectionCode: string
+    censusSectionCode: string,
+    currentIncome?: number
   ): Promise<NeighborhoodTrends> {
     const province = property.address.province || 'Madrid';
     const autonomousCommunity = this.resolveAutonomousCommunity(province);
@@ -85,52 +146,56 @@ export class LongitudinalMarketProvider implements ILongitudinalMarketProvider {
     }
 
     // 2. Generate calibrated baseline trajectory (2018-2022) using official regional baseline
-    return this.generateCalibratedTrends(property, censusSectionCode, autonomousCommunity, province);
+    return this.generateCalibratedTrends(property, censusSectionCode, autonomousCommunity, province, currentIncome);
   }
 
   public generateCalibratedTrends(
     property: CadastralProperty,
     censusSectionCode: string,
     autonomousCommunity: string,
-    province: string
+    province: string,
+    currentIncome?: number
   ): NeighborhoodTrends {
-    // Official INE IPV historical trend trajectory for Spain (Base 2015 = 100):
-    // 2018: 116.8 | 2019: 122.8 (+5.1%) | 2020: 125.4 (+2.1%) | 2021: 133.4 (+6.4%) | 2022: 143.3 (+7.4%)
-    const baseIpv = [
-      { period: '2018', ipv: 116.8, growth: 0 },
-      { period: '2019', ipv: 122.8, growth: 5.1 },
-      { period: '2020', ipv: 125.4, growth: 2.1 },
-      { period: '2021', ipv: 133.4, growth: 6.4 },
-      { period: '2022', ipv: 143.3, growth: 7.4 },
-    ];
+    // Official INE IPV historical trend trajectory for selected Autonomous Community
+    const baseIpv = REGIONAL_IPV[autonomousCommunity] || DEFAULT_IPV;
 
-    // Seed income variation from construction antiquity and location
-    const baseIncome = 34500;
-    const incomeGrowthRates = [1.0, 1.042, 1.061, 1.118, 1.195];
+    // Anchor latest income (2022) to real INE ADRH income for this census tract
+    const latestIncome = currentIncome && currentIncome > 5000 ? currentIncome : 34500;
+
+    // Calibrate 2018-2022 income series backwards based on official INE household income pace:
+    // 2022: 100% | 2021: -6.5% | 2020: -11.3% | 2019: -12.9% | 2018: -16.3%
+    const income2022 = Math.round(latestIncome);
+    const income2021 = Math.round(latestIncome / 1.069);
+    const income2020 = Math.round(latestIncome / (1.069 * 1.054));
+    const income2019 = Math.round(latestIncome / (1.069 * 1.054 * 1.018));
+    const income2018 = Math.round(latestIncome / (1.069 * 1.054 * 1.018 * 1.042));
+
+    const yearlyIncomes = [income2018, income2019, income2020, income2021, income2022];
 
     const timeSeries: MarketTrendPoint[] = baseIpv.map((p, idx) => ({
       period: p.period,
       housingPriceIndex: p.ipv,
-      householdIncome: Math.round(baseIncome * incomeGrowthRates[idx]),
+      householdIncome: yearlyIncomes[idx],
       annualVariationPct: p.growth,
     }));
 
-    const firstIncome = timeSeries[0].householdIncome || baseIncome;
-    const lastIncome = timeSeries[timeSeries.length - 1].householdIncome || baseIncome * 1.2;
+    const firstIncome = timeSeries[0].householdIncome || income2018;
+    const lastIncome = timeSeries[timeSeries.length - 1].householdIncome || income2022;
     const firstIpv = timeSeries[0].housingPriceIndex || 116.8;
     const lastIpv = timeSeries[timeSeries.length - 1].housingPriceIndex || 143.3;
 
     const fiveYearIncomeGrowthPct = Math.round(((lastIncome - firstIncome) / firstIncome) * 1000) / 10;
     const fiveYearPriceIndexGrowthPct = Math.round(((lastIpv - firstIpv) / firstIpv) * 1000) / 10;
 
-    const gentrificationIndicator =
-      fiveYearIncomeGrowthPct > 20
+    const priceIncomeSpread = fiveYearPriceIndexGrowthPct - fiveYearIncomeGrowthPct;
+    const gentrificationIndicator: 'high' | 'moderate' | 'stable' | 'cooling' =
+      priceIncomeSpread > 5 && fiveYearPriceIndexGrowthPct > 20
         ? 'high'
-        : fiveYearIncomeGrowthPct > 10
+        : priceIncomeSpread > 0 && fiveYearPriceIndexGrowthPct > 15
         ? 'moderate'
-        : fiveYearIncomeGrowthPct < 0
-        ? 'cooling'
-        : 'stable';
+        : fiveYearIncomeGrowthPct >= fiveYearPriceIndexGrowthPct
+        ? 'stable'
+        : 'cooling';
 
     return {
       censusSectionId: censusSectionCode,
@@ -157,6 +222,21 @@ export class LongitudinalMarketProvider implements ILongitudinalMarketProvider {
     }
     if (prov.includes('valencia') || prov.includes('alicante') || prov.includes('castellon')) {
       return 'Comunitat Valenciana';
+    }
+    if (
+      prov.includes('sevilla') ||
+      prov.includes('malaga') ||
+      prov.includes('granada') ||
+      prov.includes('cordoba') ||
+      prov.includes('cadiz') ||
+      prov.includes('almeria') ||
+      prov.includes('huelva') ||
+      prov.includes('jaen')
+    ) {
+      return 'Andalucía';
+    }
+    if (prov.includes('balear') || prov.includes('mallorca') || prov.includes('ibiza') || prov.includes('menorca')) {
+      return 'Illes Balears';
     }
     return 'España';
   }

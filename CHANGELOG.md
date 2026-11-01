@@ -5,6 +5,47 @@ All notable changes to the **OpenBarrio** platform are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.1] - 2026-11-01
+
+### Added
+- **Global Workspace State Store via Zustand (`apps/web`)**:
+  - Introduced lightweight Zustand store (`apps/web/src/store/workspace.store.ts`) with fine-grained selectors for map view state, audit reports, coordinates, modals, and layer drawers, preventing canvas re-renders.
+  - Symmetrical bidirectional URL synchronization (`pushState` / `popstate`) for `refcat`, `coords` (`lat,lon`), and comparison target (`vs`).
+- **View Decoupling & Modular Pages (`apps/web`)**:
+  - Extracted `<LandingView />` and `<GisWorkspaceView />` out of `App.tsx`, reducing root component to a clean switcher (<120 lines).
+- **Canonical Map Architecture & Hook Decomposition (`apps/web`)**:
+  - Deconstructed 2,565-line monolithic map into modular hooks (`useMapLibre`, `useCadastralLayers`, `use3DBuildingExtrusion`, `useIsochronesLayer`, `useEnvironmentalLayers`) and HUD components (`MapControls`, `MapTelemetryHud`, `MapLegendHud`, `SolarSimulationHud`).
+  - Extracted geodetic formulas into standalone utility (`src/utils/geo.ts`).
+- **Property Duel Modularization (`apps/web`)**:
+  - Decomposed comparator into decoupled subcomponents (`DualRadarChart`, `DuelPillarComparison`, `DuelCandidateSelector`, `DuelHeader`) with live candidate B querying against API.
+
+### Fixed
+- **Catastro INSPIRE WFS 3D Building Geometry & Cube-Pop Glitch Elimination (`apps/api`, `apps/web`)**:
+  - Fixed parameter casing and spelling in Catastro WFS INSPIRE URLs (`STOREDQUERY_ID=GetBuildingByParcel` and `STOREDQUERY_ID=GetParcel&REFCAT=`).
+  - Added real building footprint geometry querying (`GET /api/v1/audit/refcat/:refcat/geometry`) rendering exact 3D polygonal extrusions and solar shadows.
+  - Added in-memory geometry caching in `use3DBuildingExtrusion`, eliminating the visual glitch where an initial generic cube appeared and then morphed into the real polygon.
+- **Civic Facility Overcrowding & Visual Clutter on Map (`apps/web`)**:
+  - Restricted map landmark rendering in `useIsochronesLayer` to the 4 essential institutional pillars (Healthcare, Education, Park, Transit) plus at most 1 primary rail/subway hub within 800m, eliminating visual crowding from dozens of overlapping secondary points.
+- **Differentiated Longitudinal Market Trends by Autonomous Community & Real INE ADRH Income (`apps/api`)**:
+  - Connected real census tract income (`averageNetHouseholdIncomeEur` from INE ADRH dataset) to `LongitudinalMarketProvider`, replacing hardcoded national income constants.
+  - Added regional INE IPV trajectories (Base 2015 = 100) across Autonomous Communities (Madrid, Cataluña, Comunitat Valenciana, Andalucía, País Vasco, Navarra, Illes Balears).
+  - Dynamic gentrification indicator comparing regional property appreciation rates against local wage evolution.
+- **Pure HTTP Transport & RFC 7807 Compliance (`apps/web`)**:
+  - Stripped synthetic/offline mock generation from runtime `api.client.ts`, relocating test helpers strictly to `tests/mocks/offline-simulator.ts`.
+  - Proper RFC 7807 Problem Details error surfacing for failed backend calls.
+
+## [0.7.0] - 2026-10-31
+
+### Added
+- **Multi-Region Foral Cadastre Connectors (`apps/api`, `packages/core`)**:
+  - Integrated Foral Cadastres for Basque Country (`EuskadiCatastroProvider`: Bizkaia, Gipuzkoa, Araba) and Navarre (`NavarraCatastroProvider`).
+  - Smart coordinate and reference router (`CadastralRouterProvider`) dynamically dispatching requests based on municipal boundaries and parcel prefixes.
+- **Energy Performance Certificates & Normative Thermal Models (`apps/api`, `packages/core`)**:
+  - Regional Energy Certificate integration (`CEEProvider`) with official registers and normative thermal fallback engine calibrated to CTE DB-HE / NBE-CT-79 based on building age.
+- **Longitudinal Market Trends Engine (`apps/api`, `packages/core`, `apps/web`)**:
+  - Multi-year INE IPV house price index and INE ADRH net household income historical series.
+  - Interactive sparkline visualization and 3A/5A windowing in `NeighborhoodTrendsCard`.
+
 ## [0.6.4] - 2026-10-26
 
 ### Fixed

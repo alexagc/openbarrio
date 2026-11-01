@@ -1,6 +1,6 @@
 {
   "name": "@openbarrio/web",
-  "version": "0.7.0",
+  "version": "0.7.1",
   "type": "module",
   "description": "Interactive Web Dashboard & Civic Landing Page for OpenBarrio",
   "private": true,
@@ -16,7 +16,8 @@
     "lucide-react": "^0.577.0",
     "maplibre-gl": "^6.4.1",
     "react": "^18.3.1",
-    "react-dom": "^18.3.1"
+    "react-dom": "^18.3.1",
+    "zustand": "^5.0.16"
   },
   "devDependencies": {
     "@testing-library/dom": "^10.4.0",

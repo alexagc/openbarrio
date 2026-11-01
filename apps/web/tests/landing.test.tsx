@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen, fireEvent, act, waitFor, within } from '@testing-library/react';
 import { App } from '../src/App';
 import { LanguageProvider, useTranslation } from '../src/i18n';
+import { generateDeterministicAudit, generateDeterministicAuditFromRefcat } from './mocks/offline-simulator';
 
 // Polyfill URL.createObjectURL for JSDOM environment
 if (typeof window !== 'undefined') {
@@ -13,7 +14,7 @@ if (typeof window !== 'undefined') {
   }
 }
 
-vi.mock('../src/components/MapView', () => ({
+vi.mock('../src/components/map/MapView', () => ({
   MapView: () => <div data-testid="mock-mapview" />,
 }));
 
@@ -67,10 +68,10 @@ vi.mock('../src/services/api.client', async (importOriginal) => {
         );
       }),
       generateDeterministicAudit: vi.fn().mockImplementation((lat: number, lon: number, overrides?: any) => {
-        return actual.apiClient.generateDeterministicAudit(lat, lon, overrides);
+        return generateDeterministicAudit(lat, lon, overrides);
       }),
       generateDeterministicAuditFromRefcat: vi.fn().mockImplementation((refcat: string) => {
-        return actual.apiClient.generateDeterministicAuditFromRefcat(refcat);
+        return generateDeterministicAuditFromRefcat(refcat);
       }),
     },
   };

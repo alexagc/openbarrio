@@ -10,8 +10,9 @@ export class MockLongitudinalMarketProvider implements ILongitudinalMarketProvid
 
   async getMarketTrends(
     property: CadastralProperty,
-    censusSectionCode: string
+    censusSectionCode: string,
+    currentIncome?: number
   ): Promise<NeighborhoodTrends> {
-    return this.fallback.getMarketTrends(property, censusSectionCode);
+    return this.fallback.getMarketTrends(property, censusSectionCode, currentIncome);
   }
 }

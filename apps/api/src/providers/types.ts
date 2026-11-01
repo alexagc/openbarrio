@@ -139,6 +139,7 @@ export interface ILongitudinalMarketProvider {
    */
   getMarketTrends(
     property: CadastralProperty,
-    censusSectionCode: string
+    censusSectionCode: string,
+    currentIncome?: number
   ): Promise<NeighborhoodTrends>;
 }

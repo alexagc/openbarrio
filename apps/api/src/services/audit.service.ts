@@ -90,7 +90,8 @@ export class AuditService {
     try {
       marketTrends = await this.providers.marketTrends.getMarketTrends(
         property,
-        neighborhood.censusSectionCode
+        neighborhood.censusSectionCode,
+        neighborhood.averageNetHouseholdIncomeEur
       );
     } catch {
       marketTrends = undefined;
