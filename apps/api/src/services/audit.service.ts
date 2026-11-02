@@ -11,6 +11,11 @@ import {
   UrbanPlanningData,
   EnergyPerformanceCertificate,
   NeighborhoodTrends,
+  BuildingSurroundingsDTO,
+  RadonEvaluationDTO,
+  VutEvaluationDTO,
+  FiscalEstimateDTO,
+  calculateFiscalEstimate,
   calculateBarrioScore,
 } from '@openbarrio/core';
 import { ProviderContainer, calculateBuildingCapExRisk } from '../providers/index.js';
@@ -56,6 +61,19 @@ export class AuditService {
     return this.providers.catastro.getGeometryByCadastralReference(refcat);
   }
 
+  /**
+   * Retrieves surrounding building volumes (INSPIRE WFS GetBuildingByParcel) for 3D urban context.
+   */
+  async getCadastralSurroundings(refcat?: string, bbox?: [number, number, number, number]): Promise<BuildingSurroundingsDTO> {
+    if (refcat) {
+      return this.providers.catastro.getSurroundingsByCadastralReference(refcat);
+    }
+    if (bbox && this.providers.catastro.getSurroundingsByBbox) {
+      return this.providers.catastro.getSurroundingsByBbox(bbox);
+    }
+    return this.providers.catastro.getSurroundingsByCadastralReference('DEFAULT_REFCAT');
+  }
+
   private async generateReportForProperty(
     property: CadastralProperty
   ): Promise<PropertyAuditReport> {
@@ -97,7 +115,52 @@ export class AuditService {
       marketTrends = undefined;
     }
 
-    // 5. Calculate Barrio Due Diligence Score (5 calibrated pillars)
+    // 5. INE Experimental VUT Tourist Housing Evaluation
+    let vut: VutEvaluationDTO | undefined;
+    try {
+      vut = await this.providers.vut.getVutEvaluation(neighborhood.censusSectionCode);
+    } catch {
+      vut = undefined;
+    }
+
+    // 6. CTE DB-HS 6 Radon Geological Hazard Evaluation
+    let radon: RadonEvaluationDTO | undefined;
+    try {
+      const muniCode = property.address.municipalityCode || '001';
+      const provCode = property.address.provinceCode || property.address.postalCode.slice(0, 2) || '28';
+      let floorLevel: number | undefined;
+      if (property.unit?.floor) {
+        const parsedFloor = parseInt(property.unit.floor, 10);
+        if (!isNaN(parsedFloor)) {
+          floorLevel = parsedFloor;
+        } else if (/^(bj|b|pb|baja)$/i.test(property.unit.floor)) {
+          floorLevel = 0;
+        } else if (/^(ss|sótano|semisótano)$/i.test(property.unit.floor)) {
+          floorLevel = -1;
+        }
+      }
+      radon = await this.providers.radon.getRadonEvaluation(
+        muniCode,
+        provCode,
+        floorLevel,
+        property.building.unitsCount
+      );
+    } catch {
+      radon = undefined;
+    }
+
+    // 7. Municipal IBI & Regional ITP Fiscal Estimation
+    const cadastralSurface = property.unit?.builtSurfaceM2 || property.building.builtSurfaceM2;
+    const fiscal: FiscalEstimateDTO = calculateFiscalEstimate({
+      cadastralReference: property.cadastralReference,
+      provinceCode: property.address.provinceCode || property.address.postalCode.slice(0, 2),
+      municipalityName: property.address.municipality,
+      purchasePriceEur: 0,
+      cadastralSurfaceM2: cadastralSurface,
+      constructionYear: property.building.constructionYear,
+    });
+
+    // 8. Calculate Barrio Due Diligence Score (5 calibrated pillars + VUT recalibration)
     const score = calculateBarrioScore(
       property,
       neighborhood,
@@ -106,10 +169,11 @@ export class AuditService {
       connectivity,
       urbanPlanning,
       undefined,
-      energy
+      energy,
+      vut
     );
 
-    // 6. Calculate Building CapEx & Community Risk Intelligence
+    // 9. Calculate Building CapEx & Community Risk Intelligence
     const capex = calculateBuildingCapExRisk(property);
 
     return {
@@ -125,6 +189,9 @@ export class AuditService {
       capex,
       energy,
       marketTrends,
+      radon,
+      vut,
+      fiscal,
     };
   }
 

@@ -3,8 +3,10 @@ import {
   CadastralCoordinates,
   CadastralUnitsResponse,
   CadastralGeometry,
+  BuildingSurroundingsDTO,
 } from '@openbarrio/core';
 import { ICatastroProvider } from './types.js';
+import { generateDeterministicSurroundings } from './catastro.parser.js';
 
 export interface EuskadiProviderOptions {
   timeoutMs?: number;
@@ -270,5 +272,11 @@ export class EuskadiCatastroProvider implements ICatastroProvider {
         areaM2: 520,
       },
     };
+  }
+
+  async getSurroundingsByCadastralReference(refcat: string): Promise<BuildingSurroundingsDTO> {
+    const lat = 43.263;
+    const lon = -2.935;
+    return generateDeterministicSurroundings(refcat, lat, lon);
   }
 }

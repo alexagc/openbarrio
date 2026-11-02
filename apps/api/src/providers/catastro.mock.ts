@@ -4,9 +4,11 @@ import {
   CadastralUnit,
   CadastralCoordinates,
   CadastralGeometry,
+  BuildingSurroundingsDTO,
 } from '@openbarrio/core';
 import { ICatastroProvider } from './types.js';
 import { CadastralNotFoundError } from '../errors/problem-details.js';
+import { generateDeterministicSurroundings } from './catastro.parser.js';
 
 export class MockCatastroProvider implements ICatastroProvider {
   private readonly propertiesByRef: Map<string, CadastralProperty> = new Map();
@@ -477,5 +479,28 @@ export class MockCatastroProvider implements ICatastroProvider {
         areaM2: prop.building.builtSurfaceM2,
       },
     };
+  }
+
+  async getSurroundingsByCadastralReference(refcat: string): Promise<BuildingSurroundingsDTO> {
+    const normalized = refcat.replace(/[\s\-_.]/g, '').toUpperCase();
+    let centerLat = 40.42028;
+    let centerLon = -3.70379;
+
+    try {
+      const prop = await this.getByCadastralReference(normalized);
+      centerLat = prop.coordinates.latitude;
+      centerLon = prop.coordinates.longitude;
+    } catch {
+      // keep fallback center
+    }
+
+    return generateDeterministicSurroundings(normalized, centerLat, centerLon);
+  }
+
+  async getSurroundingsByBbox(bbox: [number, number, number, number]): Promise<BuildingSurroundingsDTO> {
+    const [minX, minY, maxX, maxY] = bbox;
+    const centerLat = (minY + maxY) / 2;
+    const centerLon = (minX + maxX) / 2;
+    return generateDeterministicSurroundings('MOCK_BBOX', centerLat, centerLon);
   }
 }

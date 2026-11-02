@@ -125,7 +125,11 @@ export function renderMiniRadar(subscores?: Partial<AuditSubscores>): string {
   `.trim();
 }
 
-export function renderAuditCard(report: PropertyAuditReport, webUrl: string): string {
+export function renderAuditCard(
+  report: PropertyAuditReport,
+  webUrl: string,
+  extracted?: { builtSurfaceM2?: number; priceEur?: number; isRental?: boolean }
+): string {
   const score = report.score.overallScore;
   const style = getScoreStyle(score);
   const property = report.property;
@@ -214,6 +218,57 @@ export function renderAuditCard(report: PropertyAuditReport, webUrl: string): st
   // 5-Axis SVG Mini Radar
   const miniRadarHtml = renderMiniRadar(report.score.subscores);
 
+  // Surface discrepancy check (>15% alert)
+  const advertisedM2 = extracted?.builtSurfaceM2;
+  const cadastralM2 = property.unit?.builtSurfaceM2 || building.builtSurfaceM2 || 90;
+  let discrepancyHtml = '';
+
+  if (advertisedM2 && cadastralM2 > 0) {
+    const diffPct = ((advertisedM2 - cadastralM2) / cadastralM2) * 100;
+    if (diffPct > 15) {
+      discrepancyHtml = `
+        <div class="ob-discrepancy-alert" style="margin-bottom: 12px; padding: 8px 10px; background: rgba(245, 158, 11, 0.15); border: 1px solid rgba(245, 158, 11, 0.35); border-radius: 6px; font-size: 11px; color: #fcd34d; display: flex; align-items: flex-start; gap: 8px;">
+          <span style="font-size: 13px; line-height: 1;">⚠️</span>
+          <div>
+            <strong>Discrepancia de Superficie (+${Math.round(diffPct)}%)</strong>: Anunciados ${advertisedM2} m² vs ${cadastralM2} m² en Catastro. Posible terraza cerrada o zonas comunes computadas como útiles.
+          </div>
+        </div>
+      `;
+    }
+  }
+
+  // Instant ITP & IBI estimate for advertised sale price
+  let fiscalHtml = '';
+  if (extracted?.priceEur && !extracted.isRental) {
+    const price = extracted.priceEur;
+    const provCode = property.address.provinceCode || property.address.postalCode.slice(0, 2) || '28';
+    let itpRate = 8.0;
+    let commName = 'Comunidad Autónoma';
+    if (provCode === '28') { itpRate = 6.0; commName = 'Madrid'; }
+    else if (provCode === '31') { itpRate = 6.0; commName = 'Navarra'; }
+    else if (['01', '20', '48'].includes(provCode)) { itpRate = 4.0; commName = 'País Vasco'; }
+    else if (['08', '17', '25', '43'].includes(provCode)) { itpRate = 10.0; commName = 'Cataluña'; }
+    else if (['03', '12', '46'].includes(provCode)) { itpRate = 10.0; commName = 'Comunitat Valenciana'; }
+    else if (['15', '27', '32', '36'].includes(provCode)) { itpRate = 9.0; commName = 'Galicia'; }
+    else if (['04', '11', '14', '18', '21', '23', '29', '41'].includes(provCode)) { itpRate = 7.0; commName = 'Andalucía'; }
+
+    const itpAmount = Math.round(price * (itpRate / 100));
+    const estimatedIbi = Math.round(price * 0.45 * 0.005);
+
+    fiscalHtml = `
+      <div class="ob-fiscal-box" style="margin-bottom: 12px; padding: 8px 10px; background: #131b2e; border: 1px solid #222a3d; border-radius: 6px; font-size: 11px; color: #dae2fd;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+          <span style="color: #94a3b8;">ITP Estimado (${itpRate}% ${commName}):</span>
+          <strong style="color: #68dba9; font-family: monospace;">€${itpAmount.toLocaleString('es-ES')}</strong>
+        </div>
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+          <span style="color: #94a3b8;">IBI Anual Estimado:</span>
+          <span style="color: #dae2fd; font-family: monospace;">~€${estimatedIbi.toLocaleString('es-ES')} / año</span>
+        </div>
+      </div>
+    `;
+  }
+
   return `
     <div class="ob-card" id="ob-card-main">
       <div class="ob-header">
@@ -248,6 +303,12 @@ export function renderAuditCard(report: PropertyAuditReport, webUrl: string): st
 
         <!-- Stressed Housing Alert if active -->
         ${stressedHtml}
+
+        <!-- Surface Discrepancy Alert if detected -->
+        ${discrepancyHtml}
+
+        <!-- Fiscal ITP & IBI Estimate if price available -->
+        ${fiscalHtml}
 
         <!-- Breakdown Grid -->
         <div class="ob-grid">

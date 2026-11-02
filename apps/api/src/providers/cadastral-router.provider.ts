@@ -64,4 +64,19 @@ export class CadastralRouterProvider implements ICatastroProvider {
     const provider = this.resolveProvider(refcat);
     return provider.getGeometryByCadastralReference(refcat);
   }
+
+  async getSurroundingsByCadastralReference(refcat: string) {
+    const provider = this.resolveProvider(refcat);
+    return provider.getSurroundingsByCadastralReference(refcat);
+  }
+
+  async getSurroundingsByBbox(bbox: [number, number, number, number]) {
+    const centerLat = (bbox[1] + bbox[3]) / 2;
+    const centerLon = (bbox[0] + bbox[2]) / 2;
+    const provider = this.resolveProvider(undefined, { latitude: centerLat, longitude: centerLon });
+    if (provider.getSurroundingsByBbox) {
+      return provider.getSurroundingsByBbox(bbox);
+    }
+    return provider.getSurroundingsByCadastralReference('BBOX');
+  }
 }

@@ -14,6 +14,7 @@ export class OpenBarrioWidget {
   private shadow: ShadowRoot | null = null;
   private currentReport: PropertyAuditReport | null = null;
   private currentWebUrl: string = 'http://localhost:3000';
+  private currentExtracted?: { builtSurfaceM2?: number; priceEur?: number; isRental?: boolean };
   private isCollapsed: boolean = false;
 
   constructor() {
@@ -50,10 +51,15 @@ export class OpenBarrioWidget {
     this.updateContent(renderLoadingSkeleton(portalName));
   }
 
-  showReport(report: PropertyAuditReport, webUrl: string): void {
+  showReport(
+    report: PropertyAuditReport,
+    webUrl: string,
+    extracted?: { builtSurfaceM2?: number; priceEur?: number; isRental?: boolean }
+  ): void {
     if (!this.shadow) return;
     this.currentReport = report;
     this.currentWebUrl = webUrl;
+    this.currentExtracted = extracted;
     this.renderCurrentReportState();
   }
 
@@ -93,7 +99,7 @@ export class OpenBarrioWidget {
       this.bindCollapsedEvents();
     } else {
       this.updateContent(
-        renderAuditCard(this.currentReport, this.currentWebUrl)
+        renderAuditCard(this.currentReport, this.currentWebUrl, this.currentExtracted)
       );
       this.bindCardEvents();
     }

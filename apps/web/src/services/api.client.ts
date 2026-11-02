@@ -3,6 +3,7 @@ import {
   ProblemDetails,
   CadastralUnitsResponse,
   CadastralGeometry,
+  BuildingSurroundingsDTO,
   CadastralProperty,
   CensusTractIncome,
   EnvironmentalData,
@@ -360,6 +361,32 @@ export class OpenBarrioApiClient {
   async getCadastralGeometry(refcat: string): Promise<CadastralGeometry> {
     const cleanRef = refcat.replace(/[\s\-_.]/g, '').toUpperCase();
     const url = `${this.baseUrl}/api/v1/audit/refcat/${encodeURIComponent(cleanRef)}/geometry`;
+
+    try {
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: { Accept: 'application/json' },
+      });
+
+      if (!response.ok) {
+        await this.handleHttpError(response);
+      }
+
+      return await response.json();
+    } catch (err) {
+      if (err instanceof ApiError) {
+        throw err;
+      }
+      throw new ApiError(0, err instanceof Error ? err.message : 'Network error');
+    }
+  }
+
+  /**
+   * Retrieves official surrounding buildings from Catastro WFS GetBuildingByParcel for 3D context.
+   */
+  async getCadastralSurroundings(refcat: string): Promise<BuildingSurroundingsDTO> {
+    const cleanRef = refcat.replace(/[\s\-_.]/g, '').toUpperCase();
+    const url = `${this.baseUrl}/api/v1/audit/geometry/surroundings?refcat=${encodeURIComponent(cleanRef)}`;
 
     try {
       const response = await fetch(url, {

@@ -474,7 +474,7 @@ export function useMapLibre({
                 'case',
                 ['boolean', ['get', 'isTarget'], false],
                 '#68dba9',
-                '#1e293b',
+                '#334155',
               ],
               'fill-extrusion-height': [
                 'coalesce',
@@ -482,7 +482,16 @@ export function useMapLibre({
                 ['*', ['coalesce', ['get', 'numberOfFloors'], 4], 3.2],
               ],
               'fill-extrusion-base': 0,
-              'fill-extrusion-opacity': 0.92,
+              'fill-extrusion-opacity': [
+                'case',
+                ['boolean', ['get', 'isTarget'], false],
+                1.0,
+                0.88,
+              ],
+              'fill-extrusion-opacity-transition': {
+                duration: 400,
+                delay: 0,
+              },
             },
           },
         ],

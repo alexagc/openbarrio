@@ -13,6 +13,9 @@ import {
   AirQualityData,
   EnergyPerformanceCertificate,
   NeighborhoodTrends,
+  BuildingSurroundingsDTO,
+  RadonEvaluationDTO,
+  VutEvaluationDTO,
 } from '@openbarrio/core';
 
 export interface ICatastroProvider {
@@ -39,6 +42,12 @@ export interface ICatastroProvider {
    * Look up real building or parcel geometry (WFS INSPIRE) for a given cadastral reference.
    */
   getGeometryByCadastralReference(refcat: string): Promise<CadastralGeometry>;
+
+  /**
+   * Look up surrounding buildings/parcels for 3D urban context and solar simulation.
+   */
+  getSurroundingsByCadastralReference(refcat: string): Promise<BuildingSurroundingsDTO>;
+  getSurroundingsByBbox?(bbox: [number, number, number, number]): Promise<BuildingSurroundingsDTO>;
 }
 
 export interface IINEProvider {
@@ -142,4 +151,23 @@ export interface ILongitudinalMarketProvider {
     censusSectionCode: string,
     currentIncome?: number
   ): Promise<NeighborhoodTrends>;
+}
+
+export interface IRadonProvider {
+  /**
+   * Evaluate CTE DB-HS 6 radon municipal hazard zone and dwelling mitigation requirements.
+   */
+  getRadonEvaluation(
+    municipalityCode: string,
+    provinceCode?: string,
+    floorLevel?: number,
+    unitsCount?: number
+  ): Promise<RadonEvaluationDTO>;
+}
+
+export interface IVutProvider {
+  /**
+   * Evaluate INE tourist dwelling saturation and calculate civic coexistence impact.
+   */
+  getVutEvaluation(censusSectionId: string): Promise<VutEvaluationDTO>;
 }

@@ -301,4 +301,51 @@ describe('Hono Audit Routes Integration', () => {
       expect(problem.status).toBe(404);
     });
   });
+
+  describe('GET /api/v1/audit/geometry/surroundings (Phase 16)', () => {
+    it('returns 200 OK with surrounding 3D buildings for cadastral reference', async () => {
+      const response = await app.request(
+        '/api/v1/audit/geometry/surroundings?refcat=9872023VH5797S0001WX'
+      );
+
+      expect(response.status).toBe(200);
+      const data = await response.json();
+      expect(data.targetRefcat).toContain('9872023VH5797S');
+      expect(Array.isArray(data.parcels)).toBe(true);
+      expect(data.parcels.length).toBeGreaterThan(0);
+      expect(data.parcels[0].heightMeters).toBeGreaterThan(0);
+      expect(data.parcels[0].geometry.type).toBe('Polygon');
+    });
+
+    it('returns 200 OK with surrounding buildings for bounding box query', async () => {
+      const response = await app.request(
+        '/api/v1/audit/geometry/surroundings?bbox=-3.705,40.419,-3.702,40.421'
+      );
+
+      expect(response.status).toBe(200);
+      const data = await response.json();
+      expect(Array.isArray(data.parcels)).toBe(true);
+      expect(data.parcels.length).toBeGreaterThan(0);
+    });
+
+    it('returns 400 Problem Details when neither refcat nor bbox is provided', async () => {
+      const response = await app.request('/api/v1/audit/geometry/surroundings');
+      expect(response.status).toBe(400);
+      const problem = await response.json();
+      expect(problem.type).toBe('https://openbarrio.org/errors/invalid-parameters');
+    });
+
+    it('enriches full audit report with radon, vut, and fiscal calculations', async () => {
+      const response = await app.request('/api/v1/audit/refcat/9872023VH5797S0001WX');
+      expect(response.status).toBe(200);
+      const report = await response.json();
+
+      expect(report.radon).toBeDefined();
+      expect(report.radon.municipalityZone).toBeDefined();
+      expect(report.vut).toBeDefined();
+      expect(report.vut.vutRatioPct).toBeDefined();
+      expect(report.fiscal).toBeDefined();
+      expect(report.fiscal.itpRatePct).toBe(6.0);
+    });
+  });
 });

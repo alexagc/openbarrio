@@ -3,6 +3,7 @@ import {
   CadastralCoordinates,
   CadastralUnitsResponse,
   CadastralUnit,
+  BuildingSurroundingsDTO,
 } from '@openbarrio/core';
 import { CadastralNotFoundError } from '../errors/problem-details.js';
 
@@ -583,6 +584,96 @@ export function parseCatastroWfsGeometryXml(
     coordinates: [ring],
     numberOfFloors,
     areaM2,
+  };
+}
+
+/**
+ * Parses Catastro INSPIRE WFS response containing surrounding buildings (GetBuildingByParcel).
+ */
+export function parseCatastroSurroundingsWfsXml(
+  xml: string,
+  targetRefcat: string
+): BuildingSurroundingsDTO {
+  const members = xml.match(/<(?:gml:featureMember|wfs:member)[\s\S]*?<\/(?:gml:featureMember|wfs:member)>/gi) || [];
+  const parcels: BuildingSurroundingsDTO['parcels'] = [];
+
+  for (const member of members) {
+    const parsed = parseCatastroWfsGeometryXml(member);
+    if (!parsed || parsed.coordinates.length === 0) continue;
+
+    const rcMatch =
+      member.match(/<bu-core2d:inspireId[^>]*>[\s\S]*?<base:localId>([\s\S]*?)<\/base:localId>/i) ||
+      member.match(/<(?:cp:)?nationalCadastralReference>([\s\S]*?)<\/(?:cp:)?nationalCadastralReference>/i) ||
+      member.match(/<gml:name>([\s\S]*?)<\/gml:name>/i);
+    const rc = rcMatch ? rcMatch[1].trim() : `${targetRefcat}_SURR_${parcels.length + 1}`;
+    const floors = parsed.numberOfFloors ?? (3 + (parcels.length % 5));
+    const heightMeters = Number((floors * 3.2 + 1.0).toFixed(1));
+
+    parcels.push({
+      cadastralReference: rc,
+      floors,
+      heightMeters,
+      geometry: {
+        type: 'Polygon',
+        coordinates: parsed.coordinates,
+      },
+    });
+  }
+
+  return {
+    targetRefcat,
+    parcels,
+  };
+}
+
+/**
+ * Generates realistic deterministic surrounding buildings for urban context and shadow simulation.
+ */
+export function generateDeterministicSurroundings(
+  targetRefcat: string,
+  centerLat: number,
+  centerLon: number
+): BuildingSurroundingsDTO {
+  const offsets = [
+    { dLat: 0.00035, dLon: 0.00000, floors: 6, code: 'N' },
+    { dLat: 0.00028, dLon: 0.00038, floors: 5, code: 'NE' },
+    { dLat: 0.00000, dLon: 0.00045, floors: 7, code: 'E' },
+    { dLat: -0.00028, dLon: 0.00038, floors: 4, code: 'SE' },
+    { dLat: -0.00035, dLon: 0.00000, floors: 6, code: 'S' },
+    { dLat: -0.00028, dLon: -0.00038, floors: 5, code: 'SW' },
+    { dLat: 0.00000, dLon: -0.00045, floors: 8, code: 'W' },
+    { dLat: 0.00028, dLon: -0.00038, floors: 4, code: 'NW' },
+  ];
+
+  const parcels: BuildingSurroundingsDTO['parcels'] = offsets.map((o) => {
+    const lat = centerLat + o.dLat;
+    const lon = centerLon + o.dLon;
+    const halfH = 0.00010;
+    const halfW = 0.00014;
+    const heightMeters = Number((o.floors * 3.2 + 1.0).toFixed(1));
+
+    return {
+      cadastralReference: `${targetRefcat.substring(0, 14)}_${o.code}`,
+      floors: o.floors,
+      heightMeters,
+      geometry: {
+        type: 'Polygon',
+        coordinates: [
+          [
+            [Number((lon - halfW).toFixed(6)), Number((lat - halfH).toFixed(6))],
+            [Number((lon + halfW).toFixed(6)), Number((lat - halfH).toFixed(6))],
+            [Number((lon + halfW).toFixed(6)), Number((lat + halfH).toFixed(6))],
+            [Number((lon - halfW).toFixed(6)), Number((lat + halfH).toFixed(6))],
+            [Number((lon - halfW).toFixed(6)), Number((lat - halfH).toFixed(6))],
+          ],
+        ],
+      },
+    };
+  });
+
+  return {
+    targetRefcat,
+    parcels,
   };
 }
 

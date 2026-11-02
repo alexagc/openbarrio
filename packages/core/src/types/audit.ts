@@ -7,6 +7,10 @@ import { UrbanPlanningDataSchema } from './urban-planning.js';
 import { BuildingCapExRiskSchema } from './capex.js';
 import { EnergyPerformanceCertificateSchema } from './energy.js';
 import { NeighborhoodTrendsSchema } from './market.js';
+import { RadonEvaluationSchema, RadonEvaluationDTO } from './radon.js';
+import { VutEvaluationSchema, VutEvaluationDTO } from './vut.js';
+import { FiscalEstimateSchema, FiscalEstimateDTO } from './fiscal.js';
+import { BuildingSurroundingsSchema, BuildingSurroundingsDTO } from './surroundings.js';
 
 if (!FormatRegistry.Has('uuid')) {
   FormatRegistry.Set('uuid', (value) => typeof value === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value));
@@ -56,6 +60,10 @@ export const PropertyAuditReportSchema = Type.Object({
   capex: Type.Optional(BuildingCapExRiskSchema),
   energy: Type.Optional(EnergyPerformanceCertificateSchema),
   marketTrends: Type.Optional(NeighborhoodTrendsSchema),
+  radon: Type.Optional(RadonEvaluationSchema),
+  vut: Type.Optional(VutEvaluationSchema),
+  fiscal: Type.Optional(FiscalEstimateSchema),
+  surroundings: Type.Optional(BuildingSurroundingsSchema),
 });
 
 export type AuditSubscores = Static<typeof AuditSubscoresSchema>;

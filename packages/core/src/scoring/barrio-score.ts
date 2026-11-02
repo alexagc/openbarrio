@@ -4,6 +4,7 @@ import { EnvironmentalData } from '../types/environmental.js';
 import { CivicConnectivityData } from '../types/connectivity.js';
 import { UrbanPlanningData } from '../types/urban-planning.js';
 import { EnergyPerformanceCertificate } from '../types/energy.js';
+import { VutEvaluationDTO } from '../types/vut.js';
 import { AuditScoreBreakdown, RentalBenchmark } from '../types/audit.js';
 
 export interface ScoringWeights {
@@ -69,7 +70,8 @@ export function calculateBarrioScore(
   connectivity?: Partial<CivicConnectivityData>,
   urbanPlanning?: Partial<UrbanPlanningData>,
   weights: ScoringWeights = DEFAULT_SCORING_WEIGHTS,
-  energy?: Partial<EnergyPerformanceCertificate>
+  energy?: Partial<EnergyPerformanceCertificate>,
+  vut?: Partial<VutEvaluationDTO>
 ): AuditScoreBreakdown {
   const highlights: string[] = [];
   const risks: string[] = [];
@@ -331,6 +333,26 @@ export function calculateBarrioScore(
   } else {
     urbanScore = property.building.builtSurfaceM2 > 0 ? 85 : 70;
     highlights.push('Standard urban classification verified via municipal cadastral register');
+  }
+
+  // VUT tourist housing saturation impact on urbanPlanning score
+  if (vut?.vutRatioPct !== undefined) {
+    const ratio = vut.vutRatioPct;
+    if (ratio >= 8.0) {
+      const penalty = vut.penaltyApplied ?? Math.min(25, Math.round(15 + Math.min(10, ((ratio - 8) / 7) * 10)));
+      urbanScore = Math.max(10, urbanScore - penalty);
+      risks.push(
+        `Critical tourist apartment saturation (${ratio}% of dwellings in census section): high risk of coexistence friction and rent inflation`
+      );
+    } else if (ratio >= 3.0) {
+      const penalty = vut.penaltyApplied ?? Math.round(5 + ((ratio - 3) / 5) * 5);
+      urbanScore = Math.max(20, urbanScore - penalty);
+      risks.push(
+        `Moderate tourist apartment presence (${ratio}% of dwellings in census section)`
+      );
+    } else {
+      highlights.push(`Low tourist apartment density (${ratio}% of residential stock) preserving neighborhood residential coexistence`);
+    }
   }
 
   const urbanPlanningScore = Math.min(100, Math.max(0, urbanScore));

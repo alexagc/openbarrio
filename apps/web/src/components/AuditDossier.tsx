@@ -7,6 +7,9 @@ import { HighlightsAndRisks } from './HighlightsAndRisks';
 import { BuildingCapExCard } from './dossier/BuildingCapExCard';
 import { EnergyPerformanceCard } from './dossier/EnergyPerformanceCard';
 import { NeighborhoodTrendsCard } from './dossier/NeighborhoodTrendsCard';
+import { RadonCard } from './dossier/RadonCard';
+import { VutSaturationCard } from './dossier/VutSaturationCard';
+import { FiscalSimulatorCard } from './dossier/FiscalSimulatorCard';
 import { downloadCadastralGML } from '../utils/gml';
 import { DossierTab } from '../hooks/useUrlSync';
 import { useWorkspaceStore } from '../store/workspace.store';
@@ -69,6 +72,9 @@ export function AuditDossier({
     urbanPlanning,
     energy,
     marketTrends,
+    radon,
+    vut,
+    fiscal,
     generatedAt,
   } = report;
 
@@ -458,6 +464,17 @@ export function AuditDossier({
             </div>
           </div>
 
+          {/* Radon Geological Evaluation */}
+          {radon && (
+            <div className="page-break-inside-avoid">
+              <RadonCard
+                radon={radon}
+                municipality={property.address.municipality}
+                floor={property.unit?.floor}
+              />
+            </div>
+          )}
+
           {/* Building CapEx Diagnostics */}
           <div className="page-break-inside-avoid">
             <BuildingCapExCard report={report} />
@@ -477,6 +494,13 @@ export function AuditDossier({
           data-testid="tab-environment"
           className={currentTab === 'environment' ? 'space-y-4 p-space-lg' : 'hidden'}
         >
+          {/* VUT Tourist Saturation Risk */}
+          {vut && (
+            <div className="page-break-inside-avoid">
+              <VutSaturationCard vut={vut} />
+            </div>
+          )}
+
           {/* 5 Dedicated Pillars */}
           <div className="page-break-inside-avoid">
             <PillarCards
@@ -496,6 +520,11 @@ export function AuditDossier({
           data-testid="tab-market"
           className={currentTab === 'market' ? 'space-y-4 p-space-lg' : 'hidden'}
         >
+          {/* Fiscal Simulator & Surface Discrepancy */}
+          <div className="page-break-inside-avoid">
+            <FiscalSimulatorCard property={property} fiscal={fiscal} />
+          </div>
+
           {/* MIVAU SERPAVI Rental Module */}
           {rentalBenchmark && (
             <div className="page-break-inside-avoid">

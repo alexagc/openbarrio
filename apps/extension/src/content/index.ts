@@ -71,7 +71,11 @@ async function runAuditInjection(): Promise<void> {
     }
 
     if (auditRes && auditRes.success && auditRes.data) {
-      widgetInstance.showReport(auditRes.data, webUrl);
+      widgetInstance.showReport(auditRes.data, webUrl, {
+        builtSurfaceM2: data.builtSurfaceM2,
+        priceEur: data.priceEur,
+        isRental: data.isRental,
+      });
     } else {
       widgetInstance.showError(
         auditRes?.error || 'Inmueble no localizado en Catastro',

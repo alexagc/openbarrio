@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 import type { Map as MapLibreMap } from 'maplibre-gl';
+import { BuildingSurroundingsDTO } from '@openbarrio/core';
 import {
   generate3dBuildingFootprints,
   calculateBuildingShadowPolygon,
@@ -18,6 +19,7 @@ export interface Use3DBuildingExtrusionProps {
 
 // In-memory module cache for real cadastral geometry to prevent initial cube-pop glitch
 const geometryCache = new Map<string, { coordinates: number[][][]; height?: number }>();
+const surroundingsCache = new Map<string, BuildingSurroundingsDTO>();
 
 export function use3DBuildingExtrusion({
   map,
@@ -81,7 +83,11 @@ export function use3DBuildingExtrusion({
     const height = Number((floors * 3.2).toFixed(1));
     currentBuildingHeightRef.current = height;
 
-    const applyFootprints = (customPolygon?: number[][][], overrideHeight?: number) => {
+    const applyFootprints = (
+      customPolygon?: number[][][],
+      overrideHeight?: number,
+      surroundingsData?: BuildingSurroundingsDTO
+    ) => {
       if (isCancelled) return;
       const effectiveHeight = overrideHeight ?? height;
       currentBuildingHeightRef.current = effectiveHeight;
@@ -97,6 +103,28 @@ export function use3DBuildingExtrusion({
       const targetFeature = footprints.features.find((f: any) => f.properties.isTarget);
       if (targetFeature && targetFeature.geometry) {
         currentBuildingCoordsRef.current = targetFeature.geometry.coordinates as number[][][];
+      }
+
+      // Append surrounding buildings with matte slate treatment (#334155)
+      const surroundingParcels =
+        surroundingsData?.parcels || (refcat ? surroundingsCache.get(refcat)?.parcels : undefined);
+
+      if (surroundingParcels && surroundingParcels.length > 0) {
+        for (let i = 0; i < surroundingParcels.length; i++) {
+          const sp = surroundingParcels[i];
+          footprints.features.push({
+            type: 'Feature' as const,
+            properties: {
+              id: `surrounding-${i}-${sp.cadastralReference}`,
+              isTarget: false,
+              isSurrounding: true,
+              name: sp.cadastralReference,
+              numberOfFloors: sp.floors,
+              height: sp.heightMeters,
+            },
+            geometry: sp.geometry,
+          } as any);
+        }
       }
 
       try {
@@ -125,6 +153,23 @@ export function use3DBuildingExtrusion({
     };
 
     const refcat = report?.property.cadastralReference;
+
+    // Fetch surrounding buildings in parallel
+    if (refcat && !surroundingsCache.has(refcat)) {
+      apiClient
+        .getCadastralSurroundings(refcat)
+        .then((surr) => {
+          if (isCancelled) return;
+          if (surr?.parcels && surr.parcels.length > 0) {
+            surroundingsCache.set(refcat, surr);
+            const cachedGeom = geometryCache.get(refcat);
+            applyFootprints(cachedGeom?.coordinates, cachedGeom?.height, surr);
+          }
+        })
+        .catch(() => {
+          // Surroundings optional; ignore network fail
+        });
+    }
 
     // 1. If geometry is already cached, apply immediately without any placeholder
     if (refcat && geometryCache.has(refcat)) {

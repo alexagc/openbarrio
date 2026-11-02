@@ -108,6 +108,54 @@ export function createAuditRoutes(providers: ProviderContainer): Hono {
     return c.json(geometry, 200);
   });
 
+  // GET /geometry/surroundings - Official surrounding buildings from Catastro WFS GetBuildingByParcel
+  router.get('/geometry/surroundings', async (c) => {
+    const rawRefcat = c.req.query('refcat');
+    const rawBbox = c.req.query('bbox');
+
+    let cleanRefcat: string | undefined;
+    if (rawRefcat) {
+      cleanRefcat = rawRefcat.replace(/[\s\-_.]/g, '').toUpperCase();
+    }
+
+    let parsedBbox: [number, number, number, number] | undefined;
+    if (rawBbox) {
+      const parts = rawBbox.split(',').map((p) => parseFloat(p.trim()));
+      if (parts.length === 4 && parts.every((n) => !isNaN(n))) {
+        parsedBbox = [parts[0], parts[1], parts[2], parts[3]];
+      }
+    }
+
+    if (!cleanRefcat && !parsedBbox) {
+      let instance: string;
+      try {
+        const url = new URL(c.req.url);
+        instance = url.pathname + url.search;
+      } catch {
+        instance = c.req.path;
+      }
+
+      throw new InvalidParametersError(
+        'Missing refcat or bbox query parameter for surroundings geometry lookup',
+        [{ name: 'refcat', reason: 'Provide either refcat or bbox parameter' }],
+        instance
+      );
+    }
+
+    const surroundings = await auditService.getCadastralSurroundings(cleanRefcat, parsedBbox);
+    c.header('Cache-Control', 'public, max-age=604800, stale-while-revalidate=86400');
+    return c.json(surroundings, 200);
+  });
+
+  // GET /refcat/:refcat/surroundings - Direct refcat surroundings endpoint
+  router.get('/refcat/:refcat/surroundings', async (c) => {
+    const rawRefcat = c.req.param('refcat') || '';
+    const cleanRefcat = rawRefcat.replace(/[\s\-_.]/g, '').toUpperCase();
+    const surroundings = await auditService.getCadastralSurroundings(cleanRefcat);
+    c.header('Cache-Control', 'public, max-age=604800, stale-while-revalidate=86400');
+    return c.json(surroundings, 200);
+  });
+
   // GET /refcat/:refcat
   router.get('/refcat/:refcat', async (c) => {
     const rawRefcat = c.req.param('refcat') || '';

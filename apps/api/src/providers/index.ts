@@ -10,6 +10,8 @@ import {
   IAirQualityProvider,
   ICEEProvider,
   ILongitudinalMarketProvider,
+  IRadonProvider,
+  IVutProvider,
 } from './types.js';
 import { D1Database, CloudflareEnv } from '../types/env.js';
 import { CatastroProvider } from './catastro.provider.js';
@@ -21,6 +23,8 @@ import { CEEProvider } from './cee.provider.js';
 import { MockCEEProvider } from './cee.mock.js';
 import { LongitudinalMarketProvider } from './longitudinal-market.provider.js';
 import { MockLongitudinalMarketProvider } from './longitudinal-market.mock.js';
+import { RadonProvider, MockRadonProvider } from './radon.provider.js';
+import { VutProvider, MockVutProvider } from './vut.provider.js';
 import { INEProvider } from './ine.provider.js';
 import { MockINEProvider } from './ine.mock.js';
 import { SICAProvider } from './sica.provider.js';
@@ -69,6 +73,8 @@ export * from './cee.provider.js';
 export * from './cee.mock.js';
 export * from './longitudinal-market.provider.js';
 export * from './longitudinal-market.mock.js';
+export * from './radon.provider.js';
+export * from './vut.provider.js';
 
 export interface ProviderContainer {
   catastro: ICatastroProvider;
@@ -82,6 +88,8 @@ export interface ProviderContainer {
   airQuality: IAirQualityProvider;
   cee: ICEEProvider;
   marketTrends: ILongitudinalMarketProvider;
+  radon: IRadonProvider;
+  vut: IVutProvider;
 }
 
 export function createMockProviders(overrides?: Partial<ProviderContainer>): ProviderContainer {
@@ -95,6 +103,8 @@ export function createMockProviders(overrides?: Partial<ProviderContainer>): Pro
   const airQuality = new MockAirQualityProvider();
   const cee = new MockCEEProvider();
   const marketTrends = new MockLongitudinalMarketProvider();
+  const radon = new MockRadonProvider();
+  const vut = new MockVutProvider();
 
   const effectiveSica = overrides?.sica || sica;
   const effectiveSnczi = overrides?.snczi || snczi;
@@ -120,6 +130,8 @@ export function createMockProviders(overrides?: Partial<ProviderContainer>): Pro
     airQuality: effectiveAirQuality,
     cee: overrides?.cee || cee,
     marketTrends: overrides?.marketTrends || marketTrends,
+    radon: overrides?.radon || radon,
+    vut: overrides?.vut || vut,
   };
 }
 
@@ -161,6 +173,8 @@ export function createProviders(
   const defaultUrbanPlanning = new UrbanPlanningProvider();
   const defaultCEE = new CEEProvider({ db });
   const defaultMarket = new LongitudinalMarketProvider({ db });
+  const defaultRadon = new RadonProvider(db);
+  const defaultVut = new VutProvider(db);
 
   const effectiveSica = overrides?.sica || defaultSICA;
   const effectiveSnczi = overrides?.snczi || defaultSNCZI;
@@ -186,5 +200,7 @@ export function createProviders(
     airQuality: effectiveAirQuality,
     cee: overrides?.cee || defaultCEE,
     marketTrends: overrides?.marketTrends || defaultMarket,
+    radon: overrides?.radon || defaultRadon,
+    vut: overrides?.vut || defaultVut,
   };
 }

@@ -240,6 +240,35 @@ describe('OpenBarrioWidget', () => {
     expect(dom.window.document.getElementById(WIDGET_ROOT_ID)).not.toBeNull();
 
     widget.destroy();
+    widget.destroy();
+    expect(dom.window.document.getElementById(WIDGET_ROOT_ID)).toBeNull();
+  });
+
+  it('should render surface discrepancy alert when advertised m2 exceeds cadastral by >15%', () => {
+    const widget = new OpenBarrioWidget();
+    widget.showReport(mockReport, 'http://localhost:3000', {
+      builtSurfaceM2: 160,
+      priceEur: 450000,
+    });
+
+    const shadow = widget.getShadowRoot();
+    expect(shadow?.querySelector('.ob-discrepancy-alert')).not.toBeNull();
+    expect(shadow?.innerHTML).toContain('Discrepancia de Superficie (+33%)');
+    expect(shadow?.innerHTML).toContain('Anunciados 160 m² vs 120 m² en Catastro');
+  });
+
+  it('should render instant ITP and IBI estimate when price is provided', () => {
+    const widget = new OpenBarrioWidget();
+    widget.showReport(mockReport, 'http://localhost:3000', {
+      builtSurfaceM2: 120,
+      priceEur: 500000,
+    });
+
+    const shadow = widget.getShadowRoot();
+    expect(shadow?.querySelector('.ob-fiscal-box')).not.toBeNull();
+    expect(shadow?.innerHTML).toContain('€30.000');
+    expect(shadow?.innerHTML).toContain('ITP Estimado (6% Madrid)');
+    widget.destroy();
     expect(dom.window.document.getElementById(WIDGET_ROOT_ID)).toBeNull();
   });
 });
