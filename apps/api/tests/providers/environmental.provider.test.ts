@@ -31,6 +31,21 @@ describe('Composite Environmental Provider', () => {
     expect(env.airQuality?.category).toBe('GOOD');
   });
 
+  it('passes censusSectionCode through to sub-providers for pre-calculated resolution', async () => {
+    const sicaMock = new MockSICAProvider();
+    const sncziMock = new MockSNCZIProvider();
+    const provider = new EnvironmentalProvider({
+      sica: sicaMock,
+      snczi: sncziMock,
+    });
+
+    const env = await provider.getEnvironmentalData(39.42, -0.41, '4625001001');
+
+    expect(env.floodRisk.level).toBe('HIGH');
+    expect(env.floodRisk.returnPeriodYears).toBe(10);
+    expect(env.floodRisk.isInPreferentialFlowZone).toBe(true);
+  });
+
   it('works seamlessly with MockEnvironmentalProvider', async () => {
     const mock = new MockEnvironmentalProvider();
     const env = await mock.getEnvironmentalData(40.395, -3.705); // riverbank

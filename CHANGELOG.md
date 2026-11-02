@@ -5,6 +5,31 @@ All notable changes to the **OpenBarrio** platform are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.10.0] - 2026-11-02
+
+### Added
+- **Full Data Sovereignty & Zero-External Latency Engine (`apps/api`, `packages/etl`, `apps/web`)**:
+  - **MIVAU SERPAVI Statutory Rent Benchmark Table (`apps/api`, `packages/etl`)**: Ingested official rental price indices into local SQLite/D1 database (`mivau_serpavi_benchmarks`), achieving sub-5ms statutory rent cap lookups without external network dependencies.
+  - **MITECO SNCZI Inundation Cartography Vectorization (`packages/etl`, `apps/api`, `apps/web`)**:
+    - Processed official MITECO WFS layers (`agua:ZI_Laminas_ZFP`, `agua:Zi_laminas_q10`, `agua:Zi_laminas_q50`, `agua:Zi_laminas_q100`, `agua:Zi_laminas_q500`) with DuckDB Spatial topology-preserving simplification (`ST_SimplifyPreserveTopology`).
+    - Packaged multi-basin hydrographic flood zones into localized vector PMTiles (`packages/etl/dist/openbarrio-etl-dist/floods.pmtiles`).
+    - Generated pre-calculated risk indices in Cloudflare D1 (`census_tract_snczi_risk`) with sub-millisecond query latency.
+  - **MITECO SICA Acoustic Noise Map Vectorization (`packages/etl`, `apps/api`, `apps/web`)**:
+    - Ingested official strategic noise maps across roads, railways, airports, and urban agglomerations (`evaluacionambiental:mer_*_lden`).
+    - Packaged decibel isolines (Lden 55–75 dB) into localized vector PMTiles (`packages/etl/dist/openbarrio-etl-dist/noise.pmtiles`).
+    - Generated pre-calculated noise exposure classification in Cloudflare D1 (`census_tract_sica_noise`).
+  - **High-Fidelity MapLibre GL Styling (`apps/web`)**:
+    - Integrated ministerial color ramps and crisp boundary stroke layers (`snczi-layer`, `snczi-borders`, `sica-layer`, `sica-borders`) with reactive opacity and visibility controls synchronized with the floating Cartographic Legends HUD.
+  - **Cadastral Write-Through Cache (`apps/api`)**:
+    - Implemented high-performance LRU cache table (`cadastral_cache`) with 90-day TTL, SHA-256 geometry fingerprinting, and automatic pruning.
+    - Integrated transparent caching into `CatastroProvider` and `CadastralRouterProvider`, dropping recurring audit latencies from >800ms to <3ms.
+    - Added database migration `0007_cadastral_cache.sql`.
+  - **Vector PMTiles Streaming Server with RFC 7233 HTTP Range 206 (`apps/api`)**:
+    - Built `/api/v1/tiles/:filename` route supporting Byte-Range requests for zero-latency local development and seamless Cloudflare R2 edge fallback.
+    - Migrated INE ADRH census tract income layer to `census_tracts.pmtiles` with 36,464 tracts and embedded net household income metrics.
+  - **ETL Idempotency Shield (`packages/etl`, `data/etl_manifest.json`)**:
+    - Integrated content fingerprinting (ETags, Last-Modified, SHA-256) avoiding redundant network ingestion and heavy vector compilation.
+
 ## [0.9.0] - 2026-11-02
 
 ### Added

@@ -1,6 +1,6 @@
 {
   "$schema": "https://openbarrio.org/schemas/etl-manifest-v1.json",
-  "generated_at": "2026-11-02T13:40:00Z",
+  "generated_at": "2026-11-02T13:55:00Z",
   "datasets": {
     "mivau_serpavi": {
       "name": "MIVAU SERPAVI Statutory Rental Benchmarks",
@@ -13,7 +13,7 @@
       "status": "UP_TO_DATE"
     },
     "ine_adrh": {
-      "name": "INE Atlas de Distribución de Renta de los Hogares",
+      "name": "INE Atlas de Distribuci\u00f3n de Renta de los Hogares",
       "version": "2024",
       "upstream_url": "https://www.ine.es/prodyser/cartografia/seccionado_2024.zip",
       "etag": "\"193400d-3ea5a83-6142bd2db4a80\"",
@@ -39,16 +39,18 @@
     "miteco_snczi": {
       "name": "MITECO SNCZI Flood Cartography",
       "version": "ciclo-2",
-      "sha256": "5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5f6a",
-      "last_processed_at": "2026-11-02T13:40:00Z",
-      "status": "PENDING_MIGRATION"
+      "upstream_url": "https://gis.miteco.gob.es/geoserver/agua/wms",
+      "sha256": "47f05598f4c25867e513cefa89e93872ab3115745e46afb737916aaad270749b",
+      "last_processed_at": "2026-11-02T16:30:00Z",
+      "status": "UP_TO_DATE"
     },
     "miteco_sica": {
       "name": "MITECO SICA Strategic Noise Map",
       "version": "fase-4",
-      "sha256": "9a0b1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b",
-      "last_processed_at": "2026-11-02T13:40:00Z",
-      "status": "PENDING_MIGRATION"
+      "upstream_url": "https://gis.miteco.gob.es/geoserver/evaluacionambiental/wms",
+      "sha256": "be18d13654cee0a973632dba6d721e8447919747c116e6979ffc646370ee7456",
+      "last_processed_at": "2026-11-02T16:30:00Z",
+      "status": "UP_TO_DATE"
     }
   }
 }

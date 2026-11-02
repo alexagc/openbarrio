@@ -69,16 +69,16 @@ export interface IINEProvider {
 
 export interface ISICAProvider {
   /**
-   * Retrieve strategic acoustic noise map data (Lden) for geographic coordinates.
+   * Retrieve strategic acoustic noise map data (Lden) for geographic coordinates or pre-calculated census tract.
    */
-  getNoiseData(latitude: number, longitude: number): Promise<NoiseData>;
+  getNoiseData(latitude: number, longitude: number, censusSectionCode?: string): Promise<NoiseData>;
 }
 
 export interface ISNCZIProvider {
   /**
-   * Retrieve flood hazard cartography and return period risk for geographic coordinates.
+   * Retrieve flood hazard cartography and return period risk for geographic coordinates or pre-calculated census tract.
    */
-  getFloodRiskData(latitude: number, longitude: number): Promise<FloodRiskData>;
+  getFloodRiskData(latitude: number, longitude: number, censusSectionCode?: string): Promise<FloodRiskData>;
 }
 
 export interface ISERPAVIProvider {
@@ -132,7 +132,7 @@ export interface IEnvironmentalProvider {
   /**
    * Aggregates environmental indicators (acoustic noise, fluvial flood risk, air quality).
    */
-  getEnvironmentalData(latitude: number, longitude: number): Promise<EnvironmentalData>;
+  getEnvironmentalData(latitude: number, longitude: number, censusSectionCode?: string): Promise<EnvironmentalData>;
 }
 
 export interface ICEEProvider {

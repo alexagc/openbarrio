@@ -27,6 +27,61 @@ describe('MITECO SNCZI Provider', () => {
     expect(flood.isInPreferentialFlowZone).toBe(false);
   });
 
+  describe('SNCZIProvider D1 Hierarchical Resolution (Subphase 17B)', () => {
+    it('resolves flood risk from Cloudflare D1 by census section (cusec)', async () => {
+      const mockDb: any = {
+        prepare: (query: string) => ({
+          bind: (param: string) => ({
+            first: async () => {
+              if (query.includes('WHERE cusec = ?') && param === '4625001001') {
+                return {
+                  flood_risk_level: 'HIGH',
+                  return_period_years: 10,
+                  is_in_preferential_flow_zone: 1,
+                };
+              }
+              return null;
+            },
+          }),
+        }),
+      };
+
+      const provider = new SNCZIProvider({ db: mockDb });
+      const flood = await provider.getFloodRiskData(39.42, -0.41, '4625001001');
+
+      expect(flood.level).toBe('HIGH');
+      expect(flood.returnPeriodYears).toBe(10);
+      expect(flood.isInPreferentialFlowZone).toBe(true);
+    });
+
+    it('falls back to D1 municipal aggregate when census tract has no specific record', async () => {
+      const mockDb: any = {
+        prepare: (query: string) => ({
+          bind: (param: string) => ({
+            first: async () => {
+              if (query.includes('WHERE cusec = ?')) return null;
+              if (query.includes('WHERE municipality_code = ? AND cusec IS NULL') && param === '30001') {
+                return {
+                  flood_risk_level: 'LOW',
+                  return_period_years: 500,
+                  is_in_preferential_flow_zone: 0,
+                };
+              }
+              return null;
+            },
+          }),
+        }),
+      };
+
+      const provider = new SNCZIProvider({ db: mockDb });
+      const flood = await provider.getFloodRiskData(37.98, -1.13, '3000199999');
+
+      expect(flood.level).toBe('LOW');
+      expect(flood.returnPeriodYears).toBe(500);
+      expect(flood.isInPreferentialFlowZone).toBe(false);
+    });
+  });
+
   describe('MockSNCZIProvider', () => {
     const mock = new MockSNCZIProvider();
 
@@ -46,6 +101,13 @@ describe('MITECO SNCZI Provider', () => {
       expect(flood.level).toBe('NONE');
       expect(flood.returnPeriodYears).toBeNull();
       expect(flood.isInPreferentialFlowZone).toBe(false);
+    });
+
+    it('returns high flood hazard when querying with high-risk censusSectionCode', async () => {
+      const flood = await mock.getFloodRiskData(39.42, -0.41, '4625001001');
+
+      expect(flood.level).toBe('HIGH');
+      expect(flood.isInPreferentialFlowZone).toBe(true);
     });
   });
 });

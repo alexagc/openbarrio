@@ -1,28 +1,94 @@
 import { FloodRiskData, FloodRiskLevel } from '@openbarrio/core';
 import { ISNCZIProvider } from './types.js';
 import { UpstreamProviderError } from '../errors/problem-details.js';
+import type { D1Database } from '../types/env.js';
 
 export interface SNCZIProviderOptions {
   wmsBaseUrl?: string;
   timeoutMs?: number;
+  db?: D1Database;
 }
 
 /**
  * MITECO SNCZI (Sistema Nacional de Cartografía de Zonas Inundables) Provider.
  * Queries official flood risk layers across return periods (T=10, 50, 100, 500 years)
  * and the Preferential Flow Zone (Zona de Flujo Preferente - ZFP).
+ * Resolves hierarchically:
+ * 1. Cloudflare D1 pre-calculated risk by Census Section (cusec) or municipal code (sub-5ms)
+ * 2. Fallback to live MITECO WMS GetFeatureInfo
  */
 export class SNCZIProvider implements ISNCZIProvider {
   private readonly wmsBaseUrl: string;
   private readonly timeoutMs: number;
+  private readonly db?: D1Database;
 
   constructor(options: SNCZIProviderOptions = {}) {
     this.wmsBaseUrl =
       options.wmsBaseUrl || 'https://gis.miteco.gob.es/geoserver/agua/wms';
     this.timeoutMs = options.timeoutMs || 8000;
+    this.db = options.db;
   }
 
-  async getFloodRiskData(latitude: number, longitude: number): Promise<FloodRiskData> {
+  async getFloodRiskData(
+    latitude: number,
+    longitude: number,
+    censusSectionCode?: string
+  ): Promise<FloodRiskData> {
+    // 1. Hierarchical Resolution via Cloudflare D1 (sub-5ms Edge execution)
+    if (this.db) {
+      try {
+        if (censusSectionCode) {
+          const row = await this.db
+            .prepare(
+              'SELECT flood_risk_level, return_period_years, is_in_preferential_flow_zone FROM census_tract_snczi_risk WHERE cusec = ?'
+            )
+            .bind(censusSectionCode)
+            .first<{
+              flood_risk_level: string;
+              return_period_years: number | null;
+              is_in_preferential_flow_zone: number;
+            }>();
+
+          if (row) {
+            return {
+              level: (row.flood_risk_level as FloodRiskLevel) || 'NONE',
+              returnPeriodYears:
+                row.return_period_years !== null ? Number(row.return_period_years) : null,
+              isInPreferentialFlowZone: row.is_in_preferential_flow_zone === 1,
+            };
+          }
+
+          if (censusSectionCode.length >= 5) {
+            const muniCode = censusSectionCode.slice(0, 5);
+            const muniRow = await this.db
+              .prepare(
+                'SELECT flood_risk_level, return_period_years, is_in_preferential_flow_zone FROM census_tract_snczi_risk WHERE municipality_code = ? AND cusec IS NULL'
+              )
+              .bind(muniCode)
+              .first<{
+                flood_risk_level: string;
+                return_period_years: number | null;
+                is_in_preferential_flow_zone: number;
+              }>();
+
+            if (muniRow) {
+              return {
+                level: (muniRow.flood_risk_level as FloodRiskLevel) || 'NONE',
+                returnPeriodYears:
+                  muniRow.return_period_years !== null
+                    ? Number(muniRow.return_period_years)
+                    : null,
+                isInPreferentialFlowZone: muniRow.is_in_preferential_flow_zone === 1,
+              };
+            }
+          }
+        }
+      } catch (err: any) {
+        console.warn('[SNCZIProvider] D1 lookup failed, falling back to WMS:', err?.message);
+      }
+    }
+
+    // 2. Fallback to live MITECO WMS GetFeatureInfo
     const delta = 0.0005;
     const minLon = longitude - delta;
     const minLat = latitude - delta;

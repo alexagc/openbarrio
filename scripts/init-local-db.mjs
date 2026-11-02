@@ -18,13 +18,15 @@ db.exec('PRAGMA journal_mode = WAL;');
 db.exec('PRAGMA synchronous = NORMAL;');
 
 // 1. Always apply all migrations idempotently
-console.log('📦 Applying D1 schemas (0001 - 0005)...');
+console.log('📦 Applying D1 schemas (0001 - 0007)...');
 const migrationFiles = [
   'apps/api/migrations/0001_initial_schema.sql',
   'apps/api/migrations/0002_civic_facilities.sql',
   'apps/api/migrations/0003_energy_certificates_and_trends.sql',
   'apps/api/migrations/0004_vut_and_radon_intelligence.sql',
   'apps/api/migrations/0005_serpavi_benchmarks.sql',
+  'apps/api/migrations/0006_environmental_risk_precalc.sql',
+  'apps/api/migrations/0007_cadastral_cache.sql',
 ];
 
 for (const mig of migrationFiles) {
@@ -148,6 +150,91 @@ if (serpaviCount === 0) {
   }
   db.exec('COMMIT;');
   console.log(`✅ Seeded ${serpaviData.length} MIVAU SERPAVI benchmarks.`);
+}
+
+// 3c. Seed MITECO SNCZI Pre-calculated Flood Risk if empty
+const sncziCount = Number(db.prepare('SELECT count(*) as total FROM census_tract_snczi_risk').get()?.total || 0);
+if (sncziCount === 0) {
+  console.log('🌊 Seeding MITECO SNCZI Pre-calculated Flood Risk...');
+  const sncziStmt = db.prepare(`
+    INSERT OR REPLACE INTO census_tract_snczi_risk (cusec, municipality_code, flood_risk_level, return_period_years, is_in_preferential_flow_zone, source_layer)
+    VALUES (?, ?, ?, ?, ?, ?)
+  `);
+  const sncziData = [
+    // Valencia / Paiporta / Horta Sud flood plain
+    ['4625001001', '46250', 'HIGH', 10, 1, 'Zi_laminas_q10'],
+    ['4625001002', '46250', 'MEDIUM', 50, 1, 'Zi_laminas_q50'],
+    [null, '46250', 'HIGH', 10, 1, 'Zi_laminas_q10'],
+    // Murcia / Segura river bend
+    ['3000101001', '30001', 'MEDIUM', 100, 0, 'Zi_laminas_q100'],
+    [null, '30001', 'LOW', 500, 0, 'Zi_laminas_q500'],
+    // Zaragoza / Ebro basin
+    ['5029701001', '50297', 'LOW', 500, 0, 'Zi_laminas_q500'],
+    [null, '50297', 'NONE', null, 0, 'SNCZI_SAFE'],
+    // Madrid / Centro
+    ['2807901001', '28079', 'NONE', null, 0, 'SNCZI_SAFE'],
+    [null, '28079', 'NONE', null, 0, 'SNCZI_SAFE'],
+    // Barcelona / Eixample
+    ['0801901001', '08019', 'NONE', null, 0, 'SNCZI_SAFE'],
+    [null, '08019', 'NONE', null, 0, 'SNCZI_SAFE'],
+  ];
+
+  db.exec('BEGIN TRANSACTION;');
+  for (const row of sncziData) {
+    sncziStmt.run(...row);
+  }
+  db.exec('COMMIT;');
+  console.log(`✅ Seeded ${sncziData.length} MITECO SNCZI flood risk records.`);
+}
+
+// 3d. Seed MITECO SICA Pre-calculated Strategic Noise Map if empty
+const sicaCount = Number(db.prepare('SELECT count(*) as total FROM census_tract_sica_noise').get()?.total || 0);
+if (sicaCount === 0) {
+  console.log('📢 Seeding MITECO SICA Pre-calculated Strategic Noise Map...');
+  const sicaStmt = db.prepare(`
+    INSERT OR REPLACE INTO census_tract_sica_noise (cusec, municipality_code, day_evening_night_decibels, category, predominant_source)
+    VALUES (?, ?, ?, ?, ?)
+  `);
+  const sicaData = [
+    // Madrid
+    ['2807901001', '28079', 68.5, 'NOISY', 'ROAD_TRAFFIC'],
+    ['2807901002', '28079', 64.0, 'MODERATE', 'ROAD_TRAFFIC'],
+    ['2807917001', '28079', 49.0, 'QUIET', 'NONE'],
+    [null, '28079', 58.0, 'MODERATE', 'ROAD_TRAFFIC'],
+    // Barcelona
+    ['0801901001', '08019', 66.5, 'NOISY', 'ROAD_TRAFFIC'],
+    ['0801901002', '08019', 62.0, 'MODERATE', 'ROAD_TRAFFIC'],
+    [null, '08019', 61.5, 'MODERATE', 'ROAD_TRAFFIC'],
+    // Prat airport corridor
+    ['0816901001', '08169', 72.0, 'NOISY', 'AIRPORT'],
+    [null, '08169', 68.0, 'NOISY', 'AIRPORT'],
+    // Valencia
+    ['4625001001', '46250', 65.5, 'NOISY', 'ROAD_TRAFFIC'],
+    [null, '46250', 57.0, 'MODERATE', 'ROAD_TRAFFIC'],
+    // Railway corridor (Sevilla)
+    ['4109101001', '41091', 63.5, 'MODERATE', 'RAILWAY'],
+    [null, '41091', 56.0, 'MODERATE', 'ROAD_TRAFFIC'],
+  ];
+
+  db.exec('BEGIN TRANSACTION;');
+  for (const row of sicaData) {
+    sicaStmt.run(...row);
+  }
+  db.exec('COMMIT;');
+  console.log(`✅ Seeded ${sicaData.length} MITECO SICA noise records.`);
+}
+
+// 3e. Load pre-calculated MITECO environmental SQL distributions if present
+const sncziDistSql = 'packages/etl/dist/openbarrio-etl-dist/snczi_risk.sql';
+if (fs.existsSync(sncziDistSql)) {
+  const sql = fs.readFileSync(sncziDistSql, 'utf8');
+  db.exec(sql);
+}
+
+const sicaDistSql = 'packages/etl/dist/openbarrio-etl-dist/sica_noise.sql';
+if (fs.existsSync(sicaDistSql)) {
+  const sql = fs.readFileSync(sicaDistSql, 'utf8');
+  db.exec(sql);
 }
 
 // 4. Check if census_tract_income already populated

@@ -6,7 +6,9 @@ import {
   CadastralUnit,
   BuildingSurroundingsDTO,
 } from '@openbarrio/core';
+import type { D1Database } from '../types/env.js';
 import { ICatastroProvider } from './types.js';
+import { CadastralCache } from './cadastral-cache.js';
 import {
   parseCatastroCoordinatesXml,
   parseCatastroDnprcXml,
@@ -15,7 +17,6 @@ import {
   isMultiUnitParcelXml,
   parseMultiUnitParcelSummary,
   parseCatastroWfsGeometryXml,
-  parseCatastroSurroundingsWfsXml,
   generateDeterministicSurroundings,
 } from './catastro.parser.js';
 import { UpstreamProviderError } from '../errors/problem-details.js';
@@ -25,12 +26,15 @@ export interface CatastroProviderOptions {
   coordenadasBaseUrl?: string;
   callejeroBaseUrl?: string;
   timeoutMs?: number;
+  db?: D1Database;
+  ttlSeconds?: number;
 }
 
 export class CatastroProvider implements ICatastroProvider {
   private readonly coordenadasBaseUrl: string;
   private readonly callejeroBaseUrl: string;
   private readonly timeoutMs: number;
+  private readonly cache: CadastralCache;
 
   constructor(options: CatastroProviderOptions = {}) {
     this.coordenadasBaseUrl =
@@ -41,9 +45,16 @@ export class CatastroProvider implements ICatastroProvider {
       options.callejeroBaseUrl ||
       'https://ovc.catastro.meh.es/ovcservweb/ovcswlocalizacionrc/ovccallejero.asmx';
     this.timeoutMs = options.timeoutMs || 15000;
+    this.cache = new CadastralCache({ db: options.db, ttlSeconds: options.ttlSeconds });
   }
 
   async getByCoordinates(latitude: number, longitude: number): Promise<CadastralProperty> {
+    const cacheKey = `coords:${latitude.toFixed(5)},${longitude.toFixed(5)}`;
+    const cached = await this.cache.get<CadastralProperty>(cacheKey);
+    if (cached) {
+      return cached;
+    }
+
     const url = `${this.coordenadasBaseUrl}/Consulta_RCCOOR?SRS=EPSG:4326&Coordenada_X=${longitude}&Coordenada_Y=${latitude}`;
 
     let xmlText = '';
@@ -117,7 +128,7 @@ export class CatastroProvider implements ICatastroProvider {
     }
 
     // Fetch detailed property attributes using the cadastral reference obtained
-    return this.getByCadastralReference(
+    const propertyResult = await this.getByCadastralReference(
       cadastralReference,
       {
         latitude: resLat || latitude,
@@ -126,6 +137,9 @@ export class CatastroProvider implements ICatastroProvider {
       },
       targetPortal
     );
+
+    await this.cache.set(cacheKey, 'coordinates', propertyResult.cadastralReference, propertyResult);
+    return propertyResult;
   }
 
     async getByCadastralReference(
@@ -149,6 +163,12 @@ export class CatastroProvider implements ICatastroProvider {
       }
     }
     const cleanRef = refcat.replace(/[\s\-_.]/g, '').toUpperCase();
+    const cacheKey = `prop:${cleanRef}${activePortal ? `:${activePortal}` : ''}`;
+    const cached = await this.cache.get<CadastralProperty>(cacheKey);
+    if (cached) {
+      return cached;
+    }
+
     const dnprcUrl = `${this.callejeroBaseUrl}/Consulta_DNPRC?Provincia=&Municipio=&RC=${encodeURIComponent(cleanRef)}`;
 
     // If coordinates are not passed, query Consulta_CPMRC to get the exact parcel centroid coordinates
@@ -230,11 +250,13 @@ export class CatastroProvider implements ICatastroProvider {
               }
             }
 
-            return parseCatastroDnprcXml(unitXml, cleanRef, resolvedCoords, {
+            const result = parseCatastroDnprcXml(unitXml, cleanRef, resolvedCoords, {
               unitsCount: summary.totalUnits,
               hasCommercialGroundFloor: summary.hasCommercialUnit,
               totalBuildingSurface,
             });
+            await this.cache.set(cacheKey, 'property', cleanRef, result);
+            return result;
           }
         } catch {
           // Fall through to parsing parent XML on unit lookup timeout/error
@@ -242,12 +264,20 @@ export class CatastroProvider implements ICatastroProvider {
       }
     }
 
-    return parseCatastroDnprcXml(xmlText, cleanRef, resolvedCoords);
+    const result = parseCatastroDnprcXml(xmlText, cleanRef, resolvedCoords);
+    await this.cache.set(cacheKey, 'property', cleanRef, result);
+    return result;
   }
 
   async getUnitsByCadastralReference(refcat: string): Promise<CadastralUnitsResponse> {
     const cleanRef = refcat.replace(/[\s\-_.]/g, '').toUpperCase();
     const parcelRef = cleanRef.slice(0, 14);
+    const cacheKey = `units:${parcelRef}`;
+    const cached = await this.cache.get<CadastralUnitsResponse>(cacheKey);
+    if (cached) {
+      return cached;
+    }
+
     const dnprcUrl = `${this.callejeroBaseUrl}/Consulta_DNPRC?Provincia=&Municipio=&RC=${encodeURIComponent(parcelRef)}`;
 
     let xmlText: string;
@@ -272,6 +302,7 @@ export class CatastroProvider implements ICatastroProvider {
 
     const parsed = parseCadastralUnitsXml(xmlText, parcelRef);
     if (!parsed.units || parsed.units.length === 0) {
+      await this.cache.set(cacheKey, 'units', parcelRef, parsed);
       return parsed;
     }
 
@@ -340,15 +371,22 @@ export class CatastroProvider implements ICatastroProvider {
       return u;
     });
 
-    return {
+    const result = {
       ...parsed,
       units: finalUnits,
     };
+    await this.cache.set(cacheKey, 'units', parcelRef, result);
+    return result;
   }
 
   async getGeometryByCadastralReference(refcat: string): Promise<CadastralGeometry> {
     const cleanRef = refcat.replace(/[\s\-_.]/g, '').toUpperCase();
     const parcelRef = cleanRef.slice(0, 14);
+    const cacheKey = `geom:${parcelRef}`;
+    const cached = await this.cache.get<CadastralGeometry>(cacheKey);
+    if (cached) {
+      return cached;
+    }
 
     // 1. Try Building footprint (wfsBU)
     const buUrl = `https://ovc.catastro.meh.es/INSPIRE/wfsBU.aspx?service=WFS&version=2.0.0&request=GetFeature&STOREDQUERY_ID=GetBuildingByParcel&refcat=${encodeURIComponent(parcelRef)}&srsname=EPSG::4326`;
@@ -368,7 +406,7 @@ export class CatastroProvider implements ICatastroProvider {
         if (parsed) {
           const floors = parsed.numberOfFloors || 4;
           const height = floors * 3.2;
-          return {
+          const buildingGeom: CadastralGeometry = {
             cadastralReference: cleanRef,
             type: 'building',
             geometry: {
@@ -381,6 +419,8 @@ export class CatastroProvider implements ICatastroProvider {
               areaM2: parsed.areaM2,
             },
           };
+          await this.cache.set(cacheKey, 'geometry', parcelRef, buildingGeom);
+          return buildingGeom;
         }
       }
     } catch {
@@ -403,7 +443,7 @@ export class CatastroProvider implements ICatastroProvider {
         const xml = await res.text();
         const parsed = parseCatastroWfsGeometryXml(xml, parcelRef, 'parcel');
         if (parsed) {
-          return {
+          const parcelGeom: CadastralGeometry = {
             cadastralReference: cleanRef,
             type: 'parcel',
             geometry: {
@@ -416,6 +456,8 @@ export class CatastroProvider implements ICatastroProvider {
               areaM2: parsed.areaM2,
             },
           };
+          await this.cache.set(cacheKey, 'geometry', parcelRef, parcelGeom);
+          return parcelGeom;
         }
       }
     } catch {
@@ -445,7 +487,7 @@ export class CatastroProvider implements ICatastroProvider {
       ],
     ];
 
-    return {
+    const fallbackGeom: CadastralGeometry = {
       cadastralReference: cleanRef,
       type: 'fallback',
       geometry: {
@@ -457,11 +499,18 @@ export class CatastroProvider implements ICatastroProvider {
         height: 12.8,
       },
     };
+    await this.cache.set(cacheKey, 'geometry', parcelRef, fallbackGeom);
+    return fallbackGeom;
   }
 
   async getSurroundingsByCadastralReference(refcat: string): Promise<BuildingSurroundingsDTO> {
     const cleanRef = refcat.replace(/[\s\-_.]/g, '').toUpperCase();
     const parcelRef = cleanRef.substring(0, 14);
+    const cacheKey = `surroundings:${parcelRef}`;
+    const cached = await this.cache.get<BuildingSurroundingsDTO>(cacheKey);
+    if (cached) {
+      return cached;
+    }
 
     // 1. Query Catastro INSPIRE WFS GetNeighbourParcel to get real official cadastral parcels
     const realParcels: BuildingSurroundingsDTO['parcels'] = [];
@@ -655,10 +704,12 @@ export class CatastroProvider implements ICatastroProvider {
     }
 
     if (realParcels.length > 0) {
-      return {
+      const result: BuildingSurroundingsDTO = {
         targetRefcat: cleanRef,
         parcels: realParcels,
       };
+      await this.cache.set(cacheKey, 'surroundings', parcelRef, result);
+      return result;
     }
 
     // Fallback if WFS unavailable
@@ -676,6 +727,7 @@ export class CatastroProvider implements ICatastroProvider {
     deterministic.parcels = deterministic.parcels.filter(
       (p) => p.cadastralReference !== cleanRef && p.cadastralReference !== parcelRef
     );
+    await this.cache.set(cacheKey, 'surroundings', parcelRef, deterministic);
     return deterministic;
   }
 

@@ -80,10 +80,12 @@ export class AuditService {
     const lat = property.coordinates.latitude;
     const lon = property.coordinates.longitude;
 
-    // 2. Fetch parallel provider metrics
-    const [neighborhood, environment, connectivity, urbanPlanning, energy] = await Promise.all([
-      this.resolveNeighborhood(property),
-      this.resolveEnvironment(property),
+    // 2. Resolve socioeconomic neighborhood first to obtain authoritative censusSectionCode
+    const neighborhood = await this.resolveNeighborhood(property);
+
+    // 3. Fetch parallel provider metrics using census tract context
+    const [environment, connectivity, urbanPlanning, energy] = await Promise.all([
+      this.resolveEnvironment(property, neighborhood.censusSectionCode),
       this.resolveConnectivity(lat, lon, {
         municipality: property.address.municipality,
         street: property.address.street,
@@ -92,7 +94,7 @@ export class AuditService {
       this.resolveEnergy(property),
     ]);
 
-    // 3. Calculate MIVAU SERPAVI rental benchmark & check stressed market status
+    // 4. Calculate MIVAU SERPAVI rental benchmark & check stressed market status
     let rentalBenchmark: RentalBenchmark | undefined;
     try {
       rentalBenchmark = await this.providers.serpavi.getRentalBenchmark(
@@ -103,7 +105,7 @@ export class AuditService {
       rentalBenchmark = undefined;
     }
 
-    // 4. Longitudinal Market Trends (INE IPV + ADRH income history)
+    // 5. Longitudinal Market Trends (INE IPV + ADRH income history)
     let marketTrends: NeighborhoodTrends | undefined;
     try {
       marketTrends = await this.providers.marketTrends.getMarketTrends(
@@ -115,7 +117,7 @@ export class AuditService {
       marketTrends = undefined;
     }
 
-    // 5. INE Experimental VUT Tourist Housing Evaluation
+    // 6. INE Experimental VUT Tourist Housing Evaluation
     let vut: VutEvaluationDTO | undefined;
     try {
       vut = await this.providers.vut.getVutEvaluation(neighborhood.censusSectionCode);
@@ -123,7 +125,7 @@ export class AuditService {
       vut = undefined;
     }
 
-    // 6. CTE DB-HS 6 Radon Geological Hazard Evaluation
+    // 7. CTE DB-HS 6 Radon Geological Hazard Evaluation
     let radon: RadonEvaluationDTO | undefined;
     try {
       const muniCode = property.address.municipalityCode || '001';
@@ -149,7 +151,7 @@ export class AuditService {
       radon = undefined;
     }
 
-    // 7. Municipal IBI & Regional ITP Fiscal Estimation
+    // 8. Municipal IBI & Regional ITP Fiscal Estimation
     const cadastralSurface = property.unit?.builtSurfaceM2 || property.building.builtSurfaceM2;
     const fiscal: FiscalEstimateDTO = calculateFiscalEstimate({
       cadastralReference: property.cadastralReference,
@@ -160,7 +162,7 @@ export class AuditService {
       constructionYear: property.building.constructionYear,
     });
 
-    // 8. Calculate Barrio Due Diligence Score (5 calibrated pillars + VUT recalibration)
+    // 9. Calculate Barrio Due Diligence Score (5 calibrated pillars + VUT recalibration)
     const score = calculateBarrioScore(
       property,
       neighborhood,
@@ -173,10 +175,10 @@ export class AuditService {
       vut
     );
 
-    // 9. Calculate Building CapEx & Community Risk Intelligence
+    // 10. Calculate Building CapEx & Community Risk Intelligence
     const capex = calculateBuildingCapExRisk(property);
 
-    // 10. Fetch surrounding buildings for 3D context
+    // 11. Fetch surrounding buildings for 3D context
     let surroundings: BuildingSurroundingsDTO | undefined;
     try {
       surroundings = await this.getCadastralSurroundings(property.cadastralReference);
@@ -258,12 +260,16 @@ export class AuditService {
     }
   }
 
-  private async resolveEnvironment(property: CadastralProperty): Promise<EnvironmentalData> {
+  private async resolveEnvironment(
+    property: CadastralProperty,
+    censusSectionCode?: string
+  ): Promise<EnvironmentalData> {
     let envData: EnvironmentalData;
     try {
       envData = await this.providers.environmental.getEnvironmentalData(
         property.coordinates.latitude,
-        property.coordinates.longitude
+        property.coordinates.longitude,
+        censusSectionCode
       );
     } catch {
       // Dynamic baseline: quieter in residential coordinates, moderate on main thoroughfares

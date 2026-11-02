@@ -50,12 +50,14 @@ vi.mock('maplibre-gl', () => {
       Popup: MockPopup,
       setWorkerUrl: vi.fn(),
       getWorkerUrl: vi.fn(),
+      addProtocol: vi.fn(),
     },
     Map: vi.fn(() => mockMapInstance),
     Marker: MockMarker,
     Popup: MockPopup,
     setWorkerUrl: vi.fn(),
     getWorkerUrl: vi.fn(),
+    addProtocol: vi.fn(),
   };
 });
 
@@ -193,7 +195,31 @@ describe('MapView Component (Stitch Civic Precision)', () => {
       expect(esriDarkLayer.maxzoom).toBe(22);
     });
 
-    it('should configure ine-income-wms source with official INE ADRH MapServer choropleth endpoint', async () => {
+    it('should configure PMTiles protocol and vector source for census tracts with interpolated color ramp', async () => {
+      const maplibreMock = await import('maplibre-gl');
+      render(
+        <MapView
+          selectedCoords={{ lat: 40.42028, lon: -3.70379 }}
+          onMapClick={vi.fn()}
+        />
+      );
+
+      expect(maplibreMock.addProtocol).toHaveBeenCalledWith('pmtiles', expect.any(Function));
+
+      const mapConstructor = maplibreMock.Map as unknown as ReturnType<typeof vi.fn>;
+      const lastCallArgs = mapConstructor.mock.calls[mapConstructor.mock.calls.length - 1][0];
+      const ineSource = lastCallArgs.style.sources['ine-income-pmtiles'];
+      expect(ineSource).toBeTruthy();
+      expect(ineSource.type).toBe('vector');
+      expect(ineSource.url).toContain('/api/v1/tiles/census_tracts.pmtiles');
+
+      const ineLayer = lastCallArgs.style.layers.find((l: any) => l.id === 'ine-income-layer');
+      expect(ineLayer).toBeTruthy();
+      expect(ineLayer.type).toBe('fill');
+      expect(ineLayer.paint['fill-color'][0]).toBe('interpolate');
+    });
+
+    it('should rely on Legend HUD instead of attaching hover tooltip listeners on ine-income-layer', async () => {
       const maplibreMock = await import('maplibre-gl');
       render(
         <MapView
@@ -203,10 +229,10 @@ describe('MapView Component (Stitch Civic Precision)', () => {
       );
 
       const mapConstructor = maplibreMock.Map as unknown as ReturnType<typeof vi.fn>;
-      const lastCallArgs = mapConstructor.mock.calls[mapConstructor.mock.calls.length - 1][0];
-      const ineSource = lastCallArgs.style.sources['ine-income-wms'];
-      expect(ineSource).toBeTruthy();
-      expect(ineSource.tiles[0]).toContain('ADRH_renta_media_por_hogar/MapServer/export');
+      const mapInstance = mapConstructor.mock.results[mapConstructor.mock.results.length - 1].value;
+
+      expect(mapInstance.on).not.toHaveBeenCalledWith('mousemove', 'ine-income-layer', expect.any(Function));
+      expect(mapInstance.on).not.toHaveBeenCalledWith('mouseleave', 'ine-income-layer', expect.any(Function));
     });
   });
 
@@ -498,7 +524,7 @@ describe('MapView Component (Stitch Civic Precision)', () => {
       expect(line15.filter).toEqual(['==', ['get', 'ring'], '15m']);
     });
 
-    it('should configure MITECO SICA and SNCZI raster sources and overzoom up to z22', async () => {
+    it('should configure MITECO SICA and SNCZI PMTiles vector sources and overzoom up to z22', async () => {
       const maplibreMock = await import('maplibre-gl');
       render(
         <MapView
@@ -512,25 +538,23 @@ describe('MapView Component (Stitch Civic Precision)', () => {
 
       const sicaSource = lastCallArgs.style.sources['miteco-sica'];
       expect(sicaSource).toBeTruthy();
-      expect(sicaSource.type).toBe('raster');
-      expect(sicaSource.maxzoom).toBe(18);
-      // Ensure no malformed empty STYLES parameter in any tile URL
-      sicaSource.tiles.forEach((url: string) => {
-        expect(url).not.toContain('&STYLES=&');
-      });
+      expect(sicaSource.type).toBe('vector');
+      expect(sicaSource.url).toContain('/api/v1/tiles/noise.pmtiles');
 
       const sncziSource = lastCallArgs.style.sources['miteco-snczi'];
       expect(sncziSource).toBeTruthy();
-      expect(sncziSource.type).toBe('raster');
-      expect(sncziSource.maxzoom).toBe(18);
+      expect(sncziSource.type).toBe('vector');
+      expect(sncziSource.url).toContain('/api/v1/tiles/floods.pmtiles');
 
       // Verify layers allow zooming past z19 (up to z22)
       const sicaLayer = lastCallArgs.style.layers.find((l: any) => l.id === 'sica-layer');
       expect(sicaLayer).toBeTruthy();
+      expect(sicaLayer.type).toBe('fill');
       expect(sicaLayer.maxzoom).toBe(22);
 
       const sncziLayer = lastCallArgs.style.layers.find((l: any) => l.id === 'snczi-layer');
       expect(sncziLayer).toBeTruthy();
+      expect(sncziLayer.type).toBe('fill');
       expect(sncziLayer.maxzoom).toBe(22);
     });
   });

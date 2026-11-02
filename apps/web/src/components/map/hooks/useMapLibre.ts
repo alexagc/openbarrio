@@ -1,7 +1,17 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import * as maplibregl from 'maplibre-gl';
 import type { Map as MapLibreMap, Marker, MapMouseEvent } from 'maplibre-gl';
+import { Protocol } from 'pmtiles';
 import { generate3dBuildingFootprints } from '../../../utils/solar';
+
+let pmtilesProtocolRegistered = false;
+function registerPMTilesProtocol() {
+  if (!pmtilesProtocolRegistered && typeof (maplibregl as any).addProtocol === 'function') {
+    const protocol = new Protocol();
+    (maplibregl as any).addProtocol('pmtiles', protocol.tile);
+    pmtilesProtocolRegistered = true;
+  }
+}
 
 export type BasemapType = 'dark-gis' | 'pnoa-satellite' | 'ign-base';
 
@@ -96,6 +106,8 @@ export function useMapLibre({
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
 
+    registerPMTilesProtocol();
+
     const initialLon = selectedCoords ? selectedCoords.lon : -3.70379;
     const initialLat = selectedCoords ? selectedCoords.lat : 40.42028;
 
@@ -170,32 +182,19 @@ export function useMapLibre({
             tileSize: 256,
             attribution: '&copy; Catastro Foral de Gipuzkoa (b5m)',
           },
-          'ine-income-wms': {
-            type: 'raster',
-            tiles: [
-              'https://www.ine.es/servergis/rest/services/ws/ADRH_renta_media_por_hogar/MapServer/export?bbox={bbox-epsg-3857}&size=256,256&f=image&transparent=true&bboxSR=3857&imageSR=3857',
-            ],
-            tileSize: 256,
-            attribution: '&copy; Instituto Nacional de Estadística (INE ADRH)',
+          'ine-income-pmtiles': {
+            type: 'vector',
+            url: `pmtiles://${(import.meta.env.VITE_API_URL || '').replace(/\/$/, '')}/api/v1/tiles/census_tracts.pmtiles`,
+            attribution: '&copy; Instituto Nacional de Estadística (INE ADRH) & IGN',
           },
           'miteco-sica': {
-            type: 'raster',
-            tiles: [
-              `${(import.meta.env.VITE_API_URL || '').replace(/\/$/, '')}/api/v1/tiles/miteco/noise?bbox={bbox-epsg-3857}&width=256&height=256`,
-              'https://gis.miteco.gob.es/geoserver/evaluacionambiental/wms?SERVICE=WMS&VERSION=1.3.0&REQUEST=GetMap&FORMAT=image/png&TRANSPARENT=TRUE&LAYERS=mer_carretera_lden,mer_aglomeracion_lden,mer_ferrocarril_lden,mer_aeropuerto_lden&CRS=EPSG:3857&WIDTH=256&HEIGHT=256&BBOX={bbox-epsg-3857}',
-            ],
-            tileSize: 256,
-            maxzoom: 18,
+            type: 'vector',
+            url: `pmtiles://${(import.meta.env.VITE_API_URL || '').replace(/\/$/, '')}/api/v1/tiles/noise.pmtiles`,
             attribution: '&copy; MITECO SICA / MER',
           },
           'miteco-snczi': {
-            type: 'raster',
-            tiles: [
-              `${(import.meta.env.VITE_API_URL || '').replace(/\/$/, '')}/api/v1/tiles/miteco/flood?bbox={bbox-epsg-3857}&width=256&height=256`,
-              'https://gis.miteco.gob.es/geoserver/agua/wms?SERVICE=WMS&VERSION=1.3.0&REQUEST=GetMap&FORMAT=image/png&TRANSPARENT=TRUE&LAYERS=Zi_laminas_q10,Zi_laminas_q50,Zi_laminas_q100,Zi_laminas_q500,ZI_Laminas_ZFP&CRS=EPSG:3857&WIDTH=256&HEIGHT=256&BBOX={bbox-epsg-3857}',
-            ],
-            tileSize: 256,
-            maxzoom: 18,
+            type: 'vector',
+            url: `pmtiles://${(import.meta.env.VITE_API_URL || '').replace(/\/$/, '')}/api/v1/tiles/floods.pmtiles`,
             attribution: '&copy; MITECO SNCZI',
           },
           'walking-isochrones': {
@@ -242,29 +241,185 @@ export function useMapLibre({
           },
           {
             id: 'ine-income-layer',
-            type: 'raster',
-            source: 'ine-income-wms',
+            type: 'fill',
+            source: 'ine-income-pmtiles',
+            'source-layer': 'census_tracts',
             minzoom: 6,
             maxzoom: 20,
-            paint: { 'raster-opacity': 0.75 },
+            paint: {
+              'fill-color': [
+                'interpolate',
+                ['linear'],
+                ['coalesce', ['get', 'income'], ['get', 'average_net_household_income_eur'], 28000],
+                14000, '#312e81',
+                20000, '#1e40af',
+                28000, '#0284c7',
+                36000, '#0d9488',
+                44000, '#10b981',
+                54000, '#eab308',
+                68000, '#f97316',
+                85000, '#ef4444',
+              ],
+              'fill-opacity': 0.75,
+            },
+            layout: { visibility: 'visible' },
+          },
+          {
+            id: 'ine-income-borders',
+            type: 'line',
+            source: 'ine-income-pmtiles',
+            'source-layer': 'census_tracts',
+            minzoom: 10,
+            maxzoom: 20,
+            paint: {
+              'line-color': '#0B1326',
+              'line-width': ['interpolate', ['linear'], ['zoom'], 10, 0.5, 16, 1.5],
+              'line-opacity': 0.35,
+            },
             layout: { visibility: 'visible' },
           },
           {
             id: 'snczi-layer',
-            type: 'raster',
+            type: 'fill',
             source: 'miteco-snczi',
-            minzoom: 7,
+            'source-layer': 'snczi_floods',
+            minzoom: 6,
             maxzoom: 22,
-            paint: { 'raster-opacity': 0.75 },
+            paint: {
+              'fill-color': [
+                'case',
+                ['==', ['get', 'zfp'], 1],
+                '#991b1b',
+                ['==', ['get', 'period'], 10],
+                '#ef4444',
+                ['==', ['get', 'period'], 50],
+                '#f97316',
+                ['==', ['get', 'period'], 100],
+                '#0284c7',
+                ['==', ['get', 'period'], 500],
+                '#06b6d4',
+                [
+                  'match',
+                  ['coalesce', ['get', 'level'], ['get', 'flood_risk_level'], 'NONE'],
+                  'HIGH',
+                  '#ef4444',
+                  'MEDIUM',
+                  '#0284c7',
+                  'LOW',
+                  '#06b6d4',
+                  '#0284c7',
+                ],
+              ],
+              'fill-opacity': 0.7,
+            },
+            layout: { visibility: 'none' },
+          },
+          {
+            id: 'snczi-borders',
+            type: 'line',
+            source: 'miteco-snczi',
+            'source-layer': 'snczi_floods',
+            minzoom: 6,
+            maxzoom: 22,
+            paint: {
+              'line-color': [
+                'case',
+                ['==', ['get', 'zfp'], 1],
+                '#f87171',
+                ['==', ['get', 'period'], 10],
+                '#fca5a5',
+                ['==', ['get', 'period'], 50],
+                '#fdba74',
+                ['==', ['get', 'period'], 100],
+                '#38bdf8',
+                ['==', ['get', 'period'], 500],
+                '#a5f3fc',
+                '#38bdf8',
+              ],
+              'line-width': ['interpolate', ['linear'], ['zoom'], 6, 0.5, 14, 1.5],
+              'line-opacity': 0.85,
+            },
             layout: { visibility: 'none' },
           },
           {
             id: 'sica-layer',
-            type: 'raster',
+            type: 'fill',
             source: 'miteco-sica',
-            minzoom: 7,
+            'source-layer': 'sica_noise',
+            minzoom: 6,
             maxzoom: 22,
-            paint: { 'raster-opacity': 0.75 },
+            paint: {
+              'fill-color': [
+                'case',
+                ['has', 'lden'],
+                [
+                  'step',
+                  ['get', 'lden'],
+                  '#10b981',
+                  55,
+                  '#eab308',
+                  65,
+                  '#f97316',
+                  75,
+                  '#7f1d1d',
+                ],
+                [
+                  'match',
+                  ['get', 'category'],
+                  'VERY_NOISY',
+                  '#7f1d1d',
+                  'NOISY',
+                  '#f97316',
+                  'MODERATE',
+                  '#eab308',
+                  'QUIET',
+                  '#10b981',
+                  '#64748b',
+                ],
+              ],
+              'fill-opacity': 0.65,
+            },
+            layout: { visibility: 'none' },
+          },
+          {
+            id: 'sica-borders',
+            type: 'line',
+            source: 'miteco-sica',
+            'source-layer': 'sica_noise',
+            minzoom: 6,
+            maxzoom: 22,
+            paint: {
+              'line-color': [
+                'case',
+                ['has', 'lden'],
+                [
+                  'step',
+                  ['get', 'lden'],
+                  '#86efac',
+                  55,
+                  '#fef08a',
+                  65,
+                  '#fdba74',
+                  75,
+                  '#fca5a5',
+                ],
+                [
+                  'match',
+                  ['get', 'category'],
+                  'VERY_NOISY',
+                  '#fca5a5',
+                  'NOISY',
+                  '#fdba74',
+                  'MODERATE',
+                  '#fef08a',
+                  'QUIET',
+                  '#86efac',
+                  '#94a3b8',
+                ],
+              ],
+              'line-width': ['interpolate', ['linear'], ['zoom'], 6, 0.5, 14, 1.2],
+              'line-opacity': 0.75,
+            },
             layout: { visibility: 'none' },
           },
           {

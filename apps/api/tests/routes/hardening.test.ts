@@ -205,13 +205,22 @@ describe('Phase 6: Cloudflare Edge Hardening & Deployment Tests', () => {
   });
 
   describe('Cloudflare R2 Storage Tiles Route', () => {
-    it('returns 503 Problem Details when TILES_BUCKET binding is missing', async () => {
+    it('returns 503 Problem Details when TILES_BUCKET binding is missing and file not found locally', async () => {
       const app = buildApp({ providers: createProviders({ useMocks: true }) });
-      const res = await app.request('/api/v1/tiles/census_tracts.pmtiles');
+      const res = await app.request('/api/v1/tiles/non_existent.pmtiles');
 
       expect(res.status).toBe(503);
       const problem = await res.json();
       expect(problem.type).toBe('https://openbarrio.org/errors/tiles-bucket-not-configured');
+    });
+
+    it('serves local PMTiles file when available without TILES_BUCKET', async () => {
+      const app = buildApp({ providers: createProviders({ useMocks: true }) });
+      const res = await app.request('/api/v1/tiles/census_tracts.pmtiles');
+
+      expect([200, 206]).toContain(res.status);
+      expect(res.headers.get('content-type')).toBe('application/vnd.pmtiles');
+      expect(res.headers.get('accept-ranges')).toBe('bytes');
     });
 
     it('streams PMTiles when TILES_BUCKET binding is provided', async () => {
@@ -247,6 +256,46 @@ describe('Phase 6: Cloudflare Edge Hardening & Deployment Tests', () => {
       expect(res.headers.get('content-type')).toBe('application/vnd.pmtiles');
       expect(res.headers.get('cache-control')).toContain('immutable');
       expect(res.headers.get('etag')).toBe('"mock-etag"');
+      expect(res.headers.get('accept-ranges')).toBe('bytes');
+    });
+
+    it('handles RFC 7233 HTTP Range requests (206 Partial Content) for PMTiles streaming', async () => {
+      const mockBucket: R2Bucket = {
+        get: async (key: string, options?: any) => {
+          if (key === 'floods.pmtiles' || key === 'noise.pmtiles') {
+            return {
+              body: new ReadableStream(),
+              arrayBuffer: async () => new ArrayBuffer(8),
+              text: async () => 'pmtiles-binary',
+              json: async () => ({}),
+              blob: async () => new Blob(),
+              httpEtag: '"mock-etag"',
+              size: 4096,
+              range: options?.range,
+            };
+          }
+          return null;
+        },
+        put: async () => ({}),
+        delete: async () => {},
+      };
+
+      const app = new Hono<{ Bindings: { TILES_BUCKET: R2Bucket } }>();
+      app.use('*', async (c, next) => {
+        c.env = { TILES_BUCKET: mockBucket };
+        await next();
+      });
+      const { createTilesRoutes } = await import('../../src/routes/tiles.routes.js');
+      app.route('/api/v1/tiles', createTilesRoutes() as any);
+
+      const res = await app.request('/api/v1/tiles/floods.pmtiles', {
+        headers: { Range: 'bytes=0-100' },
+      });
+      expect(res.status).toBe(206);
+      expect(res.headers.get('content-range')).toBe('bytes 0-100/4096');
+      expect(res.headers.get('content-length')).toBe('101');
+      expect(res.headers.get('content-type')).toBe('application/vnd.pmtiles');
+      expect(res.headers.get('accept-ranges')).toBe('bytes');
     });
   });
 });

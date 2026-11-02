@@ -7,10 +7,10 @@ import { UrbanPlanningDataSchema } from './urban-planning.js';
 import { BuildingCapExRiskSchema } from './capex.js';
 import { EnergyPerformanceCertificateSchema } from './energy.js';
 import { NeighborhoodTrendsSchema } from './market.js';
-import { RadonEvaluationSchema, RadonEvaluationDTO } from './radon.js';
-import { VutEvaluationSchema, VutEvaluationDTO } from './vut.js';
-import { FiscalEstimateSchema, FiscalEstimateDTO } from './fiscal.js';
-import { BuildingSurroundingsSchema, BuildingSurroundingsDTO } from './surroundings.js';
+import { RadonEvaluationSchema } from './radon.js';
+import { VutEvaluationSchema } from './vut.js';
+import { FiscalEstimateSchema } from './fiscal.js';
+import { BuildingSurroundingsSchema } from './surroundings.js';
 
 if (!FormatRegistry.Has('uuid')) {
   FormatRegistry.Set('uuid', (value) => typeof value === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value));

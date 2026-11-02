@@ -27,6 +27,61 @@ describe('MITECO SICA Provider', () => {
     expect(noise.predominantSource).toBe('NONE');
   });
 
+  describe('SICAProvider D1 Hierarchical Resolution (Subphase 17C)', () => {
+    it('resolves acoustic noise from Cloudflare D1 by census section (cusec)', async () => {
+      const mockDb: any = {
+        prepare: (query: string) => ({
+          bind: (param: string) => ({
+            first: async () => {
+              if (query.includes('WHERE cusec = ?') && param === '2807901001') {
+                return {
+                  day_evening_night_decibels: 68.5,
+                  category: 'NOISY',
+                  predominant_source: 'ROAD_TRAFFIC',
+                };
+              }
+              return null;
+            },
+          }),
+        }),
+      };
+
+      const provider = new SICAProvider({ db: mockDb });
+      const noise = await provider.getNoiseData(40.42, -3.70, '2807901001');
+
+      expect(noise.dayEveningNightDecibels).toBe(68.5);
+      expect(noise.category).toBe('NOISY');
+      expect(noise.predominantSource).toBe('ROAD_TRAFFIC');
+    });
+
+    it('falls back to D1 municipal aggregate when census tract has no specific record', async () => {
+      const mockDb: any = {
+        prepare: (query: string) => ({
+          bind: (param: string) => ({
+            first: async () => {
+              if (query.includes('WHERE cusec = ?')) return null;
+              if (query.includes('WHERE municipality_code = ? AND cusec IS NULL') && param === '28079') {
+                return {
+                  day_evening_night_decibels: 58.0,
+                  category: 'MODERATE',
+                  predominant_source: 'ROAD_TRAFFIC',
+                };
+              }
+              return null;
+            },
+          }),
+        }),
+      };
+
+      const provider = new SICAProvider({ db: mockDb });
+      const noise = await provider.getNoiseData(40.45, -3.68, '2807999999');
+
+      expect(noise.dayEveningNightDecibels).toBe(58.0);
+      expect(noise.category).toBe('MODERATE');
+      expect(noise.predominantSource).toBe('ROAD_TRAFFIC');
+    });
+  });
+
   describe('MockSICAProvider', () => {
     const mock = new MockSICAProvider();
 
@@ -53,6 +108,13 @@ describe('MITECO SICA Provider', () => {
       expect(noise.category).toBe('QUIET');
       expect(noise.dayEveningNightDecibels).toBe(49);
       expect(noise.predominantSource).toBe('NONE');
+    });
+
+    it('returns airport noise when queried with Prat airport censusSectionCode', async () => {
+      const noise = await mock.getNoiseData(41.30, 2.08, '0816901001');
+
+      expect(noise.category).toBe('NOISY');
+      expect(noise.predominantSource).toBe('AIRPORT');
     });
   });
 });

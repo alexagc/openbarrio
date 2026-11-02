@@ -66,6 +66,7 @@ export * from './connectivity.provider.js';
 export * from './urban-planning.provider.js';
 export * from './air-quality.provider.js';
 export * from './capex.provider.js';
+export * from './cadastral-cache.js';
 export * from './navarra.provider.js';
 export * from './euskadi.provider.js';
 export * from './cadastral-router.provider.js';
@@ -160,13 +161,14 @@ export function createProviders(
   }
 
   const defaultCatastro = new CadastralRouterProvider({
-    dgc: new CatastroProvider(),
+    dgc: new CatastroProvider({ db }),
     navarra: new NavarraCatastroProvider(),
     euskadi: new EuskadiCatastroProvider(),
+    db,
   });
   const defaultINE = new INEProvider({ db });
-  const defaultSICA = new SICAProvider();
-  const defaultSNCZI = new SNCZIProvider();
+  const defaultSICA = new SICAProvider({ db });
+  const defaultSNCZI = new SNCZIProvider({ db });
   const defaultSERPAVI = new SERPAVIProvider({ db });
   const defaultAirQuality = new AirQualityProvider();
   const defaultConnectivity = new D1CivicConnectivityProvider({ db });

@@ -1,27 +1,89 @@
 import { NoiseData, NoiseLevelCategory, PredominantNoiseSource } from '@openbarrio/core';
 import { ISICAProvider } from './types.js';
 import { UpstreamProviderError } from '../errors/problem-details.js';
+import type { D1Database } from '../types/env.js';
 
 export interface SICAProviderOptions {
   wmsBaseUrl?: string;
   timeoutMs?: number;
+  db?: D1Database;
 }
 
 /**
  * MITECO SICA (Sistema de Información sobre Contaminación Acústica) Provider.
  * Queries strategic noise maps (Lden) across road, railway, airport, and agglomeration corridors.
+ * Resolves hierarchically:
+ * 1. Cloudflare D1 pre-calculated acoustic maps by Census Section (cusec) or municipal code (sub-5ms)
+ * 2. Fallback to live MITECO WMS GetFeatureInfo
  */
 export class SICAProvider implements ISICAProvider {
   private readonly wmsBaseUrl: string;
   private readonly timeoutMs: number;
+  private readonly db?: D1Database;
 
   constructor(options: SICAProviderOptions = {}) {
     this.wmsBaseUrl =
       options.wmsBaseUrl || 'https://gis.miteco.gob.es/geoserver/evaluacionambiental/wms';
     this.timeoutMs = options.timeoutMs || 8000;
+    this.db = options.db;
   }
 
-  async getNoiseData(latitude: number, longitude: number): Promise<NoiseData> {
+  async getNoiseData(
+    latitude: number,
+    longitude: number,
+    censusSectionCode?: string
+  ): Promise<NoiseData> {
+    // 1. Hierarchical Resolution via Cloudflare D1 (sub-5ms Edge execution)
+    if (this.db) {
+      try {
+        if (censusSectionCode) {
+          const row = await this.db
+            .prepare(
+              'SELECT day_evening_night_decibels, category, predominant_source FROM census_tract_sica_noise WHERE cusec = ?'
+            )
+            .bind(censusSectionCode)
+            .first<{
+              day_evening_night_decibels: number;
+              category: string;
+              predominant_source: string;
+            }>();
+
+          if (row) {
+            return {
+              dayEveningNightDecibels: Number(row.day_evening_night_decibels),
+              category: (row.category as NoiseLevelCategory) || 'QUIET',
+              predominantSource: (row.predominant_source as PredominantNoiseSource) || 'NONE',
+            };
+          }
+
+          if (censusSectionCode.length >= 5) {
+            const muniCode = censusSectionCode.slice(0, 5);
+            const muniRow = await this.db
+              .prepare(
+                'SELECT day_evening_night_decibels, category, predominant_source FROM census_tract_sica_noise WHERE municipality_code = ? AND cusec IS NULL'
+              )
+              .bind(muniCode)
+              .first<{
+                day_evening_night_decibels: number;
+                category: string;
+                predominant_source: string;
+              }>();
+
+            if (muniRow) {
+              return {
+                dayEveningNightDecibels: Number(muniRow.day_evening_night_decibels),
+                category: (muniRow.category as NoiseLevelCategory) || 'QUIET',
+                predominantSource: (muniRow.predominant_source as PredominantNoiseSource) || 'NONE',
+              };
+            }
+          }
+        }
+      } catch (err: any) {
+        console.warn('[SICAProvider] D1 lookup failed, falling back to WMS:', err?.message);
+      }
+    }
+
+    // 2. Fallback to live MITECO WMS GetFeatureInfo
     // Generate small bounding box around the point (~50m delta) for WMS GetFeatureInfo
     const delta = 0.0005;
     const minLon = longitude - delta;

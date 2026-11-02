@@ -18,10 +18,14 @@ export class MockEnvironmentalProvider implements IEnvironmentalProvider {
     this.airQuality = options?.airQuality;
   }
 
-  async getEnvironmentalData(latitude: number, longitude: number): Promise<EnvironmentalData> {
+  async getEnvironmentalData(
+    latitude: number,
+    longitude: number,
+    censusSectionCode?: string
+  ): Promise<EnvironmentalData> {
     const [noise, floodRisk, airQuality] = await Promise.all([
-      this.sica.getNoiseData(latitude, longitude),
-      this.snczi.getFloodRiskData(latitude, longitude),
+      this.sica.getNoiseData(latitude, longitude, censusSectionCode),
+      this.snczi.getFloodRiskData(latitude, longitude, censusSectionCode),
       this.airQuality
         ? this.airQuality.getAirQualityData(latitude, longitude).catch(() => undefined)
         : Promise.resolve(undefined),

@@ -77,18 +77,18 @@ export function CartographicLegendsHud({
                 <span className="text-[10px] font-mono text-outline">€/año</span>
               </div>
 
-              {/* Color gradient ramp */}
+              {/* Color gradient ramp matching MapLibre 8-stop interpolation */}
               <div
                 className="h-2 w-full rounded-sm"
                 style={{
-                  background: 'linear-gradient(to right, #ef4444, #f59e0b, #eab308, #14b8a6, #10b981)',
+                  background: 'linear-gradient(to right, #312e81, #1e40af, #0284c7, #0d9488, #10b981, #eab308, #f97316, #ef4444)',
                 }}
               />
 
               <div className="flex justify-between text-[9px] font-mono text-outline pt-0.5">
                 <span>&lt;25k</span>
-                <span>25k-40k</span>
-                <span>40k-60k</span>
+                <span>35k</span>
+                <span>50k</span>
                 <span>&gt;60k €</span>
               </div>
             </div>
