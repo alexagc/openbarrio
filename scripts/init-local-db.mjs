@@ -18,12 +18,13 @@ db.exec('PRAGMA journal_mode = WAL;');
 db.exec('PRAGMA synchronous = NORMAL;');
 
 // 1. Always apply all migrations idempotently
-console.log('📦 Applying D1 schemas (0001 - 0004)...');
+console.log('📦 Applying D1 schemas (0001 - 0005)...');
 const migrationFiles = [
   'apps/api/migrations/0001_initial_schema.sql',
   'apps/api/migrations/0002_civic_facilities.sql',
   'apps/api/migrations/0003_energy_certificates_and_trends.sql',
   'apps/api/migrations/0004_vut_and_radon_intelligence.sql',
+  'apps/api/migrations/0005_serpavi_benchmarks.sql',
 ];
 
 for (const mig of migrationFiles) {
@@ -110,6 +111,43 @@ if (vutCount === 0) {
   }
   db.exec('COMMIT;');
   console.log(`✅ Seeded ${vutData.length} INE VUT census tracts.`);
+}
+
+// 3b. Seed MIVAU SERPAVI Statutory Rental Benchmarks if empty
+const serpaviCount = Number(db.prepare('SELECT count(*) as total FROM mivau_serpavi_benchmarks').get()?.total || 0);
+if (serpaviCount === 0) {
+  console.log('⚖️ Seeding MIVAU SERPAVI Statutory Rental Benchmarks...');
+  const serpaviStmt = db.prepare(`
+    INSERT OR REPLACE INTO mivau_serpavi_benchmarks (cusec, municipality_code, is_stressed_market, lower_bound_eur_m2, median_eur_m2, upper_bound_eur_m2, sample_size)
+    VALUES (?, ?, ?, ?, ?, ?, ?)
+  `);
+  const serpaviData = [
+    // Municipal aggregates (cusec = null)
+    [null, '08019', 1, 15.2, 17.5, 19.8, 14200], // Barcelona (Stressed)
+    [null, '08101', 1, 13.5, 15.2, 17.0, 4800],  // L'Hospitalet de Llobregat (Stressed)
+    [null, '08015', 1, 12.8, 14.5, 16.2, 3200],  // Badalona (Stressed)
+    [null, '28079', 0, 14.2, 16.4, 18.5, 21500], // Madrid
+    [null, '46250', 0, 10.5, 12.2, 14.5, 6800],  // Valencia
+    [null, '29067', 0, 11.0, 12.8, 14.8, 5400],  // Málaga
+    [null, '41091', 0, 9.8, 11.5, 13.5, 4900],   // Sevilla
+    [null, '48020', 0, 11.5, 13.2, 15.2, 3600],  // Bilbao
+    [null, '20069', 0, 13.8, 15.9, 18.2, 2100],  // Donostia / San Sebastián
+    [null, '07040', 0, 12.5, 14.8, 17.2, 3900],  // Palma
+    [null, '50297', 0, 8.5, 9.8, 11.5, 3100],    // Zaragoza
+    // Census tract fine-grained records
+    ['0801901001', '08019', 1, 17.5, 19.8, 22.4, 450], // Barcelona - Eixample Dreta
+    ['0801901002', '08019', 1, 16.8, 18.9, 21.2, 380], // Barcelona - Eixample Esquerra
+    ['2807901001', '28079', 0, 16.5, 18.8, 21.5, 520], // Madrid - Centro / Gran Vía
+    ['2807901002', '28079', 0, 15.8, 17.9, 20.2, 410], // Madrid - Palacio
+    ['4625001001', '46250', 0, 11.8, 13.5, 15.8, 310], // Valencia - Ciutat Vella
+  ];
+
+  db.exec('BEGIN TRANSACTION;');
+  for (const s of serpaviData) {
+    serpaviStmt.run(...s);
+  }
+  db.exec('COMMIT;');
+  console.log(`✅ Seeded ${serpaviData.length} MIVAU SERPAVI benchmarks.`);
 }
 
 // 4. Check if census_tract_income already populated

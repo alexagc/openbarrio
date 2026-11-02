@@ -12,6 +12,7 @@ describe('MIVAU SERPAVI Provider', () => {
       postalCode: '28013',
       municipality: 'Madrid',
       province: 'Madrid',
+      municipalityCode: '28079',
     },
     coordinates: {
       latitude: 40.42028,
@@ -35,6 +36,7 @@ describe('MIVAU SERPAVI Provider', () => {
       postalCode: '08007',
       municipality: 'Barcelona',
       province: 'Barcelona',
+      municipalityCode: '08019',
     },
     coordinates: {
       latitude: 41.391,
@@ -50,7 +52,7 @@ describe('MIVAU SERPAVI Provider', () => {
     },
   };
 
-  describe('SERPAVIProvider Algorithm', () => {
+  describe('SERPAVIProvider Algorithm (Territorial Heuristic Fallback)', () => {
     const provider = new SERPAVIProvider();
 
     it('correctly identifies Barcelona as a declared Stressed Housing Market Zone', async () => {
@@ -70,6 +72,81 @@ describe('MIVAU SERPAVI Provider', () => {
       expect(benchmark.officialRangeUpperEurM2).toBeGreaterThan(benchmark.officialRangeLowerEurM2);
       expect(benchmark.estimatedMonthlyRentLowerEur).toBeGreaterThan(1000);
       expect(benchmark.estimatedMonthlyRentUpperEur).toBeGreaterThan(benchmark.estimatedMonthlyRentLowerEur);
+    });
+  });
+
+  describe('SERPAVIProvider D1 Hierarchical Resolution (Subphase 17A)', () => {
+    it('resolves primary benchmark from D1 by census section (cusec)', async () => {
+      const mockDb: any = {
+        prepare: (query: string) => ({
+          bind: (param: string) => ({
+            first: async () => {
+              if (query.includes('WHERE cusec = ?') && param === '0801901001') {
+                return {
+                  is_stressed_market: 1,
+                  lower_bound_eur_m2: 17.5,
+                  upper_bound_eur_m2: 22.4,
+                };
+              }
+              return null;
+            },
+          }),
+        }),
+      };
+
+      const provider = new SERPAVIProvider({ db: mockDb });
+      const benchmark = await provider.getRentalBenchmark(mockBarcelonaProperty, '0801901001');
+
+      expect(benchmark.isStressedHousingZone).toBe(true);
+      // Property 2012 year (1.12), surface 90 (1.0), commercial (1.03) -> total ~1.1536
+      // Base: 17.5 - 22.4 -> Adjusted: ~20.19 - ~25.84
+      expect(benchmark.officialRangeLowerEurM2).toBeGreaterThanOrEqual(17.5);
+      expect(benchmark.officialRangeUpperEurM2).toBeGreaterThanOrEqual(22.4);
+    });
+
+    it('falls back to D1 municipal aggregate when census section has no data', async () => {
+      const mockDb: any = {
+        prepare: (query: string) => ({
+          bind: (param: string) => ({
+            first: async () => {
+              // cusec query returns null
+              if (query.includes('WHERE cusec = ?')) {
+                return null;
+              }
+              // municipal fallback returns data
+              if (query.includes('WHERE municipality_code = ? AND cusec IS NULL') && param === '28079') {
+                return {
+                  is_stressed_market: 0,
+                  lower_bound_eur_m2: 14.2,
+                  upper_bound_eur_m2: 18.5,
+                };
+              }
+              return null;
+            },
+          }),
+        }),
+      };
+
+      const provider = new SERPAVIProvider({ db: mockDb });
+      const benchmark = await provider.getRentalBenchmark(mockMadridProperty, '2807999999');
+
+      expect(benchmark.isStressedHousingZone).toBe(false);
+      expect(benchmark.officialRangeLowerEurM2).toBeGreaterThan(13.0);
+      expect(benchmark.officialRangeUpperEurM2).toBeGreaterThan(benchmark.officialRangeLowerEurM2);
+    });
+
+    it('falls back to algorithmic heuristic when D1 throws an error', async () => {
+      const mockDb: any = {
+        prepare: () => {
+          throw new Error('D1 Connection Timeout');
+        },
+      };
+
+      const provider = new SERPAVIProvider({ db: mockDb });
+      const benchmark = await provider.getRentalBenchmark(mockBarcelonaProperty, '0801901001');
+
+      expect(benchmark.isStressedHousingZone).toBe(true);
+      expect(benchmark.officialRangeLowerEurM2).toBeGreaterThan(15.0);
     });
   });
 

@@ -167,7 +167,7 @@ export function createProviders(
   const defaultINE = new INEProvider({ db });
   const defaultSICA = new SICAProvider();
   const defaultSNCZI = new SNCZIProvider();
-  const defaultSERPAVI = new SERPAVIProvider();
+  const defaultSERPAVI = new SERPAVIProvider({ db });
   const defaultAirQuality = new AirQualityProvider();
   const defaultConnectivity = new D1CivicConnectivityProvider({ db });
   const defaultUrbanPlanning = new UrbanPlanningProvider();

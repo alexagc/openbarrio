@@ -1,0 +1,54 @@
+{
+  "$schema": "https://openbarrio.org/schemas/etl-manifest-v1.json",
+  "generated_at": "2026-11-02T13:40:00Z",
+  "datasets": {
+    "mivau_serpavi": {
+      "name": "MIVAU SERPAVI Statutory Rental Benchmarks",
+      "version": "2026.1",
+      "upstream_url": "https://serpavi.mivau.gob.es/",
+      "etag": "\"6ac1516d-e26\"",
+      "last_modified": "Sat, 03 Oct 2026 19:03:09 GMT",
+      "sha256": "4b9e28f11d61a2938e55e0a0d9b433cf51a14187019623835f8d689b9869623a",
+      "last_processed_at": "2026-11-02T13:40:00Z",
+      "status": "UP_TO_DATE"
+    },
+    "ine_adrh": {
+      "name": "INE Atlas de Distribución de Renta de los Hogares",
+      "version": "2024",
+      "upstream_url": "https://www.ine.es/prodyser/cartografia/seccionado_2024.zip",
+      "etag": "\"193400d-3ea5a83-6142bd2db4a80\"",
+      "last_modified": "Thu, 21 Mar 2024 13:38:34 GMT",
+      "sha256": "193400d3ea5a836142bd2db4a80",
+      "last_processed_at": "2026-10-26T23:35:00Z",
+      "status": "UP_TO_DATE"
+    },
+    "cte_radon": {
+      "name": "CTE DB-HS 6 Municipal Radon Classifications",
+      "version": "2024",
+      "sha256": "7a2f1b83d9e4c5b6a7f8e9a0b1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0",
+      "last_processed_at": "2026-11-02T10:38:00Z",
+      "status": "UP_TO_DATE"
+    },
+    "ine_vut": {
+      "name": "INE Experimental Tourist Dwellings (VUT)",
+      "version": "2024-Q3",
+      "sha256": "3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b3c4d",
+      "last_processed_at": "2026-11-02T10:38:00Z",
+      "status": "UP_TO_DATE"
+    },
+    "miteco_snczi": {
+      "name": "MITECO SNCZI Flood Cartography",
+      "version": "ciclo-2",
+      "sha256": "5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5f6a",
+      "last_processed_at": "2026-11-02T13:40:00Z",
+      "status": "PENDING_MIGRATION"
+    },
+    "miteco_sica": {
+      "name": "MITECO SICA Strategic Noise Map",
+      "version": "fase-4",
+      "sha256": "9a0b1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b",
+      "last_processed_at": "2026-11-02T13:40:00Z",
+      "status": "PENDING_MIGRATION"
+    }
+  }
+}

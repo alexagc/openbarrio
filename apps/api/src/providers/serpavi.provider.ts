@@ -1,7 +1,9 @@
 import { CadastralProperty, RentalBenchmark } from '@openbarrio/core';
+import type { D1Database } from '../types/env.js';
 import { ISERPAVIProvider } from './types.js';
 
 export interface SERPAVIProviderOptions {
+  db?: D1Database;
   apiBaseUrl?: string;
   timeoutMs?: number;
 }
@@ -40,12 +42,18 @@ const DECLARED_STRESSED_MUNICIPALITIES = new Set([
  * MIVAU SERPAVI (Sistema Estatal de Referencia del Precio del Alquiler de Vivienda) Provider.
  * Computes official reference rental price range (€/m² and estimated monthly rent)
  * and determines whether property is located in an officially declared Stressed Housing Market Zone (Zona Tensionada).
+ * Resolves hierarchically:
+ * 1. Census Section code (cusec) in Cloudflare D1
+ * 2. Municipal aggregate in Cloudflare D1
+ * 3. Fallback territorial regulatory heuristic
  */
 export class SERPAVIProvider implements ISERPAVIProvider {
+  private readonly db?: D1Database;
   private readonly apiBaseUrl: string;
   private readonly timeoutMs: number;
 
   constructor(options: SERPAVIProviderOptions = {}) {
+    this.db = options.db;
     this.apiBaseUrl = options.apiBaseUrl || 'https://serpavi.mivau.gob.es/api/v1';
     this.timeoutMs = options.timeoutMs || 8000;
   }
@@ -68,14 +76,62 @@ export class SERPAVIProvider implements ISERPAVIProvider {
     } else {
       muniCode = `${provinceCode}001`;
     }
-    const isStressed = this.isStressedZone(muniCode, provinceCode);
 
-    // Compute baseline EUR/m2 based on municipality tier
-    const [baseLowerEurM2, baseUpperEurM2] = this.getBaseRatesByTerritory(
-      muniCode,
-      provinceCode,
-      cadastralProperty.address.municipality
-    );
+    let isStressed = this.isStressedZone(muniCode, provinceCode);
+    let baseLowerEurM2: number | undefined;
+    let baseUpperEurM2: number | undefined;
+
+    // 1. Hierarchical Resolution via Cloudflare D1 (sub-5ms)
+    if (this.db) {
+      try {
+        // Step 1A: Primary fine-grained query by census section (cusec)
+        if (censusSectionCode) {
+          const sectionRow = await this.db
+            .prepare(
+              'SELECT is_stressed_market, lower_bound_eur_m2, upper_bound_eur_m2 FROM mivau_serpavi_benchmarks WHERE cusec = ?'
+            )
+            .bind(censusSectionCode)
+            .first<{ is_stressed_market: number; lower_bound_eur_m2: number; upper_bound_eur_m2: number }>();
+
+          if (sectionRow && sectionRow.lower_bound_eur_m2 > 0) {
+            baseLowerEurM2 = sectionRow.lower_bound_eur_m2;
+            baseUpperEurM2 = sectionRow.upper_bound_eur_m2;
+            isStressed = sectionRow.is_stressed_market === 1 || isStressed;
+          }
+        }
+
+        // Step 1B: Fallback municipal aggregate query if section record has no data
+        if (baseLowerEurM2 === undefined && muniCode) {
+          const muniRow = await this.db
+            .prepare(
+              'SELECT is_stressed_market, lower_bound_eur_m2, upper_bound_eur_m2 FROM mivau_serpavi_benchmarks WHERE municipality_code = ? AND cusec IS NULL'
+            )
+            .bind(muniCode)
+            .first<{ is_stressed_market: number; lower_bound_eur_m2: number; upper_bound_eur_m2: number }>();
+
+          if (muniRow && muniRow.lower_bound_eur_m2 > 0) {
+            baseLowerEurM2 = muniRow.lower_bound_eur_m2;
+            baseUpperEurM2 = muniRow.upper_bound_eur_m2;
+            isStressed = muniRow.is_stressed_market === 1 || isStressed;
+          }
+        }
+      } catch {
+        // Fallback to territorial heuristic
+        baseLowerEurM2 = undefined;
+        baseUpperEurM2 = undefined;
+      }
+    }
+
+    // 2. Fallback to territorial heuristic if not in D1
+    if (baseLowerEurM2 === undefined || baseUpperEurM2 === undefined) {
+      const rates = this.getBaseRatesByTerritory(
+        muniCode,
+        provinceCode,
+        cadastralProperty.address.municipality
+      );
+      baseLowerEurM2 = rates[0];
+      baseUpperEurM2 = rates[1];
+    }
 
     // Adjustment factors based on building/unit parameters from Catastro
     const surface =
