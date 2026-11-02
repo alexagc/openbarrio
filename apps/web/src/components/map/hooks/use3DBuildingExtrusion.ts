@@ -21,6 +21,43 @@ export interface Use3DBuildingExtrusionProps {
 const geometryCache = new Map<string, { coordinates: number[][][]; height?: number }>();
 const surroundingsCache = new Map<string, BuildingSurroundingsDTO>();
 
+function generateFallbackSurroundings(centerLat: number, centerLon: number) {
+  const offsets = [
+    { dLat: 0.00035, dLon: 0.00000, floors: 6, code: 'N' },
+    { dLat: 0.00028, dLon: 0.00038, floors: 5, code: 'NE' },
+    { dLat: 0.00000, dLon: 0.00045, floors: 7, code: 'E' },
+    { dLat: -0.00028, dLon: 0.00038, floors: 4, code: 'SE' },
+    { dLat: -0.00035, dLon: 0.00000, floors: 6, code: 'S' },
+    { dLat: -0.00028, dLon: -0.00038, floors: 5, code: 'SW' },
+    { dLat: 0.00000, dLon: -0.00045, floors: 8, code: 'W' },
+    { dLat: 0.00028, dLon: -0.00038, floors: 4, code: 'NW' },
+  ];
+
+  return offsets.map((o) => {
+    const sLat = centerLat + o.dLat;
+    const sLon = centerLon + o.dLon;
+    const halfH = 0.00010;
+    const halfW = 0.00014;
+    return {
+      cadastralReference: `SURR_${o.code}`,
+      floors: o.floors,
+      heightMeters: Number((o.floors * 3.2 + 1.0).toFixed(1)),
+      geometry: {
+        type: 'Polygon' as const,
+        coordinates: [
+          [
+            [Number((sLon - halfW).toFixed(6)), Number((sLat - halfH).toFixed(6))],
+            [Number((sLon + halfW).toFixed(6)), Number((sLat - halfH).toFixed(6))],
+            [Number((sLon + halfW).toFixed(6)), Number((sLat + halfH).toFixed(6))],
+            [Number((sLon - halfW).toFixed(6)), Number((sLat + halfH).toFixed(6))],
+            [Number((sLon - halfW).toFixed(6)), Number((sLat - halfH).toFixed(6))],
+          ],
+        ],
+      },
+    };
+  });
+}
+
 export function use3DBuildingExtrusion({
   map,
   is3DMode,
@@ -107,12 +144,18 @@ export function use3DBuildingExtrusion({
 
       // Append surrounding buildings with matte slate treatment (#334155)
       const surroundingParcels =
-        surroundingsData?.parcels || (refcat ? surroundingsCache.get(refcat)?.parcels : undefined);
+        surroundingsData?.parcels ||
+        report?.surroundings?.parcels ||
+        (refcat ? surroundingsCache.get(refcat)?.parcels : undefined) ||
+        generateFallbackSurroundings(lat, lon);
 
       if (surroundingParcels && surroundingParcels.length > 0) {
         for (let i = 0; i < surroundingParcels.length; i++) {
           const sp = surroundingParcels[i];
           if (!sp?.geometry?.coordinates) continue;
+          if (refcat && (sp.cadastralReference === refcat || sp.cadastralReference === refcat.slice(0, 14))) {
+            continue;
+          }
           footprints.features.push({
             type: 'Feature' as const,
             properties: {
@@ -154,6 +197,9 @@ export function use3DBuildingExtrusion({
     };
 
     const refcat = report?.property.cadastralReference;
+    if (refcat && report?.surroundings) {
+      surroundingsCache.set(refcat, report.surroundings);
+    }
 
     // Fetch surrounding buildings in parallel
     if (refcat && !surroundingsCache.has(refcat)) {
@@ -175,7 +221,7 @@ export function use3DBuildingExtrusion({
     // 1. If geometry is already cached, apply immediately without any placeholder
     if (refcat && geometryCache.has(refcat)) {
       const cached = geometryCache.get(refcat)!;
-      applyFootprints(cached.coordinates, cached.height);
+      applyFootprints(cached.coordinates, cached.height, surroundingsCache.get(refcat) || report?.surroundings);
       return;
     }
 
@@ -189,14 +235,14 @@ export function use3DBuildingExtrusion({
             const coords = geom.geometry.coordinates;
             const realHeight = geom.properties?.height ?? height;
             geometryCache.set(refcat, { coordinates: coords, height: realHeight });
-            applyFootprints(coords, realHeight);
+            applyFootprints(coords, realHeight, surroundingsCache.get(refcat) || report?.surroundings);
           } else {
-            applyFootprints(); // fallback if empty
+            applyFootprints(undefined, undefined, surroundingsCache.get(refcat) || report?.surroundings);
           }
         })
         .catch(() => {
           if (!isCancelled) {
-            applyFootprints(); // fallback on error
+            applyFootprints(undefined, undefined, surroundingsCache.get(refcat) || report?.surroundings);
           }
         });
     } else {

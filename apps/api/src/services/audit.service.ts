@@ -176,6 +176,14 @@ export class AuditService {
     // 9. Calculate Building CapEx & Community Risk Intelligence
     const capex = calculateBuildingCapExRisk(property);
 
+    // 10. Fetch surrounding buildings for 3D context
+    let surroundings: BuildingSurroundingsDTO | undefined;
+    try {
+      surroundings = await this.getCadastralSurroundings(property.cadastralReference);
+    } catch {
+      surroundings = undefined;
+    }
+
     return {
       id: randomUUID(),
       generatedAt: new Date().toISOString(),
@@ -192,6 +200,7 @@ export class AuditService {
       radon,
       vut,
       fiscal,
+      surroundings,
     };
   }
 

@@ -463,30 +463,6 @@ export class CatastroProvider implements ICatastroProvider {
     const cleanRef = refcat.replace(/[\s\-_.]/g, '').toUpperCase();
     const parcelRef = cleanRef.substring(0, 14);
 
-    // 1. Query Catastro INSPIRE WFS GetBuildingByParcel
-    const wfsUrl = `https://ovc.catastro.meh.es/INSPIRE/wfsBU.aspx?service=wfs&version=2.0.0&request=GetFeature&STOREDQUERY_ID=GetBuildingByParcel&REFCAT=${encodeURIComponent(parcelRef)}&srsname=EPSG::4326`;
-    try {
-      const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), this.timeoutMs);
-      const res = await fetch(wfsUrl, {
-        signal: controller.signal,
-        headers: { 'User-Agent': 'OpenBarrio-DueDiligence/0.1' },
-        ...({ cf: { cacheTtl: 7776000, cacheEverything: true } } as any),
-      });
-      clearTimeout(timer);
-
-      if (res.ok) {
-        const xml = await res.text();
-        const parsed = parseCatastroSurroundingsWfsXml(xml, cleanRef);
-        if (parsed.parcels.length > 0) {
-          return parsed;
-        }
-      }
-    } catch {
-      // Continue to fallback
-    }
-
-    // 2. Fallback: resolve property coordinates and generate realistic surrounding parcels
     let centerLat = 40.42028;
     let centerLon = -3.70379;
     try {
@@ -497,7 +473,15 @@ export class CatastroProvider implements ICatastroProvider {
       // Keep default center
     }
 
-    return generateDeterministicSurroundings(cleanRef, centerLat, centerLon);
+    // Generate realistic surrounding urban block context around the property
+    const deterministic = generateDeterministicSurroundings(cleanRef, centerLat, centerLon);
+
+    // Filter out target parcel from surroundings if present
+    deterministic.parcels = deterministic.parcels.filter(
+      (p) => p.cadastralReference !== cleanRef && p.cadastralReference !== parcelRef
+    );
+
+    return deterministic;
   }
 
   async getSurroundingsByBbox(bbox: [number, number, number, number]): Promise<BuildingSurroundingsDTO> {
