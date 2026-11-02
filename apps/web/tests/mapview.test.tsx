@@ -524,7 +524,7 @@ describe('MapView Component (Stitch Civic Precision)', () => {
       expect(line15.filter).toEqual(['==', ['get', 'ring'], '15m']);
     });
 
-    it('should configure MITECO SICA and SNCZI sovereign tile sources and overzoom up to z22', async () => {
+    it('should configure MITECO SICA and SNCZI PMTiles vector sources and overzoom up to z22', async () => {
       const maplibreMock = await import('maplibre-gl');
       render(
         <MapView
@@ -538,23 +538,23 @@ describe('MapView Component (Stitch Civic Precision)', () => {
 
       const sicaSource = lastCallArgs.style.sources['miteco-sica'];
       expect(sicaSource).toBeTruthy();
-      expect(sicaSource.type).toBe('raster');
-      expect(sicaSource.tiles[0]).toContain('/api/v1/tiles/miteco/noise');
+      expect(sicaSource.type).toBe('vector');
+      expect(sicaSource.url).toContain('/api/v1/tiles/noise.pmtiles');
 
       const sncziSource = lastCallArgs.style.sources['miteco-snczi'];
       expect(sncziSource).toBeTruthy();
-      expect(sncziSource.type).toBe('raster');
-      expect(sncziSource.tiles[0]).toContain('/api/v1/tiles/miteco/flood');
+      expect(sncziSource.type).toBe('vector');
+      expect(sncziSource.url).toContain('/api/v1/tiles/floods.pmtiles');
 
       // Verify layers allow zooming past z19 (up to z22)
       const sicaLayer = lastCallArgs.style.layers.find((l: any) => l.id === 'sica-layer');
       expect(sicaLayer).toBeTruthy();
-      expect(sicaLayer.type).toBe('raster');
+      expect(sicaLayer.type).toBe('fill');
       expect(sicaLayer.maxzoom).toBe(22);
 
       const sncziLayer = lastCallArgs.style.layers.find((l: any) => l.id === 'snczi-layer');
       expect(sncziLayer).toBeTruthy();
-      expect(sncziLayer.type).toBe('raster');
+      expect(sncziLayer.type).toBe('fill');
       expect(sncziLayer.maxzoom).toBe(22);
     });
   });
