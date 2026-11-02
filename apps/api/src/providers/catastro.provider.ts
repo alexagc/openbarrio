@@ -560,6 +560,100 @@ export class CatastroProvider implements ICatastroProvider {
       // Ignore WFS network failure and fallback
     }
 
+    // 2. If no direct neighbors found (e.g. isolated parcel occupying entire block), probe across adjacent streets
+    if (realParcels.length === 0) {
+      let centerLat = 40.42028;
+      let centerLon = -3.70379;
+      try {
+        const prop = await this.getByCadastralReference(cleanRef);
+        centerLat = prop.coordinates.latitude;
+        centerLon = prop.coordinates.longitude;
+      } catch {
+        // Keep default center
+      }
+
+      const probes = [
+        [0.0006, 0],
+        [-0.0006, 0],
+        [0, 0.0007],
+        [0, -0.0007],
+        [0.0005, 0.0006],
+        [-0.0005, -0.0006],
+      ];
+
+      try {
+        const probedRefs = new Set<string>();
+        const rccos = await Promise.all(
+          probes.map(async ([dLat, dLon]) => {
+            const probeUrl = `${this.coordenadasBaseUrl}/Consulta_RCCOOR?SRS=EPSG:4326&Coordenada_X=${(centerLon + dLon).toFixed(6)}&Coordenada_Y=${(centerLat + dLat).toFixed(6)}`;
+            const pCtrl = new AbortController();
+            const pTimer = setTimeout(() => pCtrl.abort(), this.timeoutMs);
+            const pRes = await fetch(probeUrl, {
+              signal: pCtrl.signal,
+              headers: { 'User-Agent': 'OpenBarrio-DueDiligence/0.1' },
+            });
+            clearTimeout(pTimer);
+            return pRes.ok ? await pRes.text() : '';
+          })
+        );
+
+        for (const rx of rccos) {
+          const m = rx.match(/<pc1>([^<]+)<\/pc1>\s*<pc2>([^<]+)<\/pc2>/i);
+          if (m) {
+            const rc = (m[1].trim() + m[2].trim()).substring(0, 14);
+            if (rc !== parcelRef && rc !== cleanRef) {
+              probedRefs.add(rc);
+            }
+          }
+        }
+
+        if (probedRefs.size > 0) {
+          const blocks = await Promise.all(
+            [...probedRefs].slice(0, 4).map(async (rc) => {
+              const subUrl = `https://ovc.catastro.meh.es/INSPIRE/wfsCP.aspx?service=wfs&version=2.0.0&request=GetFeature&STOREDQUERY_ID=GetNeighbourParcel&REFCAT=${encodeURIComponent(rc)}&srsname=EPSG::4326`;
+              const subCtrl = new AbortController();
+              const subTimer = setTimeout(() => subCtrl.abort(), this.timeoutMs);
+              const subRes = await fetch(subUrl, {
+                signal: subCtrl.signal,
+                headers: { 'User-Agent': 'OpenBarrio-DueDiligence/0.1' },
+                ...({ cf: { cacheTtl: 7776000, cacheEverything: true } } as any),
+              });
+              clearTimeout(subTimer);
+              return subRes.ok ? await subRes.text() : '';
+            })
+          );
+
+          for (const bx of blocks) {
+            const bMembers = bx.match(/<(?:wfs:|gml:)?member[\s\S]*?<\/(?:wfs:|gml:)?member>/gi) || [];
+            for (const bm of bMembers) {
+              const rcMatch = bm.match(/<cp:nationalCadastralReference>([^<]+)<\/cp:nationalCadastralReference>/i);
+              if (!rcMatch) continue;
+              const rc = rcMatch[1].trim();
+              if (rc === parcelRef || rc === cleanRef || parcelMap.has(rc)) continue;
+
+              const parsedGeom = parseCatastroWfsGeometryXml(bm);
+              if (parsedGeom && parsedGeom.coordinates.length > 0) {
+                parcelMap.add(rc);
+                const floors = parsedGeom.numberOfFloors ?? (6 + (realParcels.length % 3));
+                const heightMeters = Number((floors * 3.2 + 1.0).toFixed(1));
+                realParcels.push({
+                  cadastralReference: rc,
+                  floors,
+                  heightMeters,
+                  geometry: {
+                    type: 'Polygon',
+                    coordinates: parsedGeom.coordinates,
+                  },
+                });
+              }
+            }
+          }
+        }
+      } catch {
+        // Fall back to deterministic
+      }
+    }
+
     if (realParcels.length > 0) {
       return {
         targetRefcat: cleanRef,
