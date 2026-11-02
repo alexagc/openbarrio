@@ -5,6 +5,42 @@ All notable changes to the **OpenBarrio** platform are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.9.0] - 2026-11-02
+
+### Added
+- **Urban 3D Context & Real Cadastral Neighbor Volumes (`apps/web`, `apps/api`, `packages/core`)**:
+  - Defined `BuildingSurroundingsDTO` contract for official multi-polygon footprints of adjoining parcels.
+  - Implemented dual-mode Catastro WFS INSPIRE querying: `GetNeighbourParcel` for contiguous block parcel boundaries and directional street probing via `Consulta_RCCOOR` for isolated parcels (*manzanas exentas* such as `0248301VK4704G`).
+  - Integrated progressive fade-in rendering in MapLibre GL JS with matte slate `#334155` shader receiving authentic solar simulation shadows cast by adjacent buildings.
+  - Distinctive Emerald (`#68dba9`) color encoding for audited target parcel versus slate urban context.
+- **CTE DB-HS 6 Radon Normative Assessment (`packages/core`, `packages/etl`, `apps/api`, `apps/web`)**:
+  - Defined `RadonEvaluationDTO` contract evaluating municipal exposure levels (**Zona 0**, **Zona I**, **Zona II**).
+  - Ingested CTE DB-HS 6 national municipal classification table into SQLite/D1 database (`cte_radon_municipalities`).
+  - Added contextual engineering diagnostic: evaluates floor elevation (ground floor/basement contact vs. upper floors with natural aerial dilution) and identifies mandatory mitigation systems (barriers and sub-slab depressurization or ventilated chambers).
+  - Designed `RadonCard` component in *Edificio & Sostenibilidad* tab with color-coded normative seals.
+- **INE Experimental VUT Tourist Dwelling Saturation (`packages/core`, `packages/etl`, `apps/api`, `apps/web`)**:
+  - Defined `VutEvaluationDTO` contract and ingested national INE VUT census tract dataset into SQLite/D1.
+  - Recalibrated scoring engine: `urbanPlanning` score dynamically penalizes community friction based on tourist dwelling ratio per 100 residential units (5 to 25 point penalties).
+  - Created `VutSaturationCard` component in *Entorno & Conectividad* tab displaying census tract tourist density, bed counts, and community friction risk badges.
+- **Interactive Fiscal Simulator (ITP & IBI) & Cadastral Base (`packages/core`, `apps/api`, `apps/web`)**:
+  - Defined `FiscalEstimateDTO` contract and regional ITP rate table across all 17 Autonomous Communities.
+  - Added dedicated `FiscalSimulatorCard` in *Mercado & Finanzas* tab with purchase price slider (50k–1.2M €), dynamic regional ITP quota computation, annual municipal IBI estimate, and explicit display of official cadastral computable surface area.
+  - Bidirectional deep-link URL parameter synchronization (`?price=...&advertised_m2=...`).
+- **Chrome MV3 Companion Extension Intelligence (`apps/extension`)**:
+  - Injected due diligence card in Idealista and Fotocasa with automated advertised surface discrepancy detector (>15% divergence alert between listing m² and Cadastral m²).
+  - Real-time ITP and IBI tax calculations directly in property portals based on advertised price.
+  - Single-click deep-link opening the OpenBarrio full dossier with pre-filled price and advertised metrics.
+
+### Changed
+- **Fiscal Simulator UX Simplification (`apps/web`)**:
+  - Streamlined `FiscalSimulatorCard` on web to eliminate manual copy-paste inputs in favor of displaying the official cadastral computable base directly, reserving automatic discrepancy detection for the Chrome Extension.
+
+### Fixed
+- **MapLibre GL JS Style Spec Compliance (`apps/web`)**:
+  - Resolved style specification runtime crash where `fill-extrusion-opacity` rejected data-driven feature expressions, ensuring uniform 0.88 opacity while maintaining data-driven color contrast.
+- **Real Cadastral Footprint Extraction for Isolated Blocks (`apps/api`)**:
+  - Fixed Catastro INSPIRE WFS endpoint handling for isolated parcels, replacing deterministic schematic bounding-box fallbacks with real multi-point GML parcel footprints.
+
 ## [0.8.0] - 2026-11-01
 
 ### Added

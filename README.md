@@ -7,8 +7,9 @@
 [![Docker: Ready](https://img.shields.io/badge/Docker-Zero--Pollution_Ready-2496ED.svg)](docker-compose.yml)
 
 **OpenBarrio** is an open-source civic-tech and real estate due diligence platform that aggregates, normalizes, and visualizes official open data from Spanish public institutions:
-* **Sede Electrónica del Catastro** (Construction year, built surface area, property usage, cadastral parcel, horizontal division).
-* **INE (Instituto Nacional de Estadística)** (Atlas de Distribución de Renta de los Hogares - ADRH, demographics).
+* **Sede Electrónica del Catastro** (Construction year, built surface area, property usage, cadastral parcel, horizontal division, and 3D adjoining parcel volumetric footprints).
+* **INE (Instituto Nacional de Estadística)** (Atlas de Distribución de Renta de los Hogares - ADRH, demographics, and Experimental Tourist Dwellings - VUT).
+* **CTE DB-HS 6** (Official municipal radon classification zones and mandatory mitigation prescriptions).
 * **MITECO** (SICA strategic noise maps, SNCZI flood vulnerability areas, and official Air Quality).
 * **MIVAU** (SERPAVI rental price reference index under Ley 12/2023).
 
