@@ -13,7 +13,7 @@
       "status": "UP_TO_DATE"
     },
     "ine_adrh": {
-      "name": "INE Atlas de Distribuci\u00f3n de Renta de los Hogares",
+      "name": "INE Atlas de Distribución de Renta de los Hogares",
       "version": "2024",
       "upstream_url": "https://www.ine.es/prodyser/cartografia/seccionado_2024.zip",
       "etag": "\"193400d-3ea5a83-6142bd2db4a80\"",
@@ -42,7 +42,8 @@
       "upstream_url": "https://gis.miteco.gob.es/geoserver/agua/wms",
       "sha256": "47f05598f4c25867e513cefa89e93872ab3115745e46afb737916aaad270749b",
       "last_processed_at": "2026-11-02T16:30:00Z",
-      "status": "UP_TO_DATE"
+      "status": "UP_TO_DATE",
+      "fingerprint": "d60dc84bfdf505655cbe04206511d0218e57a478b1ac64868bc3adfd6f59a9ca"
     },
     "miteco_sica": {
       "name": "MITECO SICA Strategic Noise Map",
@@ -50,7 +51,8 @@
       "upstream_url": "https://gis.miteco.gob.es/geoserver/evaluacionambiental/wms",
       "sha256": "be18d13654cee0a973632dba6d721e8447919747c116e6979ffc646370ee7456",
       "last_processed_at": "2026-11-02T16:30:00Z",
-      "status": "UP_TO_DATE"
+      "status": "UP_TO_DATE",
+      "fingerprint": "13bfcc14d9c617e2521b96c14eeb8f63bce24c469c0e5cd4a418b4479be739f2"
     }
   }
 }

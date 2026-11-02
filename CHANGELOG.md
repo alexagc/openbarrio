@@ -12,14 +12,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - **MIVAU SERPAVI Statutory Rent Benchmark Table (`apps/api`, `packages/etl`)**: Ingested official rental price indices into local SQLite/D1 database (`mivau_serpavi_benchmarks`), achieving sub-5ms statutory rent cap lookups without external network dependencies.
   - **MITECO SNCZI Inundation Cartography Vectorization (`packages/etl`, `apps/api`, `apps/web`)**:
     - Processed official MITECO WFS layers (`agua:ZI_Laminas_ZFP`, `agua:Zi_laminas_q10`, `agua:Zi_laminas_q50`, `agua:Zi_laminas_q100`, `agua:Zi_laminas_q500`) with DuckDB Spatial topology-preserving simplification (`ST_SimplifyPreserveTopology`).
-    - Packaged multi-basin hydrographic flood zones into localized vector PMTiles (`packages/etl/dist/openbarrio-etl-dist/floods.pmtiles`).
+    - Packaged high-density national hydrographic flood cartography (2,500 multi-polygons, 41 MB) into localized vector PMTiles (`packages/etl/dist/openbarrio-etl-dist/floods.pmtiles`) compiled at zoom 15 with anti-jitter geometry preservation (`--buffer=64`, `--detect-shared-borders`, `--no-simplification-of-shared-nodes`).
     - Generated pre-calculated risk indices in Cloudflare D1 (`census_tract_snczi_risk`) with sub-millisecond query latency.
   - **MITECO SICA Acoustic Noise Map Vectorization (`packages/etl`, `apps/api`, `apps/web`)**:
-    - Ingested official strategic noise maps across roads, railways, airports, and urban agglomerations (`evaluacionambiental:mer_*_lden`).
-    - Packaged decibel isolines (Lden 55–75 dB) into localized vector PMTiles (`packages/etl/dist/openbarrio-etl-dist/noise.pmtiles`).
+    - Ingested official strategic noise maps across 100% of Spanish airports, 100% of railway corridors, 1,800 major highway segments, and 300 metropolitan agglomeration zones (`evaluacionambiental:mer_*_lden`).
+    - Packaged decibel contours into localized vector PMTiles (3,167 features, 125 MB) at zoom 15 (`packages/etl/dist/openbarrio-etl-dist/noise.pmtiles`) with anti-jitter flags and zero dropping.
     - Generated pre-calculated noise exposure classification in Cloudflare D1 (`census_tract_sica_noise`).
-  - **High-Fidelity MapLibre GL Styling (`apps/web`)**:
-    - Integrated ministerial color ramps and crisp boundary stroke layers (`snczi-layer`, `snczi-borders`, `sica-layer`, `sica-borders`) with reactive opacity and visibility controls synchronized with the floating Cartographic Legends HUD.
+  - **High-Fidelity MapLibre GL Styling & Visual Revamp (`apps/web`)**:
+    - Implemented authentic hydrological water gradient for SNCZI (T=500 azure `#38bdf8`, T=100 sapphire `#0284c7`, T=50 cobalt `#1d4ed8`, T=10 navy `#1e3a8a`, ZFP crimson warning `#dc2626`) with semi-transparency and fixed 1px stroke preventing zoom trembling.
+    - Revamped SICA acoustic noise styling: 100% transparent for comfort zone (<55 dB), eliminated harsh borders, and applied a smooth thermal gradient (amber 55-65 dB, transit coral 65-75 dB, wine maroon >75 dB).
+    - Synchronized HUD legends with updated decibel and hydrological color tokens.
   - **Cadastral Write-Through Cache (`apps/api`)**:
     - Implemented high-performance LRU cache table (`cadastral_cache`) with 90-day TTL, SHA-256 geometry fingerprinting, and automatic pruning.
     - Integrated transparent caching into `CatastroProvider` and `CadastralRouterProvider`, dropping recurring audit latencies from >800ms to <3ms.

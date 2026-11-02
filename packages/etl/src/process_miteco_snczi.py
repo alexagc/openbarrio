@@ -48,11 +48,11 @@ BASINS = [
 ]
 
 LAYER_CONFIGS = [
-    {"layer": "agua:ZI_Laminas_ZFP", "period": None, "level": "HIGH", "zfp": 1, "max": 3},
-    {"layer": "agua:Zi_laminas_q10", "period": 10, "level": "HIGH", "zfp": 1, "max": 3},
-    {"layer": "agua:Zi_laminas_q50", "period": 50, "level": "MEDIUM", "zfp": 0, "max": 3},
-    {"layer": "agua:Zi_laminas_q100", "period": 100, "level": "MEDIUM", "zfp": 0, "max": 3},
-    {"layer": "agua:Zi_laminas_q500", "period": 500, "level": "LOW", "zfp": 0, "max": 3},
+    {"layer": "agua:ZI_Laminas_ZFP", "period": None, "level": "HIGH", "zfp": 1, "target": 500},
+    {"layer": "agua:Zi_laminas_q10", "period": 10, "level": "HIGH", "zfp": 1, "target": 500},
+    {"layer": "agua:Zi_laminas_q50", "period": 50, "level": "MEDIUM", "zfp": 0, "target": 500},
+    {"layer": "agua:Zi_laminas_q100", "period": 100, "level": "MEDIUM", "zfp": 0, "target": 500},
+    {"layer": "agua:Zi_laminas_q500", "period": 500, "level": "LOW", "zfp": 0, "target": 500},
 ]
 
 
@@ -94,8 +94,8 @@ def check_upstream_headers(url: str, manifest: dict) -> bool:
 
 
 def fetch_official_snczi_features() -> list:
-    """Fetches real official flood polygons from MITECO WFS across Spanish river basins."""
-    print("[ETL-SNCZI] Fetching official flood geometries from MITECO SNCZI WFS...")
+    """Fetches real official flood polygons from MITECO WFS across Spain using pagination."""
+    print("[ETL-SNCZI] Fetching official flood geometries from MITECO SNCZI WFS 2.0.0...")
     ctx = create_ssl_context()
     all_features = []
 
@@ -104,26 +104,31 @@ def fetch_official_snczi_features() -> list:
         period = cfg["period"]
         level = cfg["level"]
         zfp = cfg["zfp"]
-        max_feats = cfg["max"]
+        target = cfg.get("target", 500)
+        fetched = 0
+        page_size = 200
 
-        for basin in BASINS:
+        while fetched < target:
+            count = min(page_size, target - fetched)
             params = {
                 "service": "WFS",
-                "version": "1.1.0",
+                "version": "2.0.0",
                 "request": "GetFeature",
-                "typeName": layer_name,
-                "cql_filter": f"demarcacio LIKE '%{basin}%'",
-                "maxFeatures": str(max_feats),
+                "typeNames": layer_name,
+                "count": str(count),
+                "startIndex": str(fetched),
                 "outputFormat": "application/json",
             }
             url = f"{SNCZI_WFS_URL}?{urllib.parse.urlencode(params)}"
 
             try:
                 req = urllib.request.Request(url, headers={"User-Agent": "OpenBarrio-ETL/1.0"})
-                with urllib.request.urlopen(req, timeout=12, context=ctx) as resp:
+                with urllib.request.urlopen(req, timeout=30, context=ctx) as resp:
                     if resp.status == 200:
                         data = json.loads(resp.read().decode("utf-8"))
                         feats = data.get("features", [])
+                        if not feats:
+                            break
                         for f in feats:
                             props = f.get("properties", {})
                             f["properties"] = {
@@ -134,15 +139,18 @@ def fetch_official_snczi_features() -> list:
                                 "return_period_years": period,
                                 "is_in_preferential_flow_zone": zfp,
                                 "rio": props.get("rio") or "Cauce fluvial",
-                                "demarcacio": props.get("demarcacio") or basin,
+                                "demarcacio": props.get("demarcacio") or "España",
                                 "source_layer": layer_name.replace("agua:", ""),
-                                "id_zona": props.get("id_zona") or f"ES_{basin}_{period or 'ZFP'}",
+                                "id_zona": props.get("id_zona") or f"ES_{period or 'ZFP'}",
                             }
                         all_features.extend(feats)
-                        if feats:
-                            print(f"  ✓ {layer_name} [{basin}]: {len(feats)} official polygons.")
+                        fetched += len(feats)
+                        print(f"  ✓ {layer_name}: {fetched}/{target} official polygons.")
+                        if len(feats) < count:
+                            break
             except Exception as e:
-                print(f"  ! {layer_name} [{basin}] query error: {e}")
+                print(f"  ! {layer_name} page {fetched} query error: {e}")
+                break
 
     print(f"[ETL-SNCZI] Aggregated {len(all_features)} official flood features.")
 
@@ -229,8 +237,13 @@ def compile_pmtiles(geojson_path: str, output_pmtiles: str) -> int:
             "-o", output_pmtiles,
             "-l", "snczi_floods",
             "-Z", "6",
-            "-z", "14",
-            "--drop-densest-as-needed",
+            "-z", "15",
+            "--buffer=64",
+            "--detect-shared-borders",
+            "--no-simplification-of-shared-nodes",
+            "--preserve-input-order",
+            "--no-tile-size-limit",
+            "--no-feature-limit",
             "--force",
             geojson_path,
         ]

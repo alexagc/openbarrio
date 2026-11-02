@@ -106,10 +106,10 @@ export function CartographicLegendsHud({
               </div>
 
               <div className="grid grid-cols-4 gap-1 text-[9px] font-mono text-center">
-                <div className="p-1 rounded bg-[#10b981]/20 border border-[#10b981]/50 text-[#10b981]">
+                <div className="p-1 rounded bg-transparent border border-outline-variant/50 text-outline">
                   &lt;55
                 </div>
-                <div className="p-1 rounded bg-[#eab308]/20 border border-[#eab308]/50 text-[#eab308]">
+                <div className="p-1 rounded bg-[#fef08a]/20 border border-[#fef08a]/50 text-[#fef08a]">
                   55-65
                 </div>
                 <div className="p-1 rounded bg-[#f97316]/20 border border-[#f97316]/50 text-[#f97316]">
@@ -142,14 +142,14 @@ export function CartographicLegendsHud({
               <div className="space-y-1 text-[10px]">
                 <div className="flex items-center justify-between">
                   <span className="flex items-center gap-1.5">
-                    <span className="w-2.5 h-2.5 rounded-sm bg-[#991b1b] border border-[#f87171]" />
+                    <span className="w-2.5 h-2.5 rounded-sm bg-[#dc2626] border border-[#ef4444]" />
                     Zona Flujo Preferente (ZFP)
                   </span>
                   <span className="font-mono text-outline">Muy Alto</span>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="flex items-center gap-1.5">
-                    <span className="w-2.5 h-2.5 rounded-sm bg-[#f97316] border border-[#fdba74]" />
+                    <span className="w-2.5 h-2.5 rounded-sm bg-[#1e3a8a] border border-[#3b82f6]" />
                     Alta Probabilidad (T=10 años)
                   </span>
                   <span className="font-mono text-outline">Frecuente</span>
@@ -163,7 +163,7 @@ export function CartographicLegendsHud({
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="flex items-center gap-1.5">
-                    <span className="w-2.5 h-2.5 rounded-sm bg-[#06b6d4] border border-[#a5f3fc]" />
+                    <span className="w-2.5 h-2.5 rounded-sm bg-[#38bdf8] border border-[#7dd3fc]" />
                     Baja Probabilidad (T=500 años)
                   </span>
                   <span className="font-mono text-outline">Excepcional</span>

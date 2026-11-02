@@ -26,6 +26,8 @@ import urllib.request
 import duckdb
 
 os.environ["OGR_GEOJSON_MAX_OBJ_SIZE"] = "0"
+
+os.environ["OGR_GEOJSON_MAX_OBJ_SIZE"] = "0"
 os.environ["GDAL_MAX_OBJECT_SIZE"] = "0"
 
 if hasattr(sys.stdout, "reconfigure"):
@@ -103,58 +105,23 @@ def get_noise_category(lden: float) -> str:
 
 def fetch_official_sica_features() -> list:
     """Fetches real official acoustic noise contours from MITECO WFS across Spain."""
-    print("[ETL-SICA] Fetching official noise geometries from MITECO SICA WFS...")
+    print("[ETL-SICA] Fetching official noise geometries from MITECO SICA WFS 2.0.0...")
     ctx = create_ssl_context()
     all_features = []
 
-    # 1. Official Roads (mer_carretera_lden)
-    for reg in ROAD_REGIONS:
-        params = {
-            "service": "WFS",
-            "version": "1.1.0",
-            "request": "GetFeature",
-            "typeName": "evaluacionambiental:mer_carretera_lden",
-            "cql_filter": f"sourceiden LIKE '%{reg}%'",
-            "maxFeatures": "6",
-            "outputFormat": "application/json",
-        }
-        url = f"{SICA_WFS_URL}?{urllib.parse.urlencode(params)}"
-        try:
-            req = urllib.request.Request(url, headers={"User-Agent": "OpenBarrio-ETL/1.0"})
-            with urllib.request.urlopen(req, timeout=12, context=ctx) as resp:
-                if resp.status == 200:
-                    data = json.loads(resp.read().decode("utf-8"))
-                    feats = data.get("features", [])
-                    for f in feats:
-                        props = f.get("properties", {})
-                        lden_val = float(props.get("lden") or props.get("noiselevel") or 68.0)
-                        f["properties"] = {
-                            "lden": lden_val,
-                            "category": get_noise_category(lden_val),
-                            "source": "ROAD_TRAFFIC",
-                            "tipo_ume": "CARRETERA",
-                            "source_layer": "mer_carretera_lden",
-                            "source_id": props.get("sourceiden") or props.get("localid") or f"ROAD_{reg}",
-                        }
-                    all_features.extend(feats)
-                    if feats:
-                        print(f"  ✓ mer_carretera_lden [{reg}]: {len(feats)} official polygons.")
-        except Exception as e:
-            print(f"  ! mer_carretera_lden [{reg}] query error: {e}")
-
-    # 2. Official Airports (mer_aeropuerto_lden)
+    # 1. Official Airports (100% of Spain)
     params_airports = {
         "service": "WFS",
-        "version": "1.1.0",
+        "version": "2.0.0",
         "request": "GetFeature",
-        "typeName": "evaluacionambiental:mer_aeropuerto_lden",
-        "maxFeatures": "30",
+        "typeNames": "evaluacionambiental:mer_aeropuerto_lden",
+        "count": "200",
         "outputFormat": "application/json",
     }
     url_air = f"{SICA_WFS_URL}?{urllib.parse.urlencode(params_airports)}"
     try:
         req = urllib.request.Request(url_air, headers={"User-Agent": "OpenBarrio-ETL/1.0"})
-        with urllib.request.urlopen(req, timeout=15, context=ctx) as resp:
+        with urllib.request.urlopen(req, timeout=30, context=ctx) as resp:
             if resp.status == 200:
                 data = json.loads(resp.read().decode("utf-8"))
                 feats = data.get("features", [])
@@ -170,54 +137,136 @@ def fetch_official_sica_features() -> list:
                         "source_id": props.get("sourceiden") or props.get("localid") or "AIRPORT",
                     }
                 all_features.extend(feats)
-                if feats:
-                    print(f"  ✓ mer_aeropuerto_lden: {len(feats)} official airport contours (Barajas, Prat, Palma, Málaga, etc.).")
+                print(f"  ✓ mer_aeropuerto_lden: {len(feats)} official airport contours (100% of Spain).")
     except Exception as e:
         print(f"  ! mer_aeropuerto_lden query error: {e}")
 
-    # 3. Official Railways (mer_ferrocarril_lden)
-    params_rail = {
-        "service": "WFS",
-        "version": "1.1.0",
-        "request": "GetFeature",
-        "typeName": "evaluacionambiental:mer_ferrocarril_lden",
-        "maxFeatures": "30",
-        "outputFormat": "application/json",
-    }
-    url_rail = f"{SICA_WFS_URL}?{urllib.parse.urlencode(params_rail)}"
-    try:
-        req = urllib.request.Request(url_rail, headers={"User-Agent": "OpenBarrio-ETL/1.0"})
-        with urllib.request.urlopen(req, timeout=15, context=ctx) as resp:
-            if resp.status == 200:
-                data = json.loads(resp.read().decode("utf-8"))
-                feats = data.get("features", [])
-                for f in feats:
-                    props = f.get("properties", {})
-                    lden_val = float(props.get("lden") or props.get("noiselevel") or 64.0)
-                    f["properties"] = {
-                        "lden": lden_val,
-                        "category": get_noise_category(lden_val),
-                        "source": "RAILWAY",
-                        "tipo_ume": "FERROCARRIL",
-                        "source_layer": "mer_ferrocarril_lden",
-                        "source_id": props.get("sourceiden") or props.get("localid") or "RAILWAY",
-                    }
-                all_features.extend(feats)
-                if feats:
-                    print(f"  ✓ mer_ferrocarril_lden: {len(feats)} official railway corridors.")
-    except Exception as e:
-        print(f"  ! mer_ferrocarril_lden query error: {e}")
+    # 2. Official Railways (100% of Spain)
+    fetched_rail = 0
+    while fetched_rail < 1000:
+        params_rail = {
+            "service": "WFS",
+            "version": "2.0.0",
+            "request": "GetFeature",
+            "typeNames": "evaluacionambiental:mer_ferrocarril_lden",
+            "count": "300",
+            "startIndex": str(fetched_rail),
+            "outputFormat": "application/json",
+        }
+        url_rail = f"{SICA_WFS_URL}?{urllib.parse.urlencode(params_rail)}"
+        try:
+            req = urllib.request.Request(url_rail, headers={"User-Agent": "OpenBarrio-ETL/1.0"})
+            with urllib.request.urlopen(req, timeout=30, context=ctx) as resp:
+                if resp.status == 200:
+                    data = json.loads(resp.read().decode("utf-8"))
+                    feats = data.get("features", [])
+                    if not feats:
+                        break
+                    for f in feats:
+                        props = f.get("properties", {})
+                        lden_val = float(props.get("lden") or props.get("noiselevel") or 65.0)
+                        f["properties"] = {
+                            "lden": lden_val,
+                            "category": get_noise_category(lden_val),
+                            "source": "RAILWAY",
+                            "tipo_ume": "FERROCARRIL",
+                            "source_layer": "mer_ferrocarril_lden",
+                            "source_id": props.get("sourceiden") or props.get("localid") or "RAILWAY",
+                        }
+                    all_features.extend(feats)
+                    fetched_rail += len(feats)
+                    print(f"  ✓ mer_ferrocarril_lden: {fetched_rail} railway corridors...")
+                    if len(feats) < 300:
+                        break
+        except Exception as e:
+            print(f"  ! mer_ferrocarril_lden query error at {fetched_rail}: {e}")
+            break
 
-    # 4. Official Agglomerations (mer_aglomeracion_lden)
-    params_aglom = {
-        "service": "WFS",
-        "version": "1.1.0",
-        "request": "GetFeature",
-        "typeName": "evaluacionambiental:mer_aglomeracion_lden",
-        "maxFeatures": "15",
-        "outputFormat": "application/json",
-    }
-    url_aglom = f"{SICA_WFS_URL}?{urllib.parse.urlencode(params_aglom)}"
+    # 3. Official Roads (high-density national coverage)
+    fetched_roads = 0
+    target_roads = 1800
+    while fetched_roads < target_roads:
+        count = min(300, target_roads - fetched_roads)
+        params_roads = {
+            "service": "WFS",
+            "version": "2.0.0",
+            "request": "GetFeature",
+            "typeNames": "evaluacionambiental:mer_carretera_lden",
+            "count": str(count),
+            "startIndex": str(fetched_roads),
+            "outputFormat": "application/json",
+        }
+        url_roads = f"{SICA_WFS_URL}?{urllib.parse.urlencode(params_roads)}"
+        try:
+            req = urllib.request.Request(url_roads, headers={"User-Agent": "OpenBarrio-ETL/1.0"})
+            with urllib.request.urlopen(req, timeout=30, context=ctx) as resp:
+                if resp.status == 200:
+                    data = json.loads(resp.read().decode("utf-8"))
+                    feats = data.get("features", [])
+                    if not feats:
+                        break
+                    for f in feats:
+                        props = f.get("properties", {})
+                        lden_val = float(props.get("lden") or props.get("noiselevel") or 68.0)
+                        f["properties"] = {
+                            "lden": lden_val,
+                            "category": get_noise_category(lden_val),
+                            "source": "ROAD_TRAFFIC",
+                            "tipo_ume": "CARRETERA",
+                            "source_layer": "mer_carretera_lden",
+                            "source_id": props.get("sourceiden") or props.get("localid") or "ROAD",
+                        }
+                    all_features.extend(feats)
+                    fetched_roads += len(feats)
+                    print(f"  ✓ mer_carretera_lden: {fetched_roads}/{target_roads} road segments...")
+                    if len(feats) < count:
+                        break
+        except Exception as e:
+            print(f"  ! mer_carretera_lden query error at {fetched_roads}: {e}")
+            break
+
+    # 4. Official Agglomerations (major metropolitan urban noise)
+    fetched_agglom = 0
+    target_agglom = 300
+    while fetched_agglom < target_agglom:
+        count = min(100, target_agglom - fetched_agglom)
+        params_agglom = {
+            "service": "WFS",
+            "version": "2.0.0",
+            "request": "GetFeature",
+            "typeNames": "evaluacionambiental:mer_aglomeracion_lden",
+            "count": str(count),
+            "startIndex": str(fetched_agglom),
+            "outputFormat": "application/json",
+        }
+        url_agglom = f"{SICA_WFS_URL}?{urllib.parse.urlencode(params_agglom)}"
+        try:
+            req = urllib.request.Request(url_agglom, headers={"User-Agent": "OpenBarrio-ETL/1.0"})
+            with urllib.request.urlopen(req, timeout=45, context=ctx) as resp:
+                if resp.status == 200:
+                    data = json.loads(resp.read().decode("utf-8"))
+                    feats = data.get("features", [])
+                    if not feats:
+                        break
+                    for f in feats:
+                        props = f.get("properties", {})
+                        lden_val = float(props.get("lden") or props.get("noiselevel") or 67.0)
+                        f["properties"] = {
+                            "lden": lden_val,
+                            "category": get_noise_category(lden_val),
+                            "source": "AGGLOMERATION",
+                            "tipo_ume": "AGLOMERACION",
+                            "source_layer": "mer_aglomeracion_lden",
+                            "source_id": props.get("sourceiden") or props.get("localid") or "AGGLOM",
+                        }
+                    all_features.extend(feats)
+                    fetched_agglom += len(feats)
+                    print(f"  ✓ mer_aglomeracion_lden: {fetched_agglom}/{target_agglom} agglomeration features...")
+                    if len(feats) < count:
+                        break
+        except Exception as e:
+            print(f"  ! mer_aglomeracion_lden query error at {fetched_agglom}: {e}")
+            break
     try:
         req = urllib.request.Request(url_aglom, headers={"User-Agent": "OpenBarrio-ETL/1.0"})
         with urllib.request.urlopen(req, timeout=20, context=ctx) as resp:
@@ -323,8 +372,13 @@ def compile_pmtiles(geojson_path: str, output_pmtiles: str) -> int:
             "-o", output_pmtiles,
             "-l", "sica_noise",
             "-Z", "6",
-            "-z", "14",
-            "--drop-densest-as-needed",
+            "-z", "15",
+            "--buffer=64",
+            "--detect-shared-borders",
+            "--no-simplification-of-shared-nodes",
+            "--preserve-input-order",
+            "--no-tile-size-limit",
+            "--no-feature-limit",
             "--force",
             geojson_path,
         ]
