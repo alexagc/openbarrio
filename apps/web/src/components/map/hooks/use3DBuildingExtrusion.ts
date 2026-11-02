@@ -147,7 +147,7 @@ export function use3DBuildingExtrusion({
         surroundingsData?.parcels ||
         report?.surroundings?.parcels ||
         (refcat ? surroundingsCache.get(refcat)?.parcels : undefined) ||
-        generateFallbackSurroundings(lat, lon);
+        (refcat ? undefined : generateFallbackSurroundings(lat, lon));
 
       if (surroundingParcels && surroundingParcels.length > 0) {
         for (let i = 0; i < surroundingParcels.length; i++) {

@@ -463,6 +463,111 @@ export class CatastroProvider implements ICatastroProvider {
     const cleanRef = refcat.replace(/[\s\-_.]/g, '').toUpperCase();
     const parcelRef = cleanRef.substring(0, 14);
 
+    // 1. Query Catastro INSPIRE WFS GetNeighbourParcel to get real official cadastral parcels
+    const realParcels: BuildingSurroundingsDTO['parcels'] = [];
+    const parcelMap = new Set<string>();
+
+    try {
+      const wfsUrl = `https://ovc.catastro.meh.es/INSPIRE/wfsCP.aspx?service=wfs&version=2.0.0&request=GetFeature&STOREDQUERY_ID=GetNeighbourParcel&REFCAT=${encodeURIComponent(parcelRef)}&srsname=EPSG::4326`;
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), this.timeoutMs);
+      const res = await fetch(wfsUrl, {
+        signal: controller.signal,
+        headers: { 'User-Agent': 'OpenBarrio-DueDiligence/0.1' },
+        ...({ cf: { cacheTtl: 7776000, cacheEverything: true } } as any),
+      });
+      clearTimeout(timer);
+
+      if (res.ok) {
+        const xml = await res.text();
+        const firstTierRefs: string[] = [];
+        const members = xml.match(/<(?:wfs:|gml:)?member[\s\S]*?<\/(?:wfs:|gml:)?member>/gi) || [];
+
+        for (const m of members) {
+          const rcMatch = m.match(/<cp:nationalCadastralReference>([^<]+)<\/cp:nationalCadastralReference>/i);
+          if (!rcMatch) continue;
+          const rc = rcMatch[1].trim();
+          if (rc === parcelRef || rc === cleanRef) continue;
+          firstTierRefs.push(rc);
+
+          const parsedGeom = parseCatastroWfsGeometryXml(m);
+          if (parsedGeom && parsedGeom.coordinates.length > 0 && !parcelMap.has(rc)) {
+            parcelMap.add(rc);
+            const floors = parsedGeom.numberOfFloors ?? (5 + (realParcels.length % 4));
+            const heightMeters = Number((floors * 3.2 + 1.0).toFixed(1));
+            realParcels.push({
+              cadastralReference: rc,
+              floors,
+              heightMeters,
+              geometry: {
+                type: 'Polygon',
+                coordinates: parsedGeom.coordinates,
+              },
+            });
+          }
+        }
+
+        // Fetch 2nd tier neighbors in parallel to complete the full urban block
+        if (firstTierRefs.length > 0) {
+          try {
+            const secondTierXmls = await Promise.all(
+              firstTierRefs.slice(0, 3).map(async (nRef) => {
+                const subUrl = `https://ovc.catastro.meh.es/INSPIRE/wfsCP.aspx?service=wfs&version=2.0.0&request=GetFeature&STOREDQUERY_ID=GetNeighbourParcel&REFCAT=${encodeURIComponent(nRef)}&srsname=EPSG::4326`;
+                const subCtrl = new AbortController();
+                const subTimer = setTimeout(() => subCtrl.abort(), this.timeoutMs);
+                const subRes = await fetch(subUrl, {
+                  signal: subCtrl.signal,
+                  headers: { 'User-Agent': 'OpenBarrio-DueDiligence/0.1' },
+                  ...({ cf: { cacheTtl: 7776000, cacheEverything: true } } as any),
+                });
+                clearTimeout(subTimer);
+                return subRes.ok ? await subRes.text() : '';
+              })
+            );
+
+            for (const subXml of secondTierXmls) {
+              if (!subXml) continue;
+              const subMembers = subXml.match(/<(?:wfs:|gml:)?member[\s\S]*?<\/(?:wfs:|gml:)?member>/gi) || [];
+              for (const sm of subMembers) {
+                const rcMatch = sm.match(/<cp:nationalCadastralReference>([^<]+)<\/cp:nationalCadastralReference>/i);
+                if (!rcMatch) continue;
+                const rc = rcMatch[1].trim();
+                if (rc === parcelRef || rc === cleanRef || parcelMap.has(rc)) continue;
+
+                const parsedGeom = parseCatastroWfsGeometryXml(sm);
+                if (parsedGeom && parsedGeom.coordinates.length > 0) {
+                  parcelMap.add(rc);
+                  const floors = parsedGeom.numberOfFloors ?? (6 + (realParcels.length % 3));
+                  const heightMeters = Number((floors * 3.2 + 1.0).toFixed(1));
+                  realParcels.push({
+                    cadastralReference: rc,
+                    floors,
+                    heightMeters,
+                    geometry: {
+                      type: 'Polygon',
+                      coordinates: parsedGeom.coordinates,
+                    },
+                  });
+                }
+              }
+            }
+          } catch {
+            // Ignore second-tier failures
+          }
+        }
+      }
+    } catch {
+      // Ignore WFS network failure and fallback
+    }
+
+    if (realParcels.length > 0) {
+      return {
+        targetRefcat: cleanRef,
+        parcels: realParcels,
+      };
+    }
+
+    // Fallback if WFS unavailable
     let centerLat = 40.42028;
     let centerLon = -3.70379;
     try {
@@ -473,14 +578,10 @@ export class CatastroProvider implements ICatastroProvider {
       // Keep default center
     }
 
-    // Generate realistic surrounding urban block context around the property
     const deterministic = generateDeterministicSurroundings(cleanRef, centerLat, centerLon);
-
-    // Filter out target parcel from surroundings if present
     deterministic.parcels = deterministic.parcels.filter(
       (p) => p.cadastralReference !== cleanRef && p.cadastralReference !== parcelRef
     );
-
     return deterministic;
   }
 
