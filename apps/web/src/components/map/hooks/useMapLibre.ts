@@ -482,12 +482,7 @@ export function useMapLibre({
                 ['*', ['coalesce', ['get', 'numberOfFloors'], 4], 3.2],
               ],
               'fill-extrusion-base': 0,
-              'fill-extrusion-opacity': [
-                'case',
-                ['boolean', ['get', 'isTarget'], false],
-                1.0,
-                0.88,
-              ],
+              'fill-extrusion-opacity': 0.88,
               'fill-extrusion-opacity-transition': {
                 duration: 400,
                 delay: 0,

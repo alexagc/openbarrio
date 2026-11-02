@@ -112,6 +112,7 @@ export function use3DBuildingExtrusion({
       if (surroundingParcels && surroundingParcels.length > 0) {
         for (let i = 0; i < surroundingParcels.length; i++) {
           const sp = surroundingParcels[i];
+          if (!sp?.geometry?.coordinates) continue;
           footprints.features.push({
             type: 'Feature' as const,
             properties: {
@@ -119,8 +120,8 @@ export function use3DBuildingExtrusion({
               isTarget: false,
               isSurrounding: true,
               name: sp.cadastralReference,
-              numberOfFloors: sp.floors,
-              height: sp.heightMeters,
+              numberOfFloors: sp.floors ?? 4,
+              height: sp.heightMeters ?? ((sp.floors ?? 4) * 3.2),
             },
             geometry: sp.geometry,
           } as any);
