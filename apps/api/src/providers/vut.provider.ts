@@ -1,9 +1,6 @@
 import { VutEvaluationDTO, evaluateVutSaturation } from '@openbarrio/core';
 import type { D1Database } from '../types/env.js';
-
-export interface IVutProvider {
-  getVutEvaluation(censusSectionId: string): Promise<VutEvaluationDTO>;
-}
+import type { IVutProvider } from './types.js';
 
 export class VutProvider implements IVutProvider {
   constructor(private readonly db?: D1Database) {}

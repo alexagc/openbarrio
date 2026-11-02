@@ -1,4 +1,3 @@
-import React from 'react';
 import { VutEvaluationDTO } from '@openbarrio/core';
 import { Hotel, AlertTriangle, CheckCircle2 } from 'lucide-react';
 

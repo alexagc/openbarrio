@@ -1,4 +1,3 @@
-import React from 'react';
 import { RadonEvaluationDTO } from '@openbarrio/core';
 import { ShieldAlert, ShieldCheck, Info } from 'lucide-react';
 

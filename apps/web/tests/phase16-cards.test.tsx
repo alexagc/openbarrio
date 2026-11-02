@@ -1,6 +1,5 @@
 import { describe, it, expect } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
-import React from 'react';
 import { RadonCard } from '../src/components/dossier/RadonCard';
 import { VutSaturationCard } from '../src/components/dossier/VutSaturationCard';
 import { FiscalSimulatorCard } from '../src/components/dossier/FiscalSimulatorCard';

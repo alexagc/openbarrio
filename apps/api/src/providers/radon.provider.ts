@@ -1,14 +1,6 @@
 import { RadonEvaluationDTO, evaluateRadonRisk, RadonMunicipalZone } from '@openbarrio/core';
 import type { D1Database } from '../types/env.js';
-
-export interface IRadonProvider {
-  getRadonEvaluation(
-    municipalityCode: string,
-    provinceCode?: string,
-    floorLevel?: number,
-    unitsCount?: number
-  ): Promise<RadonEvaluationDTO>;
-}
+import type { IRadonProvider } from './types.js';
 
 export class RadonProvider implements IRadonProvider {
   constructor(private readonly db?: D1Database) {}
