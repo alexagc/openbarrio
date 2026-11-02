@@ -112,6 +112,8 @@ describe('Phase 16 Due Diligence UI Cards', () => {
       expect(screen.getByTestId('fiscal-simulator-card')).toBeDefined();
       expect(screen.getByText('Comunidad de Madrid')).toBeDefined();
       expect(screen.getByText('6.0%')).toBeDefined();
+      expect(screen.getByText('Superficie Computable IBI')).toBeDefined();
+      expect(screen.getByText('85 m²')).toBeDefined();
 
       const slider = screen.getByLabelText(/Precio Estimado de Compraventa/i) || screen.getByRole('slider');
       fireEvent.change(slider, { target: { value: '400000' } });
@@ -119,19 +121,17 @@ describe('Phase 16 Due Diligence UI Cards', () => {
       expect(screen.getByText('€24.000')).toBeDefined();
     });
 
-    it('displays surface discrepancy alert when user inputs advertised m2 > 15%', () => {
+    it('displays surface discrepancy alert when deep-linked with advertised m2 > 15%', () => {
       const fiscal = calculateFiscalEstimate({
         cadastralReference: mockProperty.cadastralReference,
         provinceCode: '28',
         municipalityName: 'Madrid',
         purchasePriceEur: 300000,
         cadastralSurfaceM2: 85,
+        advertisedSurfaceM2: 115,
       });
 
       render(<FiscalSimulatorCard property={mockProperty} fiscal={fiscal} />);
-
-      const surfaceInput = screen.getByLabelText(/Superficie Anunciada en Portal/i);
-      fireEvent.change(surfaceInput, { target: { value: '115' } });
 
       expect(screen.getByTestId('surface-discrepancy-alert')).toBeDefined();
       expect(screen.getByText(/Posible terraza cerrada sin legalizar/i)).toBeDefined();

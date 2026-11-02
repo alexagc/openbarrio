@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { CadastralProperty, FiscalEstimateDTO, calculateFiscalEstimate } from '@openbarrio/core';
-import { Coins, Calculator, AlertTriangle, CheckCircle2 } from 'lucide-react';
+import { Coins, AlertTriangle, Building2 } from 'lucide-react';
 
 interface FiscalSimulatorCardProps {
   property: CadastralProperty;
@@ -20,13 +20,14 @@ export function FiscalSimulatorCard({ property, fiscal }: FiscalSimulatorCardPro
     return fiscal?.purchasePriceEur && fiscal.purchasePriceEur > 0 ? fiscal.purchasePriceEur : 280000;
   });
 
-  const [advertisedM2, setAdvertisedM2] = useState<number | undefined>(() => {
+  // Read advertised m2 if passed via deep-link from extension
+  const advertisedM2 = (() => {
     if (typeof window !== 'undefined') {
       const m2 = new URLSearchParams(window.location.search).get('advertised_m2');
       if (m2 && !isNaN(Number(m2)) && Number(m2) > 0) return Number(m2);
     }
     return fiscal?.advertisedSurfaceM2;
-  });
+  })();
 
   // Sync params with URL search
   useEffect(() => {
@@ -37,13 +38,8 @@ export function FiscalSimulatorCard({ property, fiscal }: FiscalSimulatorCardPro
     } else {
       url.searchParams.delete('price');
     }
-    if (advertisedM2 && advertisedM2 > 0) {
-      url.searchParams.set('advertised_m2', advertisedM2.toString());
-    } else {
-      url.searchParams.delete('advertised_m2');
-    }
     window.history.replaceState({}, '', url.toString());
-  }, [purchasePrice, advertisedM2]);
+  }, [purchasePrice]);
 
   // Recalculate fiscal estimate interactively
   const currentFiscal = calculateFiscalEstimate({
@@ -73,7 +69,7 @@ export function FiscalSimulatorCard({ property, fiscal }: FiscalSimulatorCardPro
         </span>
       </div>
 
-      {/* Interactive Controls */}
+      {/* Interactive Controls & Computable Base */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         {/* Purchase price slider & input */}
         <div className="space-y-1.5">
@@ -102,34 +98,24 @@ export function FiscalSimulatorCard({ property, fiscal }: FiscalSimulatorCardPro
           </div>
         </div>
 
-        {/* Advertised surface verification input */}
-        <div className="space-y-1.5">
+        {/* Cadastral computable surface for IBI */}
+        <div className="space-y-1.5 p-2.5 rounded bg-surface-container border border-outline-variant flex flex-col justify-between">
           <div className="flex items-center justify-between text-xs">
-            <label htmlFor="advertised-m2-input" className="text-on-surface-variant font-medium">
-              Superficie Anunciada en Portal (m²)
-            </label>
-            <span className="font-mono text-xs text-on-surface-variant">
-              Catastro: <strong>{cadastralSurface} m²</strong>
+            <span className="text-on-surface-variant font-medium flex items-center gap-1.5">
+              <Building2 className="w-3.5 h-3.5 text-primary" />
+              Superficie Computable IBI
+            </span>
+            <span className="font-mono font-bold text-on-surface text-sm">
+              {cadastralSurface} m²
             </span>
           </div>
-          <div className="relative">
-            <input
-              id="advertised-m2-input"
-              type="number"
-              placeholder={`Ej: ${Math.round(cadastralSurface * 1.15)}`}
-              value={advertisedM2 ?? ''}
-              onChange={(e) => {
-                const val = e.target.value.trim();
-                setAdvertisedM2(val === '' ? undefined : Number(val));
-              }}
-              className="w-full px-3 py-1.5 bg-surface-container border border-outline-variant rounded font-mono text-xs text-on-surface focus:outline-none focus:border-primary"
-            />
-            <span className="absolute right-3 top-1.5 text-xs text-outline font-mono">m²</span>
-          </div>
+          <p className="text-[11px] text-on-surface-variant leading-tight">
+            Superficie construida oficial de Catastro considerada como base para la valoración y cálculo de la cuota anual.
+          </p>
         </div>
       </div>
 
-      {/* Surface Discrepancy Alert */}
+      {/* Surface Discrepancy Alert (if passed via deep-link from extension) */}
       {currentFiscal.surfaceAlert && (
         <div
           data-testid="surface-discrepancy-alert"
