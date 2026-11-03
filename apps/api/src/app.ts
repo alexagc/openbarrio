@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
 import { swaggerUI } from '@hono/swagger-ui';
 import { problemDetailsErrorHandler } from './errors/problem-details.js';
-import { createProviders, ProviderContainer } from './providers/index.js';
+import { createProviders, injectDatabase, ProviderContainer } from './providers/index.js';
 import { createV1Routes } from './routes/index.js';
 import {
   securityHeadersMiddleware,
@@ -232,18 +232,11 @@ export function buildApp(options: AppOptions = {}): Hono<{ Bindings: CloudflareE
   // 5. Cloudflare Cache API & Edge caching (90 days TTL, X-OpenBarrio-Cache headers)
   app.use('*', edgeCacheMiddleware(options.cache));
 
-  // 6. Dynamic Cloudflare D1 injection for sub-5ms INE and civic facilities lookups
+  // 6. Dynamic Cloudflare D1 injection across all providers (sub-5ms INE, CEE, facilities, trends, radon, vut)
   const providers = options.providers || createProviders();
   app.use('*', async (c, next) => {
-    if (c.env?.DB && providers.ine && typeof (providers.ine as any).setDatabase === 'function') {
-      (providers.ine as any).setDatabase(c.env.DB);
-    }
-    if (
-      c.env?.DB &&
-      providers.connectivity &&
-      typeof (providers.connectivity as any).setDatabase === 'function'
-    ) {
-      (providers.connectivity as any).setDatabase(c.env.DB);
+    if (c.env?.DB) {
+      injectDatabase(providers, c.env.DB);
     }
     await next();
   });

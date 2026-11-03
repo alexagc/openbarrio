@@ -3,7 +3,15 @@ import type { D1Database } from '../types/env.js';
 import type { IVutProvider } from './types.js';
 
 export class VutProvider implements IVutProvider {
-  constructor(private readonly db?: D1Database) {}
+  private db?: D1Database;
+
+  constructor(db?: D1Database) {
+    this.db = db;
+  }
+
+  setDatabase(db: D1Database): void {
+    this.db = db;
+  }
 
   async getVutEvaluation(censusSectionId: string): Promise<VutEvaluationDTO> {
     if (this.db) {

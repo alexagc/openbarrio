@@ -71,10 +71,14 @@ const DEFAULT_IPV = [
 ];
 
 export class LongitudinalMarketProvider implements ILongitudinalMarketProvider {
-  private readonly db?: D1Database;
+  private db?: D1Database;
 
   constructor(options: LongitudinalMarketOptions = {}) {
     this.db = options.db;
+  }
+
+  setDatabase(db: D1Database): void {
+    this.db = db;
   }
 
   async getMarketTrends(

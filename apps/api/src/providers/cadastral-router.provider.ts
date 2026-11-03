@@ -31,6 +31,13 @@ export class CadastralRouterProvider implements ICatastroProvider {
     this.cache = new CadastralCache({ db: options.db, ttlSeconds: options.ttlSeconds });
   }
 
+  setDatabase(db: D1Database): void {
+    this.cache.setDatabase(db);
+    if (this.dgc && typeof (this.dgc as any).setDatabase === 'function') {
+      (this.dgc as any).setDatabase(db);
+    }
+  }
+
   private resolveProvider(
     refcat?: string | null,
     coords?: { latitude: number; longitude: number }

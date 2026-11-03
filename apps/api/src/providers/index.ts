@@ -206,3 +206,11 @@ export function createProviders(
     vut: overrides?.vut || defaultVut,
   };
 }
+
+export function injectDatabase(providers: ProviderContainer, db: D1Database): void {
+  for (const provider of Object.values(providers)) {
+    if (provider && typeof (provider as any).setDatabase === 'function') {
+      (provider as any).setDatabase(db);
+    }
+  }
+}

@@ -48,7 +48,7 @@ const DECLARED_STRESSED_MUNICIPALITIES = new Set([
  * 3. Fallback territorial regulatory heuristic
  */
 export class SERPAVIProvider implements ISERPAVIProvider {
-  private readonly db?: D1Database;
+  private db?: D1Database;
   private readonly apiBaseUrl: string;
   private readonly timeoutMs: number;
 
@@ -56,6 +56,10 @@ export class SERPAVIProvider implements ISERPAVIProvider {
     this.db = options.db;
     this.apiBaseUrl = options.apiBaseUrl || 'https://serpavi.mivau.gob.es/api/v1';
     this.timeoutMs = options.timeoutMs || 8000;
+  }
+
+  setDatabase(db: D1Database): void {
+    this.db = db;
   }
 
   async getRentalBenchmark(

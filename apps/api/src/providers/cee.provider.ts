@@ -11,10 +11,14 @@ export interface CEEProviderOptions {
 }
 
 export class CEEProvider implements ICEEProvider {
-  private readonly db?: D1Database;
+  private db?: D1Database;
 
   constructor(options: CEEProviderOptions = {}) {
     this.db = options.db;
+  }
+
+  setDatabase(db: D1Database): void {
+    this.db = db;
   }
 
   async getEnergyCertificate(

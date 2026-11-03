@@ -19,7 +19,7 @@ export type CadastralCacheType =
  * with a 90-day TTL, collapsing repeat audit latencies from ~1,500ms to <3ms.
  */
 export class CadastralCache {
-  private readonly db?: D1Database;
+  private db?: D1Database;
   private readonly ttlSeconds: number;
   private readonly maxEntries: number;
 
@@ -28,6 +28,10 @@ export class CadastralCache {
     // Default 90 days = 90 * 86,400 seconds = 7,776,000 seconds
     this.ttlSeconds = options.ttlSeconds ?? 90 * 86400;
     this.maxEntries = options.maxEntries ?? 50000;
+  }
+
+  setDatabase(db: D1Database): void {
+    this.db = db;
   }
 
   get isEnabled(): boolean {

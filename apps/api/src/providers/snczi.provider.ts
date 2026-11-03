@@ -20,13 +20,17 @@ export interface SNCZIProviderOptions {
 export class SNCZIProvider implements ISNCZIProvider {
   private readonly wmsBaseUrl: string;
   private readonly timeoutMs: number;
-  private readonly db?: D1Database;
+  private db?: D1Database;
 
   constructor(options: SNCZIProviderOptions = {}) {
     this.wmsBaseUrl =
       options.wmsBaseUrl || 'https://gis.miteco.gob.es/geoserver/agua/wms';
     this.timeoutMs = options.timeoutMs || 8000;
     this.db = options.db;
+  }
+
+  setDatabase(db: D1Database): void {
+    this.db = db;
   }
 
   async getFloodRiskData(

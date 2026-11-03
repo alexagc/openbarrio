@@ -48,6 +48,10 @@ export class CatastroProvider implements ICatastroProvider {
     this.cache = new CadastralCache({ db: options.db, ttlSeconds: options.ttlSeconds });
   }
 
+  setDatabase(db: D1Database): void {
+    this.cache.setDatabase(db);
+  }
+
   async getByCoordinates(latitude: number, longitude: number): Promise<CadastralProperty> {
     const cacheKey = `coords:${latitude.toFixed(5)},${longitude.toFixed(5)}`;
     const cached = await this.cache.get<CadastralProperty>(cacheKey);

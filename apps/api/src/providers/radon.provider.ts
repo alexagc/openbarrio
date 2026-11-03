@@ -3,7 +3,15 @@ import type { D1Database } from '../types/env.js';
 import type { IRadonProvider } from './types.js';
 
 export class RadonProvider implements IRadonProvider {
-  constructor(private readonly db?: D1Database) {}
+  private db?: D1Database;
+
+  constructor(db?: D1Database) {
+    this.db = db;
+  }
+
+  setDatabase(db: D1Database): void {
+    this.db = db;
+  }
 
   async getRadonEvaluation(
     municipalityCode: string,
