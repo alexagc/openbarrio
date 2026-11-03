@@ -31,8 +31,7 @@ node_modules/
 jspm_packages/
 .pnpm-store/
 
-# ETL generated migration chunks & scratch test files
-packages/etl/chunks/
+# ETL scratch test files
 scripts/osm_*.json
 
 # TypeScript cache
