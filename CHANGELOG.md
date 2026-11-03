@@ -5,6 +5,33 @@ All notable changes to the **OpenBarrio** platform are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.11.0] - 2026-11-03
+
+### Added
+- **Multi-Typology Domain Adaptation Engine (`packages/core`, `apps/api`, `apps/web`)**:
+  - **Comprehensive Property Typology Classification (`packages/core`)**:
+    - Added `PropertyTypology` domain model supporting `RESIDENTIAL`, `VACANT_PLOT`, `RUSTIC`, `INDUSTRIAL`, `COMMERCIAL`, and `EQUIPMENT`.
+    - Implemented `detectPropertyTypology()` parsing official Catastro cadastral uses, destination codes, and alphanumeric reference formats (e.g. agricultural polygon/parcel references).
+  - **Rustic Estates & Agricultural Parcels Calibration (`apps/api`, `packages/core`, `apps/web`)**:
+    - **WFS INSPIRE Parcel Geometry Ingestion**: Automatically queries `CP:CadastralParcel` (`GetParcel`) when built surface is 0 or property is rustic/plot, extracting authentic ground area (`plotSurfaceM2`) and completely eliminating hardcoded 90 m² residential fallbacks.
+    - **Municipal Land Classification**: Mapped `RUSTIC_PROTECTED` to *Suelo No Urbanizable Protegido (SNU-P)* and `RUSTIC_COMMON` to *Suelo No Urbanizable Común (SNU-C)*, replacing default urban labels.
+    - **Tailored Fiscal Simulation**: Computes IBI using rural agricultural rates (`0.35%`) over ground surface valuation, with purchase price slider dynamically bounded for rural property acquisitions (€5k–€200k).
+    - **Rural Demographic Stability**: Suppresses urban housing price index (IPV) in favor of longitudinal household income (INE ADRH) and stable rural territory indicators.
+    - **Technical Stewardship Diagnostics**: Suppresses residential ITE/IEE and CTE thermal insulation warnings, replacing them with rural land conservation notices and parcel ground area display.
+  - **Industrial Facilities & Logistical Warehouses Calibration (`apps/api`, `packages/core`, `apps/web`)**:
+    - **Dedicated BarrioScore Weighting**: Re-calibrated scoring weights (Structure & RSCIEI 35%, Urban Planning 25%, Connectivity 15%, Environmental 15%, Socioeconomic 10%), removing pedestrian school/playground penalties in industrial zones.
+    - **Legal Zoning & Statutory Exemption**: Assigned `IND-1 (Uso Industrial / Logístico)` zoning code and explicitly exempted industrial facilities from Ley 12/2023 residential rent control caps.
+    - **Industrial CapEx & Technical Diagnostic Card**: Replaced residential community fees with industrial compliance diagnostics (*RSCIEI RD 2267/2004* fire safety, floor load capacity, clearance height, and asbestos/envelope integrity).
+    - **Industrial Fiscal Simulator**: Scaled valuation parameters for commercial/industrial purchases (up to €2.5M).
+  - **Vacant Urban Plots (Solares Urbanos) Calibration (`apps/web`, `packages/core`)**:
+    - Ground surface computation, suppression of CapEx/ITE maintenance liabilities, and planning viability evaluation.
+
+- **High-Performance Autonomous ETL Pipeline & Repository Hygiene (`packages/etl`, `.github/workflows`)**:
+  - Ingested ~37,000 real Spanish census sections (INE ADRH) and >50,000 civic facilities into high-performance local SQLite database (`data/openbarrio.sqlite`).
+  - Single-pass streaming DuckDB Spatial extraction with automatic polygon simplification (`ST_Simplify(geom, 0.00005)`) for MITECO SICA and SNCZI datasets.
+  - Cleaned repository footprint by purging legacy monolithic SQL chunks (>66,000 lines removed) in favor of the autonomous DuckDB pipeline.
+  - Fixed SQLite transaction nesting in `init-local-db.mjs` for seamless developer cold starts.
+
 ## [0.10.0] - 2026-11-03
 
 ### Added
