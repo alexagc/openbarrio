@@ -5,6 +5,21 @@ All notable changes to the **OpenBarrio** platform are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.12.2] - 2026-11-03
+
+### Fixed
+- **Cloudflare Edge Provider Database Injection (`apps/api`)**:
+  - Resolved an issue where `c.env.DB` was only bound to `ine` and `connectivity` providers at request time in Cloudflare Workers, leaving all other database-backed providers (`cee`, `longitudinalMarket`, `radon`, `vut`, `serpavi`, `sica`, `snczi`, `catastro`) with `undefined` database instances.
+  - Implemented `setDatabase(db: D1Database)` on all D1-backed provider classes and connected the global `injectDatabase()` middleware in `apps/api/src/app.ts`.
+  - Guarantees official registered Energy Performance Certificates (CEE) are retrieved with `isEstimated: false` directly from Cloudflare D1 at the edge.
+- **Automated D1 Migrations in Deployment Pipelines (`.github/workflows`)**:
+  - Replaced manual sequential execution of individual SQL migrations in `deploy.yml` and `data-pipeline.yml` with `wrangler d1 migrations apply openbarrio-d1 --remote` to guarantee all 7 database migrations are applied cleanly during deployment.
+
+### Added
+- **S3 Multipart Upload for Large PMTiles to Cloudflare R2 (`.github/workflows/data-pipeline.yml`)**:
+  - Bypassed Wrangler CLI's 300 MiB upload threshold by deriving native AWS S3 HMAC credentials directly from `CLOUDFLARE_API_TOKEN` (`id` from verify endpoint and SHA-256 hash).
+  - Integrated AWS CLI S3 multipart upload with automatic credential derivation in the data pipeline, allowing full-fidelity transfer of large geospatial datasets (such as MITECO `floods.pmtiles`, 486.5 MiB) without downsampling or precision loss.
+
 ## [0.12.1] - 2026-11-03
 
 ### Fixed

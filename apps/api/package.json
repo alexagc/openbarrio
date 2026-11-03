@@ -1,6 +1,6 @@
 {
   "name": "@openbarrio/api",
-  "version": "0.12.1",
+  "version": "0.12.2",
   "description": "Universal REST API server for OpenBarrio (Cloudflare Workers & Node.js)",
   "author": "Alejandro Gómez Canal",
   "license": "Apache-2.0",
