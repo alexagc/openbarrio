@@ -4,8 +4,31 @@ import path from 'node:path';
 const MAX_BYTES_PER_CHUNK = 1000 * 1024; // 1 MB safe limit for Cloudflare D1
 const MAX_STATEMENTS_PER_CHUNK = 2500;
 
+export function assembleSqlFromChunks(chunksDir, targetSqlPath) {
+  if (!fs.existsSync(chunksDir)) return false;
+  const chunkFiles = fs.readdirSync(chunksDir).filter((f) => f.endsWith('.sql')).sort();
+  if (chunkFiles.length === 0) return false;
+
+  console.log(`📦 Assembling complete SQL dataset from ${chunkFiles.length} versioned chunks in ${chunksDir} -> ${targetSqlPath}...`);
+  const parts = chunkFiles.map((f) => fs.readFileSync(path.join(chunksDir, f), 'utf8'));
+  fs.mkdirSync(path.dirname(targetSqlPath), { recursive: true });
+  fs.writeFileSync(targetSqlPath, parts.join('\n\n'), 'utf8');
+  const sizeMb = (fs.statSync(targetSqlPath).size / (1024 * 1024)).toFixed(1);
+  console.log(`✅ Assembled ${targetSqlPath} (${sizeMb} MB) from ${chunkFiles.length} versioned chunks.\n`);
+  return true;
+}
+
 export function splitSqlFile(srcPath, outputDir, prefix, maxStatements = MAX_STATEMENTS_PER_CHUNK) {
+  const existingChunks = fs.existsSync(outputDir)
+    ? fs.readdirSync(outputDir).filter((f) => f.endsWith('.sql'))
+    : [];
+
   if (!fs.existsSync(srcPath)) {
+    if (existingChunks.length >= 5) {
+      console.log(`ℹ️ Source ${srcPath} not found, but ${existingChunks.length} versioned chunks exist in ${outputDir}.`);
+      assembleSqlFromChunks(outputDir, srcPath);
+      return existingChunks.length;
+    }
     console.warn(`⚠️ Source SQL file not found: ${srcPath}`);
     return 0;
   }
@@ -25,6 +48,15 @@ export function splitSqlFile(srcPath, outputDir, prefix, maxStatements = MAX_STA
   if (statements.length === 0) {
     console.warn(`   No valid statements found in ${srcPath}`);
     return 0;
+  }
+
+  // Safety protection: if source file has fewer than 5,000 statements but we already have >= 5 versioned chunks
+  // (e.g. sample run with 204 facilities or 20k CEEs), preserve the full national versioned chunks!
+  if (statements.length < 5000 && existingChunks.length >= 5) {
+    console.warn(`⚠️ Source ${srcPath} only has ${statements.length} statements, while ${outputDir} contains ${existingChunks.length} full national chunks.`);
+    console.log(`🛡️ Preserving full national chunks in ${outputDir} and assembling full SQL dump to ${srcPath}...`);
+    assembleSqlFromChunks(outputDir, srcPath);
+    return existingChunks.length;
   }
 
   if (!fs.existsSync(outputDir)) {
@@ -107,6 +139,8 @@ export function runAllSplits() {
       if (t.altOutDir) {
         splitSqlFile(src, t.altOutDir, t.prefix);
       }
+    } else {
+      splitSqlFile(t.candidates[0], t.outDir, t.prefix);
     }
   }
 }

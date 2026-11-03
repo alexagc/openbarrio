@@ -284,48 +284,46 @@ try {
   facilitiesCount = 0;
 }
 
-if (facilitiesCount > 1000) {
+if (facilitiesCount >= 50000) {
   console.log(`✅ [OpenBarrio] Database already contains ${facilitiesCount} civic facilities. Skipping seed.`);
 } else {
-  const facilitiesCandidates = [
-    'packages/etl/dist/civic_facilities.sql',
-    'packages/etl/dist/openbarrio-etl-dist/civic_facilities.sql',
-  ];
-  const facilitiesSqlPath = facilitiesCandidates.find((p) => fs.existsSync(p));
+  if (facilitiesCount > 0) {
+    db.exec('DELETE FROM civic_facilities;');
+  }
   const chunkCandidates = [
     'packages/etl/chunks/civic_facilities',
     'packages/etl/chunks',
     'packages/etl/dist/openbarrio-etl-dist/chunks',
   ];
-  const activeChunksDir = chunkCandidates.find((d) => fs.existsSync(d) && fs.readdirSync(d).some((f) => f.includes('civic_facilities')));
+  const activeChunksDir = chunkCandidates.find((d) => fs.existsSync(d) && fs.readdirSync(d).filter((f) => f.endsWith('.sql')).length >= 10);
 
-  if (facilitiesSqlPath) {
-    console.log(`🏫 Loading civic facilities dataset from ${facilitiesSqlPath}...`);
-    const facilitiesSql = fs.readFileSync(facilitiesSqlPath, 'utf8');
-    if (facilitiesSql.includes('BEGIN TRANSACTION')) {
-      db.exec(facilitiesSql);
-    } else {
-      db.exec('BEGIN TRANSACTION;');
-      db.exec(facilitiesSql);
-      db.exec('COMMIT;');
-    }
-    console.log('✅ Civic facilities dataset loaded.');
-  } else if (activeChunksDir) {
+  const facilitiesCandidates = [
+    'packages/etl/dist/civic_facilities.sql',
+    'packages/etl/dist/openbarrio-etl-dist/civic_facilities.sql',
+  ];
+  const facilitiesSqlPath = facilitiesCandidates.find((p) => fs.existsSync(p) && fs.statSync(p).size > 5 * 1024 * 1024);
+
+  if (activeChunksDir) {
     console.log(`🏫 Loading civic facilities dataset from ${activeChunksDir}...`);
     const files = fs.readdirSync(activeChunksDir).filter((f) => f.endsWith('.sql') && f.includes('civic_facilities')).sort();
     for (const f of files) {
       const chunkSql = fs.readFileSync(path.join(activeChunksDir, f), 'utf8');
-      db.exec('BEGIN TRANSACTION;');
       db.exec(chunkSql);
-      db.exec('COMMIT;');
     }
-    console.log(`✅ Civic facilities dataset loaded from ${files.length} chunks.`);
+    const newCount = db.prepare('SELECT count(*) as total FROM civic_facilities').get()?.total || 0;
+    console.log(`✅ Civic facilities dataset loaded from ${files.length} chunks (${newCount} facilities).`);
+  } else if (facilitiesSqlPath) {
+    console.log(`🏫 Loading civic facilities dataset from ${facilitiesSqlPath}...`);
+    const facilitiesSql = fs.readFileSync(facilitiesSqlPath, 'utf8');
+    db.exec(facilitiesSql);
+    const newCount = db.prepare('SELECT count(*) as total FROM civic_facilities').get()?.total || 0;
+    console.log(`✅ Civic facilities dataset loaded (${newCount} facilities).`);
   } else {
-    console.warn('⚠️ Could not find civic_facilities.sql or chunks');
+    console.warn('⚠️ Could not find full civic_facilities chunks or large SQL dump');
   }
 }
 
-// 7. Load Energy Performance Certificates (CEE) if empty
+// 6. Load Energy Performance Certificates (CEE) if empty or incomplete
 let ceeCount = 0;
 try {
   ceeCount = Number(db.prepare('SELECT count(*) as total FROM building_energy_certificates').get()?.total || 0);
@@ -333,38 +331,42 @@ try {
   ceeCount = 0;
 }
 
-if (ceeCount === 0) {
+if (ceeCount >= 150000) {
+  console.log(`⚡ Database already contains ${ceeCount} official energy certificates (CEE).`);
+} else {
+  if (ceeCount > 0) {
+    db.exec('DELETE FROM building_energy_certificates;');
+  }
+  const ceeChunkCandidates = [
+    'packages/etl/chunks/energy_certificates',
+    'packages/etl/dist/openbarrio-etl-dist/chunks_cee',
+  ];
+  const ceeChunksDir = ceeChunkCandidates.find((d) => fs.existsSync(d) && fs.readdirSync(d).filter((f) => f.endsWith('.sql')).length >= 5);
+
   const ceeCandidates = [
     'packages/etl/dist/energy_certificates.sql',
     'packages/etl/dist/openbarrio-etl-dist/energy_certificates.sql',
   ];
-  const ceeSqlPath = ceeCandidates.find((p) => fs.existsSync(p));
-  const ceeChunksDir = 'packages/etl/chunks/energy_certificates';
+  const ceeSqlPath = ceeCandidates.find((p) => fs.existsSync(p) && fs.statSync(p).size > 10 * 1024 * 1024);
 
-  if (ceeSqlPath) {
-    console.log(`⚡ Loading Energy Performance Certificates from ${ceeSqlPath}...`);
-    const ceeSql = fs.readFileSync(ceeSqlPath, 'utf8');
-    db.exec('BEGIN TRANSACTION;');
-    db.exec(ceeSql);
-    db.exec('COMMIT;');
-    const newCount = db.prepare('SELECT count(*) as total FROM building_energy_certificates').get()?.total || 0;
-    console.log(`✅ Energy Performance Certificates loaded (${newCount} certificates).`);
-  } else if (fs.existsSync(ceeChunksDir)) {
-    console.log('⚡ Loading Energy Performance Certificates from versioned chunks...');
+  if (ceeChunksDir) {
+    console.log(`⚡ Loading Energy Performance Certificates from ${ceeChunksDir}...`);
     const files = fs.readdirSync(ceeChunksDir).filter((f) => f.endsWith('.sql')).sort();
     for (const f of files) {
       const chunkSql = fs.readFileSync(path.join(ceeChunksDir, f), 'utf8');
-      db.exec('BEGIN TRANSACTION;');
       db.exec(chunkSql);
-      db.exec('COMMIT;');
     }
     const newCount = db.prepare('SELECT count(*) as total FROM building_energy_certificates').get()?.total || 0;
     console.log(`✅ Energy Performance Certificates loaded from ${files.length} chunks (${newCount} certificates).`);
+  } else if (ceeSqlPath) {
+    console.log(`⚡ Loading Energy Performance Certificates from ${ceeSqlPath}...`);
+    const ceeSql = fs.readFileSync(ceeSqlPath, 'utf8');
+    db.exec(ceeSql);
+    const newCount = db.prepare('SELECT count(*) as total FROM building_energy_certificates').get()?.total || 0;
+    console.log(`✅ Energy Performance Certificates loaded (${newCount} certificates).`);
   } else {
-    console.log('ℹ️ No CEE dump file found on initial seed (normative CTE engine will be used as fallback).');
+    console.log('ℹ️ No full CEE chunks or large dump found (normative CTE engine will be used as fallback).');
   }
-} else {
-  console.log(`⚡ Database already contains ${ceeCount} official energy certificates (CEE).`);
 }
 
 const finalRow = db.prepare('SELECT count(*) as total FROM census_tract_income').get();
