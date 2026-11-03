@@ -392,27 +392,38 @@ jobs:
           command: r2 object put openbarrio-r2/census_tracts.pmtiles --file=${{ github.workspace }}/packages/etl/dist/census_tracts.pmtiles
 
       - name: Sync Cloudflare R2 (MITECO Floods PMTiles via S3 Multipart)
-        if: inputs.dry_run != true && env.HAS_R2_S3_KEYS == 'true' && hashFiles('packages/etl/dist/floods.pmtiles') != ''
-        env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
-          AWS_DEFAULT_REGION: auto
-        run: |
-          echo "==> Uploading full national floods.pmtiles (487MB) to Cloudflare R2 via AWS CLI S3 Multipart..."
-          aws s3 cp packages/etl/dist/floods.pmtiles s3://openbarrio-r2/floods.pmtiles \
-            --endpoint-url https://${{ secrets.CLOUDFLARE_ACCOUNT_ID }}.r2.cloudflarestorage.com
-          echo "✓ floods.pmtiles uploaded successfully to Cloudflare R2!"
-
-      - name: Sync Cloudflare R2 (MITECO Floods PMTiles via Wrangler Fallback)
-        if: inputs.dry_run != true && env.HAS_R2_S3_KEYS != 'true' && env.HAS_CF_TOKEN == 'true' && hashFiles('packages/etl/dist/floods.pmtiles') != ''
+        if: inputs.dry_run != true && env.HAS_CF_TOKEN == 'true' && hashFiles('packages/etl/dist/floods.pmtiles') != ''
         continue-on-error: true
-        uses: cloudflare/wrangler-action@v3
-        with:
-          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          wranglerVersion: '3.114.17'
-          workingDirectory: apps/api
-          command: r2 object put openbarrio-r2/floods.pmtiles --file=${{ github.workspace }}/packages/etl/dist/floods.pmtiles
+        env:
+          CF_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CF_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CUSTOM_R2_KEY: ${{ secrets.R2_ACCESS_KEY_ID }}
+          CUSTOM_R2_SECRET: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+        run: |
+          echo "==> Configuring S3 credentials for Cloudflare R2..."
+          if [ -n "$CUSTOM_R2_KEY" ] && [ -n "$CUSTOM_R2_SECRET" ]; then
+            export AWS_ACCESS_KEY_ID="$CUSTOM_R2_KEY"
+            export AWS_SECRET_ACCESS_KEY="$CUSTOM_R2_SECRET"
+            echo "Using explicitly configured R2 S3 secrets."
+          else
+            echo "Deriving R2 S3 credentials from CLOUDFLARE_API_TOKEN..."
+            TOKEN_VERIFY=$(curl -s -H "Authorization: Bearer $CF_TOKEN" https://api.cloudflare.com/client/v4/user/tokens/verify)
+            TOKEN_ID=$(echo "$TOKEN_VERIFY" | jq -r '.result.id // empty')
+            if [ -n "$TOKEN_ID" ]; then
+              export AWS_ACCESS_KEY_ID="$TOKEN_ID"
+              export AWS_SECRET_ACCESS_KEY=$(printf "%s" "$CF_TOKEN" | sha256sum | cut -d' ' -f1)
+              echo "✓ Derived S3 Access Key ID: ${TOKEN_ID:0:8}..."
+            else
+              echo "Failed to verify Cloudflare API token or get token ID:"
+              echo "$TOKEN_VERIFY"
+            fi
+          fi
+
+          export AWS_DEFAULT_REGION=auto
+          echo "==> Uploading full national floods.pmtiles (487MB) to Cloudflare R2 via AWS CLI S3 Multipart..."
+          aws s3 cp packages/etl/dist/floods.pmtiles "s3://openbarrio-r2/floods.pmtiles" \
+            --endpoint-url "https://${CF_ACCOUNT_ID}.r2.cloudflarestorage.com"
+          echo "✓ floods.pmtiles uploaded successfully to Cloudflare R2!"
 
       - name: Sync Cloudflare R2 (MITECO Noise PMTiles)
         if: inputs.dry_run != true && env.HAS_CF_TOKEN == 'true' && hashFiles('packages/etl/dist/noise.pmtiles') != ''
