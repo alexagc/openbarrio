@@ -26,7 +26,7 @@ export interface R2ObjectBody {
 }
 
 export interface R2Bucket {
-  get(key: string): Promise<R2ObjectBody | null>;
+  get(key: string, options?: { range?: { offset?: number; length?: number; suffix?: number } } | unknown): Promise<R2ObjectBody | null>;
   put(key: string, value: unknown, options?: unknown): Promise<unknown>;
   delete(key: string | string[]): Promise<void>;
 }

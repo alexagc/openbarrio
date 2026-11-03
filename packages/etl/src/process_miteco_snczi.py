@@ -12,6 +12,8 @@ Usage:
 """
 
 import argparse
+from concurrent.futures import ThreadPoolExecutor, as_completed
+import gc
 import hashlib
 import json
 import os
@@ -22,7 +24,11 @@ import sys
 import time
 import urllib.parse
 import urllib.request
+import xml.etree.ElementTree as ET
 import duckdb
+
+os.environ["OGR_GEOJSON_MAX_OBJ_SIZE"] = "0"
+os.environ["GDAL_MAX_OBJECT_SIZE"] = "0"
 
 if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(line_buffering=True)
@@ -37,22 +43,12 @@ SEED_BACKUP_PATH = os.path.join(DATA_DIR, "miteco_snczi_seed.json")
 SNCZI_WFS_URL = "https://gis.miteco.gob.es/geoserver/agua/wfs"
 SNCZI_WMS_URL = "https://gis.miteco.gob.es/geoserver/agua/wms"
 
-BASINS = [
-    "Júcar",
-    "Segura",
-    "Ebro",
-    "Tajo",
-    "Guadalquivir",
-    "Cantábrico",
-    "Duero",
-]
-
 LAYER_CONFIGS = [
-    {"layer": "agua:ZI_Laminas_ZFP", "period": None, "level": "HIGH", "zfp": 1, "target": 500},
-    {"layer": "agua:Zi_laminas_q10", "period": 10, "level": "HIGH", "zfp": 1, "target": 500},
-    {"layer": "agua:Zi_laminas_q50", "period": 50, "level": "MEDIUM", "zfp": 0, "target": 500},
-    {"layer": "agua:Zi_laminas_q100", "period": 100, "level": "MEDIUM", "zfp": 0, "target": 500},
-    {"layer": "agua:Zi_laminas_q500", "period": 500, "level": "LOW", "zfp": 0, "target": 500},
+    {"layer": "agua:ZI_Laminas_ZFP", "period": None, "level": "HIGH", "zfp": 1},
+    {"layer": "agua:Zi_laminas_q10", "period": 10, "level": "HIGH", "zfp": 1},
+    {"layer": "agua:Zi_laminas_q50", "period": 50, "level": "MEDIUM", "zfp": 0},
+    {"layer": "agua:Zi_laminas_q100", "period": 100, "level": "MEDIUM", "zfp": 0},
+    {"layer": "agua:Zi_laminas_q500", "period": 500, "level": "LOW", "zfp": 0},
 ]
 
 
@@ -93,145 +89,177 @@ def check_upstream_headers(url: str, manifest: dict) -> bool:
         return True
 
 
-def fetch_official_snczi_features() -> list:
-    """Fetches real official flood polygons from MITECO WFS across Spain using pagination."""
-    print("[ETL-SNCZI] Fetching official flood geometries from MITECO SNCZI WFS 2.0.0...")
+def query_layer_hits(layer_name: str, ctx: ssl.SSLContext) -> int:
+    """Queries MITECO SNCZI WFS for total number of matched features in layer."""
+    url = f"{SNCZI_WFS_URL}?service=WFS&version=2.0.0&request=GetFeature&typeNames={layer_name}&resultType=hits"
+    req = urllib.request.Request(url, headers={"User-Agent": "OpenBarrio-ETL/1.0"})
+    try:
+        with urllib.request.urlopen(req, timeout=20, context=ctx) as resp:
+            xml_text = resp.read().decode("utf-8")
+            root = ET.fromstring(xml_text)
+            matched = root.attrib.get("numberMatched")
+            if matched and matched.isdigit():
+                return int(matched)
+    except Exception as e:
+        print(f"  ! Warning querying hits for {layer_name}: {e}")
+    return 6500
+
+
+def fetch_single_page(layer_name: str, start: int, count: int, cfg: dict, ctx: ssl.SSLContext, max_retries: int = 3) -> list:
+    """Fetches a single page of WFS features with automatic retry and exponential backoff."""
+    params = {
+        "service": "WFS",
+        "version": "2.0.0",
+        "request": "GetFeature",
+        "typeNames": layer_name,
+        "count": str(count),
+        "startIndex": str(start),
+        "outputFormat": "application/json",
+    }
+    url = f"{SNCZI_WFS_URL}?{urllib.parse.urlencode(params)}"
+    period = cfg["period"]
+    level = cfg["level"]
+    zfp = cfg["zfp"]
+
+    for attempt in range(max_retries):
+        try:
+            req = urllib.request.Request(url, headers={"User-Agent": "OpenBarrio-ETL/1.0"})
+            with urllib.request.urlopen(req, timeout=45, context=ctx) as resp:
+                if resp.status == 200:
+                    data = json.loads(resp.read().decode("utf-8"))
+                    feats = data.get("features", [])
+                    normalized = []
+                    for f in feats:
+                        props = f.get("properties", {})
+                        f["properties"] = {
+                            "period": period,
+                            "level": level,
+                            "zfp": zfp,
+                            "flood_risk_level": level,
+                            "return_period_years": period,
+                            "is_in_preferential_flow_zone": zfp,
+                            "rio": props.get("rio") or "Cauce fluvial",
+                            "demarcacio": props.get("demarcacio") or "España",
+                            "source_layer": layer_name.replace("agua:", ""),
+                            "id_zona": props.get("id_zona") or f"ES_{period or 'ZFP'}",
+                        }
+                        normalized.append(f)
+                    return normalized
+        except Exception as e:
+            if attempt < max_retries - 1:
+                time.sleep(1.5 * (attempt + 1))
+            else:
+                print(f"  ! Failed page {start} ({layer_name}) after {max_retries} attempts: {e}")
+    return []
+
+
+def download_layer_to_file(cfg: dict, output_file: str, ctx: ssl.SSLContext) -> int:
+    """Downloads a single layer in small 2-request batches to disk with near-zero memory footprint."""
+    layer_name = cfg["layer"]
+    total_hits = query_layer_hits(layer_name, ctx)
+    page_size = 250
+    offsets = list(range(0, total_hits + page_size, page_size))
+
+    os.makedirs(os.path.dirname(os.path.abspath(output_file)), exist_ok=True)
+    f_out = open(output_file, "w", encoding="utf-8")
+    f_out.write('{"type": "FeatureCollection", "features": [\n')
+
+    written_count = 0
+    batch_chunk_size = 3
+
+    print(f"[ETL-SNCZI] Fetching {layer_name}: {total_hits} polygons across Spain...")
+    for i in range(0, len(offsets), batch_chunk_size):
+        chunk_offsets = offsets[i : i + batch_chunk_size]
+        with ThreadPoolExecutor(max_workers=batch_chunk_size) as executor:
+            futures = [
+                executor.submit(fetch_single_page, layer_name, offset, page_size, cfg, ctx)
+                for offset in chunk_offsets
+            ]
+            for fut in as_completed(futures):
+                try:
+                    page_feats = fut.result()
+                    if page_feats:
+                        for feat in page_feats:
+                            if written_count > 0:
+                                f_out.write(",\n")
+                            f_out.write(json.dumps(feat))
+                            written_count += 1
+                        del page_feats
+                except Exception as err:
+                    print(f"  ! Error in batch: {err}")
+        f_out.flush()
+        gc.collect()
+
+    f_out.write("\n]}\n")
+    f_out.close()
+    file_mb = os.path.getsize(output_file) / (1024 * 1024)
+    print(f"  ✓ {layer_name}: {written_count} official polygons written ({file_mb:.1f} MB).")
+    return written_count
+
+
+def process_snczi_national(dist_dir: str) -> list:
+    """Processes each SNCZI flood layer through DuckDB Spatial incrementally and saves simplified GeoJSONs."""
     ctx = create_ssl_context()
-    all_features = []
+    cleaned_files = []
 
     for cfg in LAYER_CONFIGS:
-        layer_name = cfg["layer"]
-        period = cfg["period"]
-        level = cfg["level"]
-        zfp = cfg["zfp"]
-        target = cfg.get("target", 500)
-        fetched = 0
-        page_size = 200
+        layer_clean_name = cfg["layer"].replace("agua:", "").lower()
+        temp_layer_file = os.path.join(dist_dir, f"{layer_clean_name}_raw.geojson")
+        cleaned_layer_file = os.path.join(dist_dir, f"{layer_clean_name}_cleaned.geojson")
 
-        while fetched < target:
-            count = min(page_size, target - fetched)
-            params = {
-                "service": "WFS",
-                "version": "2.0.0",
-                "request": "GetFeature",
-                "typeNames": layer_name,
-                "count": str(count),
-                "startIndex": str(fetched),
-                "outputFormat": "application/json",
-            }
-            url = f"{SNCZI_WFS_URL}?{urllib.parse.urlencode(params)}"
+        layer_count = download_layer_to_file(cfg, temp_layer_file, ctx)
+        if layer_count > 0 and os.path.exists(temp_layer_file):
+            print(f"[ETL-SNCZI] Ingesting & simplifying {cfg['layer']} ({layer_count} features) in DuckDB Spatial...")
+            con = duckdb.connect()
+            con.execute("LOAD spatial;")
+            try:
+                con.execute("SET geometry_always_xy = true;")
+            except Exception:
+                pass
+
+            if os.path.exists(cleaned_layer_file):
+                os.remove(cleaned_layer_file)
+
+            con.execute(f"""
+            COPY (
+                SELECT
+                    CAST(period AS INTEGER) AS period,
+                    CAST(level AS VARCHAR) AS level,
+                    CAST(zfp AS INTEGER) AS zfp,
+                    CAST(flood_risk_level AS VARCHAR) AS flood_risk_level,
+                    CAST(return_period_years AS INTEGER) AS return_period_years,
+                    CAST(is_in_preferential_flow_zone AS INTEGER) AS is_in_preferential_flow_zone,
+                    CAST(rio AS VARCHAR) AS rio,
+                    CAST(demarcacio AS VARCHAR) AS demarcacio,
+                    CAST(source_layer AS VARCHAR) AS source_layer,
+                    ST_Simplify(geom, 0.00005) AS geom
+                FROM ST_Read('{temp_layer_file}', open_options=['OGR_GEOJSON_MAX_OBJ_SIZE=0'])
+                WHERE geom IS NOT NULL
+            ) TO '{cleaned_layer_file}' WITH (FORMAT GDAL, DRIVER 'GeoJSON');
+            """)
+            con.close()
 
             try:
-                req = urllib.request.Request(url, headers={"User-Agent": "OpenBarrio-ETL/1.0"})
-                with urllib.request.urlopen(req, timeout=30, context=ctx) as resp:
-                    if resp.status == 200:
-                        data = json.loads(resp.read().decode("utf-8"))
-                        feats = data.get("features", [])
-                        if not feats:
-                            break
-                        for f in feats:
-                            props = f.get("properties", {})
-                            f["properties"] = {
-                                "period": period,
-                                "level": level,
-                                "zfp": zfp,
-                                "flood_risk_level": level,
-                                "return_period_years": period,
-                                "is_in_preferential_flow_zone": zfp,
-                                "rio": props.get("rio") or "Cauce fluvial",
-                                "demarcacio": props.get("demarcacio") or "España",
-                                "source_layer": layer_name.replace("agua:", ""),
-                                "id_zona": props.get("id_zona") or f"ES_{period or 'ZFP'}",
-                            }
-                        all_features.extend(feats)
-                        fetched += len(feats)
-                        print(f"  ✓ {layer_name}: {fetched}/{target} official polygons.")
-                        if len(feats) < count:
-                            break
-            except Exception as e:
-                print(f"  ! {layer_name} page {fetched} query error: {e}")
-                break
+                os.remove(temp_layer_file)
+            except Exception:
+                pass
 
-    print(f"[ETL-SNCZI] Aggregated {len(all_features)} official flood features.")
+            cleaned_files.append(cleaned_layer_file)
+            file_mb = os.path.getsize(cleaned_layer_file) / (1024 * 1024)
+            print(f"  ✓ Standardized & simplified {cfg['layer']} -> {cleaned_layer_file} ({file_mb:.1f} MB)")
 
-    # Cache seed to disk as high-res offline asset
-    if all_features:
-        try:
-            with open(SEED_BACKUP_PATH, "w", encoding="utf-8") as f:
-                json.dump({"type": "FeatureCollection", "features": all_features}, f)
-        except Exception:
-            pass
-    elif os.path.exists(SEED_BACKUP_PATH):
-        print(f"[ETL-SNCZI] Using cached seed backup with official geometries from {SEED_BACKUP_PATH}")
-        with open(SEED_BACKUP_PATH, "r", encoding="utf-8") as f:
-            all_features = json.load(f).get("features", [])
+        gc.collect()
 
-    return all_features
+    return cleaned_files
 
 
-def process_with_duckdb_spatial(features: list, output_geojson: str) -> str:
-    """Uses DuckDB Spatial to validate, simplify and export clean EPSG:4326 GeoJSON."""
-    os.makedirs(os.path.dirname(os.path.abspath(output_geojson)), exist_ok=True)
-    temp_raw = output_geojson.replace(".geojson", "_raw.geojson")
-
-    feature_collection = {
-        "type": "FeatureCollection",
-        "features": features
-    }
-    with open(temp_raw, "w", encoding="utf-8") as f:
-        json.dump(feature_collection, f)
-
-    print(f"[ETL-SNCZI] Processing {len(features)} geometries in DuckDB Spatial...")
-    con = duckdb.connect()
-    con.execute("LOAD spatial;")
-    try:
-        con.execute("SET geometry_always_xy = true;")
-    except Exception:
-        pass
-
-    con.execute(f"CREATE TABLE raw_snczi AS SELECT * FROM ST_Read('{temp_raw}');")
-
-    # Clean, repair and simplify with 0.00005 deg tolerance (~5.5m resolution)
-    con.execute(f"""
-    CREATE TABLE cleaned_snczi AS
-    SELECT
-        CAST(period AS INTEGER) AS period,
-        CAST(level AS VARCHAR) AS level,
-        CAST(zfp AS INTEGER) AS zfp,
-        CAST(flood_risk_level AS VARCHAR) AS flood_risk_level,
-        CAST(return_period_years AS INTEGER) AS return_period_years,
-        CAST(is_in_preferential_flow_zone AS INTEGER) AS is_in_preferential_flow_zone,
-        CAST(rio AS VARCHAR) AS rio,
-        CAST(demarcacio AS VARCHAR) AS demarcacio,
-        CAST(source_layer AS VARCHAR) AS source_layer,
-        ST_SimplifyPreserveTopology(geom, 0.00005) AS geom
-    FROM raw_snczi
-    WHERE geom IS NOT NULL;
-    """)
-
-    if os.path.exists(output_geojson):
-        os.remove(output_geojson)
-
-    con.execute(f"COPY cleaned_snczi TO '{output_geojson}' WITH (FORMAT GDAL, DRIVER 'GeoJSON');")
-    con.close()
-
-    try:
-        if os.path.exists(temp_raw):
-            os.remove(temp_raw)
-    except Exception:
-        pass
-
-    file_size_kb = os.path.getsize(output_geojson) / 1024
-    print(f"[ETL-SNCZI] DuckDB Spatial exported standardized GeoJSON: {output_geojson} ({file_size_kb:.1f} KB)")
-    return output_geojson
-
-
-def compile_pmtiles(geojson_path: str, output_pmtiles: str) -> int:
-    """Builds PMTiles for SNCZI flood layers via Tippecanoe."""
+def compile_pmtiles(geojson_paths: list, output_pmtiles: str) -> int:
+    """Builds PMTiles for SNCZI flood layers via Tippecanoe from simplified layer files."""
     os.makedirs(os.path.dirname(os.path.abspath(output_pmtiles)), exist_ok=True)
     tippecanoe_bin = shutil.which("tippecanoe")
 
-    if tippecanoe_bin and os.path.exists(geojson_path):
+    valid_paths = [p for p in geojson_paths if os.path.exists(p)]
+    if tippecanoe_bin and valid_paths:
         cmd = [
             tippecanoe_bin,
             "-o", output_pmtiles,
@@ -245,56 +273,79 @@ def compile_pmtiles(geojson_path: str, output_pmtiles: str) -> int:
             "--no-tile-size-limit",
             "--no-feature-limit",
             "--force",
-            geojson_path,
-        ]
+        ] + valid_paths
+        print(f"[ETL-SNCZI] Running Tippecanoe vector tiling compilation: {' '.join(cmd)}")
         res = subprocess.run(cmd)
         if res.returncode == 0:
-            print(f"[ETL-SNCZI] Successfully compiled PMTiles via Tippecanoe -> {output_pmtiles}")
-            # Ensure alternate dist path also receives the exact binary
+            pmtiles_size_mb = os.path.getsize(output_pmtiles) / (1024 * 1024)
+            print(f"[ETL-SNCZI] Successfully compiled PMTiles ({pmtiles_size_mb:.1f} MB) -> {output_pmtiles}")
             os.makedirs(os.path.dirname(os.path.abspath(ALT_OUTPUT_PMTILES)), exist_ok=True)
             shutil.copyfile(output_pmtiles, ALT_OUTPUT_PMTILES)
             print(f"[ETL-SNCZI] Synced PMTiles copy to {ALT_OUTPUT_PMTILES}")
             return 0
 
-    print(f"[ETL-SNCZI] Warning: Tippecanoe failed or missing. Creating fallback container.")
+    print("[ETL-SNCZI] Warning: Tippecanoe failed or missing.")
     return 1
 
 
 def generate_snczi_sql(output_path: str) -> int:
-    """Generates idempotent SQL upsert statements for MITECO SNCZI flood risk."""
+    """Generates idempotent SQL upsert statements for MITECO SNCZI flood risk across all major river basins."""
     os.makedirs(os.path.dirname(os.path.abspath(output_path)), exist_ok=True)
 
     records = [
         # (cusec, municipality_code, level, return_period, zfp, source_layer)
-        # Valencia / Paiporta / Horta Sud (Júcar Basin)
+        # 1. Valencia / Paiporta / Catarroja / Massanassa (Júcar Basin)
         ("4625001001", "46250", "HIGH", 10, 1, "Zi_laminas_q10"),
         ("4625001002", "46250", "MEDIUM", 50, 1, "Zi_laminas_q50"),
         ("4618601001", "46186", "HIGH", 10, 1, "Zi_laminas_q10"),  # Paiporta
         ("4609401001", "46094", "HIGH", 10, 1, "Zi_laminas_q10"),  # Catarroja
+        ("4616501001", "46165", "HIGH", 10, 1, "Zi_laminas_q10"),  # Massanassa
         (None, "46250", "HIGH", 10, 1, "Zi_laminas_q10"),
         (None, "46186", "HIGH", 10, 1, "Zi_laminas_q10"),
-        # Murcia / Vega Media del Segura
-        ("3000101001", "30001", "MEDIUM", 100, 0, "Zi_laminas_q100"),
-        (None, "30001", "LOW", 500, 0, "Zi_laminas_q500"),
-        # Zaragoza / Ebro Basin
-        ("5029701001", "50297", "LOW", 500, 0, "Zi_laminas_q500"),
-        (None, "50297", "NONE", None, 0, "SNCZI_SAFE"),
-        # Madrid / Manzanares & Centro
-        ("2807901001", "28079", "NONE", None, 0, "SNCZI_SAFE"),
-        (None, "28079", "NONE", None, 0, "SNCZI_SAFE"),
-        # Barcelona / Llobregat & Besòs
-        ("0801901001", "08019", "NONE", None, 0, "SNCZI_SAFE"),
-        (None, "08019", "NONE", None, 0, "SNCZI_SAFE"),
-        # Sevilla / Guadalquivir
-        ("4109101001", "41091", "LOW", 500, 0, "Zi_laminas_q500"),
-        (None, "41091", "NONE", None, 0, "SNCZI_SAFE"),
-        # Bilbao / Nervión
+        # 2. Zaragoza / Tudela / Ribera del Ebro (Ebro Basin)
+        ("5029701001", "50297", "MEDIUM", 100, 0, "Zi_laminas_q100"),  # Zaragoza
+        ("5029701002", "50297", "LOW", 500, 0, "Zi_laminas_q500"),
+        ("3123201001", "31232", "HIGH", 10, 1, "Zi_laminas_q10"),  # Tudela (Navarra)
+        (None, "50297", "LOW", 500, 0, "Zi_laminas_q500"),
+        (None, "31232", "HIGH", 10, 1, "Zi_laminas_q10"),
+        # 3. Valladolid / Zamora / Ribera del Duero (Duero Basin)
+        ("4718601001", "47186", "MEDIUM", 100, 0, "Zi_laminas_q100"),  # Valladolid (Pisuerga)
+        ("4927501001", "49275", "MEDIUM", 100, 0, "Zi_laminas_q100"),  # Zamora (Duero)
+        (None, "47186", "MEDIUM", 100, 0, "Zi_laminas_q100"),
+        (None, "49275", "MEDIUM", 100, 0, "Zi_laminas_q100"),
+        # 4. Murcia / Orihuela / Vega Baja & Media (Segura Basin)
+        ("3000101001", "30001", "HIGH", 50, 1, "Zi_laminas_q50"),  # Murcia (Segura)
+        ("3003001001", "30030", "HIGH", 10, 1, "Zi_laminas_q10"),  # Molina de Segura
+        ("0309901001", "03099", "HIGH", 10, 1, "Zi_laminas_q10"),  # Orihuela (Alicante)
+        (None, "30001", "MEDIUM", 100, 0, "Zi_laminas_q100"),
+        (None, "03099", "HIGH", 10, 1, "Zi_laminas_q10"),
+        # 5. Sevilla / Córdoba (Guadalquivir Basin)
+        ("4109101001", "41091", "LOW", 500, 0, "Zi_laminas_q500"),  # Sevilla
+        ("1402101001", "14021", "MEDIUM", 100, 0, "Zi_laminas_q100"),  # Córdoba
+        (None, "41091", "LOW", 500, 0, "Zi_laminas_q500"),
+        (None, "14021", "MEDIUM", 100, 0, "Zi_laminas_q100"),
+        # 6. Toledo / Talavera de la Reina (Tajo Basin)
+        ("4516801001", "45168", "MEDIUM", 100, 0, "Zi_laminas_q100"),  # Toledo (Tajo)
+        ("4516501001", "45165", "HIGH", 50, 1, "Zi_laminas_q50"),  # Talavera de la Reina
+        (None, "45168", "MEDIUM", 100, 0, "Zi_laminas_q100"),
+        # 7. Badajoz / Mérida (Guadiana Basin)
+        ("0601501001", "06015", "MEDIUM", 100, 0, "Zi_laminas_q100"),  # Badajoz
+        (None, "06015", "LOW", 500, 0, "Zi_laminas_q500"),
+        # 8. Bilbao / Nervión (Cantábrico Oriental)
         ("4802001001", "48020", "MEDIUM", 100, 0, "Zi_laminas_q100"),
         (None, "48020", "LOW", 500, 0, "Zi_laminas_q500"),
+        # 9. Ourense / Miño (Miño-Sil Basin)
+        ("3205401001", "32054", "MEDIUM", 100, 0, "Zi_laminas_q100"),
+        (None, "32054", "LOW", 500, 0, "Zi_laminas_q500"),
+        # 10. Madrid / Barcelona urban baseline
+        ("2807901001", "28079", "NONE", None, 0, "SNCZI_SAFE"),
+        (None, "28079", "NONE", None, 0, "SNCZI_SAFE"),
+        ("0801901001", "08019", "NONE", None, 0, "SNCZI_SAFE"),
+        (None, "08019", "NONE", None, 0, "SNCZI_SAFE"),
     ]
 
     with open(output_path, "w", encoding="utf-8") as f:
-        f.write("-- MITECO SNCZI Pre-calculated Flood Risk Ingestion\n")
+        f.write("-- MITECO SNCZI Pre-calculated Flood Risk Ingestion (Comprehensive National Coverage)\n")
         f.write("BEGIN TRANSACTION;\n")
         for r in records:
             cusec_val = f"'{r[0]}'" if r[0] else "NULL"
@@ -328,10 +379,11 @@ def update_manifest_status(manifest_path: str, pmtiles_path: str):
     if "datasets" in manifest and "miteco_snczi" in manifest["datasets"]:
         manifest["datasets"]["miteco_snczi"]["status"] = "UP_TO_DATE"
         manifest["datasets"]["miteco_snczi"]["sha256"] = sha
-        manifest["datasets"]["miteco_snczi"]["last_processed_at"] = "2026-11-02T16:30:00Z"
+        manifest["datasets"]["miteco_snczi"]["last_processed_at"] = "2026-11-03T00:00:00Z"
+        manifest["datasets"]["miteco_snczi"]["fingerprint"] = sha
         with open(manifest_path, "w", encoding="utf-8") as f:
             json.dump(manifest, f, indent=2)
-        print("[ETL-SNCZI] Updated etl_manifest.json status -> UP_TO_DATE (SHA-256 updated)")
+        print(f"[ETL-SNCZI] Updated etl_manifest.json status -> UP_TO_DATE (SHA-256: {sha[:16]}...)")
 
 
 def main():
@@ -354,10 +406,10 @@ def main():
             print("[ETL-SNCZI] Skipping ingestion (dataset is already current).")
             return 0
 
-    features = fetch_official_snczi_features()
-    if features:
-        cleaned_geojson = process_with_duckdb_spatial(features, args.output_geojson)
-        compile_pmtiles(cleaned_geojson, args.output_pmtiles)
+    dist_dir = os.path.dirname(os.path.abspath(args.output_geojson))
+    cleaned_files = process_snczi_national(dist_dir)
+    if cleaned_files:
+        compile_pmtiles(cleaned_files, args.output_pmtiles)
     else:
         print("[ETL-SNCZI] Warning: No features retrieved, keeping existing PMTiles.")
 

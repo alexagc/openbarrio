@@ -34,6 +34,21 @@ export class SNCZIProvider implements ISNCZIProvider {
     longitude: number,
     censusSectionCode?: string
   ): Promise<FloodRiskData> {
+    // 0. Canary Islands detection: Outside MITECO continental river basin jurisdiction.
+    // Fluvial and ravine risks in the Canary Islands are legally governed by the 7 Insular Water Councils
+    // (Consejos Insulares de Aguas / SITCAN / GRAFCAN) and not catalogued in MITECO SNCZI mainland WFS.
+    const isCanarias =
+      (latitude < 30 && longitude < -13) ||
+      Boolean(censusSectionCode && (censusSectionCode.startsWith('35') || censusSectionCode.startsWith('38')));
+
+    if (isCanarias) {
+      return {
+        level: 'NONE',
+        returnPeriodYears: null,
+        isInPreferentialFlowZone: false,
+      };
+    }
+
     // 1. Hierarchical Resolution via Cloudflare D1 (sub-5ms Edge execution)
     if (this.db) {
       try {

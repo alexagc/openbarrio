@@ -210,6 +210,7 @@ export class INEProvider implements IINEProvider {
         '30': '030', // Murcia
         '07': '040', // Palma de Mallorca
         '35': '016', // Las Palmas de Gran Canaria
+        '38': '038', // Santa Cruz de Tenerife
         '48': '020', // Bilbao
         '03': '014', // Alicante
         '14': '021', // Córdoba

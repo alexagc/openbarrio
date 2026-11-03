@@ -547,15 +547,146 @@ describe('MapView Component (Stitch Civic Precision)', () => {
       expect(sncziSource.url).toContain('/api/v1/tiles/floods.pmtiles');
 
       // Verify layers allow zooming past z19 (up to z22)
-      const sicaLayer = lastCallArgs.style.layers.find((l: any) => l.id === 'sica-layer');
-      expect(sicaLayer).toBeTruthy();
-      expect(sicaLayer.type).toBe('fill');
-      expect(sicaLayer.maxzoom).toBe(22);
+      const sicaHalo = lastCallArgs.style.layers.find((l: any) => l.id === 'sica-isophone-halo');
+      expect(sicaHalo).toBeTruthy();
+      expect(sicaHalo.type).toBe('line');
+      expect(sicaHalo.maxzoom).toBe(22);
+
+      // Verify no fill layer exists for SICA noise (eliminates polygon closing artifacts)
+      const sicaFillLayer = lastCallArgs.style.layers.find((l: any) => l.id === 'sica-layer');
+      expect(sicaFillLayer).toBeUndefined();
 
       const sncziLayer = lastCallArgs.style.layers.find((l: any) => l.id === 'snczi-layer');
       expect(sncziLayer).toBeTruthy();
       expect(sncziLayer.type).toBe('fill');
       expect(sncziLayer.maxzoom).toBe(22);
+    });
+
+    it('should configure MITECO SICA as acoustic ribbon corridors without fill polygon artifacts', async () => {
+      const maplibreMock = await import('maplibre-gl');
+      render(
+        <MapView
+          selectedCoords={{ lat: 40.42028, lon: -3.70379 }}
+          onMapClick={vi.fn()}
+        />
+      );
+
+      const mapConstructor = maplibreMock.Map as unknown as ReturnType<typeof vi.fn>;
+      const lastCallArgs = mapConstructor.mock.calls[mapConstructor.mock.calls.length - 1][0];
+
+      // Verify no fill layer exists for noise
+      const sicaFill = lastCallArgs.style.layers.find((l: any) => l.id === 'sica-layer');
+      expect(sicaFill).toBeUndefined();
+
+      // Verify sica-isophone-halo (diffuse acoustic glow ribbon corridor)
+      const sicaHalo = lastCallArgs.style.layers.find((l: any) => l.id === 'sica-isophone-halo');
+      expect(sicaHalo).toBeTruthy();
+      expect(sicaHalo.type).toBe('line');
+      expect(sicaHalo.paint['line-blur']).toBeDefined();
+      expect(sicaHalo.layout['line-join']).toBe('round');
+      expect(sicaHalo.layout['line-cap']).toBe('round');
+
+      // Verify zoom-driven attenuation expression for halo ribbon
+      const haloOpacity = sicaHalo.paint['line-opacity'];
+      expect(Array.isArray(haloOpacity)).toBe(true);
+      expect(haloOpacity[0]).toBe('interpolate');
+      expect(haloOpacity[1]).toEqual(['linear']);
+      expect(haloOpacity[2]).toEqual(['zoom']);
+
+      // Verify sica-borders (sharp isophone contour line)
+      const sicaBorders = lastCallArgs.style.layers.find((l: any) => l.id === 'sica-borders');
+      expect(sicaBorders).toBeTruthy();
+      expect(sicaBorders.type).toBe('line');
+      expect(sicaBorders.paint['line-width']).toBeDefined();
+      expect(sicaBorders.layout['line-join']).toBe('round');
+      expect(sicaBorders.layout['line-cap']).toBe('round');
+    });
+
+    it('should enforce WebGL layer render stack order: ground acoustic below cadastre and 3D buildings', async () => {
+      const maplibreMock = await import('maplibre-gl');
+      render(
+        <MapView
+          selectedCoords={{ lat: 40.42028, lon: -3.70379 }}
+          onMapClick={vi.fn()}
+        />
+      );
+
+      const mapConstructor = maplibreMock.Map as unknown as ReturnType<typeof vi.fn>;
+      const layers: any[] = mapConstructor.mock.calls[mapConstructor.mock.calls.length - 1][0].style.layers;
+
+      const sicaHaloIndex = layers.findIndex((l) => l.id === 'sica-isophone-halo');
+      const sicaBordersIndex = layers.findIndex((l) => l.id === 'sica-borders');
+      const sncziIndex = layers.findIndex((l) => l.id === 'snczi-layer');
+      const catastroIndex = layers.findIndex((l) => l.id === 'catastro-layer');
+      const building3dIndex = layers.findIndex((l) => l.id === 'building-3d-extrusion');
+
+      expect(sicaHaloIndex).toBeGreaterThan(-1);
+      expect(sicaBordersIndex).toBeGreaterThan(-1);
+      expect(sncziIndex).toBeGreaterThan(-1);
+      expect(catastroIndex).toBeGreaterThan(-1);
+      expect(building3dIndex).toBeGreaterThan(-1);
+
+      // SICA and SNCZI must render on ground plane below Cadastre
+      expect(sicaHaloIndex).toBeLessThan(catastroIndex);
+      expect(sicaBordersIndex).toBeLessThan(catastroIndex);
+      expect(sncziIndex).toBeLessThan(catastroIndex);
+
+      // Cadastre must render below 3D buildings
+      expect(catastroIndex).toBeLessThan(building3dIndex);
+    });
+
+    it('should coherently stack MITECO SNCZI flood sheets from outer T=500 to core ZFP with antialiased borders without seam artifacts', async () => {
+      const maplibreMock = await import('maplibre-gl');
+      render(
+        <MapView
+          selectedCoords={{ lat: 40.42028, lon: -3.70379 }}
+          onMapClick={vi.fn()}
+        />
+      );
+
+      const mapConstructor = maplibreMock.Map as unknown as ReturnType<typeof vi.fn>;
+      const layers: any[] = mapConstructor.mock.calls[mapConstructor.mock.calls.length - 1][0].style.layers;
+
+      const sncziOuter = layers.find((l) => l.id === 'snczi-layer');
+      const sncziT100 = layers.find((l) => l.id === 'snczi-t100-layer');
+      const sncziT10 = layers.find((l) => l.id === 'snczi-t10-layer');
+      const sncziZfp = layers.find((l) => l.id === 'snczi-zfp-layer');
+      const sncziBorders = layers.find((l) => l.id === 'snczi-borders');
+
+      expect(sncziOuter).toBeTruthy();
+      expect(sncziT100).toBeTruthy();
+      expect(sncziT10).toBeTruthy();
+      expect(sncziZfp).toBeTruthy();
+      expect(sncziBorders).toBeTruthy();
+
+      // Outer sheet T=500: official MITECO sky blue / celeste
+      expect(sncziOuter.paint['fill-color']).toBe('#38bdf8');
+      expect(sncziOuter.paint['fill-antialias']).toBe(true);
+      expect(sncziOuter.paint['fill-outline-color']).toBeUndefined(); // Seam-free: no conflicting outline
+
+      // Core ZFP: official MITECO midnight indigo warning
+      expect(sncziZfp.paint['fill-color']).toBe('#172554');
+      expect(sncziZfp.paint['fill-antialias']).toBe(true);
+
+      // High energy T=10: official MITECO deep navy blue
+      expect(sncziT10.paint['fill-color']).toBe('#1e3a8a');
+
+      // Borders: line layer with round joins and anti-jitter blur
+      expect(sncziBorders.type).toBe('line');
+      expect(sncziBorders.layout['line-join']).toBe('round');
+      expect(sncziBorders.paint['line-blur']).toBe(0.5);
+
+      // Verify layer stacking hierarchy (T=500 bottom -> T=100 -> T=10 -> ZFP top -> Borders)
+      const idxOuter = layers.indexOf(sncziOuter);
+      const idxT100 = layers.indexOf(sncziT100);
+      const idxT10 = layers.indexOf(sncziT10);
+      const idxZfp = layers.indexOf(sncziZfp);
+      const idxBorders = layers.indexOf(sncziBorders);
+
+      expect(idxOuter).toBeLessThan(idxT100);
+      expect(idxT100).toBeLessThan(idxT10);
+      expect(idxT10).toBeLessThan(idxZfp);
+      expect(idxZfp).toBeLessThan(idxBorders);
     });
   });
 });

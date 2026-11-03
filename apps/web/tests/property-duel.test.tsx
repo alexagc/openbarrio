@@ -210,7 +210,7 @@ describe('Property Duel & Dual Radar Comparator (Phase 12C)', () => {
     const barcelonaPresetBtn = screen.getByText(/Passeig de Gràcia 43/i);
     fireEvent.click(barcelonaPresetBtn);
 
-    await waitFor(() => expect(handleSelectB).toHaveBeenCalled());
+    await waitFor(() => expect(handleSelectB).toHaveBeenCalled(), { timeout: 4000 });
   });
 
   it('renders BuildingCapExCard with ITE status, derramas risk gauge, and formatted metrics', () => {

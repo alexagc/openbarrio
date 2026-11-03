@@ -118,13 +118,13 @@ def process_ign_boundaries(input_path: str, output_geojson: str, output_pmtiles:
 
     # Detect attribute column names
     cols = [col[0].lower() for col in con.execute("DESCRIBE raw_boundaries").fetchall()]
-    cusec_col = next((c for c in cols if c in ['cusec', 'seccion', 'seccion_censal', 'code']), cols[0])
-    cumun_col = next((c for c in cols if c in ['cumun', 'municipio', 'muni']), None)
+    cusec_col = next((c for c in cols if c in ['census_section_code', 'cusec', 'seccion', 'seccion_censal', 'code']), cols[0])
+    cumun_col = next((c for c in cols if c in ['municipality_code', 'cumun', 'municipio', 'muni']), None)
 
     cumun_expr = (
-        f"CAST(\"{cumun_col}\" AS VARCHAR)"
+        f"CAST(rb.\"{cumun_col}\" AS VARCHAR)"
         if cumun_col
-        else f"SUBSTRING(CAST(\"{cusec_col}\" AS VARCHAR), 1, 5)"
+        else f"SUBSTRING(CAST(rb.\"{cusec_col}\" AS VARCHAR), 1, 5)"
     )
 
     print("Performing SQL LEFT JOIN between IGN boundary polygons and INE ADRH income indicators...")
@@ -140,7 +140,8 @@ def process_ign_boundaries(input_path: str, output_geojson: str, output_pmtiles:
         ROUND(COALESCE(ci.percentile_in_municipality, 50.0), 1) AS percentile_in_municipality,
         ST_SimplifyPreserveTopology(
             CASE
-                WHEN ST_X(ST_Centroid(rb.geom)) > 1000 THEN ST_Transform(rb.geom, 'EPSG:25830', 'EPSG:4326', always_xy := true)
+                WHEN ABS(ST_X(ST_Centroid(rb.geom))) > 180 OR ABS(ST_Y(ST_Centroid(rb.geom))) > 90 THEN
+                    ST_Transform(rb.geom, 'EPSG:25830', 'EPSG:4326', always_xy := true)
                 ELSE rb.geom
             END,
             0.0001

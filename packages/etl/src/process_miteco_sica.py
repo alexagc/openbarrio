@@ -13,6 +13,7 @@ Usage:
 """
 
 import argparse
+from concurrent.futures import ThreadPoolExecutor, as_completed
 import hashlib
 import json
 import os
@@ -23,9 +24,8 @@ import sys
 import time
 import urllib.parse
 import urllib.request
+import xml.etree.ElementTree as ET
 import duckdb
-
-os.environ["OGR_GEOJSON_MAX_OBJ_SIZE"] = "0"
 
 os.environ["OGR_GEOJSON_MAX_OBJ_SIZE"] = "0"
 os.environ["GDAL_MAX_OBJECT_SIZE"] = "0"
@@ -42,18 +42,6 @@ DEFAULT_OUTPUT_GEOJSON = os.path.join(os.path.dirname(__file__), "..", "dist", "
 SEED_BACKUP_PATH = os.path.join(DATA_DIR, "miteco_sica_seed.json")
 SICA_WFS_URL = "https://gis.miteco.gob.es/geoserver/evaluacionambiental/wfs"
 SICA_WMS_URL = "https://gis.miteco.gob.es/geoserver/evaluacionambiental/wms"
-
-ROAD_REGIONS = [
-    "MAD",  # Madrid (M-30, M-40, A-1 to A-6)
-    "CAT",  # Catalunya (Barcelona, AP-7)
-    "VAL",  # Comunitat Valenciana (V-30, A-7)
-    "AND",  # Andalucía (Sevilla, Málaga, SE-30)
-    "EUS",  # Euskadi (Bilbao, AP-8)
-    "ARA",  # Aragón (Zaragoza, A-2)
-    "GAL",  # Galicia (AP-9)
-    "CYL",  # Castilla y León (A-62)
-    "MUR",  # Región de Murcia (A-30)
-]
 
 
 def create_ssl_context():
@@ -103,203 +91,144 @@ def get_noise_category(lden: float) -> str:
     return "QUIET"
 
 
+def query_sica_hits(layer_name: str, ctx: ssl.SSLContext) -> int:
+    """Queries MITECO SICA WFS for total number of matched features in layer."""
+    url = f"{SICA_WFS_URL}?service=WFS&version=2.0.0&request=GetFeature&typeNames={layer_name}&resultType=hits"
+    req = urllib.request.Request(url, headers={"User-Agent": "OpenBarrio-ETL/1.0"})
+    try:
+        with urllib.request.urlopen(req, timeout=20, context=ctx) as resp:
+            xml_text = resp.read().decode("utf-8")
+            root = ET.fromstring(xml_text)
+            matched = root.attrib.get("numberMatched")
+            if matched and matched.isdigit():
+                return int(matched)
+    except Exception as e:
+        print(f"  ! Warning querying hits for {layer_name}: {e}")
+    return 1000
+
+
+def fetch_sica_page(layer_name: str, start: int, count: int, source_type: str, ume_type: str, fallback_lden: float, ctx: ssl.SSLContext, max_retries: int = 3) -> list:
+    """Fetches a single page of SICA WFS features with automatic retries."""
+    params = {
+        "service": "WFS",
+        "version": "2.0.0",
+        "request": "GetFeature",
+        "typeNames": layer_name,
+        "count": str(count),
+        "startIndex": str(start),
+        "outputFormat": "application/json",
+    }
+    url = f"{SICA_WFS_URL}?{urllib.parse.urlencode(params)}"
+
+    for attempt in range(max_retries):
+        try:
+            req = urllib.request.Request(url, headers={"User-Agent": "OpenBarrio-ETL/1.0"})
+            with urllib.request.urlopen(req, timeout=40, context=ctx) as resp:
+                if resp.status == 200:
+                    data = json.loads(resp.read().decode("utf-8"))
+                    feats = data.get("features", [])
+                    normalized = []
+                    for f in feats:
+                        props = f.get("properties", {})
+                        raw_lden = props.get("lden") or props.get("noiselevel")
+                        try:
+                            lden_val = float(raw_lden) if raw_lden is not None else fallback_lden
+                        except (ValueError, TypeError):
+                            lden_val = fallback_lden
+
+                        f["properties"] = {
+                            "lden": lden_val,
+                            "category": get_noise_category(lden_val),
+                            "source": source_type,
+                            "tipo_ume": ume_type,
+                            "source_layer": layer_name.replace("evaluacionambiental:", ""),
+                            "source_id": props.get("sourceiden") or props.get("localid") or props.get("zip_origen") or source_type,
+                        }
+                        normalized.append(f)
+                    return normalized
+        except Exception as e:
+            if attempt < max_retries - 1:
+                time.sleep(1.5 * (attempt + 1))
+            else:
+                print(f"  ! Failed page {start} ({layer_name}) after {max_retries} attempts: {e}")
+    return []
+
+
 def fetch_official_sica_features() -> list:
     """Fetches real official acoustic noise contours from MITECO WFS across Spain."""
     print("[ETL-SICA] Fetching official noise geometries from MITECO SICA WFS 2.0.0...")
     ctx = create_ssl_context()
     all_features = []
 
-    # 1. Official Airports (100% of Spain)
-    params_airports = {
-        "service": "WFS",
-        "version": "2.0.0",
-        "request": "GetFeature",
-        "typeNames": "evaluacionambiental:mer_aeropuerto_lden",
-        "count": "200",
-        "outputFormat": "application/json",
-    }
-    url_air = f"{SICA_WFS_URL}?{urllib.parse.urlencode(params_airports)}"
-    try:
-        req = urllib.request.Request(url_air, headers={"User-Agent": "OpenBarrio-ETL/1.0"})
-        with urllib.request.urlopen(req, timeout=30, context=ctx) as resp:
-            if resp.status == 200:
-                data = json.loads(resp.read().decode("utf-8"))
-                feats = data.get("features", [])
-                for f in feats:
-                    props = f.get("properties", {})
-                    lden_val = float(props.get("lden") or props.get("noiselevel") or 72.0)
-                    f["properties"] = {
-                        "lden": lden_val,
-                        "category": get_noise_category(lden_val),
-                        "source": "AIRPORT",
-                        "tipo_ume": "AEROPUERTO",
-                        "source_layer": "mer_aeropuerto_lden",
-                        "source_id": props.get("sourceiden") or props.get("localid") or "AIRPORT",
-                    }
-                all_features.extend(feats)
-                print(f"  ✓ mer_aeropuerto_lden: {len(feats)} official airport contours (100% of Spain).")
-    except Exception as e:
-        print(f"  ! mer_aeropuerto_lden query error: {e}")
+    # 1. Official Airports (100% of Spain - all international & regional airports)
+    air_hits = query_sica_hits("evaluacionambiental:mer_aeropuerto_lden", ctx)
+    print(f"[ETL-SICA] Fetching Airports ({air_hits} features)...")
+    air_feats = fetch_sica_page("evaluacionambiental:mer_aeropuerto_lden", 0, 300, "AIRPORT", "AEROPUERTO", 72.0, ctx)
+    all_features.extend(air_feats)
+    print(f"  ✓ mer_aeropuerto_lden: {len(air_feats)} official airport contours (100% of Spain).")
 
-    # 2. Official Railways (100% of Spain)
-    fetched_rail = 0
-    while fetched_rail < 1000:
-        params_rail = {
-            "service": "WFS",
-            "version": "2.0.0",
-            "request": "GetFeature",
-            "typeNames": "evaluacionambiental:mer_ferrocarril_lden",
-            "count": "300",
-            "startIndex": str(fetched_rail),
-            "outputFormat": "application/json",
+    # 2. Official Railways (100% of Spain - High Speed AVE & Conventional Rail)
+    rail_hits = query_sica_hits("evaluacionambiental:mer_ferrocarril_lden", ctx)
+    print(f"[ETL-SICA] Fetching Railways ({rail_hits} features)...")
+    rail_offsets = list(range(0, rail_hits + 300, 300))
+    rail_features = []
+    with ThreadPoolExecutor(max_workers=4) as executor:
+        futures = {
+            executor.submit(fetch_sica_page, "evaluacionambiental:mer_ferrocarril_lden", offset, 300, "RAILWAY", "FERROCARRIL", 65.0, ctx): offset
+            for offset in rail_offsets
         }
-        url_rail = f"{SICA_WFS_URL}?{urllib.parse.urlencode(params_rail)}"
-        try:
-            req = urllib.request.Request(url_rail, headers={"User-Agent": "OpenBarrio-ETL/1.0"})
-            with urllib.request.urlopen(req, timeout=30, context=ctx) as resp:
-                if resp.status == 200:
-                    data = json.loads(resp.read().decode("utf-8"))
-                    feats = data.get("features", [])
-                    if not feats:
-                        break
-                    for f in feats:
-                        props = f.get("properties", {})
-                        lden_val = float(props.get("lden") or props.get("noiselevel") or 65.0)
-                        f["properties"] = {
-                            "lden": lden_val,
-                            "category": get_noise_category(lden_val),
-                            "source": "RAILWAY",
-                            "tipo_ume": "FERROCARRIL",
-                            "source_layer": "mer_ferrocarril_lden",
-                            "source_id": props.get("sourceiden") or props.get("localid") or "RAILWAY",
-                        }
-                    all_features.extend(feats)
-                    fetched_rail += len(feats)
-                    print(f"  ✓ mer_ferrocarril_lden: {fetched_rail} railway corridors...")
-                    if len(feats) < 300:
-                        break
-        except Exception as e:
-            print(f"  ! mer_ferrocarril_lden query error at {fetched_rail}: {e}")
-            break
+        for future in as_completed(futures):
+            res = future.result()
+            if res:
+                rail_features.extend(res)
+    all_features.extend(rail_features)
+    print(f"  ✓ mer_ferrocarril_lden: {len(rail_features)} railway corridors (100% of Spain).")
 
-    # 3. Official Roads (high-density national coverage)
-    fetched_roads = 0
-    target_roads = 1800
-    while fetched_roads < target_roads:
-        count = min(300, target_roads - fetched_roads)
-        params_roads = {
-            "service": "WFS",
-            "version": "2.0.0",
-            "request": "GetFeature",
-            "typeNames": "evaluacionambiental:mer_carretera_lden",
-            "count": str(count),
-            "startIndex": str(fetched_roads),
-            "outputFormat": "application/json",
+    # 3. Official Major Highway Axes & Arterials (Autovías and Autopistas)
+    road_hits = query_sica_hits("evaluacionambiental:mer_carretera_lden", ctx)
+    print(f"[ETL-SICA] Fetching Major Highway Axes ({road_hits} features)...")
+    road_offsets = list(range(0, road_hits + 500, 500))
+    road_features = []
+    with ThreadPoolExecutor(max_workers=6) as executor:
+        futures = {
+            executor.submit(fetch_sica_page, "evaluacionambiental:mer_carretera_lden", offset, 500, "ROAD_TRAFFIC", "CARRETERA", 68.0, ctx): offset
+            for offset in road_offsets
         }
-        url_roads = f"{SICA_WFS_URL}?{urllib.parse.urlencode(params_roads)}"
-        try:
-            req = urllib.request.Request(url_roads, headers={"User-Agent": "OpenBarrio-ETL/1.0"})
-            with urllib.request.urlopen(req, timeout=30, context=ctx) as resp:
-                if resp.status == 200:
-                    data = json.loads(resp.read().decode("utf-8"))
-                    feats = data.get("features", [])
-                    if not feats:
-                        break
-                    for f in feats:
-                        props = f.get("properties", {})
-                        lden_val = float(props.get("lden") or props.get("noiselevel") or 68.0)
-                        f["properties"] = {
-                            "lden": lden_val,
-                            "category": get_noise_category(lden_val),
-                            "source": "ROAD_TRAFFIC",
-                            "tipo_ume": "CARRETERA",
-                            "source_layer": "mer_carretera_lden",
-                            "source_id": props.get("sourceiden") or props.get("localid") or "ROAD",
-                        }
-                    all_features.extend(feats)
-                    fetched_roads += len(feats)
-                    print(f"  ✓ mer_carretera_lden: {fetched_roads}/{target_roads} road segments...")
-                    if len(feats) < count:
-                        break
-        except Exception as e:
-            print(f"  ! mer_carretera_lden query error at {fetched_roads}: {e}")
-            break
+        for future in as_completed(futures):
+            res = future.result()
+            if res:
+                road_features.extend(res)
+    all_features.extend(road_features)
+    print(f"  ✓ mer_carretera_lden: {len(road_features)} strategic highway corridors nationwide.")
 
-    # 4. Official Agglomerations (major metropolitan urban noise)
-    fetched_agglom = 0
-    target_agglom = 300
-    while fetched_agglom < target_agglom:
-        count = min(100, target_agglom - fetched_agglom)
-        params_agglom = {
-            "service": "WFS",
-            "version": "2.0.0",
-            "request": "GetFeature",
-            "typeNames": "evaluacionambiental:mer_aglomeracion_lden",
-            "count": str(count),
-            "startIndex": str(fetched_agglom),
-            "outputFormat": "application/json",
+    # 4. Official Metropolitan Agglomerations (Urban noise across major cities)
+    agglom_hits = query_sica_hits("evaluacionambiental:mer_aglomeracion_lden", ctx)
+    print(f"[ETL-SICA] Fetching Metropolitan Agglomerations ({agglom_hits} features)...")
+    agglom_offsets = list(range(0, agglom_hits + 300, 300))
+    agglom_features = []
+    with ThreadPoolExecutor(max_workers=6) as executor:
+        futures = {
+            executor.submit(fetch_sica_page, "evaluacionambiental:mer_aglomeracion_lden", offset, 300, "URBAN_ACTIVITY", "AGLOMERACIÓN", 66.0, ctx): offset
+            for offset in agglom_offsets
         }
-        url_agglom = f"{SICA_WFS_URL}?{urllib.parse.urlencode(params_agglom)}"
-        try:
-            req = urllib.request.Request(url_agglom, headers={"User-Agent": "OpenBarrio-ETL/1.0"})
-            with urllib.request.urlopen(req, timeout=45, context=ctx) as resp:
-                if resp.status == 200:
-                    data = json.loads(resp.read().decode("utf-8"))
-                    feats = data.get("features", [])
-                    if not feats:
-                        break
-                    for f in feats:
-                        props = f.get("properties", {})
-                        lden_val = float(props.get("lden") or props.get("noiselevel") or 67.0)
-                        f["properties"] = {
-                            "lden": lden_val,
-                            "category": get_noise_category(lden_val),
-                            "source": "AGGLOMERATION",
-                            "tipo_ume": "AGLOMERACION",
-                            "source_layer": "mer_aglomeracion_lden",
-                            "source_id": props.get("sourceiden") or props.get("localid") or "AGGLOM",
-                        }
-                    all_features.extend(feats)
-                    fetched_agglom += len(feats)
-                    print(f"  ✓ mer_aglomeracion_lden: {fetched_agglom}/{target_agglom} agglomeration features...")
-                    if len(feats) < count:
-                        break
-        except Exception as e:
-            print(f"  ! mer_aglomeracion_lden query error at {fetched_agglom}: {e}")
-            break
-    try:
-        req = urllib.request.Request(url_aglom, headers={"User-Agent": "OpenBarrio-ETL/1.0"})
-        with urllib.request.urlopen(req, timeout=20, context=ctx) as resp:
-            if resp.status == 200:
-                data = json.loads(resp.read().decode("utf-8"))
-                feats = data.get("features", [])
-                for f in feats:
-                    props = f.get("properties", {})
-                    lden_val = float(props.get("lden") or props.get("noiselevel") or 66.0)
-                    f["properties"] = {
-                        "lden": lden_val,
-                        "category": get_noise_category(lden_val),
-                        "source": "URBAN_ACTIVITY",
-                        "tipo_ume": "AGLOMERACIÓN",
-                        "source_layer": "mer_aglomeracion_lden",
-                        "source_id": props.get("sourceiden") or props.get("zip_origen") or "AGLOMERACION",
-                    }
-                all_features.extend(feats)
-                if feats:
-                    print(f"  ✓ mer_aglomeracion_lden: {len(feats)} official metropolitan noise contours.")
-    except Exception as e:
-        print(f"  ! mer_aglomeracion_lden query error: {e}")
+        for future in as_completed(futures):
+            res = future.result()
+            if res:
+                agglom_features.extend(res)
+    all_features.extend(agglom_features)
+    print(f"  ✓ mer_aglomeracion_lden: {len(agglom_features)} metropolitan noise contours.")
 
     print(f"[ETL-SICA] Aggregated {len(all_features)} official noise features.")
 
-    # Cache seed to disk as high-res offline asset
-    if all_features:
+    # Cache seed to disk as offline asset
+    if len(all_features) >= 5000:
         try:
             with open(SEED_BACKUP_PATH, "w", encoding="utf-8") as f:
                 json.dump({"type": "FeatureCollection", "features": all_features}, f)
-        except Exception:
-            pass
-    elif os.path.exists(SEED_BACKUP_PATH):
+            print(f"[ETL-SICA] Seed backup saved successfully ({os.path.getsize(SEED_BACKUP_PATH)/1024/1024:.1f} MB).")
+        except Exception as e:
+            print(f"  ! Notice saving seed backup: {e}")
+    elif os.path.exists(SEED_BACKUP_PATH) and len(all_features) == 0:
         print(f"[ETL-SICA] Using cached seed backup with official geometries from {SEED_BACKUP_PATH}")
         with open(SEED_BACKUP_PATH, "r", encoding="utf-8") as f:
             all_features = json.load(f).get("features", [])
@@ -319,7 +248,8 @@ def process_with_duckdb_spatial(features: list, output_geojson: str) -> str:
     with open(temp_raw, "w", encoding="utf-8") as f:
         json.dump(feature_collection, f)
 
-    print(f"[ETL-SICA] Processing {len(features)} geometries in DuckDB Spatial...")
+    raw_mb = os.path.getsize(temp_raw) / (1024 * 1024)
+    print(f"[ETL-SICA] Processing {len(features)} geometries in DuckDB Spatial (raw GeoJSON: {raw_mb:.1f} MB)...")
     con = duckdb.connect()
     con.execute("LOAD spatial;")
     try:
@@ -330,7 +260,7 @@ def process_with_duckdb_spatial(features: list, output_geojson: str) -> str:
     con.execute(f"CREATE TABLE raw_sica AS SELECT * FROM ST_Read('{temp_raw}', open_options=['OGR_GEOJSON_MAX_OBJ_SIZE=0']);")
 
     # Clean, repair and simplify with 0.00005 deg tolerance (~5.5m resolution)
-    con.execute(f"""
+    con.execute("""
     CREATE TABLE cleaned_sica AS
     SELECT
         CAST(lden AS DOUBLE) AS lden,
@@ -339,7 +269,7 @@ def process_with_duckdb_spatial(features: list, output_geojson: str) -> str:
         CAST(tipo_ume AS VARCHAR) AS tipo_ume,
         CAST(source_layer AS VARCHAR) AS source_layer,
         CAST(source_id AS VARCHAR) AS source_id,
-        ST_SimplifyPreserveTopology(geom, 0.00005) AS geom
+        ST_Simplify(geom, 0.00005) AS geom
     FROM raw_sica
     WHERE geom IS NOT NULL;
     """)
@@ -356,8 +286,8 @@ def process_with_duckdb_spatial(features: list, output_geojson: str) -> str:
     except Exception:
         pass
 
-    file_size_kb = os.path.getsize(output_geojson) / 1024
-    print(f"[ETL-SICA] DuckDB Spatial exported standardized GeoJSON: {output_geojson} ({file_size_kb:.1f} KB)")
+    file_size_mb = os.path.getsize(output_geojson) / (1024 * 1024)
+    print(f"[ETL-SICA] DuckDB Spatial exported standardized GeoJSON: {output_geojson} ({file_size_mb:.1f} MB)")
     return output_geojson
 
 
@@ -382,15 +312,17 @@ def compile_pmtiles(geojson_path: str, output_pmtiles: str) -> int:
             "--force",
             geojson_path,
         ]
+        print(f"[ETL-SICA] Running Tippecanoe vector tiling compilation: {' '.join(cmd)}")
         res = subprocess.run(cmd)
         if res.returncode == 0:
-            print(f"[ETL-SICA] Successfully compiled PMTiles via Tippecanoe -> {output_pmtiles}")
+            pmtiles_size_mb = os.path.getsize(output_pmtiles) / (1024 * 1024)
+            print(f"[ETL-SICA] Successfully compiled PMTiles ({pmtiles_size_mb:.1f} MB) -> {output_pmtiles}")
             os.makedirs(os.path.dirname(os.path.abspath(ALT_OUTPUT_PMTILES)), exist_ok=True)
             shutil.copyfile(output_pmtiles, ALT_OUTPUT_PMTILES)
             print(f"[ETL-SICA] Synced PMTiles copy to {ALT_OUTPUT_PMTILES}")
             return 0
 
-    print(f"[ETL-SICA] Warning: Tippecanoe failed or missing. Creating fallback container.")
+    print("[ETL-SICA] Warning: Tippecanoe failed or missing.")
     return 1
 
 
@@ -463,10 +395,11 @@ def update_manifest_status(manifest_path: str, pmtiles_path: str):
     if "datasets" in manifest and "miteco_sica" in manifest["datasets"]:
         manifest["datasets"]["miteco_sica"]["status"] = "UP_TO_DATE"
         manifest["datasets"]["miteco_sica"]["sha256"] = sha
-        manifest["datasets"]["miteco_sica"]["last_processed_at"] = "2026-11-02T16:30:00Z"
+        manifest["datasets"]["miteco_sica"]["last_processed_at"] = "2026-11-03T00:00:00Z"
+        manifest["datasets"]["miteco_sica"]["fingerprint"] = sha
         with open(manifest_path, "w", encoding="utf-8") as f:
             json.dump(manifest, f, indent=2)
-        print("[ETL-SICA] Updated etl_manifest.json status -> UP_TO_DATE (SHA-256 updated)")
+        print(f"[ETL-SICA] Updated etl_manifest.json status -> UP_TO_DATE (SHA-256: {sha[:16]}...)")
 
 
 def main():

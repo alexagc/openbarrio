@@ -112,6 +112,25 @@ jobs:
           python3 packages/etl/src/process_civic_facilities.py \
             --output-sql packages/etl/dist/civic_facilities.sql
 
+      - name: Run MITECO SNCZI Flood Cartography Processing (DuckDB Spatial -> PMTiles)
+        if: inputs.apply_only != true
+        run: |
+          python3 packages/etl/src/process_miteco_snczi.py \
+            --output-pmtiles packages/etl/dist/floods.pmtiles \
+            --output-sql packages/etl/dist/snczi_risk.sql
+
+      - name: Run MITECO SICA Strategic Noise Processing (DuckDB Spatial -> PMTiles)
+        if: inputs.apply_only != true
+        run: |
+          python3 packages/etl/src/process_miteco_sica.py \
+            --output-pmtiles packages/etl/dist/noise.pmtiles \
+            --output-sql packages/etl/dist/sica_noise.sql
+
+      - name: Run ETL Integrity Quality Gate
+        if: inputs.apply_only != true
+        run: |
+          node scripts/verify-etl-integrity.mjs
+
       - name: Download Processed National Artifacts (Fast Sync)
         if: inputs.apply_only == true
         env:
@@ -182,6 +201,28 @@ jobs:
           workingDirectory: apps/api
           command: d1 execute openbarrio-d1 --file=${{ github.workspace }}/packages/etl/dist/energy_certificates.sql --remote --yes
 
+      - name: Sync Cloudflare D1 (MITECO SNCZI Flood Risk)
+        if: inputs.dry_run != true && env.HAS_CF_TOKEN == 'true'
+        continue-on-error: true
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          wranglerVersion: '3.114.17'
+          workingDirectory: apps/api
+          command: d1 execute openbarrio-d1 --file=${{ github.workspace }}/packages/etl/dist/snczi_risk.sql --remote --yes
+
+      - name: Sync Cloudflare D1 (MITECO SICA Acoustic Noise)
+        if: inputs.dry_run != true && env.HAS_CF_TOKEN == 'true'
+        continue-on-error: true
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          wranglerVersion: '3.114.17'
+          workingDirectory: apps/api
+          command: d1 execute openbarrio-d1 --file=${{ github.workspace }}/packages/etl/dist/sica_noise.sql --remote --yes
+
       - name: Sync Cloudflare R2 (PMTiles Vector Boundaries)
         if: inputs.dry_run != true && env.HAS_CF_TOKEN == 'true'
         uses: cloudflare/wrangler-action@v3
@@ -192,6 +233,26 @@ jobs:
           workingDirectory: apps/api
           command: r2 object put openbarrio-r2/census_tracts.pmtiles --file=${{ github.workspace }}/packages/etl/dist/census_tracts.pmtiles
 
+      - name: Sync Cloudflare R2 (MITECO Floods PMTiles)
+        if: inputs.dry_run != true && env.HAS_CF_TOKEN == 'true'
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          wranglerVersion: '3.114.17'
+          workingDirectory: apps/api
+          command: r2 object put openbarrio-r2/floods.pmtiles --file=${{ github.workspace }}/packages/etl/dist/floods.pmtiles
+
+      - name: Sync Cloudflare R2 (MITECO Noise PMTiles)
+        if: inputs.dry_run != true && env.HAS_CF_TOKEN == 'true'
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          wranglerVersion: '3.114.17'
+          workingDirectory: apps/api
+          command: r2 object put openbarrio-r2/noise.pmtiles --file=${{ github.workspace }}/packages/etl/dist/noise.pmtiles
+
       - name: Upload Processed Artifacts (SQL & PMTiles)
         if: inputs.apply_only != true
         uses: actions/upload-artifact@v4
@@ -201,6 +262,10 @@ jobs:
             packages/etl/dist/ine_adrh.sql
             packages/etl/dist/civic_facilities.sql
             packages/etl/dist/energy_certificates.sql
+            packages/etl/dist/snczi_risk.sql
+            packages/etl/dist/sica_noise.sql
             packages/etl/dist/census_tracts.pmtiles
+            packages/etl/dist/floods.pmtiles
+            packages/etl/dist/noise.pmtiles
             packages/etl/dist/census_tracts_simplified.geojson
           retention-days: 30

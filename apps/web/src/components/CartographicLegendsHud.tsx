@@ -142,17 +142,24 @@ export function CartographicLegendsHud({
               <div className="space-y-1 text-[10px]">
                 <div className="flex items-center justify-between">
                   <span className="flex items-center gap-1.5">
-                    <span className="w-2.5 h-2.5 rounded-sm bg-[#dc2626] border border-[#ef4444]" />
+                    <span className="w-2.5 h-2.5 rounded-sm bg-[#172554] border border-[#1e1b4b]" />
                     Zona Flujo Preferente (ZFP)
                   </span>
                   <span className="font-mono text-outline">Muy Alto</span>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="flex items-center gap-1.5">
-                    <span className="w-2.5 h-2.5 rounded-sm bg-[#1e3a8a] border border-[#3b82f6]" />
+                    <span className="w-2.5 h-2.5 rounded-sm bg-[#1e3a8a] border border-[#2563eb]" />
                     Alta Probabilidad (T=10 años)
                   </span>
                   <span className="font-mono text-outline">Frecuente</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="flex items-center gap-1.5">
+                    <span className="w-2.5 h-2.5 rounded-sm bg-[#1d4ed8] border border-[#3b82f6]" />
+                    Media-Alta (T=50 años)
+                  </span>
+                  <span className="font-mono text-outline">Intermedio</span>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="flex items-center gap-1.5">

@@ -5,32 +5,40 @@ All notable changes to the **OpenBarrio** platform are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.10.0] - 2026-11-02
+## [0.10.0] - 2026-11-03
 
 ### Added
 - **Full Data Sovereignty & Zero-External Latency Engine (`apps/api`, `packages/etl`, `apps/web`)**:
   - **MIVAU SERPAVI Statutory Rent Benchmark Table (`apps/api`, `packages/etl`)**: Ingested official rental price indices into local SQLite/D1 database (`mivau_serpavi_benchmarks`), achieving sub-5ms statutory rent cap lookups without external network dependencies.
-  - **MITECO SNCZI Inundation Cartography Vectorization (`packages/etl`, `apps/api`, `apps/web`)**:
-    - Processed official MITECO WFS layers (`agua:ZI_Laminas_ZFP`, `agua:Zi_laminas_q10`, `agua:Zi_laminas_q50`, `agua:Zi_laminas_q100`, `agua:Zi_laminas_q500`) with DuckDB Spatial topology-preserving simplification (`ST_SimplifyPreserveTopology`).
-    - Packaged high-density national hydrographic flood cartography (2,500 multi-polygons, 41 MB) into localized vector PMTiles (`packages/etl/dist/openbarrio-etl-dist/floods.pmtiles`) compiled at zoom 15 with anti-jitter geometry preservation (`--buffer=64`, `--detect-shared-borders`, `--no-simplification-of-shared-nodes`).
-    - Generated pre-calculated risk indices in Cloudflare D1 (`census_tract_snczi_risk`) with sub-millisecond query latency.
-  - **MITECO SICA Acoustic Noise Map Vectorization (`packages/etl`, `apps/api`, `apps/web`)**:
-    - Ingested official strategic noise maps across 100% of Spanish airports, 100% of railway corridors, 1,800 major highway segments, and 300 metropolitan agglomeration zones (`evaluacionambiental:mer_*_lden`).
-    - Packaged decibel contours into localized vector PMTiles (3,167 features, 125 MB) at zoom 15 (`packages/etl/dist/openbarrio-etl-dist/noise.pmtiles`) with anti-jitter flags and zero dropping.
-    - Generated pre-calculated noise exposure classification in Cloudflare D1 (`census_tract_sica_noise`).
-  - **High-Fidelity MapLibre GL Styling & Visual Revamp (`apps/web`)**:
-    - Implemented authentic hydrological water gradient for SNCZI (T=500 azure `#38bdf8`, T=100 sapphire `#0284c7`, T=50 cobalt `#1d4ed8`, T=10 navy `#1e3a8a`, ZFP crimson warning `#dc2626`) with semi-transparency and fixed 1px stroke preventing zoom trembling.
-    - Revamped SICA acoustic noise styling: 100% transparent for comfort zone (<55 dB), eliminated harsh borders, and applied a smooth thermal gradient (amber 55-65 dB, transit coral 65-75 dB, wine maroon >75 dB).
-    - Synchronized HUD legends with updated decibel and hydrological color tokens.
+  - **Full National MITECO SNCZI Flood Cartography (`packages/etl`, `apps/api`, `apps/web`)**:
+    - Ingested 100% of official MITECO flood sheets across all 25 Spanish river basins and archipelagos (Ebro, Duero, Tajo, Guadalquivir, Segura, Júcar, Guadiana, Miño-Sil, Cantábrico, Cuencas Mediterráneas Andaluzas, Baleares, Canarias, Ceuta, Melilla) with DuckDB Spatial streaming simplification (`ST_Simplify(geom, 0.00005)`).
+    - Compiled all 28,021 official sheets into `floods.pmtiles` (557 MB) covering T=500, T=100, T=50, T=10, and Preferential Flow Zone (ZFP).
+    - Adopted official **MITECO Hydrological Blue Palette** (T=500 sky blue `#38bdf8`, T=100 cerulean `#0284c7`, T=50 cobalt `#1d4ed8`, T=10 deep navy `#1e3a8a`, ZFP midnight indigo `#172554`) across vector fill layers and Cartographic HUD legends.
+    - Pre-calculated risk indices in Cloudflare D1 (`census_tract_snczi_risk`) with sub-millisecond query latency.
+  - **Geometric LineString Correction & National Noise Cartography (`packages/etl`, `apps/web`)**:
+    - Eliminated MapLibre `type: 'fill'` layer to prevent triangular prolongation spikes on `LineString` isophone curves.
+    - Replaced with dual-line acoustic corridor ribbon styling (`sica-isophone-halo` with gaussian `line-blur: 1.5`, round joins/caps, thermal gradient from 55 to >=75 dBA, plus crisp `sica-borders`).
+    - Ingested 100% of Spain's airports (89 features), railways (978 features), highway axes (24,994 features), and metropolitan agglomerations (13,950 features), compiling `noise.pmtiles` (151 MB, 40,011 features).
+    - Pre-calculated noise exposure classification in Cloudflare D1 (`census_tract_sica_noise`).
+  - **Comprehensive Multi-Domain ETL Quality Gate (`scripts/verify-etl-integrity.mjs`)**:
+    - Built strict automated quality gate asserting physical file sizes, headers, and minimum records before deployment:
+      * Floods: >=400 MB (current: 556.5 MB), >=25,000 polygons, valid PMTiles v3 header.
+      * Noise: >=120 MB (current: 150.4 MB), >=35,000 line features, valid PMTiles v3 header.
+      * INE ADRH Demographics: >=36,000 census sections across all 52 provinces (current: 36,994).
+      * Civic Public Facilities: >=50,000 facilities across healthcare (24,218), education (17,608), parks (13,666), and transit (4,905).
+      * Energy Performance Certificates CEE: >=150,000 records (current: 197,125) with normative estimation engine fallback.
+      * CTE DB-HS 6 Radon Geological Hazard: Municipal classification (Zona 0/I/II) + floor-level ground contact attenuation.
+      * End-to-End API Multi-Basin Query Verification across Madrid, Zaragoza, Valladolid, Paiporta, and Murcia.
+  - **Autonomous CI/CD Pipeline Ingestion (`.github/workflows/data-pipeline.yml`)**:
+    - Integrated DuckDB Spatial + Tippecanoe compilation of SNCZI floods and SICA noise into GitHub Actions.
+    - Added automated execution of `verify-etl-integrity.mjs` quality gate.
+    - Added synchronization of `floods.pmtiles` and `noise.pmtiles` to Cloudflare R2 alongside `census_tracts.pmtiles`.
+    - Added synchronization of `snczi_risk.sql` and `sica_noise.sql` to Cloudflare D1.
   - **Cadastral Write-Through Cache (`apps/api`)**:
     - Implemented high-performance LRU cache table (`cadastral_cache`) with 90-day TTL, SHA-256 geometry fingerprinting, and automatic pruning.
     - Integrated transparent caching into `CatastroProvider` and `CadastralRouterProvider`, dropping recurring audit latencies from >800ms to <3ms.
-    - Added database migration `0007_cadastral_cache.sql`.
   - **Vector PMTiles Streaming Server with RFC 7233 HTTP Range 206 (`apps/api`)**:
     - Built `/api/v1/tiles/:filename` route supporting Byte-Range requests for zero-latency local development and seamless Cloudflare R2 edge fallback.
-    - Migrated INE ADRH census tract income layer to `census_tracts.pmtiles` with 36,464 tracts and embedded net household income metrics.
-  - **ETL Idempotency Shield (`packages/etl`, `data/etl_manifest.json`)**:
-    - Integrated content fingerprinting (ETags, Last-Modified, SHA-256) avoiding redundant network ingestion and heavy vector compilation.
 
 ## [0.9.0] - 2026-11-02
 
