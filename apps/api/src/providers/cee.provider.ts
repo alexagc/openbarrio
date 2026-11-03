@@ -29,7 +29,7 @@ export class CEEProvider implements ICEEProvider {
                    FROM building_energy_certificates
                    WHERE cadastral_reference = ?1
                    LIMIT 1`;
-        let params: any[] = [refcat];
+        const params: any[] = [refcat];
 
         if (refcat.length === 20) {
           // Dwelling/Unit refcat: prioritize exact 20-char unit match, fallback to 14-char building/parcel

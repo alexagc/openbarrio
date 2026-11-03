@@ -111,8 +111,8 @@ describe('CEEProvider & Normative Fallback Engine', () => {
   describe('D1 Database CEEProvider Queries', () => {
     it('executes hierarchical query on D1 and parses expiration and dataSource', async () => {
       const mockD1: any = {
-        prepare: (query: string) => ({
-          bind: (...args: any[]) => ({
+        prepare: (_query: string) => ({
+          bind: (..._args: any[]) => ({
             first: async () => ({
               rating_emissions: 'C',
               rating_consumption: 'B',
