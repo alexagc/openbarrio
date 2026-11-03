@@ -270,9 +270,13 @@ const chunksDir = 'packages/etl/chunks';
 if (fs.existsSync(facilitiesSqlPath)) {
   console.log('🏫 Loading civic facilities dataset (Healthcare, Schools, Transit)...');
   const facilitiesSql = fs.readFileSync(facilitiesSqlPath, 'utf8');
-  db.exec('BEGIN TRANSACTION;');
-  db.exec(facilitiesSql);
-  db.exec('COMMIT;');
+  if (facilitiesSql.includes('BEGIN TRANSACTION')) {
+    db.exec(facilitiesSql);
+  } else {
+    db.exec('BEGIN TRANSACTION;');
+    db.exec(facilitiesSql);
+    db.exec('COMMIT;');
+  }
   console.log('✅ Civic facilities dataset loaded.');
 } else if (fs.existsSync(chunksDir)) {
   console.log('🏫 Loading civic facilities dataset from versioned chunks...');
