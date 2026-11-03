@@ -10,7 +10,8 @@ We actively provide security patches and dependency updates for the following re
 
 | Version | Supported | Security Policy |
 | :--- | :---: | :--- |
-| `0.11.x` (Current Release) | ✅ | Active support, high/critical CVE patching |
+| `0.12.x` (Current Release) | ✅ | Active support, high/critical CVE patching |
+| `0.11.x` (Multi-Typology) | ✅ | Active maintenance |
 | `0.10.x` (Data Sovereignty) | ✅ | Active maintenance |
 | `< 0.10.0` (Legacy prototypes) | ❌ | Deprecated — upgrade to current release |
 | `main` (Development branch) | ✅ | Continuous SAST and supply chain analysis |

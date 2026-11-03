@@ -33,7 +33,7 @@ export function evaluateVutSaturation(
   const ratio = (vutCount / safeTotal) * 100;
   const vutRatioPct = Number(ratio.toFixed(2));
 
-  let saturationRisk: VutSaturationRisk = 'low';
+  let saturationRisk: VutSaturationRisk;
   let penaltyApplied = 0;
   let description = '';
 

@@ -11,7 +11,7 @@ export class RadonProvider implements IRadonProvider {
     floorLevel?: number,
     unitsCount?: number
   ): Promise<RadonEvaluationDTO> {
-    let zone: RadonMunicipalZone = 'Zona 0';
+    let zone: RadonMunicipalZone;
 
     if (this.db) {
       try {
@@ -53,11 +53,13 @@ export class MockRadonProvider implements IRadonProvider {
     floorLevel?: number,
     unitsCount?: number
   ): Promise<RadonEvaluationDTO> {
-    let zone: RadonMunicipalZone = 'Zona 0';
+    let zone: RadonMunicipalZone;
     if (municipalityCode === '28079' || provinceCode === '28') {
       zone = 'Zona I';
     } else if (['32', '36', '15', '10'].includes(provinceCode || '')) {
       zone = 'Zona II';
+    } else {
+      zone = 'Zona 0';
     }
     return evaluateRadonRisk(zone, floorLevel, unitsCount);
   }

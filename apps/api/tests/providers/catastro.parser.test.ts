@@ -359,4 +359,32 @@ describe('Catastro XML Parser', () => {
     expect(result.units[0].block).toBe('I');
     expect(result.units[1].block).toBe('F');
   });
+
+  it('prefers upper-floor residential dwellings over ground-floor commercial premises in multi-unit buildings', () => {
+    const mixedBuildingXml = `
+      <consulta_dnp xmlns="http://www.catastro.meh.es/">
+        <control><cudnp>3</cudnp></control>
+        <lrcdnp>
+          <rcdnp>
+            <rc><pc1>9766209</pc1><pc2>VK3696F</pc2><car>0001</car><cc1>M</cc1><cc2>P</cc2></rc>
+            <dt><locs><lous><lourb><dir><tv>PS</tv><nv>ALBERTO PALACIOS</nv><pnp>14</pnp></dir><loint><pt>00</pt><pu>01</pu></loint></lourb></lous></dt>
+          </rcdnp>
+          <rcdnp>
+            <rc><pc1>9766209</pc1><pc2>VK3696F</pc2><car>0002</car><cc1>Q</cc1><cc2>A</cc2></rc>
+            <dt><locs><lous><lourb><dir><tv>PS</tv><nv>ALBERTO PALACIOS</nv><pnp>14</pnp></dir><loint><pt>00</pt><pu>02</pu></loint></lourb></lous></dt>
+          </rcdnp>
+          <rcdnp>
+            <rc><pc1>9766209</pc1><pc2>VK3696F</pc2><car>0007</car><cc1>Y</cc1><cc2>H</cc2></rc>
+            <dt><locs><lous><lourb><dir><tv>PS</tv><nv>ALBERTO PALACIOS</nv><pnp>14</pnp></dir><loint><pt>01</pt><pu>B</pu></loint></lourb></lous></dt>
+          </rcdnp>
+        </lrcdnp>
+      </consulta_dnp>
+    `;
+
+    const summary = parseMultiUnitParcelSummary(mixedBuildingXml);
+    expect(summary.totalUnits).toBe(3);
+    // Must select unit 0007 on floor 01 instead of ground floor units 0001 or 0002
+    expect(summary.primaryUnitRef).toBe('9766209VK3696F0007YH');
+    expect(summary.hasCommercialUnit).toBe(true);
+  });
 });

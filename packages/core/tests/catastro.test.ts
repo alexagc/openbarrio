@@ -134,6 +134,12 @@ describe('isCadastralReference Validation Engine', () => {
       expect(detectCadastralJurisdiction('01001A00200030')).toBe('araba');
       expect(detectCadastralJurisdiction('31001A00500050')).toBe('navarra');
       expect(detectCadastralJurisdiction('9872023VH5797S')).toBe('dgc');
+      expect(detectCadastralJurisdiction('0167508VK4606G0001IK')).toBe('dgc');
+      expect(detectCadastralJurisdiction('0167508VK4606G')).toBe('dgc');
+      expect(detectCadastralJurisdiction('2012345VK4606G0001IK')).toBe('dgc');
+      expect(detectCadastralJurisdiction('4812345VK4606G0001IK')).toBe('dgc');
+      expect(detectCadastralJurisdiction('3112345VK4606G0001IK')).toBe('dgc');
+      expect(detectCadastralJurisdiction('28079A001000100000AB')).toBe('dgc');
     });
 
     it('should route jurisdictions correctly by GPS coordinates', () => {

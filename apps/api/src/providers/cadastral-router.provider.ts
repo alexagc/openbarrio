@@ -54,6 +54,9 @@ export class CadastralRouterProvider implements ICatastroProvider {
 
     const provider = this.resolveProvider(undefined, { latitude, longitude });
     const result = await provider.getByCoordinates(latitude, longitude);
+    if (!result.jurisdiction) {
+      result.jurisdiction = 'dgc';
+    }
     await this.cache.set(cacheKey, 'coordinates', result.cadastralReference, result);
     return result;
   }
@@ -75,6 +78,9 @@ export class CadastralRouterProvider implements ICatastroProvider {
       fallbackCoords ? { latitude: fallbackCoords.latitude, longitude: fallbackCoords.longitude } : undefined
     );
     const result = await provider.getByCadastralReference(refcat, fallbackCoords, preferredPortal);
+    if (!result.jurisdiction) {
+      result.jurisdiction = 'dgc';
+    }
     await this.cache.set(cacheKey, 'property', cleanRef, result);
     return result;
   }

@@ -1,7 +1,7 @@
 # OpenBarrio 🏘️🇪🇸
 
 [![CI Pipeline](https://github.com/alexcg1/openbarrio/actions/workflows/ci.yml/badge.svg)](https://github.com/alexcg1/openbarrio/actions/workflows/ci.yml)
-[![Version: v0.11.0](https://img.shields.io/badge/Version-v0.11.0-blue.svg)](CHANGELOG.md)
+[![Version: v0.12.1](https://img.shields.io/badge/Version-v0.12.1-blue.svg)](CHANGELOG.md)
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 [![Runtime: Node.js 22 LTS](https://img.shields.io/badge/Runtime-Node.js_22_LTS-green.svg)](https://nodejs.org/)
 [![Monorepo: pnpm](https://img.shields.io/badge/Monorepo-pnpm_workspaces-orange.svg)](https://pnpm.io/)

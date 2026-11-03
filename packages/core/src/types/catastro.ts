@@ -85,6 +85,41 @@ export function detectCadastralJurisdiction(
   refcat?: string | null,
   coords?: { latitude: number; longitude: number }
 ): CadastralJurisdiction {
+  if (refcat) {
+    const clean = refcat.replace(/[\s\-_.]/g, '').toUpperCase();
+
+    // 1. Standard DGC Urban Cartographic Reference (14 or 20 characters with MTN50 sheet pattern)
+    // Structure: 7 alphanumeric (parcel) + 2 letters MTN50 + 4 digits + 1 letter control (+ optional 4 digits unit + 2 letters control)
+    // Note: This pattern uniquely identifies national DGC common territory parcels.
+    const isDgcUrban = /^[0-9A-Z]{7}[A-Z]{2}[0-9]{4}[A-Z]([0-9]{4}[A-Z]{2})?$/.test(clean);
+    if (isDgcUrban) {
+      return 'dgc';
+    }
+
+    // 2. Standard DGC Rural/Rustic Reference (14 or 20 characters: 2-digit province + 3-digit municipality + 1-letter sector + 8 digits)
+    const isDgcRural = /^\d{5}[A-Z]\d{8}(\d{4}[A-Z]{2})?$/.test(clean);
+    if (isDgcRural) {
+      const prov = clean.slice(0, 2);
+      if (prov === '01') return 'araba';
+      if (prov === '20') return 'gipuzkoa';
+      if (prov === '48') return 'bizkaia';
+      if (prov === '31') return 'navarra';
+      return 'dgc';
+    }
+
+    // 3. Explicit Foral Reference Prefixes (Bizkaia, Gipuzkoa, Araba, Navarra)
+    if (clean.startsWith('A48') || clean.startsWith('BI') || clean.startsWith('U48') || clean.startsWith('R48')) return 'bizkaia';
+    if (clean.startsWith('SS') || clean.startsWith('GI')) return 'gipuzkoa';
+    if (clean.startsWith('VI') || clean.startsWith('AR')) return 'araba';
+    if (clean.startsWith('NA')) return 'navarra';
+
+    // 4. Other Foral-specific provincial numerical patterns (not matching standard DGC urban or rural above)
+    if (clean.startsWith('48')) return 'bizkaia';
+    if (clean.startsWith('20')) return 'gipuzkoa';
+    if (clean.startsWith('01')) return 'araba';
+    if (clean.startsWith('31')) return 'navarra';
+  }
+
   if (coords) {
     const { latitude: lat, longitude: lon } = coords;
     // Bounding box heuristic for Spanish foral territories
@@ -100,14 +135,6 @@ export function detectCadastralJurisdiction(
     if (lat >= 42.40 && lat <= 43.15 && lon >= -3.15 && lon <= -2.15) {
       return 'araba';
     }
-  }
-
-  if (refcat) {
-    const clean = refcat.replace(/[\s\-_.]/g, '').toUpperCase();
-    if (clean.startsWith('48') || clean.startsWith('A48') || clean.startsWith('BI')) return 'bizkaia';
-    if (clean.startsWith('20') || clean.startsWith('SS') || clean.startsWith('GI')) return 'gipuzkoa';
-    if (clean.startsWith('01') || clean.startsWith('VI') || clean.startsWith('AR')) return 'araba';
-    if (clean.startsWith('31') || clean.startsWith('NA')) return 'navarra';
   }
 
   return 'dgc';

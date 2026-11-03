@@ -298,6 +298,7 @@ def process_with_duckdb_spatial(features: list, output_geojson: str) -> str:
     try:
         con.execute("SET geometry_always_xy = true;")
     except Exception:
+        # Legacy DuckDB spatial builds proceed with standard coordinate ordering.
         pass
 
     con.execute(f"CREATE TABLE raw_sica AS SELECT * FROM ST_Read('{temp_raw}', open_options=['OGR_GEOJSON_MAX_OBJ_SIZE=0']);")
@@ -326,7 +327,8 @@ def process_with_duckdb_spatial(features: list, output_geojson: str) -> str:
     try:
         if os.path.exists(temp_raw):
             os.remove(temp_raw)
-    except Exception:
+    except OSError:
+        # Intermediate raw GeoJSON removal is non-critical.
         pass
 
     file_size_mb = os.path.getsize(output_geojson) / (1024 * 1024)
@@ -366,6 +368,7 @@ def compile_pmtiles(geojson_path: str, output_pmtiles: str) -> int:
                     shutil.copyfile(output_pmtiles, ALT_OUTPUT_PMTILES)
                     print(f"[ETL-SICA] Synced PMTiles copy to {ALT_OUTPUT_PMTILES}")
             except shutil.SameFileError:
+                # Canonical output_pmtiles and ALT_OUTPUT_PMTILES target paths are identical.
                 pass
             return 0
 

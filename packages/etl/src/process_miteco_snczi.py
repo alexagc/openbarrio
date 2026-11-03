@@ -204,37 +204,36 @@ def download_layer_to_file(cfg: dict, output_file: str, ctx: ssl.SSLContext) -> 
     offsets = list(range(0, total_hits + page_size, page_size))
 
     os.makedirs(os.path.dirname(os.path.abspath(output_file)), exist_ok=True)
-    f_out = open(output_file, "w", encoding="utf-8")
-    f_out.write('{"type": "FeatureCollection", "features": [\n')
-
     written_count = 0
     batch_chunk_size = 6
 
     print(f"[ETL-SNCZI] Fetching {layer_name}: {total_hits} polygons across Spain (6-worker pool)...")
-    for i in range(0, len(offsets), batch_chunk_size):
-        chunk_offsets = offsets[i : i + batch_chunk_size]
-        with ThreadPoolExecutor(max_workers=batch_chunk_size) as executor:
-            futures = [
-                executor.submit(fetch_single_page, layer_name, offset, page_size, cfg, ctx)
-                for offset in chunk_offsets
-            ]
-            for fut in as_completed(futures):
-                try:
-                    page_feats = fut.result()
-                    if page_feats:
-                        for feat in page_feats:
-                            if written_count > 0:
-                                f_out.write(",\n")
-                            f_out.write(json.dumps(feat))
-                            written_count += 1
-                        del page_feats
-                except Exception as err:
-                    print(f"  ! Error in batch: {err}")
-        f_out.flush()
-        gc.collect()
+    with open(output_file, "w", encoding="utf-8") as f_out:
+        f_out.write('{"type": "FeatureCollection", "features": [\n')
+        for i in range(0, len(offsets), batch_chunk_size):
+            chunk_offsets = offsets[i : i + batch_chunk_size]
+            with ThreadPoolExecutor(max_workers=batch_chunk_size) as executor:
+                futures = [
+                    executor.submit(fetch_single_page, layer_name, offset, page_size, cfg, ctx)
+                    for offset in chunk_offsets
+                ]
+                for fut in as_completed(futures):
+                    try:
+                        page_feats = fut.result()
+                        if page_feats:
+                            for feat in page_feats:
+                                if written_count > 0:
+                                    f_out.write(",\n")
+                                f_out.write(json.dumps(feat))
+                                written_count += 1
+                            del page_feats
+                    except Exception as err:
+                        print(f"  ! Error in batch: {err}")
+            f_out.flush()
+            gc.collect()
 
-    f_out.write("\n]}\n")
-    f_out.close()
+        f_out.write("\n]}\n")
+
     file_mb = os.path.getsize(output_file) / (1024 * 1024)
     print(f"  ✓ {layer_name}: {written_count} official polygons written ({file_mb:.1f} MB).")
     return written_count
@@ -258,6 +257,7 @@ def process_snczi_national(dist_dir: str) -> list:
             try:
                 con.execute("SET geometry_always_xy = true;")
             except Exception:
+                # DuckDB builds prior to spatial geometry_always_xy support proceed with standard axis configuration.
                 pass
 
             if os.path.exists(cleaned_layer_file):
@@ -284,7 +284,8 @@ def process_snczi_national(dist_dir: str) -> list:
 
             try:
                 os.remove(temp_layer_file)
-            except Exception:
+            except OSError:
+                # Best-effort cleanup of intermediate unsimplified GeoJSON.
                 pass
 
             cleaned_files.append(cleaned_layer_file)
@@ -328,6 +329,7 @@ def compile_pmtiles(geojson_paths: list, output_pmtiles: str) -> int:
                     shutil.copyfile(output_pmtiles, ALT_OUTPUT_PMTILES)
                     print(f"[ETL-SNCZI] Synced PMTiles copy to {ALT_OUTPUT_PMTILES}")
             except shutil.SameFileError:
+                # Target path ALT_OUTPUT_PMTILES matches output_pmtiles canonical location.
                 pass
             return 0
 

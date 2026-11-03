@@ -4,6 +4,7 @@ import {
   PropertyTypology,
   LandClassification,
   detectPropertyTypology,
+  detectCadastralJurisdiction,
 } from '@openbarrio/core';
 import { ScoreGauge } from './ScoreGauge';
 import { PillarCards } from './PillarCard';
@@ -122,29 +123,30 @@ export function AuditDossier({
     jurisdiction?: string
   ): { url: string; label: string; fullTitle: string } => {
     const clean = rc.replace(/[^A-Za-z0-9]/g, '').toUpperCase();
+    const resolvedJurisdiction = jurisdiction || detectCadastralJurisdiction(clean);
 
-    if (jurisdiction === 'bizkaia' || clean.startsWith('48') || clean.startsWith('A48')) {
+    if (resolvedJurisdiction === 'bizkaia') {
       return {
         url: 'https://www.bizkaia.eus/es/catastro-de-bizkaia',
         label: 'Sede Bizkaia',
         fullTitle: 'Ver en Sede del Catastro Foral de Bizkaia',
       };
     }
-    if (jurisdiction === 'gipuzkoa' || clean.startsWith('20')) {
+    if (resolvedJurisdiction === 'gipuzkoa') {
       return {
         url: 'https://www.gipuzkoa.eus/es/web/ogasuna/catastro',
         label: 'Sede Gipuzkoa',
         fullTitle: 'Ver en Sede del Catastro Foral de Gipuzkoa',
       };
     }
-    if (jurisdiction === 'araba' || clean.startsWith('01')) {
+    if (resolvedJurisdiction === 'araba') {
       return {
         url: 'https://geo.araba.eus/',
         label: 'Sede Álava',
         fullTitle: 'Ver en GeoAraba / Catastro de Álava',
       };
     }
-    if (jurisdiction === 'navarra' || clean.startsWith('31')) {
+    if (resolvedJurisdiction === 'navarra') {
       return {
         url: 'https://catastro.navarra.es/',
         label: 'Sede Navarra',
@@ -161,8 +163,9 @@ export function AuditDossier({
     };
   };
 
+  const effectiveUse = property.unit?.use || property.building.primaryUse;
   const typology: PropertyTypology = report.typology ?? property.typology ?? detectPropertyTypology(
-    property.building.primaryUse,
+    effectiveUse,
     property.building.constructionYear,
     property.building.unitsCount,
     property.cadastralReference

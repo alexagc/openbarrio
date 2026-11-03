@@ -96,6 +96,7 @@ def process_ign_boundaries(input_path: str, output_geojson: str, output_pmtiles:
     try:
         con.execute("SET geometry_always_xy = true;")
     except Exception:
+        # Pre-0.10 DuckDB spatial releases safely use default axis order.
         pass
 
     # Load income dataset for LEFT JOIN

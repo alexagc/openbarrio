@@ -82,9 +82,10 @@ export class AuditService {
     const lat = property.coordinates.latitude;
     const lon = property.coordinates.longitude;
 
-    // Detect authoritative property typology
+    // Detect authoritative property typology (prioritizing specific unit use if queried)
+    const effectiveUse = property.unit?.use || property.building.primaryUse;
     const typology: PropertyTypology = property.typology ?? detectPropertyTypology(
-      property.building.primaryUse,
+      effectiveUse,
       property.building.constructionYear,
       property.building.unitsCount,
       property.cadastralReference

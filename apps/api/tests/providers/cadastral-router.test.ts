@@ -54,6 +54,12 @@ describe('CadastralRouterProvider & Foral Connectors', () => {
       const prop = await router.getByCadastralReference('9872023VH5797S0001WX');
       expect(prop.address.municipality).toBe('Madrid');
     });
+
+    it('routes DGC reference starting with 01 to DGC provider rather than Araba', async () => {
+      const prop = await router.getByCadastralReference('0167508VK4606G0001IK');
+      expect(prop.jurisdiction).toBe('dgc');
+      expect(prop.address.municipality).toBe('Madrid');
+    });
   });
 
   describe('Graceful Degradation for Foral Units & WFS Geometry', () => {

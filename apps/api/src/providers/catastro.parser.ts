@@ -114,6 +114,35 @@ export function parseMultiUnitParcelSummary(
   let primaryUnitRef: string | undefined;
   let targetRcdnp: string | undefined;
 
+  const isLikelyResidentialUnit = (rcdnp: string): boolean => {
+    const luso = extractTag(rcdnp, 'luso') || '';
+    if (/residencial|vivienda/i.test(luso)) return true;
+    if (/comercial|oficina|local|garaje|aparcamiento|trastero/i.test(luso)) return false;
+
+    const ldt = extractTag(rcdnp, 'ldt') || '';
+    if (/vivienda/i.test(ldt)) return true;
+    if (/comercial|local|garaje|aparcamiento|trastero/i.test(ldt)) return false;
+
+    const loint = extractTag(rcdnp, 'loint') || '';
+    const pt = (extractTag(loint, 'pt') || extractTag(rcdnp, 'pt') || '').trim();
+    const pu = (extractTag(loint, 'pu') || extractTag(rcdnp, 'pu') || '').trim().toUpperCase();
+
+    if (/gar|tra|loc|pk/i.test(pu)) return false;
+
+    const floorNum = parseInt(pt, 10);
+    const isGroundOrBasement =
+      pt === '00' ||
+      pt.toUpperCase() === 'PB' ||
+      pt.toUpperCase() === 'BJ' ||
+      pt.toUpperCase() === 'BAJO' ||
+      pt.toUpperCase() === 'SS' ||
+      pt.toUpperCase() === 'ST' ||
+      pt.startsWith('-') ||
+      (!isNaN(floorNum) && floorNum <= 0);
+
+    return !isGroundOrBasement && (!isNaN(floorNum) && floorNum > 0);
+  };
+
   if (preferredPortal && rcdnpList.length > 0) {
     const cleanPortal = preferredPortal.trim().toUpperCase();
     const portalMatches = rcdnpList.filter((rcdnp) => {
@@ -124,20 +153,14 @@ export function parseMultiUnitParcelSummary(
     });
 
     if (portalMatches.length > 0) {
-      // Prefer a residential unit in that portal over storage/parking
-      const residential = portalMatches.find((rcdnp) =>
-        /residencial|vivienda/i.test(extractTag(rcdnp, 'luso') || '')
-      );
-      targetRcdnp = residential || portalMatches[0];
+      // Prefer a residential upper-floor unit in that portal over ground-floor shops or storage
+      targetRcdnp = portalMatches.find(isLikelyResidentialUnit) || portalMatches[0];
     }
   }
 
   if (!targetRcdnp && rcdnpList.length > 0) {
-    // Prefer residential unit over parking/storage
-    const residential = rcdnpList.find((rcdnp) =>
-      /residencial|vivienda/i.test(extractTag(rcdnp, 'luso') || '')
-    );
-    targetRcdnp = residential || rcdnpList[0];
+    // Prefer a residential upper-floor unit over ground-floor shops or storage
+    targetRcdnp = rcdnpList.find(isLikelyResidentialUnit) || rcdnpList[0];
   }
 
   if (targetRcdnp) {
@@ -151,7 +174,14 @@ export function parseMultiUnitParcelSummary(
     }
   }
 
-  const hasCommercialUnit = /comercial|oficina|local/i.test(xml);
+  const hasCommercialUnit =
+    /comercial|oficina|local/i.test(xml) ||
+    rcdnpList.some((rcdnp) => {
+      const loint = extractTag(rcdnp, 'loint') || '';
+      const pt = (extractTag(loint, 'pt') || extractTag(rcdnp, 'pt') || '').trim();
+      const pu = (extractTag(loint, 'pu') || extractTag(rcdnp, 'pu') || '').trim().toUpperCase();
+      return pt === '00' || pt.toUpperCase() === 'PB' || pt.toUpperCase() === 'BJ' || /com|loc/i.test(pu);
+    });
 
   return {
     totalUnits,

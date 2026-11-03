@@ -5,6 +5,31 @@ All notable changes to the **OpenBarrio** platform are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.12.1] - 2026-11-03
+
+### Fixed
+- **Cadastral Routing & Foral Jurisdiction Detection (`packages/core`, `apps/api`, `apps/web`)**:
+  - Resolved jurisdiction misclassification where DGC national urban cartographic references starting with numerical sheet prefixes (e.g., `0167508VK4606G0001IK` in Madrid) were incorrectly routed to Álava/Araba.
+  - Added cartographic pattern matching for DGC urban sheet structures (7 alphanumeric parcel + 2 letters MTN50 + 4 digits + 1 control letter) in `detectCadastralJurisdiction()`.
+  - Harmonized verification URLs in `cryptoSeal.ts` and `AuditDossier.tsx` to automatically resolve jurisdiction fallback.
+- **Multi-Unit Parcel Dwelling Selection (`apps/api`)**:
+  - Calibrated Catastro XML parcel parser (`parseMultiUnitParcelSummary`) to prioritize upper-floor residential dwellings over ground-floor commercial premises, parking lots, or storage units.
+  - Enhanced commercial unit detection across `PB`, `BJ`, `00`, and `SS` floor designations.
+- **Typology Precedence in Audit Engine (`apps/api`, `apps/web`)**:
+  - Ensured specific unit usage (`property.unit?.use`) takes authoritative precedence over building-level primary use (`property.building.primaryUse`) for typology adaptation.
+
+### Security & Governance
+- **GitHub CodeQL SAST Remediation (11 Alerts)**:
+  - Fixed TOCTOU file-system race condition and unclosed file descriptor leak in `apps/api/src/routes/tiles.routes.ts` via scoped `FileHandle` open and `try...finally` closure (`js/file-system-race`).
+  - Enforced Python context manager (`with open(...) as f_out:`) in `packages/etl/src/process_miteco_snczi.py` to prevent descriptor leaks (`py/file-not-closed`).
+  - Removed dead stores in `apps/api/src/providers/radon.provider.ts` and `packages/core/src/types/vut.ts` (`js/useless-assignment-to-local`).
+  - Documented and refined empty exception handlers across DuckDB spatial ETL processors (`py/empty-except`).
+- **Supply Chain Security**:
+  - Upgraded `@hono/node-server` to `^2.1.6` in `apps/api/package.json` to eliminate production CVE-2026-118663 with 0 overrides.
+  - Enabled `dependabot_security_updates` at the repository level.
+- **CI/CD Quality Gate Hardening**:
+  - Enforced `--frozen-lockfile` and strict production audit (`pnpm audit --prod --audit-level=high`) in `.github/workflows/ci.yml`.
+
 ## [0.12.0] - 2026-11-03
 
 ### Added

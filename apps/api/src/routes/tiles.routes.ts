@@ -320,9 +320,6 @@ export function createTilesRoutes(): Hono<{ Bindings: CloudflareEnv }> {
     const localFilePath = findLocalTileFile(filename);
     if (localFilePath) {
       try {
-        const stat = await fs.promises.stat(localFilePath);
-        const totalSize = stat.size;
-
         const headers = new Headers();
         headers.set('Content-Type', contentType);
         headers.set('Cache-Control', 'public, max-age=7776000, immutable');
@@ -330,38 +327,53 @@ export function createTilesRoutes(): Hono<{ Bindings: CloudflareEnv }> {
         headers.set('Access-Control-Allow-Origin', '*');
 
         if (rangeHeader && rangeHeader.startsWith('bytes=')) {
-          let start = requestedStart ?? 0;
-          let end = requestedEnd ?? (totalSize > 0 ? totalSize - 1 : 0);
-          if (rangeOption?.suffix) {
-            start = Math.max(0, totalSize - rangeOption.suffix);
-            end = totalSize - 1;
-          }
+          const fileHandle = await fs.promises.open(localFilePath, 'r');
+          try {
+            const stat = await fileHandle.stat();
+            const totalSize = stat.size;
 
-          if (isNaN(start) || isNaN(end) || start > end || start >= totalSize) {
-            return new Response(null, {
-              status: 416,
-              headers: {
-                'Content-Range': `bytes */${totalSize}`,
-                'Access-Control-Allow-Origin': '*',
-              },
+            let start = requestedStart ?? 0;
+            let end = requestedEnd ?? (totalSize > 0 ? totalSize - 1 : 0);
+            if (rangeOption?.suffix) {
+              start = Math.max(0, totalSize - rangeOption.suffix);
+              end = totalSize - 1;
+            }
+
+            if (isNaN(start) || isNaN(end) || start > end || start >= totalSize) {
+              return new Response(null, {
+                status: 416,
+                headers: {
+                  'Content-Range': `bytes */${totalSize}`,
+                  'Access-Control-Allow-Origin': '*',
+                },
+              });
+            }
+
+            end = Math.min(end, totalSize - 1);
+            const contentLength = Math.max(0, end - start + 1);
+
+            const buffer = Buffer.alloc(contentLength);
+            await fileHandle.read(buffer, 0, contentLength, start);
+
+            headers.set('Content-Range', `bytes ${start}-${end}/${totalSize}`);
+            headers.set('Content-Length', String(contentLength));
+
+            return new Response(buffer, {
+              status: 206,
+              headers,
             });
+          } finally {
+            await fileHandle.close();
           }
+        }
 
-          end = Math.min(end, totalSize - 1);
-          const contentLength = Math.max(0, end - start + 1);
-
-          const fd = await fs.promises.open(localFilePath, 'r');
-          const buffer = Buffer.alloc(contentLength);
-          await fd.read(buffer, 0, contentLength, start);
-          await fd.close();
-
-          headers.set('Content-Range', `bytes ${start}-${end}/${totalSize}`);
-          headers.set('Content-Length', String(contentLength));
-
-          return new Response(buffer, {
-            status: 206,
-            headers,
-          });
+        const fileHandle = await fs.promises.open(localFilePath, 'r');
+        let totalSize = 0;
+        try {
+          const stat = await fileHandle.stat();
+          totalSize = stat.size;
+        } finally {
+          await fileHandle.close();
         }
 
         headers.set('Content-Length', String(totalSize));

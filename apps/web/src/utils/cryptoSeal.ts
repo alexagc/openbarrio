@@ -1,4 +1,4 @@
-import { PropertyAuditReport } from '@openbarrio/core';
+import { PropertyAuditReport, detectCadastralJurisdiction } from '@openbarrio/core';
 
 /**
  * Computes a deterministic SHA-256 cryptographic seal of the public registry snapshot.
@@ -42,17 +42,18 @@ export function buildCatastroVerificationUrl(
   jurisdiction?: 'dgc' | 'bizkaia' | 'gipuzkoa' | 'araba' | 'navarra'
 ): string {
   const clean = refcat.replace(/[^A-Za-z0-9]/g, '').toUpperCase();
+  const resolvedJurisdiction = jurisdiction || detectCadastralJurisdiction(clean);
 
-  if (jurisdiction === 'bizkaia' || clean.startsWith('48') || clean.startsWith('A48')) {
+  if (resolvedJurisdiction === 'bizkaia') {
     return 'https://www.bizkaia.eus/es/catastro-de-bizkaia';
   }
-  if (jurisdiction === 'gipuzkoa' || clean.startsWith('20')) {
+  if (resolvedJurisdiction === 'gipuzkoa') {
     return 'https://www.gipuzkoa.eus/es/web/ogasuna/catastro';
   }
-  if (jurisdiction === 'araba' || clean.startsWith('01')) {
+  if (resolvedJurisdiction === 'araba') {
     return 'https://geo.araba.eus/';
   }
-  if (jurisdiction === 'navarra' || clean.startsWith('31')) {
+  if (resolvedJurisdiction === 'navarra') {
     return 'https://catastro.navarra.es/';
   }
 
