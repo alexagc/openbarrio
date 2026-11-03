@@ -284,6 +284,7 @@ jobs:
     if: always() && (inputs.apply_only == true || contains(needs.*.result, 'success'))
     env:
       HAS_CF_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN != '' }}
+      HAS_R2_S3_KEYS: ${{ secrets.R2_ACCESS_KEY_ID != '' && secrets.R2_SECRET_ACCESS_KEY != '' }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -390,8 +391,20 @@ jobs:
           workingDirectory: apps/api
           command: r2 object put openbarrio-r2/census_tracts.pmtiles --file=${{ github.workspace }}/packages/etl/dist/census_tracts.pmtiles
 
-      - name: Sync Cloudflare R2 (MITECO Floods PMTiles)
-        if: inputs.dry_run != true && env.HAS_CF_TOKEN == 'true' && hashFiles('packages/etl/dist/floods.pmtiles') != ''
+      - name: Sync Cloudflare R2 (MITECO Floods PMTiles via S3 Multipart)
+        if: inputs.dry_run != true && env.HAS_R2_S3_KEYS == 'true' && hashFiles('packages/etl/dist/floods.pmtiles') != ''
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: auto
+        run: |
+          echo "==> Uploading full national floods.pmtiles (487MB) to Cloudflare R2 via AWS CLI S3 Multipart..."
+          aws s3 cp packages/etl/dist/floods.pmtiles s3://openbarrio-r2/floods.pmtiles \
+            --endpoint-url https://${{ secrets.CLOUDFLARE_ACCOUNT_ID }}.r2.cloudflarestorage.com
+          echo "✓ floods.pmtiles uploaded successfully to Cloudflare R2!"
+
+      - name: Sync Cloudflare R2 (MITECO Floods PMTiles via Wrangler Fallback)
+        if: inputs.dry_run != true && env.HAS_R2_S3_KEYS != 'true' && env.HAS_CF_TOKEN == 'true' && hashFiles('packages/etl/dist/floods.pmtiles') != ''
         continue-on-error: true
         uses: cloudflare/wrangler-action@v3
         with:
