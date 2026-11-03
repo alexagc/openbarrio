@@ -19,6 +19,7 @@ export const CadastralCoordinatesSchema = Type.Object({
 export const CadastralBuildingSchema = Type.Object({
   constructionYear: Type.Number(),
   builtSurfaceM2: Type.Number(),
+  plotSurfaceM2: Type.Optional(Type.Number({ description: 'Ground parcel land surface in m² (superficie de suelo/parcela)' })),
   primaryUse: Type.String(),
   unitsCount: Type.Number(),
   hasCommercialGroundFloor: Type.Boolean(),
@@ -62,6 +63,7 @@ export const CadastralPropertySchema = Type.Object({
   coordinates: CadastralCoordinatesSchema,
   building: CadastralBuildingSchema,
   unit: Type.Optional(CadastralUnitSchema),
+  plotSurfaceM2: Type.Optional(Type.Number({ description: 'Total parcel land surface area in square meters (superficie de parcela/suelo)' })),
   typology: Type.Optional(PropertyTypologySchema),
   jurisdiction: Type.Optional(
     Type.Union([

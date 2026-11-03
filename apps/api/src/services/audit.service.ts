@@ -167,7 +167,11 @@ export class AuditService {
     }
 
     // 8. Municipal IBI & Regional ITP Fiscal Estimation
-    const cadastralSurface = property.unit?.builtSurfaceM2 || property.building.builtSurfaceM2;
+    const isUnbuilt = typology === 'VACANT_PLOT' || typology === 'RUSTIC' || property.building.builtSurfaceM2 === 0;
+    const cadastralSurface = isUnbuilt
+      ? (property.plotSurfaceM2 || property.building.plotSurfaceM2 || 0)
+      : (property.unit?.builtSurfaceM2 || property.building.builtSurfaceM2 || 0);
+
     const fiscal: FiscalEstimateDTO = calculateFiscalEstimate({
       cadastralReference: property.cadastralReference,
       provinceCode: property.address.provinceCode || property.address.postalCode.slice(0, 2),
@@ -175,6 +179,7 @@ export class AuditService {
       purchasePriceEur: 0,
       cadastralSurfaceM2: cadastralSurface,
       constructionYear: property.building.constructionYear,
+      typology,
     });
 
     // 9. Calculate Barrio Due Diligence Score (5 calibrated pillars + VUT recalibration)

@@ -1,12 +1,14 @@
 import { useState } from 'react';
-import { NeighborhoodTrends } from '@openbarrio/core';
+import { NeighborhoodTrends, PropertyTypology } from '@openbarrio/core';
 import { TrendingUp, Info } from 'lucide-react';
 
 interface NeighborhoodTrendsCardProps {
   trends?: NeighborhoodTrends;
+  typology?: PropertyTypology;
 }
 
-export function NeighborhoodTrendsCard({ trends }: NeighborhoodTrendsCardProps) {
+export function NeighborhoodTrendsCard({ trends, typology }: NeighborhoodTrendsCardProps) {
+  const isRustic = typology === 'RUSTIC';
   const [metric, setMetric] = useState<'income' | 'ipv'>('income');
   const [windowYears, setWindowYears] = useState<3 | 5>(5);
   const [activeIdx, setActiveIdx] = useState<number | null>(null);
@@ -15,11 +17,12 @@ export function NeighborhoodTrendsCard({ trends }: NeighborhoodTrendsCardProps) 
     return null;
   }
 
+  const effectiveMetric = isRustic ? 'income' : metric;
   const series = windowYears === 3 ? trends.timeSeries.slice(-3) : trends.timeSeries;
 
   // Extract metric values
   const values = series.map((pt) =>
-    metric === 'income' ? pt.householdIncome || 0 : pt.housingPriceIndex || 0
+    effectiveMetric === 'income' ? pt.householdIncome || 0 : pt.housingPriceIndex || 0
   );
 
   const minVal = Math.min(...values);
@@ -60,10 +63,12 @@ export function NeighborhoodTrendsCard({ trends }: NeighborhoodTrendsCardProps) 
     cooling: { label: 'Enfriamiento de Renta', color: 'text-rose-400 border-rose-500/40 bg-rose-500/10' },
   };
 
-  const status = gentrificationLabels[trends.summary.gentrificationIndicator] || gentrificationLabels.moderate;
+  const status = isRustic
+    ? { label: 'Entorno Rural / Demografía Estable', color: 'text-blue-400 border-blue-500/40 bg-blue-500/10' }
+    : gentrificationLabels[trends.summary.gentrificationIndicator] || gentrificationLabels.moderate;
 
   const formatPointValue = (val: number) => {
-    if (metric === 'income') {
+    if (effectiveMetric === 'income') {
       return val >= 1000 ? `${(val / 1000).toFixed(1)}k €` : `${val} €`;
     }
     return val.toFixed(1);
@@ -81,38 +86,40 @@ export function NeighborhoodTrendsCard({ trends }: NeighborhoodTrendsCardProps) 
         <div className="flex items-center gap-2">
           <TrendingUp className="w-4 h-4 text-primary" />
           <h3 className="text-sm font-semibold text-on-surface">
-            Evolución y Tendencia Histórica del Barrio
+            {isRustic ? 'Evolución Histórica de Renta Municipal' : 'Evolución y Tendencia Histórica del Barrio'}
           </h3>
         </div>
 
         <div className="flex items-center gap-1.5 text-[11px] font-mono">
-          {/* Metric Selector */}
-          <div className="flex rounded bg-surface-container-high p-0.5 border border-outline-variant/60">
-            <button
-              type="button"
-              onClick={() => {
-                setMetric('income');
-                setActiveIdx(null);
-              }}
-              className={`px-2 py-0.5 rounded transition-colors ${
-                metric === 'income' ? 'bg-primary text-on-primary font-semibold' : 'text-outline hover:text-on-surface'
-              }`}
-            >
-              Renta Media (€)
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setMetric('ipv');
-                setActiveIdx(null);
-              }}
-              className={`px-2 py-0.5 rounded transition-colors ${
-                metric === 'ipv' ? 'bg-primary text-on-primary font-semibold' : 'text-outline hover:text-on-surface'
-              }`}
-            >
-              IPV Precios
-            </button>
-          </div>
+          {/* Metric Selector (Only shown if not rustic) */}
+          {!isRustic && (
+            <div className="flex rounded bg-surface-container-high p-0.5 border border-outline-variant/60">
+              <button
+                type="button"
+                onClick={() => {
+                  setMetric('income');
+                  setActiveIdx(null);
+                }}
+                className={`px-2 py-0.5 rounded transition-colors ${
+                  metric === 'income' ? 'bg-primary text-on-primary font-semibold' : 'text-outline hover:text-on-surface'
+                }`}
+              >
+                Renta Media (€)
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setMetric('ipv');
+                  setActiveIdx(null);
+                }}
+                className={`px-2 py-0.5 rounded transition-colors ${
+                  metric === 'ipv' ? 'bg-primary text-on-primary font-semibold' : 'text-outline hover:text-on-surface'
+                }`}
+              >
+                IPV Precios
+              </button>
+            </div>
+          )}
 
           {/* Time Window Selector */}
           <div className="flex rounded bg-surface-container-high p-0.5 border border-outline-variant/60">
@@ -243,7 +250,7 @@ export function NeighborhoodTrendsCard({ trends }: NeighborhoodTrendsCardProps) 
           <div className="absolute top-2 right-2 px-2.5 py-1 rounded bg-surface-container-lowest/90 border border-primary/50 text-xs font-mono shadow-md backdrop-blur flex items-center gap-2">
             <span className="text-on-surface font-semibold">{activePoint.period}:</span>
             <span className="text-primary font-bold">
-              {metric === 'income' ? `${activePoint.val.toLocaleString('es-ES')} € / año` : `${activePoint.val.toFixed(1)} pts`}
+              {effectiveMetric === 'income' ? `${activePoint.val.toLocaleString('es-ES')} € / año` : `${activePoint.val.toFixed(1)} pts`}
             </span>
             {activePoint.annualVar !== undefined && activePoint.annualVar !== 0 && (
               <span className={`text-[11px] font-semibold ${activePoint.annualVar > 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
@@ -264,16 +271,27 @@ export function NeighborhoodTrendsCard({ trends }: NeighborhoodTrendsCardProps) 
           </span>
         </div>
 
-        <div className="p-2 rounded bg-surface-container-high border border-outline-variant/40">
-          <span className="text-[10px] text-outline uppercase block">Crecimiento IPV Vivienda</span>
-          <span className="text-sm font-semibold text-primary">
-            {trends.summary.fiveYearPriceIndexGrowthPct > 0 ? '+' : ''}
-            {trends.summary.fiveYearPriceIndexGrowthPct}%
-          </span>
-        </div>
+        {isRustic ? (
+          <div className="p-2 rounded bg-surface-container-high border border-outline-variant/40">
+            <span className="text-[10px] text-outline uppercase block">Ámbito Territorial</span>
+            <span className="text-sm font-semibold text-primary">
+              Finca Rústica
+            </span>
+          </div>
+        ) : (
+          <div className="p-2 rounded bg-surface-container-high border border-outline-variant/40">
+            <span className="text-[10px] text-outline uppercase block">Crecimiento IPV Vivienda</span>
+            <span className="text-sm font-semibold text-primary">
+              {trends.summary.fiveYearPriceIndexGrowthPct > 0 ? '+' : ''}
+              {trends.summary.fiveYearPriceIndexGrowthPct}%
+            </span>
+          </div>
+        )}
 
         <div className="p-2 rounded bg-surface-container-high border border-outline-variant/40">
-          <span className="text-[10px] text-outline uppercase block">Dinámica del Barrio</span>
+          <span className="text-[10px] text-outline uppercase block">
+            {isRustic ? 'Dinámica del Entorno' : 'Dinámica del Barrio'}
+          </span>
           <span className={`inline-block px-1.5 py-0.5 rounded text-[10px] font-semibold border ${status.color} mt-0.5`}>
             {status.label}
           </span>
@@ -284,7 +302,15 @@ export function NeighborhoodTrendsCard({ trends }: NeighborhoodTrendsCardProps) 
       <div className="flex items-start gap-1.5 text-[10px] text-outline font-mono pt-1 border-t border-outline-variant/30">
         <Info className="w-3 h-3 text-primary shrink-0 mt-0.5" />
         <span>
-          <strong>Fuentes Oficiales INE:</strong> Renta de Hogares del <em>Atlas ADRH</em> (sección censal {trends.censusSectionId}) e <em>Índice de Precios de Vivienda (IPV)</em> de {trends.autonomousCommunity || trends.provinceName}.
+          {isRustic ? (
+            <>
+              <strong>Fuentes Oficiales INE:</strong> Renta de Hogares del <em>Atlas ADRH</em> (sección censal {trends.censusSectionId}) en entorno rural.
+            </>
+          ) : (
+            <>
+              <strong>Fuentes Oficiales INE:</strong> Renta de Hogares del <em>Atlas ADRH</em> (sección censal {trends.censusSectionId}) e <em>Índice de Precios de Vivienda (IPV)</em> de {trends.autonomousCommunity || trends.provinceName}.
+            </>
+          )}
         </span>
       </div>
     </div>

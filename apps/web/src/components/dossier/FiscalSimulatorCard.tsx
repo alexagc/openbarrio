@@ -1,15 +1,43 @@
 import { useState, useEffect } from 'react';
-import { CadastralProperty, FiscalEstimateDTO, calculateFiscalEstimate } from '@openbarrio/core';
+import {
+  CadastralProperty,
+  FiscalEstimateDTO,
+  PropertyTypology,
+  calculateFiscalEstimate,
+} from '@openbarrio/core';
 import { Coins, AlertTriangle, Building2 } from 'lucide-react';
 
 interface FiscalSimulatorCardProps {
   property: CadastralProperty;
   fiscal?: FiscalEstimateDTO;
+  typology?: PropertyTypology;
 }
 
-export function FiscalSimulatorCard({ property, fiscal }: FiscalSimulatorCardProps) {
-  const cadastralSurface = property.unit?.builtSurfaceM2 || property.building.builtSurfaceM2 || 90;
+export function FiscalSimulatorCard({ property, fiscal, typology }: FiscalSimulatorCardProps) {
+  const isRustic = typology === 'RUSTIC' || property.typology === 'RUSTIC';
+  const isVacantPlot = typology === 'VACANT_PLOT' || property.typology === 'VACANT_PLOT';
+  const isUnbuilt =
+    isRustic ||
+    isVacantPlot ||
+    (property.building.builtSurfaceM2 === 0 && (!property.unit || property.unit.builtSurfaceM2 === 0));
+
+  const parcelSurface = property.plotSurfaceM2 || property.building.plotSurfaceM2 || 0;
+  const cadastralSurface = isUnbuilt
+    ? (parcelSurface || property.building.builtSurfaceM2 || 0)
+    : (property.unit?.builtSurfaceM2 || property.building.builtSurfaceM2 || 0);
+
   const provCode = property.address.provinceCode || property.address.postalCode.slice(0, 2) || '28';
+
+  const defaultPrice = (() => {
+    if (fiscal?.purchasePriceEur && fiscal.purchasePriceEur > 0) return fiscal.purchasePriceEur;
+    if (isRustic) return 25000;
+    if (isVacantPlot) return 65000;
+    return 280000;
+  })();
+
+  const minPrice = isRustic ? 5000 : isVacantPlot ? 10000 : 50000;
+  const maxPrice = isRustic ? 200000 : isVacantPlot ? 500000 : 1200000;
+  const stepPrice = isRustic ? 1000 : isVacantPlot ? 2500 : 5000;
 
   // Read initial values from URL search params
   const [purchasePrice, setPurchasePrice] = useState<number>(() => {
@@ -17,7 +45,7 @@ export function FiscalSimulatorCard({ property, fiscal }: FiscalSimulatorCardPro
       const p = new URLSearchParams(window.location.search).get('price');
       if (p && !isNaN(Number(p)) && Number(p) > 0) return Number(p);
     }
-    return fiscal?.purchasePriceEur && fiscal.purchasePriceEur > 0 ? fiscal.purchasePriceEur : 280000;
+    return defaultPrice;
   });
 
   // Read advertised m2 if passed via deep-link from extension
@@ -50,6 +78,7 @@ export function FiscalSimulatorCard({ property, fiscal }: FiscalSimulatorCardPro
     cadastralSurfaceM2: cadastralSurface,
     advertisedSurfaceM2: advertisedM2,
     constructionYear: property.building.constructionYear,
+    typology: typology || property.typology,
   });
 
   return (
@@ -61,7 +90,7 @@ export function FiscalSimulatorCard({ property, fiscal }: FiscalSimulatorCardPro
         <div className="flex items-center gap-2">
           <Coins className="w-4 h-4 text-primary shrink-0" />
           <span className="font-headline text-sm font-bold text-on-surface">
-            Simulador Fiscal ITP & IBI Municipal
+            {isRustic ? 'Simulador Fiscal Rústico (ITP & IBI)' : 'Simulador Fiscal ITP & IBI Municipal'}
           </span>
         </div>
         <span className="font-mono text-[11px] font-semibold px-2 py-0.5 rounded bg-primary/10 text-primary border border-primary/20">
@@ -84,17 +113,17 @@ export function FiscalSimulatorCard({ property, fiscal }: FiscalSimulatorCardPro
           <input
             id="purchase-price-slider"
             type="range"
-            min="50000"
-            max="1200000"
-            step="5000"
+            min={minPrice}
+            max={maxPrice}
+            step={stepPrice}
             value={purchasePrice}
             onChange={(e) => setPurchasePrice(Number(e.target.value))}
             className="w-full accent-primary cursor-pointer"
           />
           <div className="flex justify-between text-[10px] font-mono text-outline">
-            <span>50.000 €</span>
-            <span>600.000 €</span>
-            <span>1.200.000 €</span>
+            <span>{minPrice.toLocaleString('es-ES')} €</span>
+            <span>{Math.round((minPrice + maxPrice) / 2).toLocaleString('es-ES')} €</span>
+            <span>{maxPrice.toLocaleString('es-ES')} €</span>
           </div>
         </div>
 
@@ -103,14 +132,18 @@ export function FiscalSimulatorCard({ property, fiscal }: FiscalSimulatorCardPro
           <div className="flex items-center justify-between text-xs">
             <span className="text-on-surface-variant font-medium flex items-center gap-1.5">
               <Building2 className="w-3.5 h-3.5 text-primary" />
-              Superficie Computable IBI
+              {isUnbuilt ? 'Superficie Terreno / Parcela' : 'Superficie Computable IBI'}
             </span>
             <span className="font-mono font-bold text-on-surface text-sm">
-              {cadastralSurface} m²
+              {cadastralSurface.toLocaleString('es-ES')} m² {isUnbuilt ? 'suelo' : ''}
             </span>
           </div>
           <p className="text-[11px] text-on-surface-variant leading-tight">
-            Superficie construida oficial de Catastro considerada como base para la valoración y cálculo de la cuota anual.
+            {isRustic
+              ? 'Superficie de parcela catastral rústica considerada como base territorial para el cálculo de la cuota anual.'
+              : isVacantPlot
+                ? 'Superficie de parcela o solar urbano vacante tomada como base para la valoración tributaria.'
+                : 'Superficie construida oficial de Catastro considerada como base para la valoración y cálculo de la cuota anual.'}
           </p>
         </div>
       </div>
@@ -145,18 +178,28 @@ export function FiscalSimulatorCard({ property, fiscal }: FiscalSimulatorCardPro
           </span>
         </div>
         <div>
-          <span className="text-on-surface-variant block">Tipo IBI Municipal</span>
+          <span className="text-on-surface-variant block">
+            {isRustic ? 'Tipo IBI Rústico' : 'Tipo IBI Municipal'}
+          </span>
           <span className="font-mono font-bold text-on-surface">
             {currentFiscal.ibiRatePct.toFixed(3)}%
           </span>
         </div>
         <div>
-          <span className="text-on-surface-variant block">IBI Anual Estimado</span>
+          <span className="text-on-surface-variant block">
+            {isRustic ? 'IBI Rústico Estimado' : 'IBI Anual Estimado'}
+          </span>
           <span className="font-mono font-bold text-on-surface text-sm">
             €{currentFiscal.ibiEstimatedAnnualQuotaEur.toLocaleString('es-ES')} / año
           </span>
         </div>
       </div>
+
+      {isRustic && (
+        <p className="text-[10px] text-outline font-mono italic pt-1 border-t border-outline-variant/30">
+          * Nota fincas rústicas: Cuando la cuota líquida resultante es mínima (&lt; 6 € anuales según ordenanza municipal), los ayuntamientos suelen eximir el cobro o no emitir recibo.
+        </p>
+      )}
     </div>
   );
 }

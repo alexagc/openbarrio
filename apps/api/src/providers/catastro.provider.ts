@@ -255,6 +255,17 @@ export class CatastroProvider implements ICatastroProvider {
               hasCommercialGroundFloor: summary.hasCommercialUnit,
               totalBuildingSurface,
             });
+            if (result.building.builtSurfaceM2 === 0 || result.typology === 'RUSTIC' || result.typology === 'VACANT_PLOT') {
+              try {
+                const geom = await this.getGeometryByCadastralReference(cleanRef);
+                if (geom?.properties?.areaM2 && geom.properties.areaM2 > 0) {
+                  result.building.plotSurfaceM2 = geom.properties.areaM2;
+                  result.plotSurfaceM2 = geom.properties.areaM2;
+                }
+              } catch {
+                // Non-critical: continue
+              }
+            }
             await this.cache.set(cacheKey, 'property', cleanRef, result);
             return result;
           }
@@ -265,6 +276,17 @@ export class CatastroProvider implements ICatastroProvider {
     }
 
     const result = parseCatastroDnprcXml(xmlText, cleanRef, resolvedCoords);
+    if (result.building.builtSurfaceM2 === 0 || result.typology === 'RUSTIC' || result.typology === 'VACANT_PLOT') {
+      try {
+        const geom = await this.getGeometryByCadastralReference(cleanRef);
+        if (geom?.properties?.areaM2 && geom.properties.areaM2 > 0) {
+          result.building.plotSurfaceM2 = geom.properties.areaM2;
+          result.plotSurfaceM2 = geom.properties.areaM2;
+        }
+      } catch {
+        // Non-critical: continue
+      }
+    }
     await this.cache.set(cacheKey, 'property', cleanRef, result);
     return result;
   }

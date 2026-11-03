@@ -163,6 +163,14 @@ export function AuditDossier({
     property.cadastralReference
   );
 
+  const isRustic = typology === 'RUSTIC';
+  const isVacantPlot = typology === 'VACANT_PLOT';
+  const isUnbuilt =
+    isRustic ||
+    isVacantPlot ||
+    (property.building.builtSurfaceM2 === 0 && (!property.unit || property.unit.builtSurfaceM2 === 0));
+  const plotArea = property.plotSurfaceM2 || property.building.plotSurfaceM2 || 0;
+
   const getTypologyBadge = (typ: PropertyTypology, year: number, primaryUse: string) => {
     switch (typ) {
       case 'VACANT_PLOT':
@@ -228,11 +236,13 @@ export function AuditDossier({
                 {property.address.province} ·{' '}
                 {property.unit
                   ? `${property.unit.builtSurfaceM2.toLocaleString('es-ES')} m² privativos (Edificio Año ${property.building.constructionYear || '—'})`
-                  : `${property.building.builtSurfaceM2.toLocaleString('es-ES')} m² ${
-                      property.building.constructionYear > 0
-                        ? `construidos (Año ${property.building.constructionYear})`
-                        : 'superficie (Suelo sin edificar)'
-                    }`}
+                  : isUnbuilt || property.building.builtSurfaceM2 === 0
+                    ? `${(plotArea || property.building.builtSurfaceM2 || 0).toLocaleString('es-ES')} m² de terreno · ${isRustic ? 'Finca Rústica' : 'Solar Urbano'}`
+                    : `${property.building.builtSurfaceM2.toLocaleString('es-ES')} m² ${
+                        property.building.constructionYear > 0
+                          ? `construidos (Año ${property.building.constructionYear})`
+                          : 'superficie (Suelo sin edificar)'
+                      }`}
               </span>
             </p>
           </div>
@@ -490,8 +500,12 @@ export function AuditDossier({
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
               <div>
-                <span className="text-on-surface-variant block">Superficie Construida</span>
-                <span className="font-mono font-bold text-on-surface">{property.building.builtSurfaceM2.toLocaleString('es-ES')} m²</span>
+                <span className="text-on-surface-variant block">
+                  {isUnbuilt ? 'Superficie de Parcela' : 'Superficie Construida'}
+                </span>
+                <span className="font-mono font-bold text-on-surface">
+                  {(isUnbuilt ? (plotArea || property.building.builtSurfaceM2 || 0) : property.building.builtSurfaceM2).toLocaleString('es-ES')} m² {isUnbuilt ? 'terreno' : ''}
+                </span>
               </div>
               <div>
                 <span className="text-on-surface-variant block">Uso Principal</span>
@@ -589,7 +603,7 @@ export function AuditDossier({
         >
           {/* Fiscal Simulator & Surface Discrepancy */}
           <div className="page-break-inside-avoid">
-            <FiscalSimulatorCard property={property} fiscal={fiscal} />
+            <FiscalSimulatorCard property={property} fiscal={fiscal} typology={typology} />
           </div>
 
           {/* MIVAU SERPAVI Rental Module (Only shown for residential typologies) */}
@@ -602,7 +616,7 @@ export function AuditDossier({
           {/* Longitudinal Market & Neighborhood Trends */}
           {marketTrends && (
             <div className="page-break-inside-avoid">
-              <NeighborhoodTrendsCard trends={marketTrends} />
+              <NeighborhoodTrendsCard trends={marketTrends} typology={typology} />
             </div>
           )}
         </div>

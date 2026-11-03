@@ -184,4 +184,68 @@ describe('Non-Residential Typology Adaptation (Phase 18 Stream B)', () => {
     expect(rusticNotice).toBeTruthy();
     expect(rusticNotice.textContent).toContain('Finca rústica');
   });
+
+  it('calibrates header, technical overview, fiscal simulator and trends for rustic parcel with plot surface', () => {
+    const rusticParcelReport: PropertyAuditReport = {
+      ...baseMockReport,
+      typology: 'RUSTIC',
+      property: {
+        ...baseMockReport.property,
+        cadastralReference: '39041A50200077',
+        plotSurfaceM2: 6258,
+        building: {
+          ...baseMockReport.property.building,
+          constructionYear: 0,
+          builtSurfaceM2: 0,
+          plotSurfaceM2: 6258,
+          primaryUse: 'Agrario / Rústico',
+          unitsCount: 0,
+        },
+      },
+      marketTrends: {
+        censusSectionId: '3904101001',
+        provinceName: 'Cantabria',
+        autonomousCommunity: 'Cantabria',
+        timeSeries: [
+          { period: '2018', housingPriceIndex: 105.0, householdIncome: 24500 },
+          { period: '2022', housingPriceIndex: 118.0, householdIncome: 27800 },
+        ],
+        summary: {
+          fiveYearIncomeGrowthPct: 13.5,
+          fiveYearPriceIndexGrowthPct: 12.4,
+          gentrificationIndicator: 'stable',
+        },
+      },
+      capex: undefined,
+      energy: undefined,
+    };
+
+    // 1. Check building & header
+    const { unmount } = render(<AuditDossier report={rusticParcelReport} activeTab="building" />);
+
+    // Header subtitle shows ground land surface (6258 / 6.258 m² de terreno · Finca Rústica), NOT 0 m² built
+    expect(screen.getByText(/6[.,]?258 m² de terreno · Finca Rústica/i)).toBeDefined();
+
+    // Technical overview shows Superficie de Parcela and 6258 / 6.258 m² terreno
+    expect(screen.getByText('Superficie de Parcela')).toBeDefined();
+    expect(screen.getByText(/6[.,]?258 m² terreno/i)).toBeDefined();
+
+    unmount();
+
+    // 2. Check market tab (Fiscal Simulator & Trends)
+    render(<AuditDossier report={rusticParcelReport} activeTab="market" />);
+
+    // Fiscal Simulator shows rustic specific labels & ground surface
+    expect(screen.getByText('Simulador Fiscal Rústico (ITP & IBI)')).toBeDefined();
+    expect(screen.getByText('Superficie Terreno / Parcela')).toBeDefined();
+    expect(screen.getByText(/6[.,]?258 m² suelo/i)).toBeDefined();
+    expect(screen.getByText('Tipo IBI Rústico')).toBeDefined();
+    expect(screen.getByText('IBI Rústico Estimado')).toBeDefined();
+
+    // Trends card shows rural demographic stability and suppresses IPV toggle
+    expect(screen.getByText('Evolución Histórica de Renta Municipal')).toBeDefined();
+    expect(screen.getByText('Entorno Rural / Demografía Estable')).toBeDefined();
+    expect(screen.getByText('Ámbito Territorial')).toBeDefined();
+    expect(screen.queryByText('IPV Precios')).toBeNull();
+  });
 });

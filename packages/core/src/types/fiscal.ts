@@ -1,4 +1,5 @@
 import { Type, Static } from '@sinclair/typebox';
+import { PropertyTypology } from './catastro.js';
 
 export const FiscalEstimateSchema = Type.Object({
   cadastralReference: Type.String({ description: 'Official cadastral reference' }),
@@ -103,6 +104,7 @@ export interface CalculateFiscalOptions {
   advertisedSurfaceM2?: number;
   constructionYear?: number;
   customIbiRatePct?: number;
+  typology?: PropertyTypology;
 }
 
 /**
@@ -117,7 +119,11 @@ export function calculateFiscalEstimate(options: CalculateFiscalOptions): Fiscal
     cadastralSurfaceM2,
     advertisedSurfaceM2,
     customIbiRatePct,
+    typology,
   } = options;
+
+  const isRustic = typology === 'RUSTIC';
+  const isVacantPlot = typology === 'VACANT_PLOT';
 
   // 1. Regional ITP lookup
   const cleanProv = (provinceCode || cadastralReference.slice(0, 2)).padStart(2, '0');
@@ -127,8 +133,9 @@ export function calculateFiscalEstimate(options: CalculateFiscalOptions): Fiscal
 
   // 2. Municipal IBI estimation
   // Spanish urban properties have average IBI rates between 0.40% and 0.65% (Madrid 0.456%, Barcelona 0.66%, Valencia 0.723%)
-  let ibiRatePct = customIbiRatePct ?? 0.50;
-  if (!customIbiRatePct) {
+  // Spanish rustic properties have average IBI rates between 0.30% and 0.50%
+  let ibiRatePct = customIbiRatePct ?? (isRustic ? 0.35 : 0.50);
+  if (!customIbiRatePct && !isRustic) {
     if (cleanProv === '28') ibiRatePct = 0.456;
     else if (cleanProv === '08') ibiRatePct = 0.660;
     else if (cleanProv === '46') ibiRatePct = 0.723;
@@ -136,10 +143,20 @@ export function calculateFiscalEstimate(options: CalculateFiscalOptions): Fiscal
     else if (cleanProv === '48') ibiRatePct = 0.400;
   }
 
-  // Estimated cadastral value is typically ~40% - 50% of market value in Spain, or ~800-1200€/m²
-  const estimatedCadastralValueEur = purchasePriceEur > 0
-    ? Math.round(purchasePriceEur * 0.45)
-    : Math.round(Math.max(30000, cadastralSurfaceM2 * 850));
+  // Estimated cadastral value:
+  // - Rustic land: agricultural ground value (~0.50 - 2.50 €/m²)
+  // - Vacant plot: urban ground without building (~150 - 300 €/m²)
+  // - Residential/building: ~800 - 1200 €/m²
+  let estimatedCadastralValueEur = 0;
+  if (purchasePriceEur > 0) {
+    estimatedCadastralValueEur = Math.round(purchasePriceEur * (isRustic ? 0.30 : 0.45));
+  } else if (isRustic) {
+    estimatedCadastralValueEur = Math.round(Math.max(1500, cadastralSurfaceM2 * 1.5));
+  } else if (isVacantPlot) {
+    estimatedCadastralValueEur = Math.round(Math.max(15000, cadastralSurfaceM2 * 250));
+  } else {
+    estimatedCadastralValueEur = Math.round(Math.max(30000, cadastralSurfaceM2 * 850));
+  }
 
   const ibiEstimatedAnnualQuotaEur = Math.round(estimatedCadastralValueEur * (ibiRatePct / 100));
 
@@ -153,9 +170,13 @@ export function calculateFiscalEstimate(options: CalculateFiscalOptions): Fiscal
     surfaceDiscrepancyPct = Number(pct.toFixed(1));
 
     if (pct > 15.0) {
-      surfaceAlert = `⚠️ +${Math.round(pct)}% m² publicitados vs Catastro (${advertisedSurfaceM2} m² vs ${cadastralSurfaceM2} m²). Posible terraza cerrada sin legalizar o zonas comunes computadas como útiles.`;
+      surfaceAlert = isRustic || isVacantPlot
+        ? `⚠️ +${Math.round(pct)}% m² anunciados vs Catastro (${advertisedSurfaceM2} m² vs ${cadastralSurfaceM2} m² de parcela). Comprobar linderos o posible agregación de parcelas.`
+        : `⚠️ +${Math.round(pct)}% m² publicitados vs Catastro (${advertisedSurfaceM2} m² vs ${cadastralSurfaceM2} m²). Posible terraza cerrada sin legalizar o zonas comunes computadas como útiles.`;
     } else if (pct < -15.0) {
-      surfaceAlert = `ℹ️ ${Math.round(pct)}% m² anunciados vs Catastro (${advertisedSurfaceM2} m² vs ${cadastralSurfaceM2} m²). El anuncio podría computar solo superficie útil privativa.`;
+      surfaceAlert = isRustic || isVacantPlot
+        ? `ℹ️ ${Math.round(pct)}% m² anunciados vs Catastro (${advertisedSurfaceM2} m² vs ${cadastralSurfaceM2} m² de parcela). El anuncio podría contemplar una segregación parcial de la finca.`
+        : `ℹ️ ${Math.round(pct)}% m² anunciados vs Catastro (${advertisedSurfaceM2} m² vs ${cadastralSurfaceM2} m²). El anuncio podría computar solo superficie útil privativa.`;
     }
   }
 
