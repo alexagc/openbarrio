@@ -82,8 +82,7 @@ def generate_serpavi_sql(output_path: str) -> int:
     ]
 
     with open(output_path, "w", encoding="utf-8") as f:
-        f.write("-- MIVAU SERPAVI Statutory Rental Benchmarks Ingestion\n")
-        f.write("BEGIN TRANSACTION;\n")
+        f.write("-- MIVAU SERPAVI Statutory Rental Benchmarks Ingestion (D1 compatible)\n")
         for b in benchmarks:
             cusec_val = f"'{b[0]}'" if b[0] else "NULL"
             f.write(
@@ -91,7 +90,6 @@ def generate_serpavi_sql(output_path: str) -> int:
                 f"(cusec, municipality_code, is_stressed_market, lower_bound_eur_m2, median_eur_m2, upper_bound_eur_m2, sample_size) "
                 f"VALUES ({cusec_val}, '{b[1]}', {b[2]}, {b[3]}, {b[4]}, {b[5]}, {b[6]});\n"
             )
-        f.write("COMMIT;\n")
 
     print(f"[ETL-SERPAVI] Generated {len(benchmarks)} benchmark rows in {output_path}")
     return 0

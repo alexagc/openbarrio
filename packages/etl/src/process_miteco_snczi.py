@@ -322,9 +322,13 @@ def compile_pmtiles(geojson_paths: list, output_pmtiles: str) -> int:
         if res.returncode == 0:
             pmtiles_size_mb = os.path.getsize(output_pmtiles) / (1024 * 1024)
             print(f"[ETL-SNCZI] Successfully compiled PMTiles ({pmtiles_size_mb:.1f} MB) -> {output_pmtiles}")
-            os.makedirs(os.path.dirname(os.path.abspath(ALT_OUTPUT_PMTILES)), exist_ok=True)
-            shutil.copyfile(output_pmtiles, ALT_OUTPUT_PMTILES)
-            print(f"[ETL-SNCZI] Synced PMTiles copy to {ALT_OUTPUT_PMTILES}")
+            try:
+                if os.path.abspath(output_pmtiles) != os.path.abspath(ALT_OUTPUT_PMTILES):
+                    os.makedirs(os.path.dirname(os.path.abspath(ALT_OUTPUT_PMTILES)), exist_ok=True)
+                    shutil.copyfile(output_pmtiles, ALT_OUTPUT_PMTILES)
+                    print(f"[ETL-SNCZI] Synced PMTiles copy to {ALT_OUTPUT_PMTILES}")
+            except shutil.SameFileError:
+                pass
             return 0
 
     print("[ETL-SNCZI] Warning: Tippecanoe failed or missing.")
@@ -388,8 +392,7 @@ def generate_snczi_sql(output_path: str) -> int:
     ]
 
     with open(output_path, "w", encoding="utf-8") as f:
-        f.write("-- MITECO SNCZI Pre-calculated Flood Risk Ingestion (Comprehensive National Coverage)\n")
-        f.write("BEGIN TRANSACTION;\n")
+        f.write("-- MITECO SNCZI Pre-calculated Flood Risk Ingestion (D1 compatible, Comprehensive National Coverage)\n")
         for r in records:
             cusec_val = f"'{r[0]}'" if r[0] else "NULL"
             period_val = f"{r[3]}" if r[3] is not None else "NULL"
@@ -398,7 +401,6 @@ def generate_snczi_sql(output_path: str) -> int:
                 f"(cusec, municipality_code, flood_risk_level, return_period_years, is_in_preferential_flow_zone, source_layer) "
                 f"VALUES ({cusec_val}, '{r[1]}', '{r[2]}', {period_val}, {r[4]}, '{r[5]}');\n"
             )
-        f.write("COMMIT;\n")
 
     print(f"[ETL-SNCZI] Generated {len(records)} flood risk rows in {output_path}")
     return 0

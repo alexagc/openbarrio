@@ -360,9 +360,13 @@ def compile_pmtiles(geojson_path: str, output_pmtiles: str) -> int:
         if res.returncode == 0:
             pmtiles_size_mb = os.path.getsize(output_pmtiles) / (1024 * 1024)
             print(f"[ETL-SICA] Successfully compiled PMTiles ({pmtiles_size_mb:.1f} MB) -> {output_pmtiles}")
-            os.makedirs(os.path.dirname(os.path.abspath(ALT_OUTPUT_PMTILES)), exist_ok=True)
-            shutil.copyfile(output_pmtiles, ALT_OUTPUT_PMTILES)
-            print(f"[ETL-SICA] Synced PMTiles copy to {ALT_OUTPUT_PMTILES}")
+            try:
+                if os.path.abspath(output_pmtiles) != os.path.abspath(ALT_OUTPUT_PMTILES):
+                    os.makedirs(os.path.dirname(os.path.abspath(ALT_OUTPUT_PMTILES)), exist_ok=True)
+                    shutil.copyfile(output_pmtiles, ALT_OUTPUT_PMTILES)
+                    print(f"[ETL-SICA] Synced PMTiles copy to {ALT_OUTPUT_PMTILES}")
+            except shutil.SameFileError:
+                pass
             return 0
 
     print("[ETL-SICA] Warning: Tippecanoe failed or missing.")
@@ -405,8 +409,7 @@ def generate_sica_sql(output_path: str) -> int:
     ]
 
     with open(output_path, "w", encoding="utf-8") as f:
-        f.write("-- MITECO SICA Pre-calculated Strategic Noise Map Ingestion\n")
-        f.write("BEGIN TRANSACTION;\n")
+        f.write("-- MITECO SICA Pre-calculated Strategic Noise Map Ingestion (D1 compatible)\n")
         for r in records:
             cusec_val = f"'{r[0]}'" if r[0] else "NULL"
             f.write(
@@ -414,7 +417,6 @@ def generate_sica_sql(output_path: str) -> int:
                 f"(cusec, municipality_code, day_evening_night_decibels, category, predominant_source) "
                 f"VALUES ({cusec_val}, '{r[1]}', {r[2]}, '{r[3]}', '{r[4]}');\n"
             )
-        f.write("COMMIT;\n")
 
     print(f"[ETL-SICA] Generated {len(records)} acoustic noise rows in {output_path}")
     return 0
