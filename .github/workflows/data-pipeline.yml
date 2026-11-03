@@ -392,6 +392,7 @@ jobs:
 
       - name: Sync Cloudflare R2 (MITECO Floods PMTiles)
         if: inputs.dry_run != true && env.HAS_CF_TOKEN == 'true' && hashFiles('packages/etl/dist/floods.pmtiles') != ''
+        continue-on-error: true
         uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
@@ -402,6 +403,7 @@ jobs:
 
       - name: Sync Cloudflare R2 (MITECO Noise PMTiles)
         if: inputs.dry_run != true && env.HAS_CF_TOKEN == 'true' && hashFiles('packages/etl/dist/noise.pmtiles') != ''
+        continue-on-error: true
         uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
