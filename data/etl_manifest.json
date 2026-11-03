@@ -1,6 +1,6 @@
 {
   "$schema": "https://openbarrio.org/schemas/etl-manifest-v1.json",
-  "generated_at": "2026-11-02T13:55:00Z",
+  "generated_at": "2026-11-03T11:16:04.396Z",
   "datasets": {
     "mivau_serpavi": {
       "name": "MIVAU SERPAVI Statutory Rental Benchmarks",
@@ -13,13 +13,13 @@
       "status": "UP_TO_DATE"
     },
     "ine_adrh": {
-      "name": "INE Atlas de Distribuci\u00f3n de Renta de los Hogares",
+      "name": "INE Atlas de Distribución de Renta de los Hogares",
       "version": "2024",
       "upstream_url": "https://www.ine.es/prodyser/cartografia/seccionado_2024.zip",
       "etag": "\"193400d-3ea5a83-6142bd2db4a80\"",
       "last_modified": "Thu, 21 Mar 2024 13:38:34 GMT",
-      "sha256": "193400d3ea5a836142bd2db4a80",
-      "last_processed_at": "2026-10-26T23:35:00Z",
+      "sha256": "7b2c8e38b286eb21bce8e23076d8a7e72118825aadc66ccf03e69dd843c98086",
+      "last_processed_at": "2026-11-03T11:16:04.396Z",
       "status": "UP_TO_DATE"
     },
     "cte_radon": {
@@ -42,10 +42,10 @@
       "upstream_url": "https://gis.miteco.gob.es/geoserver/agua/wms",
       "etag": "\"snczi-cycle2-2026\"",
       "last_modified": "Sun, 01 Nov 2026 00:00:00 GMT",
-      "sha256": "9892740d03da68fef2847343e52c985ac7f8b8e319b486538ab11df04a73c8eb",
-      "last_processed_at": "2026-11-02T20:52:00Z",
+      "sha256": "b29ab946a8c056b0106520f4a46e3eb12d07b557812dfdcb4075f5b0dd623472",
+      "last_processed_at": "2026-11-03T11:16:03.145Z",
       "status": "UP_TO_DATE",
-      "fingerprint": "9892740d03da68fef2847343e52c985ac7f8b8e319b486538ab11df04a73c8eb"
+      "fingerprint": "b29ab946a8c056b0106520f4a46e3eb12d07b557812dfdcb4075f5b0dd623472"
     },
     "miteco_sica": {
       "name": "MITECO SICA Strategic Noise Map",

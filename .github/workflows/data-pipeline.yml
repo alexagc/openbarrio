@@ -32,6 +32,9 @@ on:
         default: '40088381506'
         type: string
 
+permissions:
+  contents: write
+
 jobs:
   # =========================================================================
   # Job 1: Ingest & Process INE ADRH + IGN Census Boundaries
@@ -401,3 +404,22 @@ jobs:
             packages/etl/dist/noise.pmtiles
             packages/etl/dist/census_tracts_simplified.geojson
           retention-days: 30
+
+      - name: Update Manifest from Generated Artifacts
+        if: inputs.dry_run != true && inputs.apply_only != true
+        run: node scripts/update-etl-manifest.mjs
+
+      - name: Persist ETL Manifest Changes to Main
+        if: inputs.dry_run != true && inputs.apply_only != true
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          if ! git diff --quiet data/etl_manifest.json; then
+            echo "Changes detected in data/etl_manifest.json. Committing and pushing to main..."
+            git add data/etl_manifest.json
+            git commit -m "chore(etl): update etl_manifest.json [skip ci]"
+            git pull --rebase origin main
+            git push origin main
+          else
+            echo "No changes in data/etl_manifest.json. Repository is up-to-date."
+          fi
