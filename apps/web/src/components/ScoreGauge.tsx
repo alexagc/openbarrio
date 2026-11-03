@@ -1,4 +1,4 @@
-import { AuditScoreBreakdown, AuditSubscores } from '@openbarrio/core';
+import { AuditScoreBreakdown, AuditSubscores, PropertyTypology } from '@openbarrio/core';
 import { ShieldCheck, AlertTriangle, ShieldAlert, Compass } from 'lucide-react';
 import { RadarChart } from './RadarChart';
 
@@ -6,31 +6,56 @@ interface ScoreGaugeProps {
   score: AuditScoreBreakdown;
   cityOrProvince?: string;
   percentile?: number;
+  typology?: PropertyTypology;
 }
 
-export function ScoreGauge({ score, cityOrProvince = 'España', percentile = 89 }: ScoreGaugeProps) {
+export function ScoreGauge({
+  score,
+  cityOrProvince = 'España',
+  percentile = 89,
+  typology,
+}: ScoreGaugeProps) {
   const { overallScore } = score;
+  const isRustic = typology === 'RUSTIC';
+  const isVacantPlot = typology === 'VACANT_PLOT';
+  const isUnbuilt = isRustic || isVacantPlot;
 
-  let badgeText = 'Notable Alto - Entorno Consolidado';
+  let badgeText = isRustic
+    ? 'Notable · Finca Rústica en Entorno Estable'
+    : isVacantPlot
+      ? 'Notable · Solar Urbano Consolidado'
+      : 'Notable Alto - Entorno Consolidado';
   let badgeClass = 'bg-primary/10 text-primary border-primary/30';
   let gaugeColor = 'text-primary';
   let Icon = ShieldCheck;
 
   if (overallScore >= 85) {
-    badgeText = 'Sobresaliente - Alta Solvencia & Confort';
+    badgeText = isRustic
+      ? 'Sobresaliente · Alto Valor Natural & Aptitud Rústica'
+      : isVacantPlot
+        ? 'Sobresaliente · Solar de Alta Calidad & Viabilidad'
+        : 'Sobresaliente - Alta Solvencia & Confort';
     badgeClass = 'bg-primary/15 text-primary border-primary/40';
     gaugeColor = 'text-primary';
     Icon = ShieldCheck;
   } else if (overallScore < 50) {
-    badgeText = 'Alerta / Precaución Técnica';
+    badgeText = isRustic
+      ? 'Alerta · Servidumbres / Afecciones Rústicas Severas'
+      : isVacantPlot
+        ? 'Alerta · Restricciones Urbanísticas o Inundabilidad'
+        : 'Alerta / Precaución Técnica';
     badgeClass = 'bg-error/15 text-error border-error/40';
     gaugeColor = 'text-error';
     Icon = ShieldAlert;
   } else if (overallScore < 75) {
-    badgeText = 'Moderado - Revisar Aislamiento o ITE';
+    badgeText = isRustic
+      ? 'Moderado · Suelo No Urbanizable / Entorno Rural'
+      : isVacantPlot
+        ? 'Moderado · Parcela Vacante / Planeamiento Pendiente'
+        : 'Moderado - Revisar Aislamiento o ITE';
     badgeClass = 'bg-secondary/15 text-secondary border-secondary/40';
     gaugeColor = 'text-secondary';
-    Icon = AlertTriangle;
+    Icon = isUnbuilt ? Compass : AlertTriangle;
   }
 
   // Calculate circumference: 2 * Math.PI * 15.9155 ~= 100
@@ -114,7 +139,9 @@ export function ScoreGauge({ score, cityOrProvince = 'España', percentile = 89 
           {/* Sub-score 2: Catastro */}
           <div>
             <div className="flex justify-between text-body-sm mb-0.5 font-mono text-[11px]">
-              <span className="text-on-surface-variant font-sans">Salud Edificatoria & Tejido</span>
+              <span className="text-on-surface-variant font-sans">
+                {isRustic ? 'Aptitud del Terreno / Tejido' : isVacantPlot ? 'Idoneidad de Parcela' : 'Salud Edificatoria & Tejido'}
+              </span>
               <span className="text-on-surface font-semibold">{score.buildingHealthScore}/100</span>
             </div>
             <div className="w-full h-1.5 bg-surface-variant rounded-full overflow-hidden">

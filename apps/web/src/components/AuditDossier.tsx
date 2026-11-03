@@ -1,5 +1,10 @@
 import { useState } from 'react';
-import { PropertyAuditReport, PropertyTypology, detectPropertyTypology } from '@openbarrio/core';
+import {
+  PropertyAuditReport,
+  PropertyTypology,
+  LandClassification,
+  detectPropertyTypology,
+} from '@openbarrio/core';
 import { ScoreGauge } from './ScoreGauge';
 import { PillarCards } from './PillarCard';
 import { RentalModule } from './RentalModule';
@@ -170,6 +175,30 @@ export function AuditDossier({
     isVacantPlot ||
     (property.building.builtSurfaceM2 === 0 && (!property.unit || property.unit.builtSurfaceM2 === 0));
   const plotArea = property.plotSurfaceM2 || property.building.plotSurfaceM2 || 0;
+
+  const getLandClassificationLabel = (
+    classification?: LandClassification,
+    propTypology?: PropertyTypology
+  ): string => {
+    switch (classification) {
+      case 'RUSTIC_PROTECTED':
+        return 'Suelo No Urbanizable Protegido (SNU-P) · Régimen Rústico';
+      case 'RUSTIC_COMMON':
+        return 'Suelo No Urbanizable Común (SNU-C) · Rústico Ordinario';
+      case 'DEVELOPABLE':
+        return 'Suelo Urbanizable (SURB) · Desarrollo Pendiente';
+      case 'URBAN_UNCONSOLIDATED':
+        return 'Suelo Urbano No Consolidado (SUNC) · Gestión Pendiente';
+      case 'URBAN_CONSOLIDATED':
+        return 'Régimen SUC Consolidado · INSPIRE Compliant';
+      default:
+        return propTypology === 'RUSTIC'
+          ? 'Suelo Rústico · No Urbanizable'
+          : propTypology === 'VACANT_PLOT'
+            ? 'Solar Urbano · Suelo sin edificar'
+            : 'Suelo Urbano Consolidado (SUC)';
+    }
+  };
 
   const getTypologyBadge = (typ: PropertyTypology, year: number, primaryUse: string) => {
     switch (typ) {
@@ -459,6 +488,7 @@ export function AuditDossier({
               score={score}
               cityOrProvince={property.address.province}
               percentile={neighborhood.percentileInMunicipality}
+              typology={typology}
             />
           </div>
 
@@ -469,9 +499,7 @@ export function AuditDossier({
                 <span>Régimen Urbanístico del Suelo:</span>
               </span>
               <span className="font-mono text-primary font-bold">
-                {urbanPlanning?.landClassification === 'URBAN_CONSOLIDATED'
-                  ? 'Régimen SUC Consolidado · INSPIRE Compliant'
-                  : 'Suelo Urbano'}
+                {getLandClassificationLabel(urbanPlanning?.landClassification, typology)}
               </span>
             </div>
           </div>

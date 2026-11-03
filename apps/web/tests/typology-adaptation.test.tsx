@@ -221,7 +221,7 @@ describe('Non-Residential Typology Adaptation (Phase 18 Stream B)', () => {
     };
 
     // 1. Check building & header
-    const { unmount } = render(<AuditDossier report={rusticParcelReport} activeTab="building" />);
+    const { unmount: unmountBuilding } = render(<AuditDossier report={rusticParcelReport} activeTab="building" />);
 
     // Header subtitle shows ground land surface (6258 / 6.258 m² de terreno · Finca Rústica), NOT 0 m² built
     expect(screen.getByText(/6[.,]?258 m² de terreno · Finca Rústica/i)).toBeDefined();
@@ -230,9 +230,41 @@ describe('Non-Residential Typology Adaptation (Phase 18 Stream B)', () => {
     expect(screen.getByText('Superficie de Parcela')).toBeDefined();
     expect(screen.getByText(/6[.,]?258 m² terreno/i)).toBeDefined();
 
-    unmount();
+    unmountBuilding();
 
-    // 2. Check market tab (Fiscal Simulator & Trends)
+    // 2. Check summary tab (Score Gauge & Land Classification strip)
+    const { unmount: unmountSummary } = render(
+      <AuditDossier
+        report={{
+          ...rusticParcelReport,
+          score: {
+            ...rusticParcelReport.score,
+            overallScore: 50,
+          },
+          urbanPlanning: {
+            landClassification: 'RUSTIC_PROTECTED',
+            zoningCode: 'SNU-P',
+            isProtectedLand: true,
+            declaredRenovationsCount: 0,
+            lastRenovationYear: null,
+            isStressedHousingZone: false,
+          },
+        }}
+        activeTab="summary"
+      />
+    );
+
+    // Score gauge shows rustic appropriate badge and suppresses ITE/isolation warnings
+    expect(screen.getByText('Moderado · Suelo No Urbanizable / Entorno Rural')).toBeDefined();
+    expect(screen.queryByText(/Revisar Aislamiento o ITE/i)).toBeNull();
+
+    // Land classification strip shows SNU-P regime, not "Suelo Urbano"
+    expect(screen.getByText('Suelo No Urbanizable Protegido (SNU-P) · Régimen Rústico')).toBeDefined();
+    expect(screen.queryByText('Régimen SUC Consolidado · INSPIRE Compliant')).toBeNull();
+
+    unmountSummary();
+
+    // 3. Check market tab (Fiscal Simulator & Trends)
     render(<AuditDossier report={rusticParcelReport} activeTab="market" />);
 
     // Fiscal Simulator shows rustic specific labels & ground surface

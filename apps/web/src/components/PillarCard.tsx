@@ -166,6 +166,15 @@ export function PillarCards({
   const primaryUse = property.building.primaryUse;
   const aqi = environment.airQuality;
 
+  const isRustic =
+    property.typology === 'RUSTIC' ||
+    primaryUse.toLowerCase().includes('rústic') ||
+    primaryUse.toLowerCase().includes('agrari');
+  const isVacantPlot =
+    property.typology === 'VACANT_PLOT' || primaryUse.toLowerCase().includes('solar');
+  const isUnbuilt = isRustic || isVacantPlot || (surface === 0 && year === 0);
+  const plotArea = property.plotSurfaceM2 || property.building.plotSurfaceM2 || 0;
+
   return (
     <div className="space-y-4">
       {/* BENTO GRID: 5 DEDICATED PILLARS */}
@@ -280,16 +289,24 @@ export function PillarCards({
           <div className="grid grid-cols-2 gap-2">
             <div className="p-2.5 bg-surface-container-low border border-outline-variant rounded-lg">
               <span className="text-[10px] font-mono text-outline uppercase block">Año Construcción</span>
-              <span className="font-mono text-xl font-bold text-on-surface">{year}</span>
+              <span className="font-mono text-xl font-bold text-on-surface">{year > 0 ? year : '—'}</span>
               <span className="text-[10px] text-secondary block font-medium mt-0.5">{eraTag}</span>
             </div>
             <div className="p-2.5 bg-surface-container-low border border-outline-variant rounded-lg">
-              <span className="text-[10px] font-mono text-outline uppercase block">Superficie Construida</span>
+              <span className="text-[10px] font-mono text-outline uppercase block">
+                {isUnbuilt ? 'Superficie de Suelo' : 'Superficie Construida'}
+              </span>
               <span className="font-mono text-xl font-bold text-primary">
-                {surface.toLocaleString('es-ES')} m²
+                {(isUnbuilt ? (plotArea || surface) : surface).toLocaleString('es-ES')} m²
               </span>
               <span className="text-[10px] text-outline block mt-0.5">
-                {property.building.hasCommercialGroundFloor ? 'Con locales comerciales en planta baja' : 'Uso residencial'}
+                {isRustic
+                  ? 'Finca rústica / Parcela agraria'
+                  : isVacantPlot
+                    ? 'Solar urbano sin edificar'
+                    : property.building.hasCommercialGroundFloor
+                      ? 'Con locales comerciales en planta baja'
+                      : 'Uso residencial'}
               </span>
             </div>
           </div>
@@ -303,7 +320,11 @@ export function PillarCards({
                 </tr>
                 <tr className="hover:bg-surface-container/50 transition-colors">
                   <td className="p-2 text-outline">Unidades Urbanas</td>
-                  <td className="p-2 text-on-surface">{units} unidades registradas en división horizontal</td>
+                  <td className="p-2 text-on-surface">
+                    {isUnbuilt
+                      ? 'Sin división horizontal (Finca íntegra)'
+                      : `${units} unidades registradas en división horizontal`}
+                  </td>
                 </tr>
                 <tr className="hover:bg-surface-container/50 transition-colors">
                   <td className="p-2 text-outline">Calidad Normativa</td>
