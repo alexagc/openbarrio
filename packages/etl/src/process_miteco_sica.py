@@ -17,11 +17,13 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 import hashlib
 import json
 import os
+import random
 import shutil
 import ssl
 import subprocess
 import sys
 import time
+import urllib.error
 import urllib.parse
 import urllib.request
 import xml.etree.ElementTree as ET
@@ -51,32 +53,60 @@ def create_ssl_context():
     return ctx
 
 
-def check_upstream_headers(url: str, manifest: dict) -> bool:
-    """Checks whether upstream ETag or Last-Modified has changed."""
+def check_upstream_headers(url: str, manifest: dict, pmtiles_path: str = None) -> bool:
+    """Checks whether upstream ETag or Last-Modified has changed, enabling Zero-Transfer No-Op."""
     sica_meta = manifest.get("datasets", {}).get("miteco_sica", {})
     recorded_etag = sica_meta.get("etag")
     recorded_lm = sica_meta.get("last_modified")
+    status = sica_meta.get("status")
 
     try:
         req = urllib.request.Request(f"{url}?SERVICE=WMS&REQUEST=GetCapabilities", method="HEAD")
         req.add_header("User-Agent", "OpenBarrio-ETL/1.0")
+        if recorded_etag:
+            req.add_header("If-None-Match", recorded_etag)
+        if recorded_lm:
+            req.add_header("If-Modified-Since", recorded_lm)
+
         ctx = create_ssl_context()
-        with urllib.request.urlopen(req, timeout=6, context=ctx) as res:
+        with urllib.request.urlopen(req, timeout=10, context=ctx) as res:
+            if res.status == 304:
+                print("[ETL-SICA] Upstream returned 304 Not Modified. Dataset is UP TO DATE (Zero-Transfer No-Op).")
+                return False
             headers = dict(res.info())
             current_etag = headers.get("ETag") or headers.get("etag")
             current_lm = headers.get("Last-Modified") or headers.get("last-modified")
 
             if recorded_etag and current_etag and recorded_etag == current_etag:
-                print(f"[ETL-SICA] Upstream ETag matches ({current_etag}). Dataset is UP TO DATE.")
+                print(f"[ETL-SICA] Upstream ETag matches ({current_etag}). Dataset is UP TO DATE (Zero-Transfer No-Op).")
                 return False
 
             if recorded_lm and current_lm and recorded_lm == current_lm:
-                print(f"[ETL-SICA] Upstream Last-Modified matches ({current_lm}). Dataset is UP TO DATE.")
+                print(f"[ETL-SICA] Upstream Last-Modified matches ({current_lm}). Dataset is UP TO DATE (Zero-Transfer No-Op).")
                 return False
+
+            # If upstream doesn't emit ETag/Last-Modified headers, verify if manifest has recorded UP_TO_DATE status and valid PMTiles artifact
+            if not current_etag and not current_lm and status == "UP_TO_DATE":
+                artifact_present = (pmtiles_path and os.path.exists(pmtiles_path)) or os.path.exists(DEFAULT_OUTPUT_PMTILES) or os.path.exists(ALT_OUTPUT_PMTILES)
+                if artifact_present:
+                    print(f"[ETL-SICA] Manifest status is UP_TO_DATE and artifact exists on disk. Dataset is UP TO DATE (Zero-Transfer No-Op).")
+                    return False
 
             print(f"[ETL-SICA] Upstream checked (ETag: {current_etag}, LM: {current_lm}). Processing official geometries...")
             return True
+    except urllib.error.HTTPError as http_err:
+        if http_err.code == 304:
+            print("[ETL-SICA] Upstream returned 304 Not Modified. Dataset is UP TO DATE (Zero-Transfer No-Op).")
+            return False
+        if status == "UP_TO_DATE":
+            print(f"[ETL-SICA] Upstream HTTP notice ({http_err}). Using manifest UP_TO_DATE status (Zero-Transfer No-Op).")
+            return False
+        print(f"[ETL-SICA] Upstream HTTP check notice ({http_err}). Processing cartography...")
+        return True
     except Exception as err:
+        if status == "UP_TO_DATE":
+            print(f"[ETL-SICA] Notice: upstream check ({err}). Using manifest UP_TO_DATE status (Zero-Transfer No-Op).")
+            return False
         print(f"[ETL-SICA] Notice: Could not verify upstream HEAD ({err}). Processing cartography...")
         return True
 
@@ -107,8 +137,8 @@ def query_sica_hits(layer_name: str, ctx: ssl.SSLContext) -> int:
     return 1000
 
 
-def fetch_sica_page(layer_name: str, start: int, count: int, source_type: str, ume_type: str, fallback_lden: float, ctx: ssl.SSLContext, max_retries: int = 3) -> list:
-    """Fetches a single page of SICA WFS features with automatic retries."""
+def fetch_sica_page(layer_name: str, start: int, count: int, source_type: str, ume_type: str, fallback_lden: float, ctx: ssl.SSLContext, max_retries: int = 4) -> list:
+    """Fetches a single page of SICA WFS features with adaptive connection pooling, retry and jitter backoff."""
     params = {
         "service": "WFS",
         "version": "2.0.0",
@@ -123,7 +153,7 @@ def fetch_sica_page(layer_name: str, start: int, count: int, source_type: str, u
     for attempt in range(max_retries):
         try:
             req = urllib.request.Request(url, headers={"User-Agent": "OpenBarrio-ETL/1.0"})
-            with urllib.request.urlopen(req, timeout=40, context=ctx) as resp:
+            with urllib.request.urlopen(req, timeout=45, context=ctx) as resp:
                 if resp.status == 200:
                     data = json.loads(resp.read().decode("utf-8"))
                     feats = data.get("features", [])
@@ -146,17 +176,30 @@ def fetch_sica_page(layer_name: str, start: int, count: int, source_type: str, u
                         }
                         normalized.append(f)
                     return normalized
+        except urllib.error.HTTPError as http_err:
+            status_code = http_err.code
+            is_rate_limit_or_server_error = status_code in (429, 502, 503, 504)
+            if attempt < max_retries - 1:
+                jitter = random.uniform(0.5, 2.5)
+                backoff = (2 ** attempt) + jitter
+                if is_rate_limit_or_server_error:
+                    print(f"  [HTTP {status_code}] MITECO SICA backoff for {layer_name}:{start}. Retrying in {backoff:.2f}s...")
+                time.sleep(backoff)
+            else:
+                print(f"  ! Failed page {start} ({layer_name}) after {max_retries} attempts [HTTP {status_code}]: {http_err}")
         except Exception as e:
             if attempt < max_retries - 1:
-                time.sleep(1.5 * (attempt + 1))
+                jitter = random.uniform(0.5, 2.5)
+                backoff = (1.5 * (attempt + 1)) + jitter
+                time.sleep(backoff)
             else:
                 print(f"  ! Failed page {start} ({layer_name}) after {max_retries} attempts: {e}")
     return []
 
 
 def fetch_official_sica_features() -> list:
-    """Fetches real official acoustic noise contours from MITECO WFS across Spain."""
-    print("[ETL-SICA] Fetching official noise geometries from MITECO SICA WFS 2.0.0...")
+    """Fetches real official acoustic noise contours from MITECO WFS across Spain using 6-worker pools."""
+    print("[ETL-SICA] Fetching official noise geometries from MITECO SICA WFS 2.0.0 (6-worker pool)...")
     ctx = create_ssl_context()
     all_features = []
 
@@ -172,7 +215,7 @@ def fetch_official_sica_features() -> list:
     print(f"[ETL-SICA] Fetching Railways ({rail_hits} features)...")
     rail_offsets = list(range(0, rail_hits + 300, 300))
     rail_features = []
-    with ThreadPoolExecutor(max_workers=4) as executor:
+    with ThreadPoolExecutor(max_workers=6) as executor:
         futures = {
             executor.submit(fetch_sica_page, "evaluacionambiental:mer_ferrocarril_lden", offset, 300, "RAILWAY", "FERROCARRIL", 65.0, ctx): offset
             for offset in rail_offsets
@@ -417,9 +460,11 @@ def main():
             manifest = json.load(f)
 
     if not args.force:
-        should_run = check_upstream_headers(SICA_WMS_URL, manifest)
+        should_run = check_upstream_headers(SICA_WMS_URL, manifest, args.output_pmtiles)
         if not should_run:
-            print("[ETL-SICA] Skipping ingestion (dataset is already current).")
+            print("[ETL-SICA] Zero-Transfer No-Op: dataset is UP_TO_DATE. Skipping redundant downloads.")
+            if not os.path.exists(args.output_sql):
+                generate_sica_sql(args.output_sql)
             return 0
 
     features = fetch_official_sica_features()

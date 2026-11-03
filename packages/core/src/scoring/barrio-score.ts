@@ -1,4 +1,4 @@
-import { CadastralProperty } from '../types/catastro.js';
+import { CadastralProperty, PropertyTypology, detectPropertyTypology } from '../types/catastro.js';
 import { CensusTractIncome } from '../types/ine.js';
 import { EnvironmentalData } from '../types/environmental.js';
 import { CivicConnectivityData } from '../types/connectivity.js';
@@ -24,14 +24,58 @@ export const DEFAULT_SCORING_WEIGHTS: ScoringWeights = {
 };
 
 /**
- * Computes the base building health score based on construction year
- * and Spanish regulatory milestones.
+ * Computes the base building health score based on construction year,
+ * property typology and Spanish regulatory milestones.
  */
 function computeBaseBuildingScore(
   year: number,
+  typology: PropertyTypology,
   highlights: string[],
   risks: string[],
 ): number {
+  if (typology === 'VACANT_PLOT') {
+    highlights.push('Unbuilt urban plot (Solar): unencumbered development potential, free of building conservation liabilities');
+    return 90;
+  }
+  if (typology === 'INDUSTRIAL') {
+    if (year >= 2007) {
+      highlights.push(`Industrial facility built in ${year} compliant with CTE/RSCIEI fire and structural safety standards`);
+      return 92;
+    } else if (year >= 1980) {
+      highlights.push(`Industrial facility built in ${year} following modern industrial building era`);
+      return 82;
+    } else if (year > 0) {
+      highlights.push(`Established industrial building constructed in ${year}`);
+      return 75;
+    } else {
+      highlights.push('Industrial parcel with operational infrastructure');
+      return 80;
+    }
+  }
+  if (typology === 'RUSTIC') {
+    highlights.push('Rustic / agricultural estate: conservation governed by rural land management standards');
+    return 85;
+  }
+  if (typology === 'COMMERCIAL') {
+    if (year >= 2007) {
+      highlights.push(`Commercial facility built in ${year} under Spanish CTE accessibility and safety standards`);
+      return 92;
+    } else if (year >= 1980) {
+      highlights.push(`Commercial building constructed in ${year}`);
+      return 80;
+    } else if (year > 0) {
+      highlights.push(`Established commercial premises constructed in ${year}`);
+      return 72;
+    } else {
+      return 80;
+    }
+  }
+  if (typology === 'EQUIPMENT') {
+    highlights.push(`Public / dotational equipment facility (Built in ${year > 0 ? year : '—'})`);
+    return 88;
+  }
+
+  // RESIDENTIAL (default)
   if (year >= 2007) {
     // Post Código Técnico de la Edificación (CTE, RD 314/2006)
     highlights.push(`Built in ${year} under Spanish CTE (Código Técnico de la Edificación) structural, acoustic and thermal safety codes`);
@@ -102,9 +146,15 @@ export function calculateBarrioScore(
   }
 
   // 2. Building Health & Age Dimension (0 - 100)
-  // Evaluates building era against Spanish construction standard milestones
+  // Evaluates building era against Spanish construction standard milestones and typology
+  const typology = property.typology ?? detectPropertyTypology(
+    property.building.primaryUse,
+    property.building.constructionYear,
+    property.building.unitsCount,
+    property.cadastralReference
+  );
   const year = property.building.constructionYear;
-  let buildingScore = computeBaseBuildingScore(year, highlights, risks);
+  let buildingScore = computeBaseBuildingScore(year, typology, highlights, risks);
 
   // Renovation bonus from urbanPlanning if recorded
   if (urbanPlanning?.lastRenovationYear && urbanPlanning.lastRenovationYear >= 2000) {
@@ -112,12 +162,14 @@ export function calculateBarrioScore(
     highlights.push(`Documented major structural renovation in ${urbanPlanning.lastRenovationYear}`);
   }
 
-  // Density adjustment
-  if (property.building.unitsCount > 100) {
-    buildingScore = Math.max(20, buildingScore - 5);
-    risks.push(`High density residential complex (${property.building.unitsCount} cadastral units)`);
-  } else if (property.building.unitsCount >= 2 && property.building.unitsCount <= 40) {
-    buildingScore = Math.min(100, buildingScore + 5);
+  // Density adjustment: relevant to residential coexistence
+  if (typology === 'RESIDENTIAL') {
+    if (property.building.unitsCount > 100) {
+      buildingScore = Math.max(20, buildingScore - 5);
+      risks.push(`High density residential complex (${property.building.unitsCount} cadastral units)`);
+    } else if (property.building.unitsCount >= 2 && property.building.unitsCount <= 40) {
+      buildingScore = Math.min(100, buildingScore + 5);
+    }
   }
 
   // Commercial ground floor vitality
@@ -125,8 +177,8 @@ export function calculateBarrioScore(
     highlights.push(`Commercial street-level presence providing neighborhood services and pedestrian vitality`);
   }
 
-  // Energy efficiency rating impact on Building Health
-  if (energy?.ratingEmissions) {
+  // Energy efficiency rating impact on Building Health (for buildings with active CEE requirements)
+  if ((typology === 'RESIDENTIAL' || typology === 'COMMERCIAL') && energy?.ratingEmissions) {
     if (['A', 'B'].includes(energy.ratingEmissions)) {
       buildingScore = Math.min(100, buildingScore + 5);
       highlights.push(
@@ -369,13 +421,22 @@ export function calculateBarrioScore(
   }
 
   // 7. Composite Multi-Score Calculation (0 - 100)
-  // Calibrated weights: 25% connectivity, 25% building, 20% socioeconomic, 15% environmental, 15% urbanPlanning
+  // Calibrated weights: adapted dynamically for non-residential typologies (plots, rustic)
+  let effectiveWeights = weights;
+  if (weights === DEFAULT_SCORING_WEIGHTS) {
+    if (typology === 'VACANT_PLOT') {
+      effectiveWeights = { connectivity: 0.25, building: 0.05, socioeconomic: 0.20, environmental: 0.25, urbanPlanning: 0.25 };
+    } else if (typology === 'RUSTIC') {
+      effectiveWeights = { connectivity: 0.15, building: 0.05, socioeconomic: 0.20, environmental: 0.30, urbanPlanning: 0.30 };
+    }
+  }
+
   const rawOverall =
-    connectivityScore * weights.connectivity +
-    buildingHealthScore * weights.building +
-    socioeconomicScore * weights.socioeconomic +
-    environmentalScore * weights.environmental +
-    urbanPlanningScore * weights.urbanPlanning;
+    connectivityScore * effectiveWeights.connectivity +
+    buildingHealthScore * effectiveWeights.building +
+    socioeconomicScore * effectiveWeights.socioeconomic +
+    environmentalScore * effectiveWeights.environmental +
+    urbanPlanningScore * effectiveWeights.urbanPlanning;
 
   const overallScore = Math.round(Math.min(100, Math.max(0, rawOverall)));
 

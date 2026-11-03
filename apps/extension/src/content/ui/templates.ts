@@ -1,4 +1,4 @@
-import { PropertyAuditReport, AuditSubscores } from '@openbarrio/core';
+import { PropertyAuditReport, AuditSubscores, PropertyTypology, detectPropertyTypology } from '@openbarrio/core';
 import {
   getScoreStyle,
   formatNoiseLabel,
@@ -152,10 +152,18 @@ export function renderAuditCard(
     environment.floodRisk.isInPreferentialFlowZone
   );
 
+  // Authoritative property typology detection
+  const typology: PropertyTypology = report.typology ?? property.typology ?? detectPropertyTypology(
+    building.primaryUse,
+    building.constructionYear,
+    building.unitsCount,
+    property.cadastralReference
+  );
+
   // Unit switcher badge for buildings with multiple units
   const unitsCount = building.unitsCount;
   let unitPillHtml = '';
-  if (unitsCount && unitsCount > 1) {
+  if (unitsCount && unitsCount > 1 && typology === 'RESIDENTIAL') {
     const cleanWebUrl = webUrl.replace(/\/+$/, '');
     const unitsDossierUrl = `${cleanWebUrl}/map?refcat=${encodeURIComponent(property.cadastralReference)}&tab=dossier`;
     unitPillHtml = `
@@ -165,9 +173,9 @@ export function renderAuditCard(
     `;
   }
 
-  // Stressed zone section
+  // Stressed zone section (residential only: suppressed on plots, warehouses and commercial premises)
   let stressedHtml = '';
-  if (rental && rental.isStressedHousingZone) {
+  if (rental && rental.isStressedHousingZone && typology === 'RESIDENTIAL') {
     stressedHtml = `
       <div class="ob-stressed-alert">
         <div class="ob-stressed-icon">⚠️</div>
@@ -194,6 +202,10 @@ export function renderAuditCard(
     ? `🌳 ${conn.nearestPark.name.replace(/^(Parque\s*(de\s*)?|Jardines\s*(de\s*)?)/i, '')} (${Math.round(conn.nearestPark.walkTimeMinutes)}m)`
     : '🌳 Parque (~5m)';
 
+  const ceeChipHtml = (typology === 'VACANT_PLOT' || typology === 'RUSTIC')
+    ? ''
+    : `<span class="ob-telemetry-chip" title="CEE">⚡ CEE ${report.energy?.ratingEmissions || 'E'}</span>`;
+
   const connectivityChipsHtml = `
     <!-- Connectivity Telemetry Chips (v0.3.0) -->
     <div class="ob-connectivity-chips">
@@ -209,9 +221,7 @@ export function renderAuditCard(
       <span class="ob-telemetry-chip" title="Zona verde o parque urbano más próximo">
         ${parkLabel}
       </span>
-      <span class="ob-telemetry-chip" title="CEE">
-        ⚡ CEE ${report.energy?.ratingEmissions || 'E'}
-      </span>
+      ${ceeChipHtml}
     </div>
   `;
 
@@ -269,13 +279,37 @@ export function renderAuditCard(
     `;
   }
 
+  // Adaptive typology titles & badges
+  const typologyBadgeLabel =
+    typology === 'VACANT_PLOT' ? 'Solar Urbano' :
+    typology === 'INDUSTRIAL' ? 'Industrial' :
+    typology === 'RUSTIC' ? 'Finca Rústica' :
+    typology === 'COMMERCIAL' ? 'Comercial' :
+    typology === 'EQUIPMENT' ? 'Equipamiento' : 'Auditoría Oficial';
+
+  let constructionTitle = 'Construcción';
+  let constructionLabel = `${building.constructionYear > 0 ? building.constructionYear : '—'} · ${building.builtSurfaceM2} m²`;
+  if (typology === 'VACANT_PLOT') {
+    constructionTitle = 'Tipología';
+    constructionLabel = `Solar (${building.builtSurfaceM2} m²)`;
+  } else if (typology === 'INDUSTRIAL') {
+    constructionTitle = 'Uso';
+    constructionLabel = `Industrial (${building.builtSurfaceM2} m²)`;
+  } else if (typology === 'RUSTIC') {
+    constructionTitle = 'Tipología';
+    constructionLabel = `Rústica (${building.builtSurfaceM2} m²)`;
+  } else if (typology === 'COMMERCIAL') {
+    constructionTitle = 'Uso';
+    constructionLabel = `Comercial (${building.builtSurfaceM2} m²)`;
+  }
+
   return `
     <div class="ob-card" id="ob-card-main">
       <div class="ob-header">
         <div class="ob-brand">
           <div class="ob-logo">OB</div>
           <span class="ob-title">OpenBarrio</span>
-          <span class="ob-badge-official">Auditoría Oficial</span>
+          <span class="ob-badge-official">${typologyBadgeLabel}</span>
         </div>
         <div class="ob-actions">
           <button class="ob-btn-icon" id="ob-btn-collapse" title="Minimizar">▾</button>
@@ -313,8 +347,8 @@ export function renderAuditCard(
         <!-- Breakdown Grid -->
         <div class="ob-grid">
           <div class="ob-stat-box">
-            <div class="ob-stat-label">Construcción</div>
-            <div class="ob-stat-value">${building.constructionYear} · ${building.builtSurfaceM2} m²</div>
+            <div class="ob-stat-label">${constructionTitle}</div>
+            <div class="ob-stat-value">${constructionLabel}</div>
           </div>
           <div class="ob-stat-box">
             <div class="ob-stat-label">Renta Media</div>

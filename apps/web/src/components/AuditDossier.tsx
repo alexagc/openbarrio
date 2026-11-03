@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { PropertyAuditReport } from '@openbarrio/core';
+import { PropertyAuditReport, PropertyTypology, detectPropertyTypology } from '@openbarrio/core';
 import { ScoreGauge } from './ScoreGauge';
 import { PillarCards } from './PillarCard';
 import { RentalModule } from './RentalModule';
@@ -156,7 +156,50 @@ export function AuditDossier({
     };
   };
 
-  const usageLabel = property.building.primaryUse || 'Residencial Colectivo';
+  const typology: PropertyTypology = report.typology ?? property.typology ?? detectPropertyTypology(
+    property.building.primaryUse,
+    property.building.constructionYear,
+    property.building.unitsCount,
+    property.cadastralReference
+  );
+
+  const getTypologyBadge = (typ: PropertyTypology, year: number, primaryUse: string) => {
+    switch (typ) {
+      case 'VACANT_PLOT':
+        return {
+          label: 'Solar Urbano · Suelo sin edificar',
+          className: 'bg-amber-500/20 text-amber-300 border-amber-500/40',
+        };
+      case 'INDUSTRIAL':
+        return {
+          label: 'Nave Industrial / Logístico',
+          className: 'bg-cyan-500/20 text-cyan-300 border-cyan-500/40',
+        };
+      case 'RUSTIC':
+        return {
+          label: 'Finca Rústica / Agrario',
+          className: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40',
+        };
+      case 'COMMERCIAL':
+        return {
+          label: 'Local Comercial / Terciario',
+          className: 'bg-blue-500/20 text-blue-300 border-blue-500/40',
+        };
+      case 'EQUIPMENT':
+        return {
+          label: 'Dotacional / Equipamiento',
+          className: 'bg-purple-500/20 text-purple-300 border-purple-500/40',
+        };
+      case 'RESIDENTIAL':
+      default:
+        return {
+          label: year > 0 && year < 1940 ? 'Edificio Singular Histórico' : (primaryUse || 'Residencial Colectivo'),
+          className: 'bg-primary-container/20 text-primary border-primary/40',
+        };
+    }
+  };
+
+  const typologyBadge = getTypologyBadge(typology, property.building.constructionYear, property.building.primaryUse);
   const districtLabel = `${property.address.municipality} · Sección ${neighborhood.censusSectionCode.slice(-3)}`;
 
   return (
@@ -166,10 +209,11 @@ export function AuditDossier({
         <div className="flex items-start justify-between gap-2">
           <div>
             <div className="flex items-center gap-2 mb-1.5 flex-wrap">
-              <span className="px-2 py-0.5 rounded text-[10px] font-mono uppercase bg-primary-container/20 text-primary border border-primary/40 font-semibold">
-                {property.building.constructionYear > 0 && property.building.constructionYear < 1940
-                  ? 'Edificio Singular Histórico'
-                  : usageLabel}
+              <span
+                data-testid="dossier-typology-badge"
+                className={`px-2 py-0.5 rounded text-[10px] font-mono uppercase border font-semibold ${typologyBadge.className}`}
+              >
+                {typologyBadge.label}
               </span>
               <span className="text-xs font-mono text-outline">{districtLabel}</span>
             </div>
@@ -475,16 +519,39 @@ export function AuditDossier({
             </div>
           )}
 
-          {/* Building CapEx Diagnostics */}
-          <div className="page-break-inside-avoid">
-            <BuildingCapExCard report={report} />
-          </div>
-
-          {/* CEE Energy Performance */}
-          {energy && (
-            <div className="page-break-inside-avoid">
-              <EnergyPerformanceCard energy={energy} />
+          {/* Building CapEx & Energy Diagnostics (Adapted for Non-Residential Typologies) */}
+          {typology === 'VACANT_PLOT' ? (
+            <div data-testid="vacant-plot-notice" className="p-4 rounded-lg bg-surface-container-low border border-outline-variant text-xs space-y-1.5">
+              <div className="flex items-center gap-2 text-amber-400 font-semibold">
+                <span>🏗️ Parcela sin edificación existente</span>
+              </div>
+              <p className="text-on-surface-variant">
+                Al tratarse de un solar urbano vacante, no aplican inspecciones técnicas de la edificación (ITE/IEE), certificados de eficiencia energética (CEE) ni derramas de conservación comunitaria.
+              </p>
             </div>
+          ) : typology === 'RUSTIC' ? (
+            <div data-testid="rustic-plot-notice" className="p-4 rounded-lg bg-surface-container-low border border-outline-variant text-xs space-y-1.5">
+              <div className="flex items-center gap-2 text-emerald-400 font-semibold">
+                <span>🌾 Finca rústica / Parcela no residencial</span>
+              </div>
+              <p className="text-on-surface-variant">
+                Inmueble de naturaleza rústica o agraria no sujeto a régimen de propiedad horizontal residencial ni certificados energéticos de edificación continua.
+              </p>
+            </div>
+          ) : (
+            <>
+              {report.capex && (
+                <div className="page-break-inside-avoid">
+                  <BuildingCapExCard report={report} />
+                </div>
+              )}
+              {/* CEE Energy Performance */}
+              {energy && (
+                <div className="page-break-inside-avoid">
+                  <EnergyPerformanceCard energy={energy} />
+                </div>
+              )}
+            </>
           )}
         </div>
 
@@ -525,8 +592,8 @@ export function AuditDossier({
             <FiscalSimulatorCard property={property} fiscal={fiscal} />
           </div>
 
-          {/* MIVAU SERPAVI Rental Module */}
-          {rentalBenchmark && (
+          {/* MIVAU SERPAVI Rental Module (Only shown for residential typologies) */}
+          {rentalBenchmark && typology === 'RESIDENTIAL' && (
             <div className="page-break-inside-avoid">
               <RentalModule rental={rentalBenchmark} />
             </div>

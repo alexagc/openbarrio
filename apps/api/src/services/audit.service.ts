@@ -1,6 +1,8 @@
 import { randomUUID } from 'node:crypto';
 import {
   PropertyAuditReport,
+  PropertyTypology,
+  detectPropertyTypology,
   CadastralProperty,
   CadastralCoordinates,
   CadastralUnitsResponse,
@@ -80,6 +82,15 @@ export class AuditService {
     const lat = property.coordinates.latitude;
     const lon = property.coordinates.longitude;
 
+    // Detect authoritative property typology
+    const typology: PropertyTypology = property.typology ?? detectPropertyTypology(
+      property.building.primaryUse,
+      property.building.constructionYear,
+      property.building.unitsCount,
+      property.cadastralReference
+    );
+    property.typology = typology;
+
     // 2. Resolve socioeconomic neighborhood first to obtain authoritative censusSectionCode
     const neighborhood = await this.resolveNeighborhood(property);
 
@@ -94,15 +105,17 @@ export class AuditService {
       this.resolveEnergy(property),
     ]);
 
-    // 4. Calculate MIVAU SERPAVI rental benchmark & check stressed market status
+    // 4. Calculate MIVAU SERPAVI rental benchmark & check stressed market status (Residential only)
     let rentalBenchmark: RentalBenchmark | undefined;
-    try {
-      rentalBenchmark = await this.providers.serpavi.getRentalBenchmark(
-        property,
-        neighborhood.censusSectionCode
-      );
-    } catch {
-      rentalBenchmark = undefined;
+    if (typology === 'RESIDENTIAL') {
+      try {
+        rentalBenchmark = await this.providers.serpavi.getRentalBenchmark(
+          property,
+          neighborhood.censusSectionCode
+        );
+      } catch {
+        rentalBenchmark = undefined;
+      }
     }
 
     // 5. Longitudinal Market Trends (INE IPV + ADRH income history)
@@ -117,12 +130,14 @@ export class AuditService {
       marketTrends = undefined;
     }
 
-    // 6. INE Experimental VUT Tourist Housing Evaluation
+    // 6. INE Experimental VUT Tourist Housing Evaluation (Residential only)
     let vut: VutEvaluationDTO | undefined;
-    try {
-      vut = await this.providers.vut.getVutEvaluation(neighborhood.censusSectionCode);
-    } catch {
-      vut = undefined;
+    if (typology === 'RESIDENTIAL') {
+      try {
+        vut = await this.providers.vut.getVutEvaluation(neighborhood.censusSectionCode);
+      } catch {
+        vut = undefined;
+      }
     }
 
     // 7. CTE DB-HS 6 Radon Geological Hazard Evaluation
@@ -175,8 +190,10 @@ export class AuditService {
       vut
     );
 
-    // 10. Calculate Building CapEx & Community Risk Intelligence
-    const capex = calculateBuildingCapExRisk(property);
+    // 10. Calculate Building CapEx & Community Risk Intelligence (omit for unbuilt plots and rustic land)
+    const capex = (typology === 'VACANT_PLOT' || typology === 'RUSTIC')
+      ? undefined
+      : calculateBuildingCapExRisk(property);
 
     // 11. Fetch surrounding buildings for 3D context
     let surroundings: BuildingSurroundingsDTO | undefined;
@@ -190,6 +207,7 @@ export class AuditService {
       id: randomUUID(),
       generatedAt: new Date().toISOString(),
       property,
+      typology,
       neighborhood,
       environment,
       connectivity,

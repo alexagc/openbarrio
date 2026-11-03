@@ -1,5 +1,6 @@
 .git
 node_modules
-data/*.sqlite
+data/*
+!data/etl_manifest.json
 dist
 .notes

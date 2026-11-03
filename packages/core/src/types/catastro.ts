@@ -43,6 +43,17 @@ export const CadastralUnitsResponseSchema = Type.Object({
   units: Type.Array(CadastralUnitSchema),
 });
 
+export const PropertyTypologySchema = Type.Union([
+  Type.Literal('RESIDENTIAL'),
+  Type.Literal('VACANT_PLOT'),
+  Type.Literal('INDUSTRIAL'),
+  Type.Literal('RUSTIC'),
+  Type.Literal('COMMERCIAL'),
+  Type.Literal('EQUIPMENT'),
+], { description: 'Authoritative property usage typology' });
+
+export type PropertyTypology = Static<typeof PropertyTypologySchema>;
+
 export const CadastralPropertySchema = Type.Object({
   cadastralReference: Type.String({
     description: 'Spanish Cadastral Reference (14-character parcel or 20-character property code)',
@@ -51,6 +62,7 @@ export const CadastralPropertySchema = Type.Object({
   coordinates: CadastralCoordinatesSchema,
   building: CadastralBuildingSchema,
   unit: Type.Optional(CadastralUnitSchema),
+  typology: Type.Optional(PropertyTypologySchema),
   jurisdiction: Type.Optional(
     Type.Union([
       Type.Literal('dgc'),
@@ -97,6 +109,99 @@ export function detectCadastralJurisdiction(
   }
 
   return 'dgc';
+}
+
+/**
+ * Detects the authoritative property typology based on Catastro primaryUse,
+ * constructionYear, unitsCount and cadastralReference structure.
+ */
+export function detectPropertyTypology(
+  primaryUse?: string | null,
+  constructionYear?: number | null,
+  unitsCount?: number | null,
+  cadastralReference?: string | null
+): PropertyTypology {
+  const use = (primaryUse || '').toUpperCase().trim();
+  const ref = (cadastralReference || '').toUpperCase().trim();
+
+  // 1. Explicit Residential use
+  if (use.includes('RESIDENC') || use.includes('VIVIENDA')) {
+    return 'RESIDENTIAL';
+  }
+
+  // 2. Rustic / Rural classification
+  if (
+    use.includes('RUSTIC') ||
+    use.includes('RÚSTIC') ||
+    use.includes('AGRARI') ||
+    use.includes('AGRO') ||
+    use.includes('FOREST') ||
+    use.includes('GANADER') ||
+    use.includes('RURAL') ||
+    (/^\d{5}[A-Z]\d{8}/.test(ref) && !use)
+  ) {
+    return 'RUSTIC';
+  }
+
+  // 3. Industrial / Warehouse / Logistics / Factory
+  if (
+    use.includes('INDUSTRIAL') ||
+    use.includes('ALMACEN') ||
+    use.includes('ALMACÉN') ||
+    use.includes('FABRICA') ||
+    use.includes('FÁBRICA') ||
+    use.includes('LOGISTIC') ||
+    use.includes('LOGÍSTIC') ||
+    use.includes('NAVE') ||
+    use.includes('TALLER')
+  ) {
+    return 'INDUSTRIAL';
+  }
+
+  // 4. Commercial / Offices / Hospitality / Retail
+  if (
+    use.includes('COMERCIAL') ||
+    use.includes('OFICINA') ||
+    use.includes('HOSTELER') ||
+    use.includes('HOTEL') ||
+    use.includes('ESPECTACUL') ||
+    use.includes('COMERCIO') ||
+    use.includes('RESTAUR')
+  ) {
+    return 'COMMERCIAL';
+  }
+
+  // 5. Equipment / Dotational / Institutional / Healthcare / Education / Religious
+  if (
+    use.includes('EQUIPAMIENTO') ||
+    use.includes('DOTACIONAL') ||
+    use.includes('CULTURAL') ||
+    use.includes('RELIGIOSO') ||
+    use.includes('SANITARIO') ||
+    use.includes('DOCENTE') ||
+    use.includes('DEPORTIVO') ||
+    use.includes('PUBLICO') ||
+    use.includes('PÚBLICO') ||
+    use.includes('ADMINISTRATIVO')
+  ) {
+    return 'EQUIPMENT';
+  }
+
+  // 6. Vacant Urban Plot (Solar / Suelo vacante / Parcela sin edificar)
+  if (
+    use.includes('SOLAR') ||
+    use.includes('SUELO') ||
+    use.includes('URBANO SIN EDIFICAR') ||
+    use.includes('VACANTE') ||
+    use.includes('PARCELA') ||
+    ((constructionYear === 0 || constructionYear === null || constructionYear === undefined) &&
+     (unitsCount === 0 || unitsCount === null || unitsCount === undefined))
+  ) {
+    return 'VACANT_PLOT';
+  }
+
+  // 7. Default: Residential
+  return 'RESIDENTIAL';
 }
 
 export type CadastralUnit = Static<typeof CadastralUnitSchema>;

@@ -33,29 +33,18 @@ on:
         type: string
 
 jobs:
-  etl:
-    name: Ingest & Process Public Open Datasets (INE & IGN)
+  # =========================================================================
+  # Job 1: Ingest & Process INE ADRH + IGN Census Boundaries
+  # =========================================================================
+  etl-ine-ign:
+    name: ETL 1/4 - INE ADRH & IGN Secciones Censales
     runs-on: ubuntu-latest
-    env:
-      HAS_CF_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN != '' }}
-
+    if: inputs.apply_only != true
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Setup Node.js & pnpm for Wrangler
-        uses: pnpm/action-setup@v4
-
-      - name: Setup Node 22 LTS
-        uses: actions/setup-node@v4
-        with:
-          node-version: 22
-
-      - name: Install Monorepo Dependencies for Wrangler
-        run: pnpm install --no-frozen-lockfile
-
       - name: Set up Python 3.11
-        if: inputs.apply_only != true
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
@@ -63,13 +52,11 @@ jobs:
           cache-dependency-path: 'packages/etl/requirements.txt'
 
       - name: Install Python dependencies
-        if: inputs.apply_only != true
         run: |
           python -m pip install --upgrade pip
           pip install -r packages/etl/requirements.txt
 
       - name: Install Tippecanoe & GDAL
-        if: inputs.apply_only != true
         run: |
           sudo apt-get update
           sudo apt-get install -y gdal-bin libsqlite3-dev build-essential
@@ -80,7 +67,6 @@ jobs:
           tippecanoe --version
 
       - name: Ingest Public Open Datasets (INE ADRH & Cartography)
-        if: inputs.apply_only != true
         run: |
           mkdir -p packages/etl/data packages/etl/dist
           ARGS="--all-provinces"
@@ -92,7 +78,6 @@ jobs:
           python3 packages/etl/src/download_datasets.py $ARGS
 
       - name: Run INE ADRH Processing (DuckDB -> D1 SQL)
-        if: inputs.apply_only != true
         run: |
           python3 packages/etl/src/process_ine_adrh.py \
             --input packages/etl/data/ine_adrh_raw.csv \
@@ -100,43 +85,208 @@ jobs:
             --output-db packages/etl/dist/ine_adrh.db
 
       - name: Run IGN Seccionado Censal Processing (DuckDB Spatial -> PMTiles)
-        if: inputs.apply_only != true
         run: |
           python3 packages/etl/src/process_ign_boundaries.py \
             --input packages/etl/data/ign_secciones_censales.geojson \
             --output-pmtiles packages/etl/dist/census_tracts.pmtiles
 
-      - name: Run Civic Facilities Processing (Python -> D1 SQL)
-        if: inputs.apply_only != true
-        run: |
-          python3 packages/etl/src/process_civic_facilities.py \
-            --output-sql packages/etl/dist/civic_facilities.sql
+      - name: Upload INE & IGN Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: artifact-ine-ign
+          path: |
+            packages/etl/dist/ine_adrh.sql
+            packages/etl/dist/census_tracts.pmtiles
+            packages/etl/dist/census_tracts_simplified.geojson
+          retention-days: 7
 
-      - name: Run MITECO SNCZI Flood Cartography Processing (DuckDB Spatial -> PMTiles)
-        if: inputs.apply_only != true
+  # =========================================================================
+  # Job 2: MITECO SNCZI Flood Cartography Ingestion (28k+ Polygons)
+  # =========================================================================
+  etl-snczi-floods:
+    name: ETL 2/4 - MITECO SNCZI Inundaciones
+    runs-on: ubuntu-latest
+    if: inputs.apply_only != true
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+          cache-dependency-path: 'packages/etl/requirements.txt'
+
+      - name: Install Python dependencies
         run: |
+          python -m pip install --upgrade pip
+          pip install -r packages/etl/requirements.txt
+
+      - name: Install Tippecanoe & GDAL
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gdal-bin libsqlite3-dev build-essential
+          git clone https://github.com/felt/tippecanoe.git /tmp/tippecanoe
+          cd /tmp/tippecanoe
+          make -j$(nproc)
+          sudo make install
+          tippecanoe --version
+
+      - name: Run MITECO SNCZI Processing (DuckDB Spatial -> PMTiles & SQL)
+        run: |
+          mkdir -p packages/etl/dist
           python3 packages/etl/src/process_miteco_snczi.py \
             --output-pmtiles packages/etl/dist/floods.pmtiles \
             --output-sql packages/etl/dist/snczi_risk.sql
 
-      - name: Run MITECO SICA Strategic Noise Processing (DuckDB Spatial -> PMTiles)
-        if: inputs.apply_only != true
+      - name: Upload SNCZI Flood Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: artifact-snczi-floods
+          path: |
+            packages/etl/dist/floods.pmtiles
+            packages/etl/dist/snczi_risk.sql
+          retention-days: 7
+
+  # =========================================================================
+  # Job 3: MITECO SICA Strategic Noise Cartography (40k+ Isochrones)
+  # =========================================================================
+  etl-sica-noise:
+    name: ETL 3/4 - MITECO SICA Ruido Estratégico
+    runs-on: ubuntu-latest
+    if: inputs.apply_only != true
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+          cache-dependency-path: 'packages/etl/requirements.txt'
+
+      - name: Install Python dependencies
         run: |
+          python -m pip install --upgrade pip
+          pip install -r packages/etl/requirements.txt
+
+      - name: Install Tippecanoe & GDAL
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gdal-bin libsqlite3-dev build-essential
+          git clone https://github.com/felt/tippecanoe.git /tmp/tippecanoe
+          cd /tmp/tippecanoe
+          make -j$(nproc)
+          sudo make install
+          tippecanoe --version
+
+      - name: Run MITECO SICA Processing (DuckDB Spatial -> PMTiles & SQL)
+        run: |
+          mkdir -p packages/etl/dist
           python3 packages/etl/src/process_miteco_sica.py \
             --output-pmtiles packages/etl/dist/noise.pmtiles \
             --output-sql packages/etl/dist/sica_noise.sql
 
-      - name: Run ETL Integrity Quality Gate
-        if: inputs.apply_only != true
-        run: |
-          node scripts/verify-etl-integrity.mjs
+      - name: Upload SICA Noise Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: artifact-sica-noise
+          path: |
+            packages/etl/dist/noise.pmtiles
+            packages/etl/dist/sica_noise.sql
+          retention-days: 7
 
-      - name: Download Processed National Artifacts (Fast Sync)
+  # =========================================================================
+  # Job 4: Civic Public Facilities (60k) + Energy Certificates CEE (197k)
+  # =========================================================================
+  etl-civic-cee:
+    name: ETL 4/4 - Equipamientos Cívicos & Certificados CEE
+    runs-on: ubuntu-latest
+    if: inputs.apply_only != true
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node 22 LTS & pnpm
+        uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+          cache-dependency-path: 'packages/etl/requirements.txt'
+
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r packages/etl/requirements.txt
+          pnpm install --no-frozen-lockfile
+
+      - name: Run Civic Facilities Processing (Python -> D1 SQL)
+        run: |
+          mkdir -p packages/etl/dist
+          python3 packages/etl/src/process_civic_facilities.py \
+            --output-sql packages/etl/dist/civic_facilities.sql
+
+      - name: Ingest Energy Performance Certificates (CEE)
+        run: |
+          echo "⚡ Ingesting official Open Data Energy Certificates (Madrid, Catalunya, Euskadi)..."
+          node scripts/ingest-open-data-cee.mjs
+
+      - name: Upload Civic & CEE Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: artifact-civic-cee
+          path: |
+            packages/etl/dist/civic_facilities.sql
+            packages/etl/dist/energy_certificates.sql
+          retention-days: 7
+
+  # =========================================================================
+  # Job 5: Quality Gatekeeper & Aggregator Deployer (D1 & R2 Sync)
+  # =========================================================================
+  deploy-and-gate:
+    name: Gatekeeper & Cloudflare Deployment (D1 & R2)
+    runs-on: ubuntu-latest
+    needs: [etl-ine-ign, etl-snczi-floods, etl-sica-noise, etl-civic-cee]
+    if: always() && (needs.etl-ine-ign.result == 'success' || inputs.apply_only == true)
+    env:
+      HAS_CF_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN != '' }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js & pnpm
+        uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install Monorepo Dependencies
+        run: pnpm install --no-frozen-lockfile
+
+      - name: Prepare Output Directory
+        run: mkdir -p packages/etl/dist
+
+      - name: Download Parallel ETL Artifacts
+        if: inputs.apply_only != true
+        uses: actions/download-artifact@v4
+        with:
+          pattern: artifact-*
+          path: packages/etl/dist
+          merge-multiple: true
+
+      - name: Download Processed National Artifacts (Fast Sync Apply Only)
         if: inputs.apply_only == true
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          mkdir -p packages/etl/dist
           TARGET_RUN="${{ inputs.artifact_run_id || '40088381506' }}"
           echo "Downloading processed artifacts from workflow run $TARGET_RUN..."
           gh run download "$TARGET_RUN" --dir packages/etl/dist
@@ -145,6 +295,11 @@ jobs:
           fi
           echo "Verified downloaded files in packages/etl/dist:"
           ls -lh packages/etl/dist
+
+      - name: Run ETL Integrity Quality Gate
+        if: inputs.apply_only != true
+        run: |
+          node scripts/verify-etl-integrity.mjs
 
       - name: Sync Cloudflare D1 (INE Income SQLite)
         if: inputs.dry_run != true && env.HAS_CF_TOKEN == 'true'
@@ -156,39 +311,16 @@ jobs:
           workingDirectory: apps/api
           command: d1 execute openbarrio-d1 --file=${{ github.workspace }}/packages/etl/dist/ine_adrh.sql --remote --yes
 
-      - name: Sync Cloudflare D1 (Civic Facilities SQLite Chunks)
+      - name: Sync Cloudflare D1 (Civic Facilities SQLite)
         if: inputs.dry_run != true && env.HAS_CF_TOKEN == 'true'
         continue-on-error: true
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-        run: |
-          CHUNKS_DIR=""
-          if [ -d "packages/etl/chunks" ] && [ $(ls -1 packages/etl/chunks/*.sql 2>/dev/null | wc -l) -gt 0 ]; then
-            CHUNKS_DIR="packages/etl/chunks"
-          elif [ -d "packages/etl/dist/openbarrio-etl-dist/chunks" ]; then
-            CHUNKS_DIR="packages/etl/dist/openbarrio-etl-dist/chunks"
-          elif [ -d "packages/etl/dist/chunks" ]; then
-            CHUNKS_DIR="packages/etl/dist/chunks"
-          fi
-
-          if [ -n "$CHUNKS_DIR" ]; then
-            echo "🚀 Found D1 migration chunks in $CHUNKS_DIR. Executing batch migration..."
-            for chunk in "$CHUNKS_DIR"/*.sql; do
-              echo ">>> Executing $chunk into Cloudflare D1..."
-              pnpm --filter @openbarrio/api exec wrangler d1 execute openbarrio-d1 --file="$GITHUB_WORKSPACE/$chunk" --remote --yes
-            done
-            echo "✅ Successfully synced all civic facilities chunks to Cloudflare D1."
-          elif [ -f "packages/etl/dist/civic_facilities.sql" ]; then
-            echo "Executing monolithic civic_facilities.sql into Cloudflare D1..."
-            pnpm --filter @openbarrio/api exec wrangler d1 execute openbarrio-d1 --file="$GITHUB_WORKSPACE/packages/etl/dist/civic_facilities.sql" --remote --yes
-          fi
-
-      - name: Ingest Energy Performance Certificates (CEE)
-        if: inputs.apply_only != true
-        run: |
-          echo "⚡ Ingesting official Open Data Energy Certificates (Madrid, Catalunya, Euskadi)..."
-          node scripts/ingest-open-data-cee.mjs
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          wranglerVersion: '3.114.17'
+          workingDirectory: apps/api
+          command: d1 execute openbarrio-d1 --file=${{ github.workspace }}/packages/etl/dist/civic_facilities.sql --remote --yes
 
       - name: Sync Cloudflare D1 (Energy Certificates CEE)
         if: inputs.dry_run != true && env.HAS_CF_TOKEN == 'true'
@@ -253,7 +385,7 @@ jobs:
           workingDirectory: apps/api
           command: r2 object put openbarrio-r2/noise.pmtiles --file=${{ github.workspace }}/packages/etl/dist/noise.pmtiles
 
-      - name: Upload Processed Artifacts (SQL & PMTiles)
+      - name: Upload Consolidated National Artifacts
         if: inputs.apply_only != true
         uses: actions/upload-artifact@v4
         with:

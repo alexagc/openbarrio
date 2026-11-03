@@ -35,7 +35,7 @@ export class MockCatastroProvider implements ICatastroProvider {
       building: {
         constructionYear: 1924,
         builtSurfaceM2: 31500,
-        primaryUse: 'Comercial',
+        primaryUse: 'Residencial',
         unitsCount: 48,
         hasCommercialGroundFloor: true,
       },

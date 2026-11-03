@@ -30,7 +30,10 @@ coverage
 node_modules/
 jspm_packages/
 .pnpm-store/
-pnpm-lock.yaml
+
+# ETL generated migration chunks & scratch test files
+packages/etl/chunks/
+scripts/osm_*.json
 
 # TypeScript cache
 *.tsbuildinfo

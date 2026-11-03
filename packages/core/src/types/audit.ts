@@ -1,5 +1,5 @@
 import { Type, Static, FormatRegistry } from '@sinclair/typebox';
-import { CadastralPropertySchema } from './catastro.js';
+import { CadastralPropertySchema, PropertyTypologySchema } from './catastro.js';
 import { CensusTractIncomeSchema } from './ine.js';
 import { EnvironmentalDataSchema } from './environmental.js';
 import { CivicConnectivityDataSchema } from './connectivity.js';
@@ -51,6 +51,7 @@ export const PropertyAuditReportSchema = Type.Object({
   id: Type.String({ format: 'uuid', description: 'Unique audit report identifier' }),
   generatedAt: Type.String({ format: 'date-time', description: 'ISO 8601 generation timestamp' }),
   property: CadastralPropertySchema,
+  typology: Type.Optional(PropertyTypologySchema),
   neighborhood: CensusTractIncomeSchema,
   environment: EnvironmentalDataSchema,
   connectivity: Type.Optional(CivicConnectivityDataSchema),

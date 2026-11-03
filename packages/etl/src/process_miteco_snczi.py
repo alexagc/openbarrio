@@ -17,11 +17,13 @@ import gc
 import hashlib
 import json
 import os
+import random
 import shutil
 import ssl
 import subprocess
 import sys
 import time
+import urllib.error
 import urllib.parse
 import urllib.request
 import xml.etree.ElementTree as ET
@@ -59,32 +61,60 @@ def create_ssl_context():
     return ctx
 
 
-def check_upstream_headers(url: str, manifest: dict) -> bool:
-    """Checks whether upstream ETag or Last-Modified has changed."""
+def check_upstream_headers(url: str, manifest: dict, pmtiles_path: str = None) -> bool:
+    """Checks whether upstream ETag or Last-Modified has changed, enabling Zero-Transfer No-Op."""
     snczi_meta = manifest.get("datasets", {}).get("miteco_snczi", {})
     recorded_etag = snczi_meta.get("etag")
     recorded_lm = snczi_meta.get("last_modified")
+    status = snczi_meta.get("status")
 
     try:
         req = urllib.request.Request(f"{url}?SERVICE=WMS&REQUEST=GetCapabilities", method="HEAD")
         req.add_header("User-Agent", "OpenBarrio-ETL/1.0")
+        if recorded_etag:
+            req.add_header("If-None-Match", recorded_etag)
+        if recorded_lm:
+            req.add_header("If-Modified-Since", recorded_lm)
+
         ctx = create_ssl_context()
-        with urllib.request.urlopen(req, timeout=6, context=ctx) as res:
+        with urllib.request.urlopen(req, timeout=10, context=ctx) as res:
+            if res.status == 304:
+                print("[ETL-SNCZI] Upstream returned 304 Not Modified. Dataset is UP TO DATE (Zero-Transfer No-Op).")
+                return False
             headers = dict(res.info())
             current_etag = headers.get("ETag") or headers.get("etag")
             current_lm = headers.get("Last-Modified") or headers.get("last-modified")
 
             if recorded_etag and current_etag and recorded_etag == current_etag:
-                print(f"[ETL-SNCZI] Upstream ETag matches ({current_etag}). Dataset is UP TO DATE.")
+                print(f"[ETL-SNCZI] Upstream ETag matches ({current_etag}). Dataset is UP TO DATE (Zero-Transfer No-Op).")
                 return False
 
             if recorded_lm and current_lm and recorded_lm == current_lm:
-                print(f"[ETL-SNCZI] Upstream Last-Modified matches ({current_lm}). Dataset is UP TO DATE.")
+                print(f"[ETL-SNCZI] Upstream Last-Modified matches ({current_lm}). Dataset is UP TO DATE (Zero-Transfer No-Op).")
                 return False
+
+            # If upstream doesn't emit ETag/Last-Modified headers, verify if manifest has recorded UP_TO_DATE status and valid PMTiles artifact
+            if not current_etag and not current_lm and status == "UP_TO_DATE":
+                artifact_present = (pmtiles_path and os.path.exists(pmtiles_path)) or os.path.exists(DEFAULT_OUTPUT_PMTILES) or os.path.exists(ALT_OUTPUT_PMTILES)
+                if artifact_present:
+                    print(f"[ETL-SNCZI] Manifest status is UP_TO_DATE and artifact exists on disk. Dataset is UP TO DATE (Zero-Transfer No-Op).")
+                    return False
 
             print(f"[ETL-SNCZI] Upstream checked (ETag: {current_etag}, LM: {current_lm}). Processing official geometries...")
             return True
+    except urllib.error.HTTPError as http_err:
+        if http_err.code == 304:
+            print("[ETL-SNCZI] Upstream returned 304 Not Modified. Dataset is UP TO DATE (Zero-Transfer No-Op).")
+            return False
+        if status == "UP_TO_DATE":
+            print(f"[ETL-SNCZI] Upstream HTTP notice ({http_err}). Using manifest UP_TO_DATE status (Zero-Transfer No-Op).")
+            return False
+        print(f"[ETL-SNCZI] Upstream HTTP check notice ({http_err}). Processing cartography...")
+        return True
     except Exception as err:
+        if status == "UP_TO_DATE":
+            print(f"[ETL-SNCZI] Notice: upstream check ({err}). Using manifest UP_TO_DATE status (Zero-Transfer No-Op).")
+            return False
         print(f"[ETL-SNCZI] Notice: Could not verify upstream HEAD ({err}). Processing cartography...")
         return True
 
@@ -105,8 +135,8 @@ def query_layer_hits(layer_name: str, ctx: ssl.SSLContext) -> int:
     return 6500
 
 
-def fetch_single_page(layer_name: str, start: int, count: int, cfg: dict, ctx: ssl.SSLContext, max_retries: int = 3) -> list:
-    """Fetches a single page of WFS features with automatic retry and exponential backoff."""
+def fetch_single_page(layer_name: str, start: int, count: int, cfg: dict, ctx: ssl.SSLContext, max_retries: int = 4) -> list:
+    """Fetches a single page of WFS features with adaptive connection pooling, retry and jitter backoff."""
     params = {
         "service": "WFS",
         "version": "2.0.0",
@@ -145,16 +175,29 @@ def fetch_single_page(layer_name: str, start: int, count: int, cfg: dict, ctx: s
                         }
                         normalized.append(f)
                     return normalized
+        except urllib.error.HTTPError as http_err:
+            status_code = http_err.code
+            is_rate_limit_or_server_error = status_code in (429, 502, 503, 504)
+            if attempt < max_retries - 1:
+                jitter = random.uniform(0.5, 2.5)
+                backoff = (2 ** attempt) + jitter
+                if is_rate_limit_or_server_error:
+                    print(f"  [HTTP {status_code}] MITECO GeoServer backoff for {layer_name}:{start}. Retrying in {backoff:.2f}s...")
+                time.sleep(backoff)
+            else:
+                print(f"  ! Failed page {start} ({layer_name}) after {max_retries} attempts [HTTP {status_code}]: {http_err}")
         except Exception as e:
             if attempt < max_retries - 1:
-                time.sleep(1.5 * (attempt + 1))
+                jitter = random.uniform(0.5, 2.5)
+                backoff = (1.5 * (attempt + 1)) + jitter
+                time.sleep(backoff)
             else:
                 print(f"  ! Failed page {start} ({layer_name}) after {max_retries} attempts: {e}")
     return []
 
 
 def download_layer_to_file(cfg: dict, output_file: str, ctx: ssl.SSLContext) -> int:
-    """Downloads a single layer in small 2-request batches to disk with near-zero memory footprint."""
+    """Downloads a single layer in small 6-request concurrent batches to disk with near-zero memory footprint."""
     layer_name = cfg["layer"]
     total_hits = query_layer_hits(layer_name, ctx)
     page_size = 250
@@ -165,9 +208,9 @@ def download_layer_to_file(cfg: dict, output_file: str, ctx: ssl.SSLContext) -> 
     f_out.write('{"type": "FeatureCollection", "features": [\n')
 
     written_count = 0
-    batch_chunk_size = 3
+    batch_chunk_size = 6
 
-    print(f"[ETL-SNCZI] Fetching {layer_name}: {total_hits} polygons across Spain...")
+    print(f"[ETL-SNCZI] Fetching {layer_name}: {total_hits} polygons across Spain (6-worker pool)...")
     for i in range(0, len(offsets), batch_chunk_size):
         chunk_offsets = offsets[i : i + batch_chunk_size]
         with ThreadPoolExecutor(max_workers=batch_chunk_size) as executor:
@@ -401,9 +444,11 @@ def main():
             manifest = json.load(f)
 
     if not args.force:
-        should_run = check_upstream_headers(SNCZI_WMS_URL, manifest)
+        should_run = check_upstream_headers(SNCZI_WMS_URL, manifest, args.output_pmtiles)
         if not should_run:
-            print("[ETL-SNCZI] Skipping ingestion (dataset is already current).")
+            print("[ETL-SNCZI] Zero-Transfer No-Op: dataset is UP_TO_DATE. Skipping redundant downloads.")
+            if not os.path.exists(args.output_sql):
+                generate_snczi_sql(args.output_sql)
             return 0
 
     dist_dir = os.path.dirname(os.path.abspath(args.output_geojson))

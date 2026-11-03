@@ -367,4 +367,60 @@ describe('Barrio Scoring Engine v0.3.0', () => {
 
     expect(scoreWithLowCee.keyRisks.some((r) => r.includes('Low Energy Performance rating'))).toBe(true);
   });
+
+  it('recalibrates BarrioScore for VACANT_PLOT without penalizing lack of building or ITE', () => {
+    const vacantPlotProperty: CadastralProperty = {
+      ...mockModernProperty,
+      cadastralReference: '000100200VK4713D0001AZ',
+      building: {
+        constructionYear: 0,
+        builtSurfaceM2: 500,
+        primaryUse: 'Solar Urbano',
+        unitsCount: 0,
+        hasCommercialGroundFloor: false,
+      },
+      typology: 'VACANT_PLOT',
+    };
+
+    const result = calculateBarrioScore(
+      vacantPlotProperty,
+      mockWealthyNeighborhood,
+      mockSafeEnvironment,
+      undefined,
+      mockCivicConnectivity,
+      mockUrbanPlanning
+    );
+
+    expect(result.overallScore).toBeGreaterThanOrEqual(80);
+    expect(result.subscores.building).toBeGreaterThanOrEqual(90);
+    expect(result.keyHighlights.some((h) => h.includes('Unbuilt urban plot (Solar)'))).toBe(true);
+    expect(result.keyRisks.some((r) => r.includes('ITE/IEE'))).toBe(false);
+  });
+
+  it('evaluates INDUSTRIAL property without residential ITE penalties', () => {
+    const industrialProperty: CadastralProperty = {
+      ...mockModernProperty,
+      cadastralReference: '8839201VK4713D0001AZ',
+      building: {
+        constructionYear: 2012,
+        builtSurfaceM2: 2500,
+        primaryUse: 'Industrial / Almacén',
+        unitsCount: 1,
+        hasCommercialGroundFloor: false,
+      },
+      typology: 'INDUSTRIAL',
+    };
+
+    const result = calculateBarrioScore(
+      industrialProperty,
+      mockWealthyNeighborhood,
+      mockSafeEnvironment,
+      undefined,
+      mockCivicConnectivity,
+      mockUrbanPlanning
+    );
+
+    expect(result.subscores.building).toBeGreaterThanOrEqual(90);
+    expect(result.keyHighlights.some((h) => h.includes('CTE/RSCIEI'))).toBe(true);
+  });
 });
