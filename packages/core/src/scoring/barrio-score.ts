@@ -428,6 +428,8 @@ export function calculateBarrioScore(
       effectiveWeights = { connectivity: 0.25, building: 0.05, socioeconomic: 0.20, environmental: 0.25, urbanPlanning: 0.25 };
     } else if (typology === 'RUSTIC') {
       effectiveWeights = { connectivity: 0.15, building: 0.05, socioeconomic: 0.20, environmental: 0.30, urbanPlanning: 0.30 };
+    } else if (typology === 'INDUSTRIAL') {
+      effectiveWeights = { connectivity: 0.15, building: 0.35, socioeconomic: 0.10, environmental: 0.15, urbanPlanning: 0.25 };
     }
   }
 

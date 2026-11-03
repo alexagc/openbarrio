@@ -134,26 +134,54 @@ describe('Non-Residential Typology Adaptation (Phase 18 Stream B)', () => {
     expect(vacantNotice.textContent).toContain('Parcela sin edificación');
   });
 
-  it('suppresses residential rental module for non-residential typologies in market tab', () => {
+  it('adapts building tab, score gauge, and fiscal simulator for INDUSTRIAL typology', () => {
     const industrialReport: PropertyAuditReport = {
       ...baseMockReport,
       typology: 'INDUSTRIAL',
+      score: {
+        ...baseMockReport.score,
+        overallScore: 68,
+      },
       property: {
         ...baseMockReport.property,
         building: {
           ...baseMockReport.property.building,
+          constructionYear: 1998,
+          builtSurfaceM2: 1500,
           primaryUse: 'Industrial / Nave',
         },
       },
     };
 
-    render(<AuditDossier report={industrialReport} activeTab="market" />);
+    // 1. Check building tab: industrial RSCIEI notice instead of residential CapEx
+    const { unmount: unmountBuilding } = render(<AuditDossier report={industrialReport} activeTab="building" />);
 
     const badge = screen.getByTestId('dossier-typology-badge');
     expect(badge.textContent).toContain('Nave Industrial');
 
+    const industrialNotice = screen.getByTestId('industrial-notice');
+    expect(industrialNotice).toBeTruthy();
+    expect(industrialNotice.textContent).toContain('RSCIEI');
+    expect(industrialNotice.textContent).toContain('Exento de derramas vecinales');
+
+    unmountBuilding();
+
+    // 2. Check summary tab: industrial specific badge in ScoreGauge
+    const { unmount: unmountSummary } = render(<AuditDossier report={industrialReport} activeTab="summary" />);
+
+    expect(screen.getByText('Moderado · Revisar Cubiertas, Cargas & Licencia de Actividad')).toBeDefined();
+    expect(screen.queryByText(/Revisar Aislamiento o ITE/i)).toBeNull();
+
+    unmountSummary();
+
+    // 3. Check market tab: suppressed SERPAVI and calibrated fiscal simulator
+    render(<AuditDossier report={industrialReport} activeTab="market" />);
+
     // MIVAU SERPAVI residential module must not be displayed for industrial properties
     expect(screen.queryByText(/Rango Oficial de Alquiler/i)).toBeNull();
+
+    // Fiscal Simulator title tailored for industrial premises
+    expect(screen.getByText('Simulador Fiscal Inmueble Industrial (ITP & IBI)')).toBeDefined();
   });
 
   it('renders rustic plot notice for RUSTIC typology', () => {

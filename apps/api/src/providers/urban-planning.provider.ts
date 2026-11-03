@@ -59,6 +59,17 @@ export class UrbanPlanningProvider implements IUrbanPlanningProvider {
       landClassification = 'URBAN_UNCONSOLIDATED';
       isProtectedLand = false;
       zoningCode = 'SUNC-2';
+    } else if (
+      property.typology === 'INDUSTRIAL' ||
+      primaryUse.includes('industrial') ||
+      primaryUse.includes('almacén') ||
+      primaryUse.includes('almacen') ||
+      primaryUse.includes('fabrica') ||
+      primaryUse.includes('logístico')
+    ) {
+      landClassification = 'URBAN_CONSOLIDATED';
+      isProtectedLand = false;
+      zoningCode = 'IND-1';
     } else {
       // Default consolidated urban land for residential/commercial properties
       landClassification = 'URBAN_CONSOLIDATED';
@@ -85,7 +96,14 @@ export class UrbanPlanningProvider implements IUrbanPlanningProvider {
       property.address.municipality.toLowerCase() === 'barcelona' ||
       property.address.postalCode?.startsWith('08');
 
-    const isStressedHousingZone = Boolean(isBarcelona);
+    const isStressedHousingZone =
+      Boolean(isBarcelona) &&
+      property.typology !== 'INDUSTRIAL' &&
+      !primaryUse.includes('industrial') &&
+      !primaryUse.includes('almacén') &&
+      !primaryUse.includes('almacen') &&
+      property.typology !== 'RUSTIC' &&
+      property.typology !== 'VACANT_PLOT';
 
     return {
       landClassification,

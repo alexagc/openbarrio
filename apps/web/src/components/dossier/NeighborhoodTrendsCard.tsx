@@ -9,6 +9,7 @@ interface NeighborhoodTrendsCardProps {
 
 export function NeighborhoodTrendsCard({ trends, typology }: NeighborhoodTrendsCardProps) {
   const isRustic = typology === 'RUSTIC';
+  const isIndustrial = typology === 'INDUSTRIAL';
   const [metric, setMetric] = useState<'income' | 'ipv'>('income');
   const [windowYears, setWindowYears] = useState<3 | 5>(5);
   const [activeIdx, setActiveIdx] = useState<number | null>(null);
@@ -65,7 +66,9 @@ export function NeighborhoodTrendsCard({ trends, typology }: NeighborhoodTrendsC
 
   const status = isRustic
     ? { label: 'Entorno Rural / Demografía Estable', color: 'text-blue-400 border-blue-500/40 bg-blue-500/10' }
-    : gentrificationLabels[trends.summary.gentrificationIndicator] || gentrificationLabels.moderate;
+    : isIndustrial
+      ? { label: 'Área Industrial / Actividad Productiva', color: 'text-cyan-400 border-cyan-500/40 bg-cyan-500/10' }
+      : gentrificationLabels[trends.summary.gentrificationIndicator] || gentrificationLabels.moderate;
 
   const formatPointValue = (val: number) => {
     if (effectiveMetric === 'income') {
@@ -276,6 +279,13 @@ export function NeighborhoodTrendsCard({ trends, typology }: NeighborhoodTrendsC
             <span className="text-[10px] text-outline uppercase block">Ámbito Territorial</span>
             <span className="text-sm font-semibold text-primary">
               Finca Rústica
+            </span>
+          </div>
+        ) : isIndustrial ? (
+          <div className="p-2 rounded bg-surface-container-high border border-outline-variant/40">
+            <span className="text-[10px] text-outline uppercase block">Ámbito Territorial</span>
+            <span className="text-sm font-semibold text-cyan-400">
+              Polígono / Suelo Industrial
             </span>
           </div>
         ) : (

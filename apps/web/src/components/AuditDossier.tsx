@@ -580,6 +580,29 @@ export function AuditDossier({
                 Inmueble de naturaleza rústica o agraria no sujeto a régimen de propiedad horizontal residencial ni certificados energéticos de edificación continua.
               </p>
             </div>
+          ) : typology === 'INDUSTRIAL' ? (
+            <div data-testid="industrial-notice" className="p-4 rounded-lg bg-surface-container-low border border-outline-variant text-xs space-y-2">
+              <div className="flex items-center gap-2 text-cyan-400 font-semibold text-sm">
+                <span>🏭 Diagnóstico Técnico & CapEx Industrial (RSCIEI)</span>
+              </div>
+              <p className="text-on-surface-variant leading-relaxed">
+                Inmueble de naturaleza industrial / logística. No aplican derramas vecinales de propiedad horizontal residencial. La diligencia técnica se rige por el <strong>RSCIEI (Reglamento de Seguridad Contra Incendios en Establecimientos Industriales, RD 2267/2004)</strong>, sobrecargas de solera, altura libre y estanqueidad de cubiertas.
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-1 font-mono text-[11px]">
+                <div className="p-2 rounded bg-surface-container border border-outline-variant/60">
+                  <span className="text-outline block text-[10px]">Normativa de Incendios</span>
+                  <span className="text-primary font-semibold">RSCIEI / CTE DB-SI</span>
+                </div>
+                <div className="p-2 rounded bg-surface-container border border-outline-variant/60">
+                  <span className="text-outline block text-[10px]">Cubiertas & Envolvente</span>
+                  <span className="text-on-surface font-semibold">Inspección de estanqueidad</span>
+                </div>
+                <div className="p-2 rounded bg-surface-container border border-outline-variant/60">
+                  <span className="text-outline block text-[10px]">Régimen de Comunidad</span>
+                  <span className="text-emerald-400 font-semibold">Exento de derramas vecinales</span>
+                </div>
+              </div>
+            </div>
           ) : (
             <>
               {report.capex && (

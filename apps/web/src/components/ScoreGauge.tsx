@@ -18,13 +18,16 @@ export function ScoreGauge({
   const { overallScore } = score;
   const isRustic = typology === 'RUSTIC';
   const isVacantPlot = typology === 'VACANT_PLOT';
+  const isIndustrial = typology === 'INDUSTRIAL';
   const isUnbuilt = isRustic || isVacantPlot;
 
   let badgeText = isRustic
     ? 'Notable · Finca Rústica en Entorno Estable'
     : isVacantPlot
       ? 'Notable · Solar Urbano Consolidado'
-      : 'Notable Alto - Entorno Consolidado';
+      : isIndustrial
+        ? 'Notable · Polígono Consolidado & Buena Conectividad'
+        : 'Notable Alto - Entorno Consolidado';
   let badgeClass = 'bg-primary/10 text-primary border-primary/30';
   let gaugeColor = 'text-primary';
   let Icon = ShieldCheck;
@@ -34,7 +37,9 @@ export function ScoreGauge({
       ? 'Sobresaliente · Alto Valor Natural & Aptitud Rústica'
       : isVacantPlot
         ? 'Sobresaliente · Solar de Alta Calidad & Viabilidad'
-        : 'Sobresaliente - Alta Solvencia & Confort';
+        : isIndustrial
+          ? 'Sobresaliente · Nave de Alta Operatividad & Confort Logístico'
+          : 'Sobresaliente - Alta Solvencia & Confort';
     badgeClass = 'bg-primary/15 text-primary border-primary/40';
     gaugeColor = 'text-primary';
     Icon = ShieldCheck;
@@ -43,7 +48,9 @@ export function ScoreGauge({
       ? 'Alerta · Servidumbres / Afecciones Rústicas Severas'
       : isVacantPlot
         ? 'Alerta · Restricciones Urbanísticas o Inundabilidad'
-        : 'Alerta / Precaución Técnica';
+        : isIndustrial
+          ? 'Alerta · Restricciones de Uso Industrial o Afecciones Técnicas'
+          : 'Alerta / Precaución Técnica';
     badgeClass = 'bg-error/15 text-error border-error/40';
     gaugeColor = 'text-error';
     Icon = ShieldAlert;
@@ -52,7 +59,9 @@ export function ScoreGauge({
       ? 'Moderado · Suelo No Urbanizable / Entorno Rural'
       : isVacantPlot
         ? 'Moderado · Parcela Vacante / Planeamiento Pendiente'
-        : 'Moderado - Revisar Aislamiento o ITE';
+        : isIndustrial
+          ? 'Moderado · Revisar Cubiertas, Cargas & Licencia de Actividad'
+          : 'Moderado - Revisar Aislamiento o ITE';
     badgeClass = 'bg-secondary/15 text-secondary border-secondary/40';
     gaugeColor = 'text-secondary';
     Icon = isUnbuilt ? Compass : AlertTriangle;
@@ -140,7 +149,13 @@ export function ScoreGauge({
           <div>
             <div className="flex justify-between text-body-sm mb-0.5 font-mono text-[11px]">
               <span className="text-on-surface-variant font-sans">
-                {isRustic ? 'Aptitud del Terreno / Tejido' : isVacantPlot ? 'Idoneidad de Parcela' : 'Salud Edificatoria & Tejido'}
+                {isRustic
+                  ? 'Aptitud del Terreno / Tejido'
+                  : isVacantPlot
+                    ? 'Idoneidad de Parcela'
+                    : isIndustrial
+                      ? 'Seguridad Estructural & RSCIEI'
+                      : 'Salud Edificatoria & Tejido'}
               </span>
               <span className="text-on-surface font-semibold">{score.buildingHealthScore}/100</span>
             </div>

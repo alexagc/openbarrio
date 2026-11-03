@@ -16,6 +16,7 @@ interface FiscalSimulatorCardProps {
 export function FiscalSimulatorCard({ property, fiscal, typology }: FiscalSimulatorCardProps) {
   const isRustic = typology === 'RUSTIC' || property.typology === 'RUSTIC';
   const isVacantPlot = typology === 'VACANT_PLOT' || property.typology === 'VACANT_PLOT';
+  const isIndustrial = typology === 'INDUSTRIAL' || property.typology === 'INDUSTRIAL';
   const isUnbuilt =
     isRustic ||
     isVacantPlot ||
@@ -32,12 +33,13 @@ export function FiscalSimulatorCard({ property, fiscal, typology }: FiscalSimula
     if (fiscal?.purchasePriceEur && fiscal.purchasePriceEur > 0) return fiscal.purchasePriceEur;
     if (isRustic) return 25000;
     if (isVacantPlot) return 65000;
+    if (isIndustrial) return 380000;
     return 280000;
   })();
 
-  const minPrice = isRustic ? 5000 : isVacantPlot ? 10000 : 50000;
-  const maxPrice = isRustic ? 200000 : isVacantPlot ? 500000 : 1200000;
-  const stepPrice = isRustic ? 1000 : isVacantPlot ? 2500 : 5000;
+  const minPrice = isRustic ? 5000 : isVacantPlot ? 10000 : isIndustrial ? 50000 : 50000;
+  const maxPrice = isRustic ? 200000 : isVacantPlot ? 500000 : isIndustrial ? 2500000 : 1200000;
+  const stepPrice = isRustic ? 1000 : isVacantPlot ? 2500 : isIndustrial ? 10000 : 5000;
 
   // Read initial values from URL search params
   const [purchasePrice, setPurchasePrice] = useState<number>(() => {
@@ -90,7 +92,11 @@ export function FiscalSimulatorCard({ property, fiscal, typology }: FiscalSimula
         <div className="flex items-center gap-2">
           <Coins className="w-4 h-4 text-primary shrink-0" />
           <span className="font-headline text-sm font-bold text-on-surface">
-            {isRustic ? 'Simulador Fiscal Rústico (ITP & IBI)' : 'Simulador Fiscal ITP & IBI Municipal'}
+            {isRustic
+              ? 'Simulador Fiscal Rústico (ITP & IBI)'
+              : isIndustrial
+                ? 'Simulador Fiscal Inmueble Industrial (ITP & IBI)'
+                : 'Simulador Fiscal ITP & IBI Municipal'}
           </span>
         </div>
         <span className="font-mono text-[11px] font-semibold px-2 py-0.5 rounded bg-primary/10 text-primary border border-primary/20">
@@ -143,7 +149,9 @@ export function FiscalSimulatorCard({ property, fiscal, typology }: FiscalSimula
               ? 'Superficie de parcela catastral rústica considerada como base territorial para el cálculo de la cuota anual.'
               : isVacantPlot
                 ? 'Superficie de parcela o solar urbano vacante tomada como base para la valoración tributaria.'
-                : 'Superficie construida oficial de Catastro considerada como base para la valoración y cálculo de la cuota anual.'}
+                : isIndustrial
+                  ? 'Superficie construida de la nave o instalación industrial computada por Catastro como base imponible.'
+                  : 'Superficie construida oficial de Catastro considerada como base para la valoración y cálculo de la cuota anual.'}
           </p>
         </div>
       </div>
