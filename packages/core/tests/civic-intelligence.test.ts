@@ -165,6 +165,76 @@ describe('Phase 16 Core Civic Intelligence & Urban 3D DTOs', () => {
     });
   });
 
+  describe('Energy Performance Certificate Schema & Expiration', () => {
+    const mockProperty: CadastralProperty = {
+      cadastralReference: '2807901VK4720F0001AB',
+      address: {
+        street: 'Calle Mayor',
+        number: '10',
+        postalCode: '28013',
+        municipality: 'Madrid',
+        province: 'Madrid',
+        provinceCode: '28',
+      },
+      coordinates: { latitude: 40.4168, longitude: -3.7038, srs: 'EPSG:4326' },
+      building: {
+        constructionYear: 2010,
+        builtSurfaceM2: 120,
+        primaryUse: 'Residencial',
+        unitsCount: 10,
+        hasCommercialGroundFloor: false,
+      },
+    };
+
+    const mockNeighborhood: CensusTractIncome = {
+      censusSectionCode: '2807901001',
+      averageNetHouseholdIncomeEur: 42000,
+      percentileInMunicipality: 80,
+      demographics: { totalPopulation: 1500, medianAge: 42 },
+    };
+
+    it('penalizes building score and flags risk when official CEE is expired under RD 390/2021', () => {
+      const activeScore = calculateBarrioScore(
+        mockProperty,
+        mockNeighborhood,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        {
+          ratingEmissions: 'D',
+          ratingConsumption: 'D',
+          isEstimated: false,
+          isExpired: false,
+          validUntil: '2030-05-01',
+          scope: 'unit',
+        }
+      );
+
+      const expiredScore = calculateBarrioScore(
+        mockProperty,
+        mockNeighborhood,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        {
+          ratingEmissions: 'D',
+          ratingConsumption: 'D',
+          isEstimated: false,
+          isExpired: true,
+          validUntil: '2023-01-15',
+          scope: 'unit',
+        }
+      );
+
+      expect(expiredScore.subscores.building).toBeLessThan(activeScore.subscores.building);
+      expect(expiredScore.keyRisks.some((r) => r.includes('Official Energy Performance Certificate expired'))).toBe(true);
+    });
+  });
+
   describe('BuildingSurroundingsDTO Validation', () => {
     it('validates a valid BuildingSurroundingsDTO object schema', () => {
       const data: BuildingSurroundingsDTO = {

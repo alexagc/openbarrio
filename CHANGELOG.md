@@ -5,6 +5,25 @@ All notable changes to the **OpenBarrio** platform are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.12.0] - 2026-11-03
+
+### Added
+- **Multi-Regional Energy Performance Certificates (CEE) & Hierarchical Intelligence (`packages/core`, `apps/api`, `apps/web`, `apps/extension`, `packages/etl`)**:
+  - **Comprehensive Multi-Regional Coverage**: Integrated and streamed ~197,125 official CEE records from Comunidad de Madrid, Catalunya (ICAEN Socrata), and Open Data Euskadi.
+  - **Hierarchical Reference Matching**: Implemented 20-character dwelling unit fallback to 14-character building parcel, and 14-character parcel prefix matching in `CEEProvider` and `MockCEEProvider`.
+  - **RD 390/2021 Legal Expiration Engine**: Automatic computation of statutory expiration date (10 years default, 5 years if rating is G), setting the `isExpired` flag.
+  - **BarrioScore Legal Due Diligence Penalty**: Deducts 2 points from Building Health and triggers a formal warning if a registered certificate has expired.
+  - **Dual Rating & Expiration Banner in Web UI**: `EnergyPerformanceCard.tsx` renders emissions rating, consumption rating, originating regional registry badge, and an amber expiration warning banner.
+  - **Companion Extension Intelligence**: Injected card features official, estimated, and expired CEE telemetry badges (`⚡ CEE D (Oficial)`, `⚡ CEE G (Caducado ⚠️)`).
+- **Cloudflare D1 Chunk Batch Ingestion Framework (`scripts/`, `packages/etl`)**:
+  - **Dynamic Statement & Byte Limiting (`split-d1-chunks.mjs`)**: Prevents D1 payload rejections by batching SQL into chunks under 1 MB / 2,500 statements (25 chunks for civic facilities, 19 chunks for CEE).
+  - **Automated Sequential Batch Applicator (`apply-d1-chunks.mjs`)**: Automated execution with 3-attempt exponential backoff and rate-limit handling for Cloudflare D1.
+  - **Local SQLite Seeding (`init-local-db.mjs`)**: Seeds all 197,125 CEE certificates into local SQLite database on cold start.
+- **Granular & Selective ETL CI/CD Pipeline (`.github/workflows/data-pipeline.yml`, `data/etl_manifest.json`)**:
+  - **Granular `workflow_dispatch` Input Switches**: Added individual toggles (`run_ine_ign`, `run_snczi_floods`, `run_sica_noise`, `run_civic_cee`) enabling sub-minute single-job executions.
+  - **Resilient Aggregator (`deploy-and-gate`)**: Conditional artifact existence checks preventing workflow failures on selective runs.
+  - **Manifest & Quality Gate Tracking**: Integrated `civic_facilities` and `energy_certificates` with SHA-256 fingerprinting in `data/etl_manifest.json` and 100% assertions pass in `verify-etl-integrity.mjs`.
+
 ## [0.11.0] - 2026-11-03
 
 ### Added

@@ -128,10 +128,22 @@ if (db) {
   }
 
   // Check SQL migration chunks
-  if (fs.existsSync(CHUNKS_DIR)) {
-    const chunks = fs.readdirSync(CHUNKS_DIR).filter(f => f.endsWith('.sql'));
-    assert(chunks.length >= 10, `Civic facilities SQL migration chunks: ${chunks.length} parts found for CI deployment`);
+  const chunkCandidates = [
+    path.join(CHUNKS_DIR, 'civic_facilities'),
+    CHUNKS_DIR,
+    path.join(DIST_DIR, 'chunks'),
+  ];
+  let foundChunks = [];
+  for (const dir of chunkCandidates) {
+    if (fs.existsSync(dir)) {
+      const files = fs.readdirSync(dir).filter(f => f.endsWith('.sql') && f.includes('civic_facilities'));
+      if (files.length > 0) {
+        foundChunks = files;
+        break;
+      }
+    }
   }
+  assert(foundChunks.length >= 10, `Civic facilities SQL migration chunks: ${foundChunks.length} parts found for CI deployment`);
 }
 
 // 5. Energy Performance Certificates (CEE)
@@ -147,6 +159,23 @@ if (db) {
   } catch (err) {
     assert(false, `Failed to query building_energy_certificates: ${err.message}`);
   }
+
+  // Check CEE SQL migration chunks
+  const ceeChunkCandidates = [
+    path.join(CHUNKS_DIR, 'energy_certificates'),
+    path.join(DIST_DIR, 'chunks_cee'),
+  ];
+  let foundCeeChunks = [];
+  for (const dir of ceeChunkCandidates) {
+    if (fs.existsSync(dir)) {
+      const files = fs.readdirSync(dir).filter(f => f.endsWith('.sql'));
+      if (files.length > 0) {
+        foundCeeChunks = files;
+        break;
+      }
+    }
+  }
+  assert(foundCeeChunks.length >= 5, `Energy certificates SQL migration chunks: ${foundCeeChunks.length} parts found for CI deployment`);
 }
 
 // 6. CTE DB-HS 6 Radon Geological Hazard Verification

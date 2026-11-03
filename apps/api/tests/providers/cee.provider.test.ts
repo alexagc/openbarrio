@@ -86,5 +86,57 @@ describe('CEEProvider & Normative Fallback Engine', () => {
       expect(cee.registrationNumber).toBe('MDR-2023-CEE-09412');
       expect(cee.validUntil).toBeDefined();
     });
+
+    it('hierarchically resolves unit 20-character reference to building 14-character certificate', async () => {
+      const prop = createMockProperty(1924);
+      prop.cadastralReference = '9872023VH5797S0002AB'; // Exactly 20-char unit in building 9872023VH5797S
+
+      const cee = await mockProvider.getEnergyCertificate(prop);
+      expect(cee.isEstimated).toBe(false);
+      expect(cee.ratingEmissions).toBe('B');
+      expect(cee.registrationNumber).toBe('MDR-2023-CEE-09412');
+    });
+
+    it('detects expired certificate under RD 390/2021', async () => {
+      const prop = createMockProperty(1975);
+      prop.cadastralReference = '2807901VK4720E0001EX';
+
+      const cee = await mockProvider.getEnergyCertificate(prop);
+      expect(cee.isEstimated).toBe(false);
+      expect(cee.isExpired).toBe(true);
+      expect(cee.ratingEmissions).toBe('G');
+    });
+  });
+
+  describe('D1 Database CEEProvider Queries', () => {
+    it('executes hierarchical query on D1 and parses expiration and dataSource', async () => {
+      const mockD1: any = {
+        prepare: (query: string) => ({
+          bind: (...args: any[]) => ({
+            first: async () => ({
+              rating_emissions: 'C',
+              rating_consumption: 'B',
+              co2_emissions: 18.5,
+              primary_energy: 85.0,
+              registration_number: 'CAT-ICAEN-2023-00918',
+              valid_until: '2033-01-01',
+              scope: 'building',
+              cadastral_reference: '08019A00200005',
+            }),
+          }),
+        }),
+      };
+
+      const d1Provider = new CEEProvider({ db: mockD1 });
+      const prop = createMockProperty(2005);
+      prop.cadastralReference = '08019A002000050001AB'; // 20-char unit
+
+      const result = await d1Provider.getEnergyCertificate(prop);
+      expect(result.isEstimated).toBe(false);
+      expect(result.ratingEmissions).toBe('C');
+      expect(result.ratingConsumption).toBe('B');
+      expect(result.isExpired).toBe(false);
+      expect(result.dataSource).toBe('ICAEN (Generalitat de Catalunya)');
+    });
   });
 });

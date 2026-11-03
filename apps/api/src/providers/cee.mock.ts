@@ -14,8 +14,8 @@ export class MockCEEProvider implements ICEEProvider {
   }
 
   private seedMockCertificates(): void {
-    // Madrid Gran Vía 28 - High quality historic retrofit with official certificate
-    this.registeredCertificates.set('9872023VH5797S0001WX', {
+    // Madrid Gran Vía 28 - High quality historic retrofit with official certificate (building level)
+    this.registeredCertificates.set('9872023VH5797S', {
       ratingEmissions: 'B',
       ratingConsumption: 'C',
       co2Emissions: 14.5,
@@ -24,6 +24,23 @@ export class MockCEEProvider implements ICEEProvider {
       validUntil: '2033-06-15',
       scope: 'building',
       isEstimated: false,
+      isExpired: false,
+      dataSource: 'Registro de la Comunidad de Madrid',
+      annualEstimatedCostEur: 850,
+    });
+
+    // Also support exact unit reference alias
+    this.registeredCertificates.set('9872023VH5797S0001WX', {
+      ratingEmissions: 'B',
+      ratingConsumption: 'C',
+      co2Emissions: 14.5,
+      primaryEnergyConsumption: 68.2,
+      registrationNumber: 'MDR-2023-CEE-09412',
+      validUntil: '2033-06-15',
+      scope: 'unit',
+      isEstimated: false,
+      isExpired: false,
+      dataSource: 'Registro de la Comunidad de Madrid',
       annualEstimatedCostEur: 850,
     });
 
@@ -37,6 +54,8 @@ export class MockCEEProvider implements ICEEProvider {
       validUntil: '2032-11-20',
       scope: 'building',
       isEstimated: false,
+      isExpired: false,
+      dataSource: 'ICAEN (Generalitat de Catalunya)',
       annualEstimatedCostEur: 1120,
     });
 
@@ -50,14 +69,33 @@ export class MockCEEProvider implements ICEEProvider {
       validUntil: '2034-03-10',
       scope: 'unit',
       isEstimated: false,
+      isExpired: false,
+      dataSource: 'Dades Obertes Comunitat Valenciana',
       annualEstimatedCostEur: 620,
+    });
+
+    // Madrid Expired Certificate under RD 390/2021
+    this.registeredCertificates.set('2807901VK4720E0001EX', {
+      ratingEmissions: 'G',
+      ratingConsumption: 'G',
+      co2Emissions: 72.0,
+      primaryEnergyConsumption: 340.0,
+      registrationNumber: 'MAD-2015-CEE-00124',
+      validUntil: '2020-05-10',
+      scope: 'unit',
+      isEstimated: false,
+      isExpired: true,
+      dataSource: 'Registro de la Comunidad de Madrid',
+      annualEstimatedCostEur: 1950,
     });
   }
 
   async getEnergyCertificate(
     property: CadastralProperty
   ): Promise<EnergyPerformanceCertificate> {
-    const registered = this.registeredCertificates.get(property.cadastralReference);
+    const refcat = property.cadastralReference;
+    const registered = this.registeredCertificates.get(refcat)
+      || (refcat.length === 20 ? this.registeredCertificates.get(refcat.substring(0, 14)) : undefined);
     if (registered) {
       return registered;
     }

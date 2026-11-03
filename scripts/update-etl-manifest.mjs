@@ -25,6 +25,14 @@ const targetArtifacts = [
     key: 'ine_adrh',
     files: ['packages/etl/dist/census_tracts.pmtiles', 'data/census_tracts.pmtiles'],
   },
+  {
+    key: 'civic_facilities',
+    files: ['packages/etl/dist/civic_facilities.sql', 'packages/etl/dist/openbarrio-etl-dist/civic_facilities.sql'],
+  },
+  {
+    key: 'energy_certificates',
+    files: ['packages/etl/dist/energy_certificates.sql', 'packages/etl/dist/openbarrio-etl-dist/energy_certificates.sql'],
+  },
 ];
 
 for (const target of targetArtifacts) {

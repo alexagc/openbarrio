@@ -292,5 +292,47 @@ if (fs.existsSync(facilitiesSqlPath)) {
   console.warn(`⚠️ Could not find ${facilitiesSqlPath} or ${chunksDir}`);
 }
 
+// 7. Load Energy Performance Certificates (CEE) if empty
+let ceeCount = 0;
+try {
+  ceeCount = Number(db.prepare('SELECT count(*) as total FROM building_energy_certificates').get()?.total || 0);
+} catch {
+  ceeCount = 0;
+}
+
+if (ceeCount === 0) {
+  const ceeCandidates = [
+    'packages/etl/dist/energy_certificates.sql',
+    'packages/etl/dist/openbarrio-etl-dist/energy_certificates.sql',
+  ];
+  const ceeSqlPath = ceeCandidates.find((p) => fs.existsSync(p));
+  const ceeChunksDir = 'packages/etl/chunks/energy_certificates';
+
+  if (ceeSqlPath) {
+    console.log(`⚡ Loading Energy Performance Certificates from ${ceeSqlPath}...`);
+    const ceeSql = fs.readFileSync(ceeSqlPath, 'utf8');
+    db.exec('BEGIN TRANSACTION;');
+    db.exec(ceeSql);
+    db.exec('COMMIT;');
+    const newCount = db.prepare('SELECT count(*) as total FROM building_energy_certificates').get()?.total || 0;
+    console.log(`✅ Energy Performance Certificates loaded (${newCount} certificates).`);
+  } else if (fs.existsSync(ceeChunksDir)) {
+    console.log('⚡ Loading Energy Performance Certificates from versioned chunks...');
+    const files = fs.readdirSync(ceeChunksDir).filter((f) => f.endsWith('.sql')).sort();
+    for (const f of files) {
+      const chunkSql = fs.readFileSync(path.join(ceeChunksDir, f), 'utf8');
+      db.exec('BEGIN TRANSACTION;');
+      db.exec(chunkSql);
+      db.exec('COMMIT;');
+    }
+    const newCount = db.prepare('SELECT count(*) as total FROM building_energy_certificates').get()?.total || 0;
+    console.log(`✅ Energy Performance Certificates loaded from ${files.length} chunks (${newCount} certificates).`);
+  } else {
+    console.log('ℹ️ No CEE dump file found on initial seed (normative CTE engine will be used as fallback).');
+  }
+} else {
+  console.log(`⚡ Database already contains ${ceeCount} official energy certificates (CEE).`);
+}
+
 const finalRow = db.prepare('SELECT count(*) as total FROM census_tract_income').get();
 console.log(`🎉 [OpenBarrio] Database ready with ${finalRow?.total || 0} census tracts at: ${DB_PATH}`);

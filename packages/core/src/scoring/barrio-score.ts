@@ -190,6 +190,13 @@ export function calculateBarrioScore(
         `Low Energy Performance rating (Class ${energy.ratingEmissions}): high thermal loss and significant energy rehabilitation potential`
       );
     }
+
+    if (energy.isExpired) {
+      buildingScore = Math.max(10, buildingScore - 2);
+      risks.push(
+        `Official Energy Performance Certificate expired on ${energy.validUntil || 'statutory term'}: mandatory renewal under RD 390/2021 before property sale or lease`
+      );
+    }
   }
 
   const buildingHealthScore = Math.min(100, Math.max(0, buildingScore));

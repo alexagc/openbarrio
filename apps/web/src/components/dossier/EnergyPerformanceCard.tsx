@@ -68,7 +68,16 @@ export function EnergyPerformanceCard({ energy }: EnergyPerformanceCardProps) {
           </h3>
         </div>
 
-        {isEstimated ? (
+        {energy.isExpired ? (
+          <span
+            data-testid="cee-expired-badge"
+            className="px-2 py-0.5 rounded text-[11px] font-mono bg-amber-500/20 text-amber-300 border border-amber-500/40 flex items-center gap-1 font-medium"
+            title="Certificado con fecha de validez caducada conforme a RD 390/2021"
+          >
+            <AlertCircle className="w-3 h-3 text-amber-400" />
+            <span>CEE Caducado</span>
+          </span>
+        ) : isEstimated ? (
           <span
             data-testid="cee-estimated-badge"
             className="px-2 py-0.5 rounded text-[11px] font-mono bg-amber-500/15 text-amber-400 border border-amber-500/30 flex items-center gap-1 font-medium"
@@ -81,12 +90,33 @@ export function EnergyPerformanceCard({ energy }: EnergyPerformanceCardProps) {
           <span
             data-testid="cee-official-badge"
             className="px-2 py-0.5 rounded text-[11px] font-mono bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 flex items-center gap-1 font-medium"
+            title={energy.dataSource || 'Registro Oficial Autonómico'}
           >
             <ShieldCheck className="w-3 h-3" />
-            <span>Registro Oficial Autonómico</span>
+            <span>{energy.dataSource || 'Registro Oficial Autonómico'}</span>
           </span>
         )}
       </div>
+
+      {/* Expired Warning Banner */}
+      {energy.isExpired && (
+        <div
+          data-testid="cee-expired-banner"
+          className="mb-3 p-2.5 rounded bg-amber-500/15 border border-amber-500/40 text-xs font-mono text-amber-300 flex items-start gap-2"
+        >
+          <AlertCircle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+          <div>
+            <span className="font-semibold block text-amber-200">
+              Certificado de Eficiencia Energética Caducado (RD 390/2021)
+            </span>
+            <span className="text-[11px] text-amber-300/90 block mt-0.5">
+              El certificado registrado expiró el{' '}
+              {energy.validUntil ? new Date(energy.validUntil).toLocaleDateString('es-ES') : 'en fecha estatutaria'}.
+              La normativa española exige su renovación obligatoria para formalizar contratos de compraventa o alquiler.
+            </span>
+          </div>
+        </div>
+      )}
 
       {/* Energy Ladder (A through G) */}
       <div className="mb-4">
@@ -134,7 +164,9 @@ export function EnergyPerformanceCard({ energy }: EnergyPerformanceCardProps) {
       {/* Key Energy Telemetry Grid */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs font-mono mb-3">
         <div className="p-2.5 rounded bg-surface-container-high border border-outline-variant/50">
-          <span className="text-[10px] text-outline uppercase block">Emisiones CO₂</span>
+          <span className="text-[10px] text-outline uppercase block">
+            Emisiones CO₂ ({energy.ratingEmissions})
+          </span>
           <span className="text-sm font-semibold text-on-surface">
             {energy.co2Emissions !== undefined ? `${energy.co2Emissions} ` : '— '}
             <span className="text-[10px] font-normal text-outline">kg/m²·año</span>
@@ -142,7 +174,9 @@ export function EnergyPerformanceCard({ energy }: EnergyPerformanceCardProps) {
         </div>
 
         <div className="p-2.5 rounded bg-surface-container-high border border-outline-variant/50">
-          <span className="text-[10px] text-outline uppercase block">Consumo Energía</span>
+          <span className="text-[10px] text-outline uppercase block">
+            Consumo Energía ({energy.ratingConsumption})
+          </span>
           <span className="text-sm font-semibold text-on-surface">
             {energy.primaryEnergyConsumption !== undefined ? `${energy.primaryEnergyConsumption} ` : '— '}
             <span className="text-[10px] font-normal text-outline">kWh/m²·año</span>

@@ -44,4 +44,27 @@ describe('EnergyPerformanceCard (Phase 13B)', () => {
     expect(screen.getByText('NBE-CT-79', { exact: false })).toBeDefined();
     expect(screen.getByText('Vivienda individual', { exact: false })).toBeDefined();
   });
+
+  it('renders expired certificate warning banner and badge under RD 390/2021', () => {
+    const expiredEnergy: EnergyPerformanceCertificate = {
+      ratingEmissions: 'G',
+      ratingConsumption: 'G',
+      co2Emissions: 68.0,
+      primaryEnergyConsumption: 310.0,
+      registrationNumber: 'MAD-2015-CEE-00124',
+      validUntil: '2020-05-10',
+      scope: 'unit',
+      isEstimated: false,
+      isExpired: true,
+      dataSource: 'Registro de la Comunidad de Madrid',
+      annualEstimatedCostEur: 1800,
+    };
+
+    render(<EnergyPerformanceCard energy={expiredEnergy} />);
+
+    expect(screen.getByTestId('cee-expired-badge')).toBeDefined();
+    expect(screen.getByTestId('cee-expired-banner')).toBeDefined();
+    expect(screen.getByText('Certificado de Eficiencia Energética Caducado (RD 390/2021)')).toBeDefined();
+    expect(screen.getByText('MAD-2015-CEE-00124', { exact: false })).toBeDefined();
+  });
 });

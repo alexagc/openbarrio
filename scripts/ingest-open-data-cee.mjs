@@ -194,13 +194,18 @@ async function ingestCatalunya(totalTarget = 25000) {
   console.log(`🎉 Finished Catalunya! Inserted ${inserted} official certificates.`);
 }
 
-await ingestCatalunya(25000);
+if (!process.argv.includes('--export-only')) {
+  await ingestCatalunya(25000);
+} else {
+  console.log('⚡ Skipping remote download (--export-only specified). Exporting local database...');
+}
 
 const total = db.prepare('SELECT count(*) as total FROM building_energy_certificates').get();
 console.log(`🏆 Total official CEE certificates in SQLite: ${total.total}`);
 
 // 3. Export Cloudflare D1-compatible SQL file (no BEGIN TRANSACTION / COMMIT)
 const exportDir = path.resolve(process.cwd(), 'packages/etl/dist');
+const altExportDir = path.resolve(process.cwd(), 'packages/etl/dist/openbarrio-etl-dist');
 if (!fs.existsSync(exportDir)) {
   fs.mkdirSync(exportDir, { recursive: true });
 }
@@ -242,5 +247,16 @@ for (let i = 0; i < rows.length; i += batchSize) {
 }
 
 fs.writeFileSync(exportPath, sqlContent, 'utf8');
+if (fs.existsSync(altExportDir)) {
+  fs.writeFileSync(path.join(altExportDir, 'energy_certificates.sql'), sqlContent, 'utf8');
+}
 console.log(`✅ Cloudflare D1 SQL export completed: ${rows.length} certificates (${Math.round(sqlContent.length / 1024)} KB written).`);
+
+// Automatically generate D1 chunks for CI & production
+try {
+  const { splitSqlFile } = await import('./split-d1-chunks.mjs');
+  splitSqlFile(exportPath, 'packages/etl/chunks/energy_certificates', 'energy_certificates', 2500);
+} catch (err) {
+  console.warn('⚠️ Could not automatically generate CEE chunks:', err.message);
+}
 

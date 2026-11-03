@@ -202,9 +202,17 @@ export function renderAuditCard(
     ? `🌳 ${conn.nearestPark.name.replace(/^(Parque\s*(de\s*)?|Jardines\s*(de\s*)?)/i, '')} (${Math.round(conn.nearestPark.walkTimeMinutes)}m)`
     : '🌳 Parque (~5m)';
 
-  const ceeChipHtml = (typology === 'VACANT_PLOT' || typology === 'RUSTIC')
-    ? ''
-    : `<span class="ob-telemetry-chip" title="CEE">⚡ CEE ${report.energy?.ratingEmissions || 'E'}</span>`;
+  let ceeChipHtml = '';
+  if (typology !== 'VACANT_PLOT' && typology !== 'RUSTIC') {
+    const ceeRating = report.energy?.ratingEmissions || 'E';
+    if (report.energy?.isExpired) {
+      ceeChipHtml = `<span class="ob-telemetry-chip alert" title="Certificado de Eficiencia Energética Caducado (RD 390/2021)">⚡ CEE ${ceeRating} (Caducado ⚠️)</span>`;
+    } else if (report.energy?.isEstimated === false) {
+      ceeChipHtml = `<span class="ob-telemetry-chip" title="Certificado CEE Oficial (${report.energy.dataSource || 'Registro Autonómico'})">⚡ CEE ${ceeRating} (Oficial)</span>`;
+    } else {
+      ceeChipHtml = `<span class="ob-telemetry-chip" title="Estimación CEE Normativa CTE">⚡ CEE ${ceeRating}</span>`;
+    }
+  }
 
   const connectivityChipsHtml = `
     <!-- Connectivity Telemetry Chips (v0.3.0) -->

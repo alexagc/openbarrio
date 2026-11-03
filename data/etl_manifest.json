@@ -1,6 +1,6 @@
 {
   "$schema": "https://openbarrio.org/schemas/etl-manifest-v1.json",
-  "generated_at": "2026-11-03T11:16:04.396Z",
+  "generated_at": "2026-11-03T15:15:43.593Z",
   "datasets": {
     "mivau_serpavi": {
       "name": "MIVAU SERPAVI Statutory Rental Benchmarks",
@@ -57,6 +57,20 @@
       "last_processed_at": "2026-11-03T00:00:00Z",
       "status": "UP_TO_DATE",
       "fingerprint": "66f7489ee93da698523c69b2f0b403b251a569177274ffc8610065bba1a68a9f"
+    },
+    "civic_facilities": {
+      "name": "National Civic Public Facilities (Healthcare, Education, Transit, Parks)",
+      "version": "2026.1",
+      "sha256": "47d95fb54522a3dfe427ac8bea3722a9d379dbe3723e876c5d0c1cd1e98a1373",
+      "last_processed_at": "2026-11-03T15:15:43.502Z",
+      "status": "UP_TO_DATE"
+    },
+    "energy_certificates": {
+      "name": "Multi-Regional Energy Performance Certificates (CEE)",
+      "version": "2026.1",
+      "sha256": "8a35bae3e8d8a4e84679fbbc807536f7cc158130cffc6ea6a52cf4ab71c8a978",
+      "last_processed_at": "2026-11-03T15:15:43.592Z",
+      "status": "UP_TO_DATE"
     }
   }
 }

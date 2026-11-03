@@ -25,6 +25,12 @@ export const EnergyPerformanceCertificateSchema = Type.Object({
   isEstimated: Type.Boolean({
     description: 'True if inferred from building antiquity & technical building regulations (CTE/NBE)',
   }),
+  isExpired: Type.Optional(
+    Type.Boolean({ description: 'True if certificate validity date has expired under RD 390/2021' })
+  ),
+  dataSource: Type.Optional(
+    Type.String({ description: 'Originating regional registry or normative model' })
+  ),
   estimationBasis: Type.Optional(
     Type.String({ description: 'Regulatory framework used for estimation (e.g. CTE DB-HE 2019, NBE-CT-79)' })
   ),

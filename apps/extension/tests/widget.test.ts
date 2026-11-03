@@ -271,4 +271,40 @@ describe('OpenBarrioWidget', () => {
     widget.destroy();
     expect(dom.window.document.getElementById(WIDGET_ROOT_ID)).toBeNull();
   });
+
+  it('should render official and expired CEE chips in companion card', () => {
+    const officialReport: PropertyAuditReport = {
+      ...mockReport,
+      energy: {
+        ratingEmissions: 'B',
+        ratingConsumption: 'B',
+        isEstimated: false,
+        isExpired: false,
+        dataSource: 'Registro de la Comunidad de Madrid',
+        scope: 'building',
+      },
+    };
+
+    const widget = new OpenBarrioWidget();
+    widget.showReport(officialReport, 'http://localhost:3000');
+
+    let shadow = widget.getShadowRoot();
+    expect(shadow?.innerHTML).toContain('⚡ CEE B (Oficial)');
+
+    const expiredReport: PropertyAuditReport = {
+      ...mockReport,
+      energy: {
+        ratingEmissions: 'G',
+        ratingConsumption: 'G',
+        isEstimated: false,
+        isExpired: true,
+        validUntil: '2020-01-01',
+        scope: 'unit',
+      },
+    };
+
+    widget.showReport(expiredReport, 'http://localhost:3000');
+    shadow = widget.getShadowRoot();
+    expect(shadow?.innerHTML).toContain('⚡ CEE G (Caducado ⚠️)');
+  });
 });
