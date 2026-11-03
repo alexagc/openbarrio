@@ -294,7 +294,7 @@ def process_with_duckdb_spatial(features: list, output_geojson: str) -> str:
     raw_mb = os.path.getsize(temp_raw) / (1024 * 1024)
     print(f"[ETL-SICA] Processing {len(features)} geometries in DuckDB Spatial (raw GeoJSON: {raw_mb:.1f} MB)...")
     con = duckdb.connect()
-    con.execute("LOAD spatial;")
+    con.execute("INSTALL spatial; LOAD spatial;")
     try:
         con.execute("SET geometry_always_xy = true;")
     except Exception:

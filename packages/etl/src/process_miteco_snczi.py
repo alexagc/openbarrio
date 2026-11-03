@@ -254,7 +254,7 @@ def process_snczi_national(dist_dir: str) -> list:
         if layer_count > 0 and os.path.exists(temp_layer_file):
             print(f"[ETL-SNCZI] Ingesting & simplifying {cfg['layer']} ({layer_count} features) in DuckDB Spatial...")
             con = duckdb.connect()
-            con.execute("LOAD spatial;")
+            con.execute("INSTALL spatial; LOAD spatial;")
             try:
                 con.execute("SET geometry_always_xy = true;")
             except Exception:
