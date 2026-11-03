@@ -225,71 +225,104 @@ if (sicaCount === 0) {
 }
 
 // 3e. Load pre-calculated MITECO environmental SQL distributions if present
-const sncziDistSql = 'packages/etl/dist/openbarrio-etl-dist/snczi_risk.sql';
-if (fs.existsSync(sncziDistSql)) {
+const sncziCandidates = [
+  'packages/etl/dist/snczi_risk.sql',
+  'packages/etl/dist/openbarrio-etl-dist/snczi_risk.sql',
+];
+const sncziDistSql = sncziCandidates.find((p) => fs.existsSync(p));
+if (sncziDistSql) {
+  console.log(`🌊 Loading MITECO SNCZI flood risk distribution from ${sncziDistSql}...`);
   const sql = fs.readFileSync(sncziDistSql, 'utf8');
   db.exec(sql);
 }
 
-const sicaDistSql = 'packages/etl/dist/openbarrio-etl-dist/sica_noise.sql';
-if (fs.existsSync(sicaDistSql)) {
+const sicaCandidates = [
+  'packages/etl/dist/sica_noise.sql',
+  'packages/etl/dist/openbarrio-etl-dist/sica_noise.sql',
+];
+const sicaDistSql = sicaCandidates.find((p) => fs.existsSync(p));
+if (sicaDistSql) {
+  console.log(`🔊 Loading MITECO SICA noise distribution from ${sicaDistSql}...`);
   const sql = fs.readFileSync(sicaDistSql, 'utf8');
   db.exec(sql);
 }
 
-// 4. Check if census_tract_income already populated
-let count = 0;
+// 4. Check & Load real INE ADRH data
+let ineCount = 0;
 try {
   const row = db.prepare('SELECT count(*) as total FROM census_tract_income').get();
-  count = Number(row?.total || 0);
+  ineCount = Number(row?.total || 0);
 } catch {
-  count = 0;
+  ineCount = 0;
 }
 
-if (count > 1000) {
-  console.log(`✅ [OpenBarrio] Database already contains ${count} real census sections. Skipping seed.`);
-  process.exit(0);
-}
-
-// 5. Load real INE ADRH data
-const ineSqlPath = 'packages/etl/dist/openbarrio-etl-dist/ine_adrh.sql';
-if (fs.existsSync(ineSqlPath)) {
-  console.log('🇪🇸 Loading INE ADRH dataset (~36,000 Spanish census sections)...');
-  const ineSql = fs.readFileSync(ineSqlPath, 'utf8');
-  db.exec('BEGIN TRANSACTION;');
-  db.exec(ineSql);
-  db.exec('COMMIT;');
-  console.log('✅ INE ADRH dataset loaded.');
+if (ineCount > 1000) {
+  console.log(`✅ [OpenBarrio] Database already contains ${ineCount} real census sections. Skipping INE ADRH seed.`);
 } else {
-  console.warn(`⚠️ Could not find ${ineSqlPath}`);
-}
-
-// 6. Load real civic facilities data
-const facilitiesSqlPath = 'packages/etl/dist/openbarrio-etl-dist/civic_facilities.sql';
-const chunksDir = 'packages/etl/chunks';
-if (fs.existsSync(facilitiesSqlPath)) {
-  console.log('🏫 Loading civic facilities dataset (Healthcare, Schools, Transit)...');
-  const facilitiesSql = fs.readFileSync(facilitiesSqlPath, 'utf8');
-  if (facilitiesSql.includes('BEGIN TRANSACTION')) {
-    db.exec(facilitiesSql);
+  const ineCandidates = [
+    'packages/etl/dist/ine_adrh.sql',
+    'packages/etl/dist/openbarrio-etl-dist/ine_adrh.sql',
+  ];
+  const ineSqlPath = ineCandidates.find((p) => fs.existsSync(p));
+  if (ineSqlPath) {
+    console.log(`🇪🇸 Loading INE ADRH dataset (~36,000 Spanish census sections) from ${ineSqlPath}...`);
+    const ineSql = fs.readFileSync(ineSqlPath, 'utf8');
+    db.exec('BEGIN TRANSACTION;');
+    db.exec(ineSql);
+    db.exec('COMMIT;');
+    console.log('✅ INE ADRH dataset loaded.');
   } else {
-    db.exec('BEGIN TRANSACTION;');
-    db.exec(facilitiesSql);
-    db.exec('COMMIT;');
+    console.warn('⚠️ Could not find ine_adrh.sql');
   }
-  console.log('✅ Civic facilities dataset loaded.');
-} else if (fs.existsSync(chunksDir)) {
-  console.log('🏫 Loading civic facilities dataset from versioned chunks...');
-  const files = fs.readdirSync(chunksDir).filter((f) => f.endsWith('.sql')).sort();
-  for (const f of files) {
-    const chunkSql = fs.readFileSync(path.join(chunksDir, f), 'utf8');
-    db.exec('BEGIN TRANSACTION;');
-    db.exec(chunkSql);
-    db.exec('COMMIT;');
-  }
-  console.log(`✅ Civic facilities dataset loaded from ${files.length} chunks.`);
+}
+
+// 5. Check & Load real civic facilities data
+let facilitiesCount = 0;
+try {
+  facilitiesCount = Number(db.prepare('SELECT count(*) as total FROM civic_facilities').get()?.total || 0);
+} catch {
+  facilitiesCount = 0;
+}
+
+if (facilitiesCount > 1000) {
+  console.log(`✅ [OpenBarrio] Database already contains ${facilitiesCount} civic facilities. Skipping seed.`);
 } else {
-  console.warn(`⚠️ Could not find ${facilitiesSqlPath} or ${chunksDir}`);
+  const facilitiesCandidates = [
+    'packages/etl/dist/civic_facilities.sql',
+    'packages/etl/dist/openbarrio-etl-dist/civic_facilities.sql',
+  ];
+  const facilitiesSqlPath = facilitiesCandidates.find((p) => fs.existsSync(p));
+  const chunkCandidates = [
+    'packages/etl/chunks/civic_facilities',
+    'packages/etl/chunks',
+    'packages/etl/dist/openbarrio-etl-dist/chunks',
+  ];
+  const activeChunksDir = chunkCandidates.find((d) => fs.existsSync(d) && fs.readdirSync(d).some((f) => f.includes('civic_facilities')));
+
+  if (facilitiesSqlPath) {
+    console.log(`🏫 Loading civic facilities dataset from ${facilitiesSqlPath}...`);
+    const facilitiesSql = fs.readFileSync(facilitiesSqlPath, 'utf8');
+    if (facilitiesSql.includes('BEGIN TRANSACTION')) {
+      db.exec(facilitiesSql);
+    } else {
+      db.exec('BEGIN TRANSACTION;');
+      db.exec(facilitiesSql);
+      db.exec('COMMIT;');
+    }
+    console.log('✅ Civic facilities dataset loaded.');
+  } else if (activeChunksDir) {
+    console.log(`🏫 Loading civic facilities dataset from ${activeChunksDir}...`);
+    const files = fs.readdirSync(activeChunksDir).filter((f) => f.endsWith('.sql') && f.includes('civic_facilities')).sort();
+    for (const f of files) {
+      const chunkSql = fs.readFileSync(path.join(activeChunksDir, f), 'utf8');
+      db.exec('BEGIN TRANSACTION;');
+      db.exec(chunkSql);
+      db.exec('COMMIT;');
+    }
+    console.log(`✅ Civic facilities dataset loaded from ${files.length} chunks.`);
+  } else {
+    console.warn('⚠️ Could not find civic_facilities.sql or chunks');
+  }
 }
 
 // 7. Load Energy Performance Certificates (CEE) if empty

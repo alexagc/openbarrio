@@ -47,9 +47,9 @@ on:
         default: false
         type: boolean
       artifact_run_id:
-        description: 'Run ID of artifact to download (if apply_only is true, default: 40088381506)'
+        description: 'Run ID of artifact to download (if apply_only is true, default: 41665387431)'
         required: false
-        default: '40088381506'
+        default: '41665387431'
         type: string
 
 permissions:
@@ -313,17 +313,29 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          TARGET_RUN="${{ inputs.artifact_run_id || '40088381506' }}"
+          TARGET_RUN="${{ inputs.artifact_run_id || '41665387431' }}"
           echo "Downloading processed artifacts from workflow run $TARGET_RUN..."
           gh run download "$TARGET_RUN" --dir packages/etl/dist
           if [ -d "packages/etl/dist/openbarrio-etl-dist" ]; then
             cp -r packages/etl/dist/openbarrio-etl-dist/* packages/etl/dist/
           fi
+          for d in packages/etl/dist/artifact-*; do
+            if [ -d "$d" ]; then
+              cp -r "$d"/* packages/etl/dist/
+            fi
+          done
           echo "Verified downloaded files in packages/etl/dist:"
           ls -lh packages/etl/dist
 
+      - name: Split Cloudflare D1 Chunks (Civic Facilities & Energy Certificates)
+        run: |
+          node scripts/split-d1-chunks.mjs
+
+      - name: Initialize Local SQLite Database from ETL Artifacts
+        run: |
+          node scripts/init-local-db.mjs
+
       - name: Run ETL Integrity Quality Gate
-        if: inputs.apply_only != true
         run: |
           node scripts/verify-etl-integrity.mjs
 
@@ -337,13 +349,12 @@ jobs:
           workingDirectory: apps/api
           command: d1 execute openbarrio-d1 --file=${{ github.workspace }}/packages/etl/dist/ine_adrh.sql --remote --yes
 
-      - name: Split and Apply Cloudflare D1 Chunks (Civic Facilities & Energy Certificates)
+      - name: Apply Cloudflare D1 Chunks (Civic Facilities & Energy Certificates)
         if: inputs.dry_run != true && env.HAS_CF_TOKEN == 'true'
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: |
-          node scripts/split-d1-chunks.mjs
           node scripts/apply-d1-chunks.mjs packages/etl/chunks/civic_facilities --remote
           node scripts/apply-d1-chunks.mjs packages/etl/chunks/energy_certificates --remote
 
