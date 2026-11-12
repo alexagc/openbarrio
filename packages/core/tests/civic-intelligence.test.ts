@@ -53,6 +53,14 @@ describe('Phase 16 Core Civic Intelligence & Urban 3D DTOs', () => {
       expect(vut.vutRatioPct).toBe(1.5);
       expect(vut.saturationRisk).toBe('low');
       expect(vut.penaltyApplied).toBe(0);
+      expect(vut.isEstimated).toBe(false);
+      expect(vut.source).toContain('Oficial');
+    });
+
+    it('identifies model fallback as statistical estimation', () => {
+      const vut = evaluateVutSaturation('2807901099', 1000, 40, 160, true);
+      expect(vut.isEstimated).toBe(true);
+      expect(vut.source).toContain('Estimación Heurística Territorial');
     });
 
     it('evaluates moderate saturation (3% to 8%) with 5-10 penalty points', () => {

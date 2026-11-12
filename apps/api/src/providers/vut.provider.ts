@@ -33,7 +33,8 @@ export class VutProvider implements IVutProvider {
             censusSectionId,
             row.total_dwellings,
             row.vut_count,
-            row.vut_beds
+            row.vut_beds,
+            false
           );
         }
       } catch {
@@ -60,18 +61,18 @@ export class VutProvider implements IVutProvider {
       vutCount = Math.round(totalDwellings * (0.005 + (hash % 15) / 1000));
     }
     const vutBeds = vutCount * 4;
-    return evaluateVutSaturation(censusSectionId, totalDwellings, vutCount, vutBeds);
+    return evaluateVutSaturation(censusSectionId, totalDwellings, vutCount, vutBeds, true);
   }
 }
 
 export class MockVutProvider implements IVutProvider {
   async getVutEvaluation(censusSectionId: string): Promise<VutEvaluationDTO> {
     if (censusSectionId === '2807901001' || censusSectionId.endsWith('01001')) {
-      return evaluateVutSaturation(censusSectionId, 1200, 168, 672);
+      return evaluateVutSaturation(censusSectionId, 1200, 168, 672, false);
     }
     if (censusSectionId === '2807907001' || censusSectionId.endsWith('07001')) {
-      return evaluateVutSaturation(censusSectionId, 1400, 70, 280);
+      return evaluateVutSaturation(censusSectionId, 1400, 70, 280, false);
     }
-    return evaluateVutSaturation(censusSectionId, 1500, 15, 60);
+    return evaluateVutSaturation(censusSectionId, 1500, 15, 60, false);
   }
 }

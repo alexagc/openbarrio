@@ -15,6 +15,7 @@ export const VutEvaluationSchema = Type.Object({
   ], { description: 'Civic coexistence and tourism saturation risk classification' }),
   penaltyApplied: Type.Number({ minimum: 0, maximum: 30, description: 'Penalty points subtracted from Urban Planning civic score' }),
   description: Type.String({ description: 'Technical civic commentary on neighborhood coexistence impact and rent pressure' }),
+  isEstimated: Type.Optional(Type.Boolean({ description: 'Indicates whether the VUT metric is derived from statistical estimation rather than official registry' })),
   source: Type.Optional(Type.String({ description: 'Source dataset attribution' })),
 });
 
@@ -27,7 +28,8 @@ export function evaluateVutSaturation(
   censusSectionId: string,
   totalDwellings: number,
   vutCount: number,
-  vutBeds: number
+  vutBeds: number,
+  isEstimated: boolean = false
 ): VutEvaluationDTO {
   const safeTotal = Math.max(1, totalDwellings);
   const ratio = (vutCount / safeTotal) * 100;
@@ -60,6 +62,9 @@ export function evaluateVutSaturation(
     saturationRisk,
     penaltyApplied,
     description,
-    source: 'INE - Medición del número de viviendas de uso turístico en España',
+    isEstimated,
+    source: isEstimated
+      ? 'Estimación Heurística Territorial (Sección sin datos INE)'
+      : 'INE - Medición del número de viviendas de uso turístico en España (Oficial)',
   };
 }

@@ -39,6 +39,7 @@ describe('Phase 16 Providers: Radon & VUT', () => {
       expect(result.vutRatioPct).toBeGreaterThanOrEqual(8.0);
       expect(result.saturationRisk).toBe('critical');
       expect(result.penaltyApplied).toBeGreaterThanOrEqual(15);
+      expect(result.isEstimated).toBe(false);
     });
 
     it('evaluates standard residential section with low saturation', async () => {
@@ -47,6 +48,7 @@ describe('Phase 16 Providers: Radon & VUT', () => {
       expect(result.vutRatioPct).toBeLessThan(3.0);
       expect(result.saturationRisk).toBe('low');
       expect(result.penaltyApplied).toBe(0);
+      expect(result.isEstimated).toBe(false);
     });
 
     it('fallback provider calculates deterministic realistic saturation without database', async () => {
@@ -55,6 +57,8 @@ describe('Phase 16 Providers: Radon & VUT', () => {
       expect(res.censusSectionId).toBe('2807904001');
       expect(res.totalDwellings).toBeGreaterThan(0);
       expect(res.vutRatioPct).toBeGreaterThanOrEqual(0);
+      expect(res.isEstimated).toBe(true);
+      expect(res.source).toContain('Estimación Heurística Territorial');
     });
   });
 });

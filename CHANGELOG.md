@@ -5,6 +5,15 @@ All notable changes to the **OpenBarrio** platform are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.12.3] - 2026-11-12
+
+### Fixed
+- **VUT Tourist Housing Statistical Fallback Telemetry (`@openbarrio/core`, `apps/api`, `apps/web`)**:
+  - Added explicit `isEstimated: boolean` schema property to `VutEvaluationDTO` in `@openbarrio/core` to clearly differentiate official INE observations from statistical fallback estimations.
+  - Calibrated `evaluateVutSaturation()` to dynamically adjust the data source label between `"INE - Medición del número de viviendas de uso turístico en España (Oficial)"` and `"Estimación Heurística Territorial (Sección sin datos INE)"`.
+  - Updated `VutProvider` in `apps/api` to return `isEstimated: false` when queried from official `census_tract_vut` database records and `isEstimated: true` when executing `resolveDeterministicFallback()` on uncatalogued census tracts or offline stores.
+  - Enhanced `VutSaturationCard` in `apps/web` with dual-badge status telemetry (`INE Oficial` with green shield vs. `Estimación Territorial` with amber alert icon) and added an amber contextual warning banner when displaying estimated tourist saturation metrics, preventing uncatalogued census sections from being falsely attributed as official INE observations.
+
 ## [0.12.2] - 2026-11-03
 
 ### Fixed

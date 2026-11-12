@@ -1,6 +1,6 @@
 {
   "name": "@openbarrio/core",
-  "version": "0.12.2",
+  "version": "0.12.3",
   "description": "Shared domain models, schemas, and scoring formulas for OpenBarrio",
   "author": "Alejandro Gómez Canal",
   "license": "Apache-2.0",

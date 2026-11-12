@@ -1,5 +1,5 @@
 import { VutEvaluationDTO } from '@openbarrio/core';
-import { Hotel, AlertTriangle, CheckCircle2 } from 'lucide-react';
+import { Hotel, AlertTriangle, CheckCircle2, ShieldCheck, AlertCircle } from 'lucide-react';
 
 interface VutSaturationCardProps {
   vut?: VutEvaluationDTO;
@@ -10,6 +10,7 @@ export function VutSaturationCard({ vut }: VutSaturationCardProps) {
 
   const isCritical = vut.saturationRisk === 'critical';
   const isModerate = vut.saturationRisk === 'moderate';
+  const isEstimated = Boolean(vut.isEstimated);
 
   const riskBadgeClass = isCritical
     ? 'bg-rose-500/20 text-rose-300 border-rose-500/40'
@@ -28,17 +29,55 @@ export function VutSaturationCard({ vut }: VutSaturationCardProps) {
       data-testid="vut-saturation-card"
       className="p-4 rounded-lg bg-surface-container-low border border-outline-variant space-y-3"
     >
-      <div className="flex items-center justify-between border-b border-outline-variant pb-2">
+      <div className="flex items-center justify-between border-b border-outline-variant pb-2 flex-wrap gap-2">
         <div className="flex items-center gap-2">
           <Hotel className="w-4 h-4 text-primary shrink-0" />
           <span className="font-headline text-sm font-bold text-on-surface">
             Pisos Turísticos & Convivencia (VUT)
           </span>
         </div>
-        <span className="font-mono text-[11px] text-on-surface-variant font-medium">
-          INE Experimental · Secc. {vut.censusSectionId}
-        </span>
+        <div className="flex items-center gap-2">
+          {isEstimated ? (
+            <span
+              data-testid="vut-estimated-badge"
+              className="px-2 py-0.5 rounded text-[11px] font-mono bg-amber-500/15 text-amber-400 border border-amber-500/30 flex items-center gap-1 font-medium"
+              title="Sección censal sin registro en el censo experimental del INE: estimación estadística territorial"
+            >
+              <AlertCircle className="w-3 h-3" />
+              <span>Estimación Territorial</span>
+            </span>
+          ) : (
+            <span
+              data-testid="vut-official-badge"
+              className="px-2 py-0.5 rounded text-[11px] font-mono bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 flex items-center gap-1 font-medium"
+              title="Medición experimental oficial del INE"
+            >
+              <ShieldCheck className="w-3 h-3" />
+              <span>INE Oficial</span>
+            </span>
+          )}
+          <span className="font-mono text-[11px] text-on-surface-variant font-medium">
+            Secc. {vut.censusSectionId}
+          </span>
+        </div>
       </div>
+
+      {isEstimated && (
+        <div
+          data-testid="vut-estimated-banner"
+          className="p-2.5 rounded bg-amber-500/10 border border-amber-500/25 text-xs font-mono text-amber-300 flex items-start gap-2"
+        >
+          <AlertCircle className="w-3.5 h-3.5 text-amber-400 shrink-0 mt-0.5" />
+          <div>
+            <span className="font-semibold block text-amber-200">
+              Estimación Estadística Territorial
+            </span>
+            <span className="text-[11px] text-amber-300/80 block mt-0.5">
+              Sección censal sin datos registrados en la última oleada oficial del INE. Cifras y porcentaje inferidos mediante calibración demográfica y densidad residencial.
+            </span>
+          </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
         <div>

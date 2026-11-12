@@ -76,10 +76,12 @@ describe('Phase 16 Due Diligence UI Cards', () => {
 
   describe('VutSaturationCard Component', () => {
     it('renders critical saturation badge and description when VUT ratio >= 8%', () => {
-      const vut = evaluateVutSaturation('2807901001', 1200, 144, 576);
+      const vut = evaluateVutSaturation('2807901001', 1200, 144, 576, false);
       render(<VutSaturationCard vut={vut} />);
 
       expect(screen.getByTestId('vut-saturation-card')).toBeDefined();
+      expect(screen.getByTestId('vut-official-badge')).toBeDefined();
+      expect(screen.getByText('INE Oficial')).toBeDefined();
       expect(screen.getByText('12.0%')).toBeDefined();
       expect(screen.getByText('144 viviendas')).toBeDefined();
       expect(screen.getByText('576 plazas')).toBeDefined();
@@ -88,11 +90,21 @@ describe('Phase 16 Due Diligence UI Cards', () => {
     });
 
     it('renders low saturation badge when VUT ratio < 3%', () => {
-      const vut = evaluateVutSaturation('2807917001', 1500, 15, 60);
+      const vut = evaluateVutSaturation('2807917001', 1500, 15, 60, false);
       render(<VutSaturationCard vut={vut} />);
 
       expect(screen.getByText('1.0%')).toBeDefined();
       expect(screen.getByText('Baja Saturación')).toBeDefined();
+    });
+
+    it('renders estimated badge and banner when VUT metric is derived from statistical fallback', () => {
+      const vut = evaluateVutSaturation('2807904001', 1100, 44, 176, true);
+      render(<VutSaturationCard vut={vut} />);
+
+      expect(screen.getByTestId('vut-estimated-badge')).toBeDefined();
+      expect(screen.getByText('Estimación Territorial')).toBeDefined();
+      expect(screen.getByTestId('vut-estimated-banner')).toBeDefined();
+      expect(screen.getByText(/Sección censal sin datos registrados en la última oleada oficial del INE/i)).toBeDefined();
     });
   });
 
