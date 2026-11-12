@@ -70,4 +70,15 @@ describe('useUrlSync & parseUrlState', () => {
     expect(state.viewMode).toBe('map');
     expect(state.refcat).toBe('9872023VH5797S0001WX');
   });
+
+  it('parses canonical /informe/:refcat deep-link into map mode with uppercase refcat', () => {
+    window.location.pathname = '/informe/28001a001000120001az';
+    window.location.search = '?tab=building';
+
+    const state = parseUrlState();
+    expect(state.viewMode).toBe('map');
+    expect(state.activeTab).toBe('dossier');
+    expect(state.dossierTab).toBe('building');
+    expect(state.refcat).toBe('28001A001000120001AZ');
+  });
 });

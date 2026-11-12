@@ -125,7 +125,7 @@ describe('MapView Component (Stitch Civic Precision)', () => {
       expect(screen.getByText(/Sede Electrónica Catastro · INE ADRH/i)).toBeTruthy();
     });
 
-    it('should toggle 3D axonometry mode when clicking 3D button', () => {
+    it('should toggle 3D axonometry mode when clicking Luz 3D thematic lens', () => {
       render(
         <MapView
           selectedCoords={{ lat: 40.42028, lon: -3.70379 }}
@@ -133,7 +133,7 @@ describe('MapView Component (Stitch Civic Precision)', () => {
         />
       );
 
-      const btn3D = screen.getByTitle(/3D Extrusión/i);
+      const btn3D = screen.getByTestId('lens-tab-solar');
       expect(btn3D).toBeTruthy();
       fireEvent.click(btn3D);
     });
@@ -417,7 +417,7 @@ describe('MapView Component (Stitch Civic Precision)', () => {
       expect(extrusionLayer.paint['fill-extrusion-height']).toBeDefined();
     });
 
-    it('should render 3D Compass Gizmo and 2D/3D Extrusión mode switchers', () => {
+    it('should render 3D Compass Gizmo and Thematic Lens Selector with Luz 3D', () => {
       render(
         <MapView
           selectedCoords={{ lat: 40.42028, lon: -3.70379 }}
@@ -428,13 +428,13 @@ describe('MapView Component (Stitch Civic Precision)', () => {
       // Verify Compass Gizmo exists
       const gizmo = screen.getByTestId('3d-compass-gizmo');
       expect(gizmo).toBeTruthy();
-      expect(screen.getByText('VISTA 2D CENITAL')).toBeTruthy();
+      expect(screen.getByText('VISTA CENITAL')).toBeTruthy();
 
-      // Verify Mode Switcher
-      expect(screen.getByTitle('3D Extrusión')).toBeTruthy();
+      // Verify Luz 3D Lens exists
+      expect(screen.getByTestId('lens-tab-solar')).toBeTruthy();
     });
 
-    it('should toggle 3D mode, update camera pitch to 55 and bearing to -15, and open Solar HUD', async () => {
+    it('should toggle 3D mode via Luz 3D lens, update camera pitch to 55 and bearing to -15, and open Solar HUD', async () => {
       const maplibreMock = await import('maplibre-gl');
       render(
         <MapView
@@ -443,7 +443,7 @@ describe('MapView Component (Stitch Civic Precision)', () => {
         />
       );
 
-      const btn3D = screen.getByTitle('3D Extrusión');
+      const btn3D = screen.getByTestId('lens-tab-solar');
       fireEvent.click(btn3D);
 
       const mapConstructor = maplibreMock.Map as unknown as ReturnType<typeof vi.fn>;
@@ -457,7 +457,7 @@ describe('MapView Component (Stitch Civic Precision)', () => {
       // Verify Solar HUD is mounted
       expect(screen.getByTestId('solar-simulation-hud')).toBeTruthy();
       expect(screen.getByText('SIMULADOR SOLAR & SOMBRAS')).toBeTruthy();
-      expect(screen.getByText('ÓRBITA 3D ACTIVA')).toBeTruthy();
+      expect(screen.getByText('ÓRBITA 3D')).toBeTruthy();
     });
 
     it('should allow closing Solar HUD in 3D mode and re-opening it via the floating pill', () => {
@@ -468,8 +468,8 @@ describe('MapView Component (Stitch Civic Precision)', () => {
         />
       );
 
-      // Enable 3D mode
-      const btn3D = screen.getByTitle('3D Extrusión');
+      // Enable 3D mode via Luz 3D lens
+      const btn3D = screen.getByTestId('lens-tab-solar');
       fireEvent.click(btn3D);
 
       expect(screen.getByTestId('solar-simulation-hud')).toBeTruthy();

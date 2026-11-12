@@ -1,6 +1,6 @@
 {
   "name": "openbarrio-monorepo",
-  "version": "0.12.4",
+  "version": "1.0.0",
   "private": true,
   "type": "module",
   "description": "Civic-tech and real estate due diligence platform using Spanish public open data",
@@ -14,6 +14,7 @@
     "dev": "pnpm --parallel run dev",
     "build": "pnpm --recursive run build",
     "test": "pnpm --recursive run test",
+    "package:extension": "pnpm --filter @openbarrio/extension run build && node scripts/package-extension.mjs",
     "lint": "eslint . --max-warnings=0",
     "lint:workspaces": "pnpm --recursive run lint"
   },

@@ -1,13 +1,9 @@
 import {
   Header,
   HeroSection,
-  InteractiveSandboxSection,
-  DataTransparencyMatrix,
-  HorizontalDivisionShowcase,
-  PillarsSection,
+  CivicPainPointsSection,
   ExtensionShowcaseSection,
   CivicPrinciplesSection,
-  MapCtaSection,
   Footer,
   AuditModal,
   AuditData,
@@ -188,26 +184,21 @@ export function LandingView() {
   };
 
   return (
-    <div className="min-h-screen min-h-[100dvh] flex flex-col bg-background text-on-surface">
+    <div className="min-h-screen min-h-[100dvh] flex flex-col bg-background text-on-surface gis-grid-pattern">
       <Header onOpenMap={() => handleOpenMap()} />
 
-      <main className="flex-1 flex flex-col items-center">
+      <main className="flex-1 w-full flex flex-col items-center">
+        {/* Bloque 1: Hero con Buscador Soberano Unificado y Presets Emblemáticos */}
         <HeroSection onAudit={handleAudit} onOpenMap={() => handleOpenMap()} />
-        <InteractiveSandboxSection
-          onSelectPreset={(p) => {
-            handleAudit(p.address, 'address', p.coords);
-          }}
-        />
-        <HorizontalDivisionShowcase
-          onAuditUnit={(refcat, _address) => {
-            handleAudit(refcat, 'refcat');
-          }}
-        />
-        <DataTransparencyMatrix />
-        <PillarsSection />
+
+        {/* Bloque 2: Rejilla de los 3 Dolores Cívicos (Antes/Después) y 4 Pilares Oficiales */}
+        <CivicPainPointsSection />
+
+        {/* Bloque 3: Extensión de Navegador (Idealista & Fotocasa Shielding) */}
         <ExtensionShowcaseSection />
+
+        {/* Bloque 4: Compromiso Cívico Radical (0% Ads, Open Data) */}
         <CivicPrinciplesSection />
-        <MapCtaSection onOpenMap={() => handleOpenMap()} />
       </main>
 
       <Footer onOpenMap={() => handleOpenMap()} />

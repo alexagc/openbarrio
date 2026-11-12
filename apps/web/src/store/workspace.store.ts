@@ -12,7 +12,7 @@ import { SheetSnapPoint } from '../components/CadastralBottomSheet';
 
 export interface WorkspaceState {
   // Navigation & Views
-  viewMode: 'landing' | 'map';
+  viewMode: 'landing' | 'map' | 'transparency';
   activeTab: 'dossier' | 'map';
   dossierTab: DossierTab;
   mobileNavDestination: MobileNavDestination;
@@ -40,7 +40,7 @@ export interface WorkspaceState {
   isCertifiedPdfOpen: boolean;
 
   // Actions
-  setViewMode: (mode: 'landing' | 'map') => void;
+  setViewMode: (mode: 'landing' | 'map' | 'transparency') => void;
   setActiveTab: (tab: 'dossier' | 'map') => void;
   setDossierTab: (tab: DossierTab) => void;
   setMobileNavDestination: (dest: MobileNavDestination) => void;
@@ -289,9 +289,25 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
       return;
     }
 
+    if (viewMode === 'transparency') {
+      const cur = window.location.pathname + window.location.search;
+      const isAlreadyTransparency =
+        cur.startsWith('/fuentes-oficiales') ||
+        cur.startsWith('/sources') ||
+        cur.startsWith('/fonts-oficials') ||
+        cur.startsWith('/transparencia');
+      if (!isAlreadyTransparency) {
+        if (replace) window.history.replaceState({ openbarrio: true }, '', '/fuentes-oficiales');
+        else window.history.pushState({ openbarrio: true }, '', '/fuentes-oficiales');
+      }
+      return;
+    }
+
     const params = new URLSearchParams();
+    let targetPath = '/map';
+
     if (report?.property.cadastralReference) {
-      params.set('refcat', report.property.cadastralReference);
+      targetPath = `/informe/${report.property.cadastralReference}`;
     } else if (selectedCoords) {
       params.set('lat', selectedCoords.lat.toFixed(5));
       params.set('lon', selectedCoords.lon.toFixed(5));
@@ -308,7 +324,7 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
     }
 
     const qs = params.toString();
-    const targetUrl = qs ? `/map?${qs}` : '/map';
+    const targetUrl = qs ? `${targetPath}?${qs}` : targetPath;
     const cur = window.location.pathname + window.location.search;
 
     if (cur !== targetUrl) {

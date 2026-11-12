@@ -1,6 +1,7 @@
 import React from 'react';
-import { Building2 } from 'lucide-react';
+import { Building2, ArrowRight } from 'lucide-react';
 import { useTranslation } from '../../i18n';
+import { useWorkspaceStore } from '../../store/workspace.store';
 
 interface FooterProps {
   onOpenMap?: () => void;
@@ -8,10 +9,11 @@ interface FooterProps {
 
 export const Footer: React.FC<FooterProps> = ({ onOpenMap }) => {
   const { t } = useTranslation();
+  const setViewMode = useWorkspaceStore((s) => s.setViewMode);
   const currentYear = new Date().getFullYear();
 
   return (
-    <footer className="bg-surface-container border-t border-outline-variant pt-12 pb-8 px-space-lg lg:px-space-xl">
+    <footer className="w-full bg-surface-container border-t border-outline-variant pt-12 pb-8 px-space-lg lg:px-space-xl">
       <div className="max-w-6xl mx-auto">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-8 pb-10 border-b border-outline-variant">
           {/* Brand Column */}
@@ -92,6 +94,16 @@ export const Footer: React.FC<FooterProps> = ({ onOpenMap }) => {
                 >
                   {t('footer.linkMivau')}
                 </a>
+              </li>
+              <li className="pt-2 border-t border-outline-variant/60">
+                <button
+                  type="button"
+                  onClick={() => setViewMode('transparency')}
+                  className="text-primary hover:underline font-mono text-[11px] font-semibold text-left cursor-pointer flex items-center gap-1"
+                >
+                  <span>{t('footer.linkSourcesMatrix')}</span>
+                  <ArrowRight className="w-3 h-3" />
+                </button>
               </li>
             </ul>
           </div>

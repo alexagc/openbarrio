@@ -43,6 +43,7 @@ build/
 .next/
 out/
 .cache/
+*.zip
 
 # Environment variables & secrets
 .env

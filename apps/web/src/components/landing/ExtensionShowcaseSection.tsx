@@ -8,9 +8,9 @@ export const ExtensionShowcaseSection: React.FC = () => {
   return (
     <section
       id="extension"
-      className="py-16 px-space-lg lg:px-space-xl bg-surface-container-lowest border-b border-outline-variant scroll-mt-14"
+      className="w-full py-16 sm:py-20 lg:py-24 px-space-md sm:px-space-lg lg:px-space-xl border-b border-outline-variant/60 scroll-mt-14"
     >
-      <div className="max-w-6xl mx-auto">
+      <div className="max-w-6xl w-full mx-auto">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-center">
           {/* Left Column: Extension Features & Call to Action */}
           <div className="lg:col-span-5 flex flex-col">

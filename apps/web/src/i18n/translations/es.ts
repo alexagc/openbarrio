@@ -7,7 +7,7 @@ export const es: TranslationSchema = {
     extension: 'Extensión Portales',
     principles: 'Metodología Cívica',
     github: 'GitHub',
-    version: 'v0.12.4',
+    version: 'v1.0.0',
     openMap: 'Ver Mapa Interactivo',
   },
   hero: {
@@ -203,6 +203,7 @@ export const es: TranslationSchema = {
     stat2Label: 'Cookies de Rastreo',
     stat3Val: 'Apache 2.0',
     stat3Label: 'Licencia Libre & Comunitaria',
+    sourcesCatalog: 'Consultar Catálogo Completo de Fuentes Oficiales',
   },
   mapCta: {
     tag: 'Acceso Directo al Visor GIS',
@@ -299,6 +300,7 @@ export const es: TranslationSchema = {
     spatialCoord: 'ETRS89 / UTM Zone 30N',
     updateFrequency: 'Actualización datos: Semanal',
     linkCatastro: 'Sede Electrónica Catastro',
+    linkSourcesMatrix: 'Matriz de Fuentes Oficiales',
     linkIne: 'INE Atlas Renta (ADRH)',
     linkSica: 'MITECO SICA Ruido',
     linkSnczi: 'SNCZI Aguas Fluviales',

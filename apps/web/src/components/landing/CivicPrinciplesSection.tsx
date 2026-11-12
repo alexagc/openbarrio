@@ -1,16 +1,18 @@
 import React from 'react';
-import { Globe, Ban, Lock, Terminal } from 'lucide-react';
+import { Globe, Ban, Lock, Terminal, ShieldCheck, ArrowRight } from 'lucide-react';
 import { useTranslation } from '../../i18n';
+import { useWorkspaceStore } from '../../store/workspace.store';
 
 export const CivicPrinciplesSection: React.FC = () => {
   const { t } = useTranslation();
+  const setViewMode = useWorkspaceStore((s) => s.setViewMode);
 
   return (
     <section
       id="principios"
-      className="py-16 px-space-lg lg:px-space-xl bg-surface-container-low border-b border-outline-variant scroll-mt-14"
+      className="w-full py-16 sm:py-20 lg:py-24 px-space-md sm:px-space-lg lg:px-space-xl border-b border-outline-variant/60 scroll-mt-14"
     >
-      <div className="max-w-5xl mx-auto text-center">
+      <div className="max-w-6xl w-full mx-auto text-center">
         {/* Section Badge */}
         <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded bg-surface-container border border-outline-variant font-mono text-xs text-primary mb-3">
           <Globe className="w-4 h-4" />
@@ -95,6 +97,19 @@ export const CivicPrinciplesSection: React.FC = () => {
               {t('principles.stat3Label')}
             </span>
           </div>
+        </div>
+
+        {/* Dedicated Transparency Catalog Access */}
+        <div className="mt-8 flex justify-center">
+          <button
+            type="button"
+            onClick={() => setViewMode('transparency')}
+            className="inline-flex items-center gap-2 text-xs font-mono font-semibold px-4 py-2.5 rounded-lg bg-surface-container border border-outline-variant hover:border-primary text-primary transition-all shadow-sm hover:shadow-md cursor-pointer group"
+          >
+            <ShieldCheck className="w-4 h-4 text-primary" />
+            <span>{t('principles.sourcesCatalog')}</span>
+            <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
+          </button>
         </div>
       </div>
     </section>

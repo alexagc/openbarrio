@@ -2,7 +2,6 @@ import React, { useState, useEffect, useRef } from 'react';
 import {
   ShieldCheck,
   MapPin,
-  Tag,
   Search,
   BarChart3,
   Building,
@@ -22,7 +21,6 @@ interface HeroSectionProps {
 
 export const HeroSection: React.FC<HeroSectionProps> = ({ onAudit, onOpenMap }) => {
   const { t } = useTranslation();
-  const [mode, setMode] = useState<'address' | 'refcat'>('address');
   const [searchValue, setSearchValue] = useState<string>('');
   const [suggestions, setSuggestions] = useState<
     Array<{ label: string; lat: number; lon: number; refcat?: string }>
@@ -48,16 +46,10 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onAudit, onOpenMap }) 
     };
   }, []);
 
-  // Debounced address search
+  // Debounced address search (skipped when input is a clean cadastral reference)
   useEffect(() => {
-    if (mode !== 'address') {
-      setSuggestions([]);
-      setShowDropdown(false);
-      return;
-    }
-
     const trimmed = searchValue.trim();
-    if (trimmed.length < 3) {
+    if (trimmed.length < 3 || isCadastralReference(trimmed)) {
       setSuggestions([]);
       setShowDropdown(false);
       return;
@@ -74,21 +66,14 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onAudit, onOpenMap }) 
     }, 350);
 
     return () => clearTimeout(timer);
-  }, [searchValue, mode]);
-
-  const handleModeChange = (newMode: 'address' | 'refcat') => {
-    setMode(newMode);
-    setSearchValue('');
-    setSuggestions([]);
-    setShowDropdown(false);
-  };
+  }, [searchValue]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const raw = searchValue.trim();
     if (!raw) return;
 
-    // Auto-detect cadastral reference format even if submitted in address mode
+    // Automatic detection: Cadastral Reference (14 or 20 alphanumeric chars)
     if (isCadastralReference(raw)) {
       const cleanRefcat = raw.replace(/[\s\-_.]/g, '').toUpperCase();
       onAudit(cleanRefcat, 'refcat');
@@ -110,29 +95,28 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onAudit, onOpenMap }) 
       return;
     }
 
-    onAudit(raw, mode);
+    onAudit(raw, 'address');
   };
 
   const handleExampleClick = (exampleQuery: string, exampleMode: 'address' | 'refcat' = 'address') => {
-    setMode(exampleMode);
     setSearchValue(exampleQuery);
     let coords: { lat: number; lon: number } | undefined;
-    if (exampleQuery.includes('Gran Vía 28')) {
-      coords = { lat: 40.42023, lon: -3.70197 };
-    } else if (exampleQuery.includes('Gràcia') || exampleQuery.includes('Gracia')) {
+    if (exampleQuery.includes('Gran Vía 28') || exampleQuery.includes('Chamberí') || exampleQuery.includes('Engracia')) {
+      coords = { lat: 40.4352, lon: -3.7001 };
+    } else if (exampleQuery.includes('Gràcia') || exampleQuery.includes('Gracia') || exampleQuery.includes('Mallorca')) {
       coords = { lat: 41.39170, lon: 2.16495 };
-    } else if (exampleQuery.includes('Sierpes')) {
-      coords = { lat: 37.39147, lon: -5.99476 };
+    } else if (exampleQuery.includes('Russafa') || exampleQuery.includes('Ruzafa') || exampleQuery.includes('Sierpes')) {
+      coords = { lat: 39.4671, lon: -0.3742 };
     }
     onAudit(exampleQuery, exampleMode, coords);
   };
 
   return (
-    <section className="relative pt-12 pb-16 px-space-md sm:px-space-lg lg:px-space-xl border-b border-outline-variant bg-surface-container-lowest gis-grid-pattern overflow-hidden">
+    <section className="w-full relative pt-12 pb-16 sm:pt-16 sm:pb-20 lg:pt-20 lg:pb-24 px-space-md sm:px-space-lg lg:px-space-xl border-b border-outline-variant/60 overflow-hidden">
       {/* Ambient Glow */}
       <div className="absolute -top-32 left-1/2 -translate-x-1/2 w-[720px] h-[360px] bg-primary/10 blur-[120px] rounded-full pointer-events-none" />
 
-      <div className="max-w-5xl mx-auto relative z-10 flex flex-col items-center text-center">
+      <div className="max-w-6xl w-full mx-auto relative z-10 flex flex-col items-center text-center">
         {/* Verification Shield Badge */}
         <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-surface-container border border-primary/30 mb-6 shadow-xs">
           <span className="h-2 w-2 rounded-full bg-primary animate-pulse" />
@@ -151,41 +135,23 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onAudit, onOpenMap }) 
           {t('hero.subtitle')}
         </p>
 
-        {/* Universal Cadastral Search Box (Buscador Soberano) */}
+        {/* Universal Cadastral Search Box (Buscador Soberano Unificado) */}
         <form
           onSubmit={handleSubmit}
           className="w-full max-w-3xl bg-surface-container/95 border border-primary/40 p-3 sm:p-4 rounded-xl shadow-2xl mb-4 text-left backdrop-blur-md"
         >
-          {/* Mode Switcher Tabs */}
-          <div className="flex items-center justify-between border-b border-outline-variant pb-2.5 mb-2.5 px-1">
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => handleModeChange('address')}
-                className={`px-3 py-1 rounded font-mono text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer ${
-                  mode === 'address'
-                    ? 'bg-primary-container text-on-primary-container shadow-xs'
-                    : 'text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high'
-                }`}
-              >
-                <MapPin className="w-3.5 h-3.5" />
-                <span>{t('hero.tabAddress')}</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => handleModeChange('refcat')}
-                className={`px-3 py-1 rounded font-mono text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer ${
-                  mode === 'refcat'
-                    ? 'bg-primary-container text-on-primary-container shadow-xs'
-                    : 'text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high'
-                }`}
-              >
-                <Tag className="w-3.5 h-3.5" />
-                <span>{t('hero.tabRefcat')}</span>
-              </button>
+          {/* Unified Sovereign Bar Header */}
+          <div className="flex items-center justify-between border-b border-outline-variant pb-2 mb-2.5 px-1 font-mono text-xs text-on-surface-variant">
+            <div className="flex items-center gap-1.5">
+              <ShieldCheck className="w-4 h-4 text-primary" />
+              <span className="font-semibold text-on-surface">Búsqueda Soberana Unificada</span>
+              {isCadastralReference(searchValue.trim()) && (
+                <span className="px-1.5 py-0.5 rounded bg-primary/20 text-primary text-[10px] font-bold border border-primary/40 animate-pulse">
+                  ✓ Ref. Catastral Detectada
+                </span>
+              )}
             </div>
             <div className="hidden sm:flex items-center gap-1.5 text-on-surface-variant font-mono text-xs">
-              <ShieldCheck className="w-3.5 h-3.5 text-primary" />
               <span>CartoCiudad + Sede Electrónica OVC</span>
             </div>
           </div>
@@ -210,7 +176,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onAudit, onOpenMap }) 
                     isFocusedRef.current = false;
                   }, 200);
                 }}
-                placeholder={mode === 'address' ? t('hero.placeholderAddress') : t('hero.placeholderRefcat')}
+                placeholder="Introduce dirección completa o referencia catastral (ej. Gran Vía 28 o 14/20 dígitos)..."
                 className="w-full pl-10 pr-4 py-2.5 rounded bg-surface-container-lowest border border-outline-variant focus:border-primary focus:ring-1 focus:ring-primary text-on-surface font-body text-sm placeholder:text-outline outline-hidden transition-colors"
               />
 
@@ -270,37 +236,79 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onAudit, onOpenMap }) 
 
           {/* Guarantee Subtext */}
           <p className="mt-2 text-center sm:text-left font-mono text-[11px] text-on-surface-variant">
-            Búsqueda directa sobre la Sede Electrónica del Catastro (OVC) y CartoCiudad. Sin cookies ni intermediarios.
+            Búsqueda directa sobre la Sede Electrónica del Catastro (OVC) y CartoCiudad. Detección automática de referencias catastrales y coordenadas.
           </p>
         </form>
 
-        {/* Quick Access Chips */}
-        <div className="flex flex-wrap items-center justify-center gap-2 text-left mb-6">
-          <span className="font-mono text-xs text-on-surface-variant">
-            {t('hero.auditedExamples')}
-          </span>
-          <button
-            type="button"
-            onClick={() => handleExampleClick('Gran Vía 28, Madrid')}
-            className="px-2.5 py-1 rounded bg-surface-container border border-outline-variant hover:border-primary text-on-surface font-mono text-xs transition-colors cursor-pointer"
-          >
-            {t('hero.example1')}
-          </button>
-          <button
-            type="button"
-            onClick={() => handleExampleClick('Passeig de Gràcia 43, Barcelona')}
-            className="px-2.5 py-1 rounded bg-surface-container border border-outline-variant hover:border-primary text-on-surface font-mono text-xs transition-colors flex items-center gap-1 cursor-pointer"
-          >
-            <span>{t('hero.example2')}</span>
-            <span className="text-secondary font-semibold">{t('hero.example2Badge')}</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => handleExampleClick('Calle Sierpes 22, Sevilla')}
-            className="px-2.5 py-1 rounded bg-surface-container border border-outline-variant hover:border-primary text-on-surface font-mono text-xs transition-colors cursor-pointer"
-          >
-            {t('hero.example3')}
-          </button>
+        {/* 3 Iconic Emblematic Presets Grid (Decision A1) */}
+        <div className="w-full max-w-3xl mb-4 text-left">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+            {/* Preset 1: Chamberí / Madrid */}
+            <button
+              type="button"
+              onClick={() => handleExampleClick('Gran Vía 28, Madrid', 'address')}
+              className="p-3 rounded-lg bg-surface-container border border-outline-variant hover:border-primary/60 hover:bg-surface-container-high transition-all text-left group cursor-pointer"
+            >
+              <div className="flex items-center justify-between mb-1">
+                <span className="font-headline text-xs font-bold text-on-surface group-hover:text-primary transition-colors">
+                  Chamberí / Centro
+                </span>
+                <span className="px-1.5 py-0.2 rounded bg-primary/10 text-primary font-mono text-[9px] font-semibold border border-primary/20">
+                  Madrid
+                </span>
+              </div>
+              <p className="text-[11px] text-on-surface-variant font-mono truncate">
+                Gran Vía 28, Madrid
+              </p>
+              <span className="text-[10px] text-outline font-mono block mt-1">
+                ITE consolidada · 84 m²
+              </span>
+            </button>
+
+            {/* Preset 2: Eixample */}
+            <button
+              type="button"
+              onClick={() => handleExampleClick('Passeig de Gràcia 43, Barcelona', 'address')}
+              className="p-3 rounded-lg bg-surface-container border border-outline-variant hover:border-primary/60 hover:bg-surface-container-high transition-all text-left group cursor-pointer"
+            >
+              <div className="flex items-center justify-between mb-1">
+                <span className="font-headline text-xs font-bold text-on-surface group-hover:text-primary transition-colors">
+                  Eixample con Terraza
+                </span>
+                <span className="px-1.5 py-0.2 rounded bg-amber-500/10 text-amber-400 font-mono text-[9px] font-semibold border border-amber-500/20">
+                  Tensionada
+                </span>
+              </div>
+              <p className="text-[11px] text-on-surface-variant font-mono truncate">
+                Passeig de Gràcia 43, Barcelona
+              </p>
+              <span className="text-[10px] text-outline font-mono block mt-1">
+                Tope SERPAVI · 88 m²
+              </span>
+            </button>
+
+            {/* Preset 3: Ruzafa */}
+            <button
+              type="button"
+              onClick={() => handleExampleClick('Carrer de Russafa 18, Valencia', 'address')}
+              className="p-3 rounded-lg bg-surface-container border border-outline-variant hover:border-primary/60 hover:bg-surface-container-high transition-all text-left group cursor-pointer"
+            >
+              <div className="flex items-center justify-between mb-1">
+                <span className="font-headline text-xs font-bold text-on-surface group-hover:text-primary transition-colors">
+                  Ruzafa Turístico
+                </span>
+                <span className="px-1.5 py-0.2 rounded bg-purple-500/10 text-purple-400 font-mono text-[9px] font-semibold border border-purple-500/20">
+                  ZAS / VUT
+                </span>
+              </div>
+              <p className="text-[11px] text-on-surface-variant font-mono truncate">
+                Carrer de Russafa 18
+              </p>
+              <span className="text-[10px] text-outline font-mono block mt-1">
+                SICA 67 dB · Saturación VUT
+              </span>
+            </button>
+          </div>
         </div>
 
         {/* Dual Quick-Access Action Cards (Fast Track: Map vs Extension) */}
@@ -309,18 +317,21 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onAudit, onOpenMap }) 
           <button
             type="button"
             onClick={() => onOpenMap?.()}
-            className="flex items-center gap-3.5 p-4 rounded-xl bg-surface-container border border-primary/40 hover:border-primary hover:bg-surface-container-high transition-all shadow-md group text-left cursor-pointer"
+            className="flex items-center gap-3.5 p-4 rounded-xl bg-surface-container/90 border border-primary/40 hover:border-primary hover:bg-surface-container-high transition-all shadow-md group text-left cursor-pointer backdrop-blur-sm"
           >
-            <div className="p-3 rounded-lg bg-primary/10 text-primary group-hover:bg-primary group-hover:text-background transition-colors flex items-center justify-center">
+            <div className="p-3 rounded-lg bg-primary/10 text-primary group-hover:bg-primary group-hover:text-background transition-colors flex items-center justify-center shrink-0">
               <MapIcon className="w-6 h-6" />
             </div>
             <div>
-              <div className="font-headline text-sm font-bold text-on-surface group-hover:text-primary transition-colors flex items-center gap-1.5">
-                <span>Explorar Mapa GIS Libre</span>
+              <span className="font-mono text-[10px] text-primary uppercase font-bold tracking-wider block">
+                Acceso Directo al Visor GIS
+              </span>
+              <div className="font-headline text-sm font-bold text-on-surface group-hover:text-primary transition-colors flex items-center gap-1.5 mt-0.5">
+                <span>Lanzar Visor GIS Completo</span>
                 <ArrowRight className="w-4 h-4" />
               </div>
               <p className="font-body text-xs text-on-surface-variant mt-0.5">
-                Visor cartográfico nacional con capas oficiales de ruido, inundaciones y parcelas INSPIRE.
+                Explora cualquier rincón de España con capas de ruido, inundaciones y parcelas INSPIRE.
               </p>
             </div>
           </button>

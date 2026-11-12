@@ -7,7 +7,7 @@ export const en: TranslationSchema = {
     extension: 'Portal Extension',
     principles: 'Civic Methodology',
     github: 'GitHub',
-    version: 'v0.12.4',
+    version: 'v1.0.0',
     openMap: 'Explore Interactive Map',
   },
   hero: {
@@ -203,6 +203,7 @@ export const en: TranslationSchema = {
     stat2Label: 'Tracking Cookies',
     stat3Val: 'Apache 2.0',
     stat3Label: 'Open & Community License',
+    sourcesCatalog: 'View Full Official Sources Catalog',
   },
   mapCta: {
     tag: 'Direct GIS Viewer Access',
@@ -299,6 +300,7 @@ export const en: TranslationSchema = {
     spatialCoord: 'ETRS89 / UTM Zone 30N',
     updateFrequency: 'Data refresh: Weekly',
     linkCatastro: 'Electronic Cadastre (OVC)',
+    linkSourcesMatrix: 'Official Sources Matrix',
     linkIne: 'INE Income Atlas (ADRH)',
     linkSica: 'MITECO SICA Noise',
     linkSnczi: 'SNCZI Fluvial Flood',

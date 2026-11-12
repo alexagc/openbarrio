@@ -3,7 +3,6 @@ import {
   Plus,
   Minus,
   Maximize2,
-  Box,
   Layers,
   Navigation,
   Loader2,
@@ -12,7 +11,7 @@ import { getCardinalOrientation } from '../../utils/solar';
 
 export interface MapControlsProps {
   is3DMode: boolean;
-  onToggle3DMode: (enable: boolean) => void;
+  onToggle3DMode?: (enable: boolean) => void;
   currentBearing: number;
   currentPitch: number;
   currentSolarAzimuth: number;
@@ -29,7 +28,7 @@ export interface MapControlsProps {
 
 export function MapControls({
   is3DMode,
-  onToggle3DMode,
+  onToggle3DMode: _onToggle3DMode,
   currentBearing,
   currentPitch,
   currentSolarAzimuth,
@@ -127,137 +126,129 @@ export function MapControls({
         </div>
       </div>
 
-      {/* ================= FLOATING MAP CONTROLS & 3D COMPASS GIZMO (Top-Right, Desktop) ================= */}
+      {/* ================= UNIFIED FLOATING MAP CONTROLS & COMPASS GIZMO (Top-Right, Desktop) ================= */}
       <div
         onClick={(e) => e.stopPropagation()}
-        className="hidden lg:flex absolute top-3 right-3 z-30 flex-col gap-2.5 items-end no-print"
+        className="hidden lg:flex absolute top-3 right-3 z-30 flex-col gap-2 items-end no-print"
       >
-        {/* 3D Navigation Gizmo & Orientation Control */}
+        {/* Single Unified Desktop Navigation & Viewport Card */}
         <div
           data-testid="3d-compass-gizmo"
-          className="bg-surface-container-low/95 border border-outline-variant rounded-xl p-2.5 shadow-2xl backdrop-blur-md flex items-center gap-3 select-none"
+          className="bg-surface-container-low/95 border border-outline-variant rounded-xl p-2.5 shadow-2xl backdrop-blur-md flex flex-col gap-2 select-none"
         >
-          {/* Interactive Compass Disc */}
-          <div
-            className="relative w-12 h-12 rounded-full border border-outline-variant bg-surface-container flex items-center justify-center cursor-pointer transition-transform hover:scale-105"
-            onClick={onResetNorth}
-            title={
-              is3DMode
-                ? `Alinear al Norte · Sol: ${Math.round(currentSolarAzimuth)}° (${getCardinalOrientation(currentSolarAzimuth)})`
-                : 'Alinear al Norte (0°)'
-            }
-            aria-label="Alinear al Norte (0°)"
-          >
-            <div className="absolute inset-1 rounded-full border border-dashed border-outline-variant/60" />
-
-            {/* Sun Direction Ray in 3D Mode */}
-            {is3DMode && (
-              <div
-                className="absolute inset-0 flex items-center justify-center pointer-events-none transition-transform duration-100"
-                style={{
-                  transform: `rotate(${((currentSolarAzimuth - currentBearing + 360) % 360)}deg)`,
-                }}
-              >
-                <div className="absolute -top-2 flex flex-col items-center">
-                  <span className="text-[11px] filter drop-shadow-[0_0_4px_#f59e0b]">☀️</span>
-                </div>
-                <div className="h-4 w-0.5 bg-gradient-to-b from-amber-400 to-transparent" />
-              </div>
-            )}
-
-            {/* Arrow pointing to True North */}
+          {/* Top Row: Interactive Compass Disc & Orientation Telemetry */}
+          <div className="flex items-center gap-3">
+            {/* Interactive Compass Disc */}
             <div
-              className="w-1 h-8 flex flex-col justify-between items-center origin-center transition-transform duration-150 pointer-events-none"
-              style={{ transform: `rotate(${-currentBearing}deg)` }}
+              className="relative w-11 h-11 rounded-full border border-outline-variant bg-surface-container flex items-center justify-center cursor-pointer transition-transform hover:scale-105 shrink-0"
+              onClick={onResetNorth}
+              title={
+                is3DMode
+                  ? `Alinear al Norte · Sol: ${Math.round(currentSolarAzimuth)}° (${getCardinalOrientation(currentSolarAzimuth)})`
+                  : 'Alinear al Norte (0°)'
+              }
+              aria-label="Alinear al Norte (0°)"
             >
-              <span className="text-[9px] text-rose-500 font-bold font-mono leading-none">N</span>
-              <div className="w-1.5 h-1.5 rounded-full bg-primary" />
-              <span className="text-[8px] text-outline font-mono leading-none">S</span>
+              <div className="absolute inset-1 rounded-full border border-dashed border-outline-variant/60" />
+
+              {/* Sun Direction Ray in 3D Mode */}
+              {is3DMode && (
+                <div
+                  className="absolute inset-0 flex items-center justify-center pointer-events-none transition-transform duration-100"
+                  style={{
+                    transform: `rotate(${((currentSolarAzimuth - currentBearing + 360) % 360)}deg)`,
+                  }}
+                >
+                  <div className="absolute -top-2 flex flex-col items-center">
+                    <span className="text-[11px] filter drop-shadow-[0_0_4px_#f59e0b]">☀️</span>
+                  </div>
+                  <div className="h-4 w-0.5 bg-gradient-to-b from-amber-400 to-transparent" />
+                </div>
+              )}
+
+              {/* Arrow pointing to True North */}
+              <div
+                className="w-1 h-7 flex flex-col justify-between items-center origin-center transition-transform duration-150 pointer-events-none"
+                style={{ transform: `rotate(${-currentBearing}deg)` }}
+              >
+                <span className="text-[8px] text-rose-500 font-bold font-mono leading-none">N</span>
+                <div className="w-1.5 h-1.5 rounded-full bg-primary" />
+                <span className="text-[7px] text-outline font-mono leading-none">S</span>
+              </div>
+            </div>
+
+            {/* Spatial Orientation Telemetry */}
+            <div className="flex flex-col min-w-[100px]">
+              <span className="text-[9px] font-mono text-outline uppercase tracking-wider font-semibold">
+                {is3DMode ? 'ÓRBITA 3D' : 'VISTA CENITAL'}
+              </span>
+              <span className="text-[11px] font-mono text-on-surface font-bold">
+                {Math.round((currentBearing + 360) % 360)}° {getCardinalOrientation(currentBearing)}
+              </span>
+              <span className="text-[9px] font-mono text-on-surface-variant">
+                Inclinación: {Math.round(currentPitch)}°
+              </span>
             </div>
           </div>
 
-          <div className="flex flex-col gap-1">
-            <div className="flex items-center gap-1">
+          {/* Integrated Divider */}
+          <div className="h-px bg-outline-variant/60" />
+
+          {/* Bottom Row: Integrated Navigation Toolbar (Zoom, North, Locate, Spain) */}
+          <div className="flex items-center justify-between gap-1">
+            <div className="flex items-center bg-surface-container rounded border border-outline-variant/60 overflow-hidden">
               <button
                 type="button"
-                onClick={onResetNorth}
-                className="w-7 h-7 bg-surface-container hover:bg-surface-container-high rounded text-on-surface border border-outline-variant flex items-center justify-center transition-colors cursor-pointer"
-                title="Alinear al Norte"
-                aria-label="Alinear al Norte"
+                onClick={onZoomIn}
+                className="w-7 h-7 flex items-center justify-center text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high transition-colors cursor-pointer"
+                title="Acercar (+)"
+                aria-label="Acercar (+)"
               >
-                <Compass className="w-3.5 h-3.5 text-secondary" />
+                <Plus className="w-3.5 h-3.5" />
               </button>
+              <div className="w-px h-4 bg-outline-variant/60" />
               <button
                 type="button"
-                onClick={() => onToggle3DMode(false)}
-                className={`w-7 h-7 rounded border border-outline-variant flex items-center justify-center transition-colors cursor-pointer ${
-                  !is3DMode
-                    ? 'bg-primary/20 text-primary border-primary/40 font-bold'
-                    : 'bg-surface-container hover:bg-surface-container-high text-on-surface'
-                }`}
-                title="Vista Cenital 2D"
-                aria-label="Vista Cenital 2D"
+                onClick={onZoomOut}
+                className="w-7 h-7 flex items-center justify-center text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high transition-colors cursor-pointer"
+                title="Alejar (-)"
+                aria-label="Alejar (-)"
               >
-                <span className="text-[10px] font-mono">2D</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => onToggle3DMode(true)}
-                data-testid="toggle-3d-button"
-                className={`w-7 h-7 rounded border border-outline-variant flex items-center justify-center transition-colors cursor-pointer ${
-                  is3DMode
-                    ? 'bg-primary text-on-primary font-bold shadow-sm'
-                    : 'bg-surface-container hover:bg-surface-container-high text-on-surface'
-                }`}
-                title="3D Extrusión"
-                aria-label="3D Extrusión"
-              >
-                <Box className="w-3.5 h-3.5" />
+                <Minus className="w-3.5 h-3.5" />
               </button>
             </div>
-            <span
-              className="text-[9px] font-mono text-outline text-center uppercase tracking-wider"
-              title={`Inclinación Pitch: ${currentPitch}° · Orientación Bearing: ${currentBearing}°`}
-            >
-              {is3DMode ? 'ÓRBITA 3D ACTIVA' : 'VISTA 2D CENITAL'}
-            </span>
-          </div>
-        </div>
 
-        {/* Desktop Vertical Tool Palette */}
-        <div className="flex items-center gap-1.5 bg-surface-container-low/95 backdrop-blur-md border border-outline-variant p-1 rounded-lg shadow-xl">
-          <button
-            type="button"
-            onClick={onZoomIn}
-            className="w-7 h-7 rounded hover:bg-surface-container text-on-surface-variant hover:text-on-surface flex items-center justify-center transition-colors cursor-pointer"
-            title="Acercar (+)"
-          >
-            <Plus className="w-3.5 h-3.5" />
-          </button>
-          <button
-            type="button"
-            onClick={onZoomOut}
-            className="w-7 h-7 rounded hover:bg-surface-container text-on-surface-variant hover:text-on-surface flex items-center justify-center transition-colors cursor-pointer"
-            title="Alejar (-)"
-          >
-            <Minus className="w-3.5 h-3.5" />
-          </button>
-          <button
-            type="button"
-            onClick={onResetNorth}
-            className="w-7 h-7 bg-surface-container-low/95 hover:bg-surface-container border border-outline-variant rounded flex items-center justify-center text-secondary transition-colors cursor-pointer"
-            title="Orientación Norte (0°)"
-          >
-            <Compass className="w-3.5 h-3.5" />
-          </button>
-          <button
-            type="button"
-            onClick={onResetToSpain}
-            className="w-7 h-7 rounded hover:bg-surface-container text-on-surface-variant hover:text-primary flex items-center justify-center transition-colors cursor-pointer"
-            title="Vista General España"
-          >
-            <Maximize2 className="w-3.5 h-3.5" />
-          </button>
+            <button
+              type="button"
+              onClick={onResetNorth}
+              className="w-7 h-7 bg-surface-container hover:bg-surface-container-high border border-outline-variant/60 rounded flex items-center justify-center text-secondary transition-colors cursor-pointer"
+              title="Alinear al Norte"
+              aria-label="Alinear al Norte"
+            >
+              <Compass className="w-3.5 h-3.5 text-secondary" />
+            </button>
+
+            <button
+              type="button"
+              onClick={onLocateMe}
+              disabled={isLocating}
+              className="w-7 h-7 bg-surface-container hover:bg-surface-container-high border border-outline-variant/60 rounded flex items-center justify-center text-primary transition-colors cursor-pointer disabled:opacity-50"
+              title="Mi ubicación GPS"
+              aria-label="Mi ubicación"
+            >
+              {isLocating ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Navigation className="w-3.5 h-3.5" />}
+            </button>
+
+            <button
+              type="button"
+              onClick={onResetToSpain}
+              className="w-7 h-7 bg-surface-container hover:bg-surface-container-high border border-outline-variant/60 rounded flex items-center justify-center text-on-surface-variant hover:text-primary transition-colors cursor-pointer"
+              title="Vista General España"
+              aria-label="Vista General España"
+            >
+              <Maximize2 className="w-3.5 h-3.5" />
+            </button>
+          </div>
         </div>
       </div>
     </>

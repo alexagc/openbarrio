@@ -4,6 +4,7 @@ export * from './InteractiveSandboxSection';
 export * from './DataTransparencyMatrix';
 export * from './HorizontalDivisionShowcase';
 export * from './PillarsSection';
+export * from './CivicPainPointsSection';
 export * from './ExtensionShowcaseSection';
 export * from './CivicPrinciplesSection';
 export * from './MapCtaSection';

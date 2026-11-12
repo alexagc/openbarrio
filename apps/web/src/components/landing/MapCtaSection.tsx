@@ -12,9 +12,9 @@ export const MapCtaSection: React.FC<MapCtaSectionProps> = ({ onOpenMap }) => {
   return (
     <section
       id="mapa"
-      className="py-12 px-space-lg lg:px-space-xl bg-surface-container-lowest border-b border-outline-variant scroll-mt-14"
+      className="w-full py-12 sm:py-16 px-space-md sm:px-space-lg lg:px-space-xl border-b border-outline-variant/60 scroll-mt-14"
     >
-      <div className="max-w-6xl mx-auto rounded-lg bg-surface-container border border-outline-variant p-6 sm:p-8 flex flex-col md:flex-row items-start md:items-center justify-between gap-6 shadow-md">
+      <div className="max-w-6xl w-full mx-auto rounded-xl bg-surface-container/90 border border-primary/30 p-6 sm:p-8 flex flex-col md:flex-row items-start md:items-center justify-between gap-6 shadow-xl backdrop-blur-sm">
         <div className="max-w-xl">
           <span className="font-mono text-xs text-primary uppercase font-bold tracking-wider">
             {t('mapCta.tag')}

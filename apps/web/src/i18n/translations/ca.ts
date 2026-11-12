@@ -7,7 +7,7 @@ export const ca: TranslationSchema = {
     extension: 'Extensió Portals',
     principles: 'Metodologia Cívica',
     github: 'GitHub',
-    version: 'v0.12.4',
+    version: 'v1.0.0',
     openMap: 'Veure Mapa Interactiu',
   },
   hero: {
@@ -203,6 +203,7 @@ export const ca: TranslationSchema = {
     stat2Label: 'Galetes de Rastreig',
     stat3Val: 'Apache 2.0',
     stat3Label: 'Llicència Lliure & Comunitària',
+    sourcesCatalog: 'Consultar Catàleg Complet de Fonts Oficials',
   },
   mapCta: {
     tag: 'Accés Directe al Visor GIS',
@@ -299,6 +300,7 @@ export const ca: TranslationSchema = {
     spatialCoord: 'ETRS89 / UTM Zone 30N',
     updateFrequency: 'Actualització dades: Setmanal',
     linkCatastro: 'Seu Electrònica Cadastre',
+    linkSourcesMatrix: 'Matriu de Fonts Oficials',
     linkIne: 'INE Atles Renda (ADRH)',
     linkSica: 'MITECO SICA Soroll',
     linkSnczi: 'SNCZI Aigües Fluvials',

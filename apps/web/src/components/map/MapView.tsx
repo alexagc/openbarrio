@@ -25,6 +25,7 @@ import { useEnvironmentalLayers } from './hooks/useEnvironmentalLayers';
 import { MapControls } from './MapControls';
 import { MapTelemetryHud } from './MapTelemetryHud';
 import { MapLegendHud } from './MapLegendHud';
+import { ThematicLensSelector, ThematicLens } from './ThematicLensSelector';
 import { SeasonPreset } from '../../utils/solar';
 
 // Export geodesic utilities for backward compatibility
@@ -68,11 +69,66 @@ export function MapView({
 
   // Basemap & Thematic Layer States
   const [activeBasemap, setActiveBasemap] = useState<BasemapType>('dark-gis');
+  const [activeLens, setActiveLens] = useState<ThematicLens>('urban');
   const [showCatastroWms, setShowCatastroWms] = useState<boolean>(true);
   const [showIneIncome, setShowIneIncome] = useState<boolean>(true);
   const [showMitecoNoise, setShowMitecoNoise] = useState<boolean>(false);
   const [showSncziFlood, setShowSncziFlood] = useState<boolean>(false);
   const [showIsochrones, setShowIsochrones] = useState<boolean>(true);
+
+  // Auto-activate lens according to property typology (Decision A2)
+  useEffect(() => {
+    if (report) {
+      const isRusticOrPlot =
+        report.typology === 'RUSTIC' ||
+        report.typology === 'VACANT_PLOT' ||
+        report.property?.typology === 'RUSTIC' ||
+        report.property?.typology === 'VACANT_PLOT';
+
+      if (isRusticOrPlot) {
+        setActiveLens('risks');
+        setShowSncziFlood(true);
+        setShowCatastroWms(true);
+        setShowMitecoNoise(false);
+        setShowIneIncome(false);
+        setShowIsochrones(false);
+        setIs3DMode(false);
+      }
+    }
+  }, [report]);
+
+  const handleSelectLens = useCallback((lens: ThematicLens) => {
+    setActiveLens(lens);
+    if (lens === 'urban') {
+      setShowIsochrones(true);
+      setShowIneIncome(true);
+      setShowCatastroWms(true);
+      setShowMitecoNoise(false);
+      setShowSncziFlood(false);
+      setIs3DMode(false);
+    } else if (lens === 'silence') {
+      setShowMitecoNoise(true);
+      setShowCatastroWms(true);
+      setShowIneIncome(false);
+      setShowSncziFlood(false);
+      setShowIsochrones(false);
+      setIs3DMode(false);
+    } else if (lens === 'risks') {
+      setShowSncziFlood(true);
+      setShowCatastroWms(true);
+      setShowIneIncome(false);
+      setShowMitecoNoise(false);
+      setShowIsochrones(false);
+      setIs3DMode(false);
+    } else if (lens === 'solar') {
+      setIs3DMode(true);
+      setShowCatastroWms(true);
+      setShowIsochrones(false);
+      setShowMitecoNoise(false);
+      setShowSncziFlood(false);
+      setIsSolarHudOpen(true);
+    }
+  }, []);
 
   // 3D & Solar Simulation States
   const [is3DMode, setIs3DMode] = useState<boolean>(false);
@@ -354,10 +410,25 @@ export function MapView({
         )}
       </div>
 
+      {/* Centered Floating Thematic Lens Selector (Fase 20 - Decision A2) */}
+      <div className="absolute top-3 left-1/2 -translate-x-1/2 z-30 max-w-[calc(100vw-24px)] overflow-x-auto no-scrollbar pointer-events-auto">
+        <ThematicLensSelector
+          activeLens={activeLens}
+          onSelectLens={handleSelectLens}
+        />
+      </div>
+
       {/* Map Controls (Top-Right Desktop & Mobile FABs) */}
       <MapControls
         is3DMode={is3DMode}
-        onToggle3DMode={setIs3DMode}
+        onToggle3DMode={(enable) => {
+          if (enable) {
+            handleSelectLens('solar');
+          } else {
+            handleSelectLens(activeLens === 'solar' ? 'urban' : activeLens);
+            setIs3DMode(false);
+          }
+        }}
         currentBearing={currentBearing}
         currentPitch={currentPitch}
         currentSolarAzimuth={currentSolarAzimuth}

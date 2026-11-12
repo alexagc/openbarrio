@@ -8,6 +8,7 @@ interface DataSourceRow {
   updateFreq: string;
   status: string;
   license: string;
+  licenseUrl: string;
 }
 
 const SOURCES: DataSourceRow[] = [
@@ -18,6 +19,7 @@ const SOURCES: DataSourceRow[] = [
     updateFreq: 'Semanal',
     status: 'En línea (200 OK)',
     license: 'Licencia Abierta OVC',
+    licenseUrl: 'https://www.sedecatastro.gob.es/',
   },
   {
     issuer: 'Instituto Nacional de Estadística (INE)',
@@ -26,6 +28,7 @@ const SOURCES: DataSourceRow[] = [
     updateFreq: 'Anual (2024)',
     status: 'En línea (200 OK)',
     license: 'Abierto (Licencia INE)',
+    licenseUrl: 'https://www.ine.es/aviso_legal',
   },
   {
     issuer: 'MITECO (Agua y Biodiversidad)',
@@ -34,6 +37,7 @@ const SOURCES: DataSourceRow[] = [
     updateFreq: 'Trimestral',
     status: 'En línea (200 OK)',
     license: 'INSPIRE Dir. 2007/2/CE',
+    licenseUrl: 'https://sig.mapama.gob.es/snczi/',
   },
   {
     issuer: 'MITECO (Calidad Ambiental)',
@@ -42,6 +46,7 @@ const SOURCES: DataSourceRow[] = [
     updateFreq: 'Bienal',
     status: 'En línea (200 OK)',
     license: 'Abierto SICA',
+    licenseUrl: 'https://sicaweb.cedex.es/',
   },
   {
     issuer: 'MIVAU (Vivienda y Agenda Urbana)',
@@ -50,6 +55,7 @@ const SOURCES: DataSourceRow[] = [
     updateFreq: 'Mensual',
     status: 'En línea (200 OK)',
     license: 'Dominio Público Estatal',
+    licenseUrl: 'https://serpavi.mivau.gob.es/',
   },
 ];
 
@@ -97,9 +103,17 @@ export const DataTransparencyMatrix: React.FC = () => {
                     <span>{row.status}</span>
                   </span>
                 </td>
-                <td className="p-3.5 font-mono text-[11px] text-outline flex items-center gap-1">
-                  <span>{row.license}</span>
-                  <ExternalLink className="w-3 h-3 opacity-60" />
+                <td className="p-3.5 font-mono text-[11px]">
+                  <a
+                    href={row.licenseUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 text-primary hover:underline hover:text-primary-container transition-colors group cursor-pointer"
+                    title={`Consultar ${row.license} en el portal oficial`}
+                  >
+                    <span>{row.license}</span>
+                    <ExternalLink className="w-3.5 h-3.5 opacity-70 group-hover:opacity-100 transition-opacity" />
+                  </a>
                 </td>
               </tr>
             ))}

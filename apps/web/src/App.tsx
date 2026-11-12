@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { LanguageProvider } from './i18n';
 import { LandingView } from './views/LandingView';
 import { GisWorkspaceView } from './views/GisWorkspaceView';
+import { TransparencyView } from './views/TransparencyView';
 import { UnitPickerModal } from './components/UnitPickerModal';
 import { PropertyDuelModal } from './components/comparator/PropertyDuelModal';
 import { CertifiedPdfReport } from './components/CertifiedPdfReport';
@@ -42,7 +43,13 @@ export function AppContent() {
 
   return (
     <>
-      {viewMode === 'map' ? <GisWorkspaceView /> : <LandingView />}
+      {viewMode === 'map' ? (
+        <GisWorkspaceView />
+      ) : viewMode === 'transparency' ? (
+        <TransparencyView />
+      ) : (
+        <LandingView />
+      )}
 
       {/* Global Modals Connected to Zustand Store */}
       <UnitPickerModal

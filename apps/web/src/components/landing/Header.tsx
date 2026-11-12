@@ -1,6 +1,7 @@
 import React from 'react';
 import { Building2, Compass, Github } from 'lucide-react';
 import { useTranslation, SupportedLanguage } from '../../i18n';
+import { useWorkspaceStore } from '../../store/workspace.store';
 
 interface HeaderProps {
   onOpenMap?: () => void;
@@ -8,6 +9,7 @@ interface HeaderProps {
 
 export const Header: React.FC<HeaderProps> = ({ onOpenMap }) => {
   const { t, language, setLanguage, availableLanguages } = useTranslation();
+  const setViewMode = useWorkspaceStore((s) => s.setViewMode);
 
   return (
     <header className="sticky top-0 z-40 w-full h-14 bg-surface-container border-b border-outline-variant shadow-sm flex items-center justify-between px-space-lg backdrop-blur-md bg-surface-container/95">
@@ -31,12 +33,13 @@ export const Header: React.FC<HeaderProps> = ({ onOpenMap }) => {
 
       {/* Navigation Links (Desktop) */}
       <nav className="hidden lg:flex items-center gap-6">
-        <a
-          className="font-body text-sm text-on-surface-variant hover:text-primary transition-colors"
-          href="#fuentes"
+        <button
+          type="button"
+          onClick={() => setViewMode('transparency')}
+          className="font-body text-sm text-on-surface-variant hover:text-primary transition-colors cursor-pointer"
         >
           {t('nav.officialSources')}
-        </a>
+        </button>
         <a
           className="font-body text-sm text-on-surface-variant hover:text-primary transition-colors"
           href="#extension"

@@ -5,6 +5,46 @@ All notable changes to the **OpenBarrio** platform are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.0] - 2026-11-12
+
+### Added
+- **MapLibre Thematic Lenses Selector (`apps/web`)**:
+  - Introduced a floating segmented tabs pill centered over MapLibre GL offering 4 specialized civic lenses: "Vida Urbana" (15-min walking isochrones, INE income, and cadastre), "Silencio" (MITECO SICA strategic acoustic noise), "Riesgos Naturales" (SNCZI flood return periods T=10..500 and preferential flow), and "Luz 3D" (3D extrusion with real-time solar simulation HUD).
+  - Implemented automatic adaptive lens selection triggering "Riesgos Naturales" for rustic parcels and vacant plots, and "Vida Urbana" for residential and commercial units.
+- **Direct Pillar Architecture & Critical Hazard Banners (`apps/web`)**:
+  - Refined `AuditDossier.tsx` to provide zero-friction direct access to the Hero Bento Score Gauge, land classification regime, and 5-axis SVG Radar chart.
+  - Retained high-priority Critical Alert Banner triggered exclusively by authentic hazards (SNCZI flood return periods T=10..500, cadastral surface discrepancy >15%, or expired CEE under RD 390/2021).
+- **Unified GIS Navigation Gizmo (`apps/web`)**:
+  - Unified MapLibre desktop viewport controls into a single cohesive card (`MapControls.tsx`): compass gizmo, orientation telemetry, zoom pair (+/-), true North alignment, GPS locate me, and national Spain overview.
+  - Delegated 3D extrusion and solar simulation exclusively to the "Luz 3D" thematic lens, eliminating cognitive duplicate toggles.
+  - Set layer switcher to start cleanly collapsed as `[ Capas (3) ▾ ]`.
+- **Dedicated Data Transparency View (`apps/web`)**:
+  - Created standalone `/fuentes-oficiales` route (`TransparencyView.tsx`) with multilingual routing aliases (`/sources`, `/fonts-oficials`, `/transparencia`) and direct links to official data licenses (Catastro, INE, MITECO, MIVAU).
+- **Canonical Routing & SEO Permalinks (`apps/web`)**:
+  - Preserved `/informe/:refcat` as the canonical persistent permalink for audited properties in `useUrlSync.ts` and `workspace.store.ts`, ensuring optimal search engine indexing (SEO) and clean URL sharing.
+
+### Changed
+- **Landing View Detoxification & 5-Block Restructuring (`apps/web`)**:
+  - Re-architected `LandingView.tsx` into 5 clean, high-impact blocks:
+    1. Hero with Sovereign Unified Search & Iconic Presets (Chamberí, Eixample, Ruzafa).
+    2. Civic Pain Points Section with Before/After micro-cards & Four Public Data Pillars.
+    3. Browser Extension Showcase & Web-to-Extension Store CTA.
+    4. Radical Civic Commitment & Principles (0% ads, no tracking, open data).
+    5. Interactive GIS Workspace Launcher.
+- **Unified Sovereign Cadastral Search (`apps/web`)**:
+  - Eliminated manual mode tabs in `HeroSection.tsx`, delivering a single input with auto-detection of 14/20-character cadastral references and postal addresses.
+- **Monorepo Version Elevation to v1.0.0**:
+  - Elevated all workspace package versions to `1.0.0` (`@openbarrio/api`, `@openbarrio/web`, `@openbarrio/extension`, `@openbarrio/core`, `@openbarrio/etl`, root `package.json`, and `manifest.json`).
+
+### Removed
+- **Manual Input Mode Tabs**: Removed manual address/refcat tab switching buttons in `HeroSection.tsx` in favor of zero-friction auto-detection.
+- **In-Page Transparency Redundancy**: Relocated `DataTransparencyMatrix` from the landing page flow into its dedicated `/fuentes-oficiales` view.
+
+### Fixed
+- **Dossier Crash on Missing Optional Census Section Code (`apps/web`)**: Added fallback handling for `neighborhood.censusSectionCode || neighborhood.censusTractId` preventing `.slice()` errors during offline or partial mock evaluations.
+- **Acoustic Metric Property Mapping (`apps/web`)**: Resolved property discrepancy between legacy `noiseLden` and `noise.dayEveningNightDecibels` in `AuditDossier.tsx`.
+- **Strict Linting Hygiene (`apps/web`)**: Removed unused imports across landing, transparency, and test modules ensuring zero warnings with `eslint . --max-warnings=0`.
+
 ## [0.12.4] - 2026-11-12
 
 ### Security & Hardening (Pentesting Audit Hotfix)

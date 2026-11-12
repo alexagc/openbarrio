@@ -33,6 +33,7 @@ import {
   BarChart3,
   Coins,
   ShieldCheck,
+  AlertTriangle,
 } from 'lucide-react';
 
 interface AuditDossierProps {
@@ -240,7 +241,7 @@ export function AuditDossier({
   };
 
   const typologyBadge = getTypologyBadge(typology, property.building.constructionYear, property.building.primaryUse);
-  const districtLabel = `${property.address.municipality} · Sección ${neighborhood.censusSectionCode.slice(-3)}`;
+  const districtLabel = `${property.address.municipality} · Sección ${neighborhood.censusSectionCode ? neighborhood.censusSectionCode.slice(-3) : '—'}`;
 
   return (
     <div className="dossier-container w-full h-full bg-surface overflow-y-auto flex flex-col divide-y divide-outline-variant text-on-surface">
@@ -484,36 +485,89 @@ export function AuditDossier({
         <div
           role="tabpanel"
           data-testid="tab-summary"
-          className={currentTab === 'summary' ? 'space-y-4' : 'hidden'}
+          className={currentTab === 'summary' ? 'space-y-4 pt-2' : 'hidden'}
         >
-          <div className="page-break-inside-avoid">
-            <ScoreGauge
-              score={score}
-              cityOrProvince={property.address.province}
-              percentile={neighborhood.percentileInMunicipality}
-              typology={typology}
-            />
-          </div>
+          {/* Critical Alert Banner (Banderas Rojas - Inundación, Discrepancia Catastral, CEE) */}
+          {(() => {
+            const hasDiscrepancyAlert = Boolean(
+              score.keyRisks.some(
+                (r) =>
+                  r.toLowerCase().includes('discrepancia') ||
+                  r.toLowerCase().includes('superficie') ||
+                  r.toLowerCase().includes('m²')
+              )
+            );
+            const hasFloodAlert =
+              environment.floodRisk.level !== 'NONE' &&
+              (environment.floodRisk.level === 'HIGH' ||
+                environment.floodRisk.level === 'MEDIUM' ||
+                (environment.floodRisk.returnPeriodYears !== null &&
+                  environment.floodRisk.returnPeriodYears <= 500));
+            const hasExpiredCee = Boolean(energy?.isExpired);
 
-          <div className="px-space-lg">
-            <div className="p-3 rounded-lg bg-surface-container-low border border-outline-variant flex items-center justify-between text-xs">
-              <span className="text-on-surface-variant flex items-center gap-1.5">
-                <ShieldCheck className="w-4 h-4 text-primary" />
-                <span>Régimen Urbanístico del Suelo:</span>
-              </span>
-              <span className="font-mono text-primary font-bold">
-                {getLandClassificationLabel(urbanPlanning?.landClassification, typology)}
-              </span>
+            const criticalAlerts: string[] = [];
+            if (hasDiscrepancyAlert) {
+              criticalAlerts.push('Discrepancia de superficie privativa >15% respecto a registros oficiales');
+            }
+            if (hasFloodAlert) {
+              criticalAlerts.push(`Afección por lámina de inundabilidad fluvial SNCZI (${environment.floodRisk.level})`);
+            }
+            if (hasExpiredCee) {
+              criticalAlerts.push('Certificado Energético (CEE) caducado según RD 390/2021');
+            }
+            if (criticalAlerts.length === 0) return null;
+
+            return (
+              <div
+                data-testid="dossier-critical-alert-banner"
+                className="mx-space-lg p-3 rounded-xl bg-rose-950/60 border border-rose-500/60 text-xs text-rose-200 flex items-start gap-2.5 animate-in fade-in"
+              >
+                <AlertTriangle className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
+                <div className="min-w-0">
+                  <span className="font-bold font-mono uppercase text-[10px] tracking-wide text-rose-300 block">
+                    Alerta Máxima Detectada · Atención Crítica Requerida
+                  </span>
+                  <ul className="list-disc list-inside mt-1 space-y-0.5 text-[11px] text-rose-200 font-mono">
+                    {criticalAlerts.map((alert, i) => (
+                      <li key={i}>{alert}</li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+            );
+          })()}
+
+          {/* Technical Audit & Pillar Overview */}
+          <div className="space-y-4 animate-in fade-in duration-200">
+            <div className="page-break-inside-avoid">
+              <ScoreGauge
+                score={score}
+                cityOrProvince={property.address.province}
+                percentile={neighborhood.percentileInMunicipality}
+                typology={typology}
+              />
             </div>
-          </div>
 
-          <div className="page-break-inside-avoid">
-            <HighlightsAndRisks
-              highlights={score.keyHighlights}
-              risks={score.keyRisks}
-              refcat={property.cadastralReference}
-              municipality={property.address.municipality}
-            />
+            <div className="px-space-lg">
+              <div className="p-3 rounded-lg bg-surface-container-low border border-outline-variant flex items-center justify-between text-xs">
+                <span className="text-on-surface-variant flex items-center gap-1.5">
+                  <ShieldCheck className="w-4 h-4 text-primary" />
+                  <span>Régimen Urbanístico del Suelo:</span>
+                </span>
+                <span className="font-mono text-primary font-bold">
+                  {getLandClassificationLabel(urbanPlanning?.landClassification, typology)}
+                </span>
+              </div>
+            </div>
+
+            <div className="page-break-inside-avoid">
+              <HighlightsAndRisks
+                highlights={score.keyHighlights}
+                risks={score.keyRisks}
+                refcat={property.cadastralReference}
+                municipality={property.address.municipality}
+              />
+            </div>
           </div>
         </div>
 
