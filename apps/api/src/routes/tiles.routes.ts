@@ -4,17 +4,12 @@ import { Readable } from 'node:stream';
 import { Hono } from 'hono';
 import type { CloudflareEnv } from '../types/env.js';
 
-export const ALLOWED_TILE_FILES = new Set([
-  'census_tracts.pmtiles',
-  'floods.pmtiles',
-  'noise.pmtiles',
-  'census_tracts_simplified.geojson',
-  'census_tracts.geojson',
-]);
+export const ALLOWED_TILE_EXTENSIONS = new Set(['.pmtiles', '.geojson', '.json']);
 
 function findLocalTileFile(filename: string): string | null {
   const safeFilename = path.basename(filename);
-  if (!ALLOWED_TILE_FILES.has(safeFilename)) {
+  const ext = path.extname(safeFilename).toLowerCase();
+  if (filename !== safeFilename || !ALLOWED_TILE_EXTENSIONS.has(ext)) {
     return null;
   }
 
@@ -219,9 +214,10 @@ export function createTilesRoutes(): Hono<{ Bindings: CloudflareEnv }> {
   router.get('/:filename', async (c) => {
     const rawFilename = c.req.param('filename') || '';
     const safeFilename = path.basename(rawFilename);
+    const ext = path.extname(safeFilename).toLowerCase();
 
-    // Strict path traversal mitigation and whitelist enforcement (OWASP CWE-22)
-    if (rawFilename !== safeFilename || !ALLOWED_TILE_FILES.has(safeFilename)) {
+    // Strict path traversal mitigation and extension whitelist enforcement (OWASP CWE-22)
+    if (rawFilename !== safeFilename || rawFilename.includes('..') || !ALLOWED_TILE_EXTENSIONS.has(ext)) {
       return c.json(
         {
           type: 'https://openbarrio.org/errors/invalid-tile-resource',
