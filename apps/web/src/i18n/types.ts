@@ -202,6 +202,7 @@ export interface TranslationSchema {
     stat2Label: string;
     stat3Val: string;
     stat3Label: string;
+    sourcesCatalog: string;
   };
   mapCta: {
     tag: string;
@@ -295,6 +296,7 @@ export interface TranslationSchema {
     spatialCoord: string;
     updateFrequency: string;
     linkCatastro: string;
+    linkSourcesMatrix: string;
     linkIne: string;
     linkSica: string;
     linkSnczi: string;
