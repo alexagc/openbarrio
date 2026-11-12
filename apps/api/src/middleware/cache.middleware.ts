@@ -3,6 +3,7 @@ import type { Context, MiddlewareHandler } from 'hono';
 export interface EdgeCacheOptions {
   ttlSeconds?: number;
   enabled?: boolean;
+  allowClientBypass?: boolean;
 }
 
 interface MemoryCacheItem {
@@ -42,9 +43,10 @@ export function edgeCacheMiddleware(options: EdgeCacheOptions = {}): MiddlewareH
       return next();
     }
 
-    // Bypass if client explicitly requests bypass
+    // Bypass only if explicitly permitted by configuration or test harness (OWASP CWE-400 DoS mitigation)
+    const allowClientBypass = options.allowClientBypass ?? false;
     const clientCacheControl = c.req.header('cache-control');
-    if (clientCacheControl?.includes('no-cache') || clientCacheControl?.includes('no-store')) {
+    if (allowClientBypass && (clientCacheControl?.includes('no-cache') || clientCacheControl?.includes('no-store'))) {
       await next();
       c.header('X-OpenBarrio-Cache', 'BYPASS');
       return;

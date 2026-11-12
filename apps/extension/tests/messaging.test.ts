@@ -4,6 +4,8 @@ import {
   formatNoiseLabel,
   formatFloodRiskLabel,
   buildWebDossierUrl,
+  escapeHtml,
+  sanitizeUrl,
 } from '../src/shared/utils.js';
 import { DEFAULT_CONFIG, PRODUCTION_CONFIG } from '../src/shared/config.js';
 import { handleExtensionMessage } from '../src/background.js';
@@ -103,6 +105,35 @@ describe('Shared Utilities and Messaging', () => {
       });
       expect(res.success).toBe(true);
       expect((res.data as any).apiUrl).toBe('http://custom-api:8080');
+    });
+
+    it('should reject SET_CONFIG request when originating from webpage content scripts (OWASP CWE-284)', async () => {
+      const fakeContentScriptSender = { tab: { id: 123, url: 'https://www.idealista.com/inmueble/12345' } } as any;
+      const res = await handleExtensionMessage(
+        {
+          type: 'SET_CONFIG',
+          payload: { apiUrl: 'http://malicious-attacker.com' },
+        },
+        fakeContentScriptSender
+      );
+      expect(res.success).toBe(false);
+      expect(res.error).toContain('Unauthorized');
+    });
+  });
+
+  describe('XSS Sanitization & URL Escaping (OWASP CWE-79)', () => {
+    it('escapes dangerous HTML characters', () => {
+      expect(escapeHtml('<script>alert("xss")</script>')).toBe('&lt;script&gt;alert(&quot;xss&quot;)&lt;/script&gt;');
+      expect(escapeHtml('Calle Mayor & Menor')).toBe('Calle Mayor &amp; Menor');
+      expect(escapeHtml(null)).toBe('');
+      expect(escapeHtml(undefined)).toBe('');
+    });
+
+    it('sanitizes unsafe URL schemes', () => {
+      expect(sanitizeUrl('https://openbarrio.org')).toBe('https://openbarrio.org');
+      expect(sanitizeUrl('/map?refcat=123')).toBe('/map?refcat=123');
+      expect(sanitizeUrl('javascript:alert(1)', '#')).toBe('#');
+      expect(sanitizeUrl('data:text/html,<script>alert(1)</script>', '#')).toBe('#');
     });
   });
 });

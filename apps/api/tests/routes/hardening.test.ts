@@ -98,10 +98,11 @@ describe('Phase 6: Cloudflare Edge Hardening & Deployment Tests', () => {
       expect(res2.headers.get('x-openbarrio-cache')).toBe('HIT');
     });
 
-    it('respects client Cache-Control: no-cache and bypasses cache', async () => {
+    it('respects client Cache-Control: no-cache when allowClientBypass is enabled', async () => {
       const app = buildApp({
         providers: createProviders({ useMocks: true }),
         rateLimit: { enabled: false },
+        cache: { allowClientBypass: true },
       });
 
       const endpoint = '/api/v1/audit/refcat/9872023VH5797S0001WX';
@@ -112,6 +113,29 @@ describe('Phase 6: Cloudflare Edge Hardening & Deployment Tests', () => {
 
       expect(res.status).toBe(200);
       expect(res.headers.get('x-openbarrio-cache')).toBe('BYPASS');
+    });
+
+    it('enforces edge caching and ignores client bypass attempts by default to mitigate DoS (OWASP CWE-400)', async () => {
+      const app = buildApp({
+        providers: createProviders({ useMocks: true }),
+        rateLimit: { enabled: false },
+        cache: { allowClientBypass: false },
+      });
+
+      const endpoint = '/api/v1/audit/refcat/9872023VH5797S0001WX';
+
+      // 1. First request fills cache
+      const res1 = await app.request(endpoint);
+      expect(res1.status).toBe(200);
+      expect(res1.headers.get('x-openbarrio-cache')).toBe('MISS');
+
+      // 2. Client sends no-cache but cache remains protected (serves HIT)
+      const res2 = await app.request(endpoint, {
+        headers: { 'Cache-Control': 'no-cache' },
+      });
+
+      expect(res2.status).toBe(200);
+      expect(res2.headers.get('x-openbarrio-cache')).toBe('HIT');
     });
   });
 
@@ -302,6 +326,24 @@ describe('Phase 6: Cloudflare Edge Hardening & Deployment Tests', () => {
       expect(res.headers.get('content-length')).toBe('101');
       expect(res.headers.get('content-type')).toBe('application/vnd.pmtiles');
       expect(res.headers.get('accept-ranges')).toBe('bytes');
+    });
+
+    it('blocks path traversal and unauthorized tile names (OWASP CWE-22)', async () => {
+      const app = new Hono<{ Bindings: { TILES_BUCKET: R2Bucket } }>();
+      const { createTilesRoutes } = await import('../../src/routes/tiles.routes.js');
+      app.route('/api/v1/tiles', createTilesRoutes() as any);
+
+      // Traversal attempt
+      const resTraversal = await app.request('/api/v1/tiles/..%2f..%2fetc%2fpasswd');
+      expect(resTraversal.status).toBe(400);
+      const jsonTraversal = await resTraversal.json();
+      expect(jsonTraversal.title).toBe('Invalid Tile Resource');
+
+      // Unauthorized file extension / filename attempt
+      const resUnauthorized = await app.request('/api/v1/tiles/openbarrio.sqlite');
+      expect(resUnauthorized.status).toBe(400);
+      const jsonUnauthorized = await resUnauthorized.json();
+      expect(jsonUnauthorized.title).toBe('Invalid Tile Resource');
     });
   });
 });

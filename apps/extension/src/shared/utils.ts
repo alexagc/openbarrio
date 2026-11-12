@@ -84,3 +84,29 @@ export function buildWebDossierUrl(
   }
   return base;
 }
+
+/**
+ * Escapes unsafe characters to prevent Cross-Site Scripting (XSS / DOM XSS).
+ */
+export function escapeHtml(str: unknown): string {
+  if (str === null || str === undefined) return '';
+  const s = String(str);
+  return s
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+/**
+ * Validates and sanitizes URLs to prevent javascript: pseudo-protocol execution.
+ */
+export function sanitizeUrl(url: string, fallback: string = '#'): string {
+  if (!url || typeof url !== 'string') return fallback;
+  const trimmed = url.trim();
+  if (/^(?:https?:\/\/|\/|#)/i.test(trimmed)) {
+    return trimmed;
+  }
+  return fallback;
+}

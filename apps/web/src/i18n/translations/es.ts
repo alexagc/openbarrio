@@ -7,7 +7,7 @@ export const es: TranslationSchema = {
     extension: 'Extensión Portales',
     principles: 'Metodología Cívica',
     github: 'GitHub',
-    version: 'v0.12.3',
+    version: 'v0.12.4',
     openMap: 'Ver Mapa Interactivo',
   },
   hero: {

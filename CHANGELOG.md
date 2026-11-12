@@ -5,6 +5,27 @@ All notable changes to the **OpenBarrio** platform are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.12.4] - 2026-11-12
+
+### Security & Hardening (Pentesting Audit Hotfix)
+- **Arbitrary Local File Read / Path Traversal Mitigation (CWE-22 / OWASP API8:2023 - `apps/api`)**:
+  - Implemented immutable `ALLOWED_TILE_FILES` whitelist in `apps/api/src/routes/tiles.routes.ts` restricting tile downloads to legitimate vector assets (`census_tracts.pmtiles`, `floods.pmtiles`, `noise.pmtiles`, `census_tracts_simplified.geojson`, `census_tracts.geojson`).
+  - Added strict path validation using `path.basename` preventing directory traversal sequences (`../../`) in local filesystem fallback handlers.
+  - Returned standardized RFC 7807 Problem Details (`400 Bad Request`) for any unauthorized or malformed resource request.
+- **Client Cache Bypass Elimination & DoS Mitigation (CWE-400 / OWASP API4:2023 - `apps/api`)**:
+  - Disabled unauthorized client-driven cache bypass (`Cache-Control: no-cache`) in `apps/api/src/middleware/cache.middleware.ts` by default, protecting upstream Spanish public services (Catastro, MITECO, INE) from request flooding.
+  - Added configurable `allowClientBypass` option strictly scoped for internal automated testing.
+- **DOM Cross-Site Scripting (XSS) Sanitization (CWE-79 / OWASP A03:2021 - `apps/extension`)**:
+  - Implemented universal `escapeHtml` utility encoding HTML entities (`&`, `<`, `>`, `"`, `'`) and `sanitizeUrl` validating protocol schemes in `apps/extension/src/shared/utils.ts`.
+  - Escaped all dynamically extracted facility names, addresses, municipal strings, and error messages before injecting into Shadow DOM in `apps/extension/src/content/ui/templates.ts`.
+- **Extension Message Passing Origin Verification (CWE-284 / OWASP A01:2021 - `apps/extension`)**:
+  - Validated `sender.tab` in `apps/extension/src/background.ts` to strictly prohibit webpage content scripts from altering the extension's target API configuration (`SET_CONFIG`).
+- **CI/CD Supply Chain Hardening (CWE-829 / OWASP A08:2021 - `.github/workflows`)**:
+  - Enforced strict `--frozen-lockfile` in `.github/workflows/deploy.yml` preventing dependency drift during Cloudflare production releases.
+  - Masked Cloudflare token ID logging and added fallback warnings in `.github/workflows/data-pipeline.yml`.
+- **Tooling Harmonization**:
+  - Aligned `wrangler` in `apps/api/package.json` to monorepo root version `^3.114.17`.
+
 ## [0.12.3] - 2026-11-12
 
 ### Fixed

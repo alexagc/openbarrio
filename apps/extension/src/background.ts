@@ -148,7 +148,8 @@ async function checkApiHealth(apiUrl: string): Promise<ExtensionResponse<{ healt
 }
 
 export async function handleExtensionMessage(
-  request: ExtensionRequest
+  request: ExtensionRequest,
+  sender?: chrome.runtime.MessageSender
 ): Promise<ExtensionResponse> {
   const config: ExtensionConfig = await getStoredConfig();
 
@@ -170,6 +171,13 @@ export async function handleExtensionMessage(
       return { success: true, data: config };
 
     case 'SET_CONFIG': {
+      // Prevent untrusted content scripts from altering extension API configuration (OWASP CWE-284)
+      if (sender && sender.tab) {
+        return {
+          success: false,
+          error: 'Unauthorized: SET_CONFIG is only permitted from the extension popup/options context',
+        };
+      }
       const updated = await setStoredConfig(request.payload);
       return { success: true, data: updated };
     }
@@ -184,10 +192,10 @@ export async function handleExtensionMessage(
 
 // Register Chrome message listener
 if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.onMessage) {
-  chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
+  chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     (async () => {
       try {
-        const response = await handleExtensionMessage(message as ExtensionRequest);
+        const response = await handleExtensionMessage(message as ExtensionRequest, sender);
         sendResponse(response);
       } catch (err: unknown) {
         const errorMsg = err instanceof Error ? err.message : 'Internal background error';

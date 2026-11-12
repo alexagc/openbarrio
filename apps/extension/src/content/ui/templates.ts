@@ -4,6 +4,8 @@ import {
   formatNoiseLabel,
   formatFloodRiskLabel,
   buildWebDossierUrl,
+  escapeHtml,
+  sanitizeUrl,
 } from '../../shared/utils.js';
 
 export function renderLoadingSkeleton(portalName: string): string {
@@ -30,7 +32,7 @@ export function renderLoadingSkeleton(portalName: string): string {
         </div>
         <div class="ob-skeleton-shimmer" style="height: 34px; margin-top: 10px;"></div>
         <p style="font-size: 11px; color: #64748b; margin: 10px 0 0 0; text-align: center;">
-          Extrayendo datos oficiales de Catastro, INE y MITECO para ${portalName}...
+          Extrayendo datos oficiales de Catastro, INE y MITECO para ${escapeHtml(portalName)}...
         </p>
       </div>
     </div>
@@ -136,10 +138,12 @@ export function renderAuditCard(
   const building = property.building;
   const environment = report.environment;
   const rental = report.rentalBenchmark;
-  const dossierUrl = buildWebDossierUrl(
-    webUrl,
-    property.cadastralReference,
-    property.coordinates
+  const dossierUrl = sanitizeUrl(
+    buildWebDossierUrl(
+      webUrl,
+      property.cadastralReference,
+      property.coordinates
+    )
   );
 
   const noiseText = formatNoiseLabel(
@@ -165,7 +169,9 @@ export function renderAuditCard(
   let unitPillHtml = '';
   if (unitsCount && unitsCount > 1 && typology === 'RESIDENTIAL') {
     const cleanWebUrl = webUrl.replace(/\/+$/, '');
-    const unitsDossierUrl = `${cleanWebUrl}/map?refcat=${encodeURIComponent(property.cadastralReference)}&tab=dossier`;
+    const unitsDossierUrl = sanitizeUrl(
+      `${cleanWebUrl}/map?refcat=${encodeURIComponent(property.cadastralReference)}&tab=dossier`
+    );
     unitPillHtml = `
       <a href="${unitsDossierUrl}" target="_blank" rel="noopener noreferrer" class="ob-unit-pill-link">
         <div class="ob-unit-pill">🏢 Edificio (${unitsCount} inmuebles) · Ver unidades</div>
@@ -193,13 +199,13 @@ export function renderAuditCard(
   const conn = report.connectivity;
   const walkScore = conn?.walkScore15Min ?? (score >= 80 ? 92 : score >= 60 ? 82 : 68);
   const capLabel = conn?.nearestHealthcare
-    ? `🏥 ${conn.nearestHealthcare.name.replace(/^(Centro de Salud|CAP)\s*/i, 'CAP ')} (${Math.round(conn.nearestHealthcare.walkTimeMinutes)}m)`
+    ? `🏥 ${escapeHtml(conn.nearestHealthcare.name.replace(/^(Centro de Salud|CAP)\s*/i, 'CAP '))} (${Math.round(conn.nearestHealthcare.walkTimeMinutes)}m)`
     : '🏥 CAP (~4m)';
   const transitLabel = conn?.nearestTransit
-    ? `🚇 ${conn.nearestTransit.name.replace(/^(Estación\s*(de\s*)?|Metro\s*)/i, '')} (${Math.round(conn.nearestTransit.walkTimeMinutes)}m)`
+    ? `🚇 ${escapeHtml(conn.nearestTransit.name.replace(/^(Estación\s*(de\s*)?|Metro\s*)/i, ''))} (${Math.round(conn.nearestTransit.walkTimeMinutes)}m)`
     : '🚇 Metro/Bus (~2m)';
   const parkLabel = conn?.nearestPark
-    ? `🌳 ${conn.nearestPark.name.replace(/^(Parque\s*(de\s*)?|Jardines\s*(de\s*)?)/i, '')} (${Math.round(conn.nearestPark.walkTimeMinutes)}m)`
+    ? `🌳 ${escapeHtml(conn.nearestPark.name.replace(/^(Parque\s*(de\s*)?|Jardines\s*(de\s*)?)/i, ''))} (${Math.round(conn.nearestPark.walkTimeMinutes)}m)`
     : '🌳 Parque (~5m)';
 
   let ceeChipHtml = '';
@@ -335,7 +341,7 @@ export function renderAuditCard(
           <div class="ob-score-info">
             <h4 class="ob-score-title" style="color: ${style.textColor};">Barrio Score · ${style.badgeLabel}</h4>
             <p class="ob-score-desc" style="color: ${style.textColor};">
-              ${report.property.address.municipality} · Percentil de renta top ${Math.max(1, 100 - Math.round(report.neighborhood.percentileInMunicipality))}%
+              ${escapeHtml(report.property.address.municipality)} · Percentil de renta top ${Math.max(1, 100 - Math.round(report.neighborhood.percentileInMunicipality))}%
             </p>
           </div>
         </div>
@@ -383,7 +389,7 @@ export function renderAuditCard(
         <!-- Reference Catastral Note -->
         <div style="font-size: 11px; color: #64748b; margin-bottom: 12px; display: flex; justify-content: space-between;">
           <span>Ref. Catastral:</span>
-          <strong style="font-family: monospace; color: #dae2fd;">${property.cadastralReference.substring(0, 14)}...</strong>
+          <strong style="font-family: monospace; color: #dae2fd;">${escapeHtml(property.cadastralReference.substring(0, 14))}...</strong>
         </div>
 
         <!-- CTA Button -->
@@ -412,6 +418,7 @@ export function renderCollapsedPill(score: number): string {
 }
 
 export function renderErrorState(errorMessage: string, webUrl: string): string {
+  const safeWebUrl = sanitizeUrl(webUrl);
   return `
     <div class="ob-card" style="width: 280px;">
       <div class="ob-header">
@@ -425,9 +432,9 @@ export function renderErrorState(errorMessage: string, webUrl: string): string {
       </div>
       <div class="ob-body" style="padding: 12px 14px;">
         <p style="font-size: 11px; color: #64748b; margin: 0 0 10px 0; line-height: 1.4;">
-          No se pudieron sincronizar los datos de Catastro automáticamente para este anuncio.
+          ${escapeHtml(errorMessage || 'No se pudieron sincronizar los datos de Catastro automáticamente para este anuncio.')}
         </p>
-        <a href="${webUrl}" target="_blank" rel="noopener noreferrer" class="ob-btn-primary" style="padding: 6px 10px; font-size: 11px;">
+        <a href="${safeWebUrl}" target="_blank" rel="noopener noreferrer" class="ob-btn-primary" style="padding: 6px 10px; font-size: 11px;">
           Buscar manualmente en OpenBarrio Web ↗
         </a>
       </div>

@@ -4,18 +4,31 @@ import { Readable } from 'node:stream';
 import { Hono } from 'hono';
 import type { CloudflareEnv } from '../types/env.js';
 
+export const ALLOWED_TILE_FILES = new Set([
+  'census_tracts.pmtiles',
+  'floods.pmtiles',
+  'noise.pmtiles',
+  'census_tracts_simplified.geojson',
+  'census_tracts.geojson',
+]);
+
 function findLocalTileFile(filename: string): string | null {
+  const safeFilename = path.basename(filename);
+  if (!ALLOWED_TILE_FILES.has(safeFilename)) {
+    return null;
+  }
+
   const candidates = [
-    process.env.TILES_DIR ? path.join(process.env.TILES_DIR, filename) : null,
-    path.resolve(process.cwd(), 'packages/etl/dist/openbarrio-etl-dist', filename),
-    path.resolve(process.cwd(), '../../packages/etl/dist/openbarrio-etl-dist', filename),
-    path.resolve(process.cwd(), 'packages/etl/dist', filename),
-    path.resolve(process.cwd(), '../../packages/etl/dist', filename),
-    path.resolve(process.cwd(), 'data', filename),
-    path.resolve(process.cwd(), '../../data', filename),
-    `/workspace/packages/etl/dist/openbarrio-etl-dist/${filename}`,
-    `/workspace/packages/etl/dist/${filename}`,
-    `/workspace/data/${filename}`,
+    process.env.TILES_DIR ? path.join(process.env.TILES_DIR, safeFilename) : null,
+    path.resolve(process.cwd(), 'packages/etl/dist/openbarrio-etl-dist', safeFilename),
+    path.resolve(process.cwd(), '../../packages/etl/dist/openbarrio-etl-dist', safeFilename),
+    path.resolve(process.cwd(), 'packages/etl/dist', safeFilename),
+    path.resolve(process.cwd(), '../../packages/etl/dist', safeFilename),
+    path.resolve(process.cwd(), 'data', safeFilename),
+    path.resolve(process.cwd(), '../../data', safeFilename),
+    `/workspace/packages/etl/dist/openbarrio-etl-dist/${safeFilename}`,
+    `/workspace/packages/etl/dist/${safeFilename}`,
+    `/workspace/data/${safeFilename}`,
   ].filter(Boolean) as string[];
 
   for (const candidate of candidates) {
@@ -204,7 +217,25 @@ export function createTilesRoutes(): Hono<{ Bindings: CloudflareEnv }> {
   // GET /tiles/:filename (e.g. census_tracts.pmtiles, floods.pmtiles, noise.pmtiles)
   // Supports RFC 7233 HTTP Range 206 Partial Content for PMTiles byte-range streaming
   router.get('/:filename', async (c) => {
-    const filename = c.req.param('filename');
+    const rawFilename = c.req.param('filename') || '';
+    const safeFilename = path.basename(rawFilename);
+
+    // Strict path traversal mitigation and whitelist enforcement (OWASP CWE-22)
+    if (rawFilename !== safeFilename || !ALLOWED_TILE_FILES.has(safeFilename)) {
+      return c.json(
+        {
+          type: 'https://openbarrio.org/errors/invalid-tile-resource',
+          title: 'Invalid Tile Resource',
+          status: 400,
+          detail: `The requested tile resource '${rawFilename}' is invalid or unauthorized`,
+          instance: c.req.path,
+        },
+        400,
+        { 'content-type': 'application/problem+json' }
+      );
+    }
+
+    const filename = safeFilename;
 
     const rangeHeader = c.req.header('range');
     let rangeOption: { offset?: number; length?: number; suffix?: number } | undefined;

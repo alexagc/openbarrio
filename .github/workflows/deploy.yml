@@ -28,8 +28,8 @@ jobs:
         with:
           node-version: 22
 
-      - name: Install dependencies
-        run: pnpm install --no-frozen-lockfile
+      - name: Install dependencies (Strict supply-chain lockfile audit)
+        run: pnpm install --frozen-lockfile
 
       - name: Build monorepo packages
         run: pnpm run build

@@ -417,16 +417,15 @@ jobs:
             export AWS_SECRET_ACCESS_KEY="$CUSTOM_R2_SECRET"
             echo "Using explicitly configured R2 S3 secrets."
           else
-            echo "Deriving R2 S3 credentials from CLOUDFLARE_API_TOKEN..."
+            echo "Deriving R2 S3 credentials from verified Cloudflare session..."
             TOKEN_VERIFY=$(curl -s -H "Authorization: Bearer $CF_TOKEN" https://api.cloudflare.com/client/v4/user/tokens/verify)
             TOKEN_ID=$(echo "$TOKEN_VERIFY" | jq -r '.result.id // empty')
             if [ -n "$TOKEN_ID" ]; then
               export AWS_ACCESS_KEY_ID="$TOKEN_ID"
               export AWS_SECRET_ACCESS_KEY=$(printf "%s" "$CF_TOKEN" | sha256sum | cut -d' ' -f1)
-              echo "✓ Derived S3 Access Key ID: ${TOKEN_ID:0:8}..."
+              echo "✓ Configured S3 Access Key ID (masked): ${TOKEN_ID:0:6}***"
             else
-              echo "Failed to verify Cloudflare API token or get token ID:"
-              echo "$TOKEN_VERIFY"
+              echo "::warning title=R2 S3 Configuration Needed::Could not verify Cloudflare token for automatic S3 multipart upload. Please configure R2_ACCESS_KEY_ID and R2_SECRET_ACCESS_KEY secrets."
             fi
           fi
 
