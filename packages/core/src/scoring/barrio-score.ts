@@ -6,6 +6,7 @@ import { UrbanPlanningData } from '../types/urban-planning.js';
 import { EnergyPerformanceCertificate } from '../types/energy.js';
 import { VutEvaluationDTO } from '../types/vut.js';
 import { AuditScoreBreakdown, RentalBenchmark } from '../types/audit.js';
+import { detectSubstandardHousingAlert } from '../types/substandard-housing.js';
 
 export interface ScoringWeights {
   connectivity: number;
@@ -120,6 +121,16 @@ export function calculateBarrioScore(
   const highlights: string[] = [];
   const risks: string[] = [];
 
+  // Phase 22 Heuristic: Substandard commercial-to-residential housing / Infravivienda risk
+  const substandardHousing = detectSubstandardHousingAlert(property);
+  if (substandardHousing.severity === 'HIGH') {
+    risks.unshift(
+      `CRITICAL ALERT: Potential substandard commercial-to-residential housing fraud (Infravivienda). Cadastral use is '${substandardHousing.detectedUse}' (Floor: ${substandardHousing.floor ?? 'Ground/Basement'}). Premises lack residential habitability status.`,
+      `Urban planning infraction risk: Municipal sanction and cessation order for unauthorized commercial-to-residential conversion without cédula de habitabilidad.`,
+      `Census registration risk: Inability to register in the municipal padrón due to non-residential cadastral classification.`
+    );
+  }
+
   // 1. Socioeconomic Dimension (0 - 100)
   // Evaluates census section income percentile and absolute net household revenue
   const percentile = neighborhood.percentileInMunicipality;
@@ -197,6 +208,12 @@ export function calculateBarrioScore(
         `Official Energy Performance Certificate expired on ${energy.validUntil || 'statutory term'}: mandatory renewal under RD 390/2021 before property sale or lease`
       );
     }
+  }
+
+  // Substandard housing / infravivienda penalty on building health (up to 25 points)
+  if (substandardHousing.severity === 'HIGH') {
+    const penalty = substandardHousing.penaltyApplied ?? 25;
+    buildingScore = Math.max(10, buildingScore - penalty);
   }
 
   const buildingHealthScore = Math.min(100, Math.max(0, buildingScore));
@@ -414,6 +431,12 @@ export function calculateBarrioScore(
     }
   }
 
+  // Substandard housing / infravivienda penalty on urban planning (up to 25 points)
+  if (substandardHousing.severity === 'HIGH') {
+    const penalty = substandardHousing.penaltyApplied ?? 25;
+    urbanScore = Math.max(10, urbanScore - penalty);
+  }
+
   const urbanPlanningScore = Math.min(100, Math.max(0, urbanScore));
 
   // 6. Rental Benchmark (SERPAVI / Ley 12/2023)
@@ -465,5 +488,8 @@ export function calculateBarrioScore(
     climateSafetyScore,
     keyHighlights: highlights,
     keyRisks: risks,
+    substandardHousing,
   };
 }
+
+export const computeBarrioScore = calculateBarrioScore;

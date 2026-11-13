@@ -199,6 +199,44 @@ export const WIDGET_STYLES = `
   color: #68dba9;
 }
 
+/* Substandard Commercial Housing Alert (Presunto local comercial / Infravivienda) */
+.ob-substandard-alert {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 12px;
+  background: rgba(225, 29, 72, 0.15);
+  border: 1px solid rgba(244, 63, 94, 0.45);
+  border-radius: 10px;
+  margin-bottom: 12px;
+}
+
+.ob-substandard-icon {
+  color: #fb7185;
+  font-size: 16px;
+  line-height: 1;
+  margin-top: 1px;
+}
+
+.ob-substandard-content {
+  flex: 1;
+}
+
+.ob-substandard-title {
+  font-size: 11px;
+  font-weight: 700;
+  color: #fb7185;
+  margin: 0 0 2px 0;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+}
+
+.ob-substandard-detail {
+  font-size: 11px;
+  color: #fecdd3;
+  margin: 0;
+  line-height: 1.3;
+}
+
 /* Stressed Housing Alert */
 .ob-stressed-alert {
   display: flex;

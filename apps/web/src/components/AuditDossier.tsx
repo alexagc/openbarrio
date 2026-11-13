@@ -20,6 +20,7 @@ import { downloadCadastralGML } from '../utils/gml';
 import { DossierTab } from '../hooks/useUrlSync';
 import { useWorkspaceStore } from '../store/workspace.store';
 import { useTranslation } from '../i18n';
+import { isSubstandardHousing } from '../utils/substandard';
 import {
   Printer,
   Copy,
@@ -35,6 +36,7 @@ import {
   Coins,
   ShieldCheck,
   AlertTriangle,
+  AlertOctagon,
 } from 'lucide-react';
 
 interface AuditDossierProps {
@@ -500,7 +502,7 @@ export function AuditDossier({
           data-testid="tab-summary"
           className={currentTab === 'summary' ? 'space-y-4 pt-2' : 'hidden'}
         >
-          {/* Critical Alert Banner (Banderas Rojas - Inundación, Discrepancia Catastral, CEE) */}
+          {/* Critical Alert Banner (Banderas Rojas - Inundación, Discrepancia Catastral, CEE, Infravivienda) */}
           {(() => {
             const hasDiscrepancyAlert = Boolean(
               score.keyRisks.some(
@@ -517,8 +519,12 @@ export function AuditDossier({
                 (environment.floodRisk.returnPeriodYears !== null &&
                   environment.floodRisk.returnPeriodYears <= 500));
             const hasExpiredCee = Boolean(energy?.isExpired);
+            const hasSubstandard = isSubstandardHousing(report);
 
             const criticalAlerts: string[] = [];
+            if (hasSubstandard) {
+              criticalAlerts.push(t('dossier.substandardHousingAlert'));
+            }
             if (hasDiscrepancyAlert) {
               criticalAlerts.push(t('dossier.discrepancyAlert'));
             }
@@ -549,6 +555,35 @@ export function AuditDossier({
               </div>
             );
           })()}
+
+          {/* Prominent Red Warning Banner for Substandard Housing / Presunto Local */}
+          {isSubstandardHousing(report) && (
+            <div
+              data-testid="substandard-housing-warning"
+              className="mx-space-lg p-4 rounded-xl bg-rose-950/90 border-2 border-rose-500 text-rose-100 shadow-xl flex items-start gap-3.5 animate-in fade-in zoom-in-95"
+            >
+              <div className="p-2 rounded-lg bg-rose-900/80 border border-rose-400 text-rose-300 shrink-0">
+                <AlertOctagon className="w-5 h-5" />
+              </div>
+              <div className="space-y-1">
+                <div className="flex items-center gap-2">
+                  <span className="font-headline font-bold text-sm text-rose-200 uppercase tracking-wide">
+                    {t('dossier.substandardHousingTitle')}
+                  </span>
+                  <span className="px-2 py-0.5 rounded bg-rose-900 border border-rose-400 text-[10px] font-mono text-rose-200 uppercase font-semibold">
+                    Alerta Crítica
+                  </span>
+                </div>
+                <p className="text-xs font-body text-rose-200/90 leading-relaxed">
+                  {t('dossier.substandardHousingDesc')}
+                </p>
+                <div className="text-[11px] font-mono text-rose-300 pt-1 flex items-center gap-1.5">
+                  <AlertTriangle className="w-3.5 h-3.5 text-rose-400 shrink-0" />
+                  <span>{t('dossier.substandardCheckAdvice')}</span>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Technical Audit & Pillar Overview */}
           <div className="space-y-4 animate-in fade-in duration-200">

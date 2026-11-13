@@ -1,4 +1,17 @@
-export type PortalType = 'idealista' | 'fotocasa';
+export type PortalType =
+  | 'idealista'
+  | 'fotocasa'
+  | 'habitaclia'
+  | 'pisos'
+  | 'yaencontre';
+
+export const PORTAL_NAMES: Record<PortalType, string> = {
+  idealista: 'Idealista',
+  fotocasa: 'Fotocasa',
+  habitaclia: 'Habitaclia',
+  pisos: 'Pisos.com',
+  yaencontre: 'YaEncontre',
+};
 
 export interface ExtractedCoordinates {
   latitude: number;
@@ -21,8 +34,23 @@ export interface ExtractedPropertyData {
   isRental?: boolean;
 }
 
+export interface ExtractionValidationResult {
+  isValid: boolean;
+  missingFields: string[];
+  errorMessages: string[];
+  diagnostics?: {
+    hasTitle: boolean;
+    hasPrice: boolean;
+    hasSurface: boolean;
+    hasCoordinates: boolean;
+    hasCadastralReference: boolean;
+    hasAddress: boolean;
+  };
+}
+
 export interface PropertyExtractor {
   readonly portal: PortalType;
   canExtract(url: string): boolean;
   extract(document: Document, url: string): ExtractedPropertyData | null;
+  getMountTarget?(document: Document): Element | null;
 }

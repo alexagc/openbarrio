@@ -2,6 +2,9 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { PropertyDuelModal } from '../src/components/comparator/PropertyDuelModal';
 import { BuildingCapExCard, deriveBuildingCapEx } from '../src/components/dossier/BuildingCapExCard';
+import { ExecutiveSummaryCard } from '../src/components/dossier/ExecutiveSummaryCard';
+import { AuditDossier } from '../src/components/AuditDossier';
+import { HighlightsAndRisks } from '../src/components/HighlightsAndRisks';
 import { generateDeterministicAudit } from './mocks/offline-simulator';
 import { PropertyAuditReport } from '@openbarrio/core';
 
@@ -239,5 +242,222 @@ describe('Property Duel & Dual Radar Comparator (Phase 12C)', () => {
     expect(oldBuilding.iteStatus).toBe('mandatory_in_progress');
     expect(oldBuilding.estimatedReserveFundDeficitPct).toBeGreaterThan(30);
     expect(oldBuilding.renovationPriorities.length).toBeGreaterThan(0);
+  });
+
+  /* -------------------------------------------------------------------------- */
+  /* PHASE 22: MULTI-PROPERTY MATRIX 2.0 & INFRAVIVIENDA WARNING               */
+  /* -------------------------------------------------------------------------- */
+
+  it('renders multi-property comparison matrix for up to 4 properties with URL persistence', async () => {
+    const reportC = generateDeterministicAudit(41.3917, 2.16495, {
+      cadastralReference: '0227802DF3802E0001JK',
+      address: {
+        street: 'Passeig de Gràcia',
+        number: '43',
+        postalCode: '08007',
+        municipality: 'Barcelona',
+        province: 'Barcelona',
+      },
+      building: {
+        constructionYear: 1905,
+        builtSurfaceM2: 140,
+        primaryUse: 'Residencial',
+        unitsCount: 16,
+        hasCommercialGroundFloor: true,
+      },
+    });
+
+    const reportD = generateDeterministicAudit(39.46845, -0.37318, {
+      cadastralReference: '6023512YJ2762C0001LK',
+      address: {
+        street: 'Carrer de Colón',
+        number: '15',
+        postalCode: '46004',
+        municipality: 'València',
+        province: 'València',
+      },
+      building: {
+        constructionYear: 1982,
+        builtSurfaceM2: 105,
+        primaryUse: 'Residencial',
+        unitsCount: 20,
+        hasCommercialGroundFloor: false,
+      },
+    });
+
+    const pushStateSpy = vi.spyOn(window.history, 'pushState');
+
+    render(
+      <PropertyDuelModal
+        reportA={reportA}
+        reportB={reportB}
+        initialCompareRefs={[
+          reportA.property.cadastralReference,
+          reportB.property.cadastralReference,
+          reportC.property.cadastralReference,
+          reportD.property.cadastralReference,
+        ]}
+        isOpen={true}
+        onClose={vi.fn()}
+      />
+    );
+
+    // Verify 4 Bento cards are rendered
+    expect(screen.getByTestId('candidate-card-a')).toBeDefined();
+    expect(screen.getByTestId('candidate-card-b')).toBeDefined();
+
+    // Verify URL was synced with ?compare= containing cadastral references
+    expect(pushStateSpy).toHaveBeenCalled();
+    const lastCall = pushStateSpy.mock.calls[pushStateSpy.mock.calls.length - 1];
+    expect(lastCall[2]).toContain('compare=');
+    expect(lastCall[2]).toContain(reportA.property.cadastralReference);
+  });
+
+  it('allows removing a candidate from the matrix and updates the UI', async () => {
+    render(
+      <PropertyDuelModal
+        reportA={reportA}
+        reportB={reportB}
+        isOpen={true}
+        onClose={vi.fn()}
+      />
+    );
+
+    // Initially has Card A and Card B
+    expect(screen.getByTestId('candidate-card-a')).toBeDefined();
+    expect(screen.getByTestId('candidate-card-b')).toBeDefined();
+
+    // Remove Candidate B using remove button
+    const removeBtn = screen.getByTestId('remove-candidate-b');
+    fireEvent.click(removeBtn);
+
+    // Candidate B card should be removed, leaving Card A and Add candidate slot
+    expect(screen.queryByTestId('candidate-card-b')).toBeNull();
+    expect(screen.getByTestId('add-candidate-slot')).toBeDefined();
+  });
+
+  it('initializes comparison modal from URL ?compare=ref1,ref2', async () => {
+    window.history.replaceState(
+      {},
+      '',
+      '/map?compare=28900A010000420003DW,9872023VH5797S0012AZ'
+    );
+
+    render(
+      <PropertyDuelModal
+        reportA={reportA}
+        isOpen={true}
+        onClose={vi.fn()}
+      />
+    );
+
+    expect(screen.getByTestId('property-duel-modal')).toBeDefined();
+    expect(screen.getByTestId('candidate-card-a')).toBeDefined();
+    // Candidate B is loaded from compare refs in URL
+    await waitFor(() => {
+      expect(screen.getByTestId('candidate-card-b')).toBeDefined();
+    });
+  });
+
+  it('renders Infravivienda / Substandard commercial housing row in differential matrix table', () => {
+    const substandardCandidate = {
+      ...reportB,
+      substandardHousing: {
+        isAlert: true,
+        severity: 'HIGH' as const,
+        detectedUse: 'COMERCIAL',
+        floor: 'PB',
+        warningMessage: 'Presunto local comercial reconvertido sin cédula',
+        legalRisks: ['Falta de cédula de habitabilidad'],
+        isGroundFloorOrBasement: true,
+        lacksResidentialSubdivision: true,
+        penaltyApplied: 25,
+      },
+      score: {
+        ...reportB.score,
+        keyRisks: ['Presunto local comercial sin cédula de habitabilidad'],
+      },
+    };
+
+    render(
+      <PropertyDuelModal
+        reportA={reportA}
+        reportB={substandardCandidate}
+        isOpen={true}
+        onClose={vi.fn()}
+      />
+    );
+
+    // Row should be present in table
+    const row = screen.getByTestId('row-substandard-housing');
+    expect(row).toBeDefined();
+    expect(row.textContent).toMatch(/Infravivienda|Cédula/i);
+
+    // Candidate A is residential conform
+    const statusA = screen.getByTestId('substandard-status-a');
+    expect(statusA.textContent).toMatch(/Conforme/i);
+
+    // Candidate B flags substandard alert
+    const statusB = screen.getByTestId('substandard-status-b');
+    expect(statusB.textContent).toMatch(/Alerta: Presunto Local/i);
+  });
+
+  it('displays a prominent red warning banner in AuditDossier when report flags substandard commercial housing', () => {
+    const reportWithSubstandardAlert: PropertyAuditReport = {
+      ...reportA,
+      substandardHousing: {
+        isAlert: true,
+        severity: 'HIGH',
+        detectedUse: 'ALMACÉN',
+        floor: 'PB',
+        warningMessage: 'Alto riesgo de infravivienda por local comercial reconvertido',
+        legalRisks: ['Sin licencia de habitabilidad'],
+        isGroundFloorOrBasement: true,
+        lacksResidentialSubdivision: false,
+        penaltyApplied: 20,
+      },
+      score: {
+        ...reportA.score,
+        keyRisks: ['Presunto local comercial sin cédula de habitabilidad'],
+      },
+    };
+
+    render(<AuditDossier report={reportWithSubstandardAlert} />);
+
+    // Prominent red banner
+    const warningBanner = screen.getByTestId('substandard-housing-warning');
+    expect(warningBanner).toBeDefined();
+    expect(warningBanner.textContent).toMatch(/Alerta de Infravivienda|Presunto Local Comercial/i);
+    expect(warningBanner.textContent).toMatch(/Cédula de Habitabilidad/i);
+  });
+
+  it('displays prominent warning banner in ExecutiveSummaryCard and highlighted risk chip in HighlightsAndRisks', () => {
+    const reportWithRiskKey: PropertyAuditReport = {
+      ...reportA,
+      score: {
+        ...reportA.score,
+        keyRisks: ['Presunto local comercial sin cédula de habitabilidad', 'Aislamiento medio'],
+      },
+    };
+
+    // 1. ExecutiveSummaryCard
+    render(<ExecutiveSummaryCard report={reportWithRiskKey} />);
+    expect(screen.getByTestId('executive-summary-card')).toBeDefined();
+    expect(screen.getByTestId('substandard-housing-warning')).toBeDefined();
+
+    // 2. HighlightsAndRisks component highlights substandard chip
+    const substandardChip = screen.getByTestId('substandard-risk-chip');
+    expect(substandardChip).toBeDefined();
+    expect(substandardChip.textContent).toContain('Presunto local comercial');
+
+    // 3. Direct HighlightsAndRisks rendering
+    render(
+      <HighlightsAndRisks
+        highlights={['Luz natural óptima']}
+        risks={['Presunto local comercial sin cédula']}
+      />
+    );
+    const directChips = screen.getAllByTestId('substandard-risk-chip');
+    expect(directChips.length).toBeGreaterThanOrEqual(2);
   });
 });

@@ -5,6 +5,34 @@ All notable changes to the **OpenBarrio** platform are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.0] - 2026-11-13
+
+### Added
+- **Multi-Portal Real Estate Expansion & Adapter Architecture (`apps/extension`)**:
+  - Abstract base class `BasePortalAdapter` (`apps/extension/src/content/extractors/base.ts`) establishing standard lifecycle methods (`canExtract`, `extract`, `getMountTarget`, `validate`) and centralized Shadow DOM injection.
+  - Native support for 5 major Spanish real estate portals: **Idealista**, **Fotocasa**, **Habitaclia** (`*://*.habitaclia.com/*`), **Pisos.com** (`*://*.pisos.com/*`), and **YaEncontre** (`*://*.yaencontre.com/*`).
+  - Unified parsing engine handling dirty price strings, gross/usable square meters (`m²`), construction years, and multi-tier coordinate resolution (Schema.org JSON-LD, microdata, OpenGraph, `geo.position`, `ICBM`, data attributes, and embedded JavaScript variables).
+  - Updated Chrome Manifest V3 with expanded host permissions and content script URL matches.
+- **Substandard Housing & Commercial Conversion Antifraud Heuristic (`@openbarrio/core`, `apps/web`, `apps/extension`)**:
+  - Algorithmic detector `detectSubstandardHousingAlert` identifying illegal commercial-to-residential conversions (*locales comerciales vendidos como vivienda* sin cambio de uso ni cédula de habitabilidad).
+  - Evaluates primary Cadastral usage (`COMERCIAL`, `ALMACÉN`, `INDUSTRIAL`, `OFICINAS`) combined with elevation at ground level or below (`PB`, `00`, `BAJO`, `SS`, `S1`, `S2`, `SEMISOTANO`, `SOTANO`) or missing horizontal division.
+  - Implemented 25-point penalty in `computeBarrioScore` applied to `buildingHealthScore` and `urbanPlanningScore`, injecting high-priority alerts regarding municipal urbanistic sanctions (up to €600,000), impossibility of municipal padrón registration, and mortgage restrictions.
+  - High-impact warning banner rendered in Chrome Extension companion widget and Web `AuditDossier` executive summary.
+- **Property Duel 2.0: Multi-Property Comparison Matrix (`apps/web`)**:
+  - Expanded comparative architecture from 1 vs 1 duel to an interactive comparison matrix supporting up to 4 assets (A: Cyan, B: Amber, C: Purple, D: Emerald).
+  - Dynamic slot management allowing adding (`+ Añadir Inmueble`) and removing candidates with responsive Bento cards and side-by-side differential table.
+  - Multi-property 4-polygon SVG radar chart with neon glow shaders.
+  - Full bidirectional URL state synchronization via `?compare=ref1,ref2,ref3,ref4` (with backwards compatibility for `?refcat=...&vs=...`) enabling shareable, bookmarkable audit matrices.
+  - Dedicated "Riesgo Infravivienda & Cédula de Habitabilidad" comparison row evaluating habitability status across all candidates.
+- **Automated Synthetic Monitoring & Portal DOM Regression Testing (`CI/CD`)**:
+  - Created canonical DOM snapshot fixtures (`apps/extension/tests/fixtures/`) for Idealista, Fotocasa, Habitaclia, Pisos.com, and YaEncontre with full JSON-LD and meta tag telemetry.
+  - Dedicated synthetic test suite (`apps/extension/tests/synthetic-monitoring.test.ts`) validating 100% extraction accuracy and reporting DOM selector anomalies with diagnostic messages.
+  - Scheduled GitHub Actions workflow (`.github/workflows/synthetic-monitoring.yml`) executing weekly synthetic checks, publishing health summaries to `$GITHUB_STEP_SUMMARY`, and archiving logs with 30-day retention.
+- **Packaging & Version Elevation to v1.2.0**:
+  - Upgraded monorepo version to `1.2.0` across `package.json`, `packages/core`, `packages/etl`, `apps/api`, `apps/web`, and `apps/extension`.
+  - Built production store-ready Chrome Manifest V3 package: `apps/extension/openbarrio-extension-v1.2.0.zip` (41.61 KB).
+  - Total test suite expanded to 512 passing tests (100% success rate) with zero ESLint warnings inside Docker Desktop.
+
 ## [1.1.0] - 2026-11-13
 
 ### Added

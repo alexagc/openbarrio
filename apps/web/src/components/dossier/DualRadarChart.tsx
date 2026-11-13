@@ -6,8 +6,12 @@ export type DualRadarMode = 'both' | 'a' | 'b' | 'diff';
 export interface DualRadarChartProps {
   subscoresA?: Partial<AuditSubscores>;
   subscoresB?: Partial<AuditSubscores>;
+  subscoresC?: Partial<AuditSubscores>;
+  subscoresD?: Partial<AuditSubscores>;
   labelA?: string;
   labelB?: string;
+  labelC?: string;
+  labelD?: string;
   mode?: DualRadarMode;
   onModeChange?: (mode: DualRadarMode) => void;
   className?: string;
@@ -86,6 +90,8 @@ function polarToCartesian(radius: number, angleRad: number): { x: number; y: num
 export function DualRadarChart({
   subscoresA = {},
   subscoresB = {},
+  subscoresC,
+  subscoresD,
   labelA = 'Inmueble A',
   labelB = 'Inmueble B',
   mode: controlledMode,
@@ -120,6 +126,16 @@ export function DualRadarChart({
     getScore(subscoresB, axis.key, [74, 52, 88, 54, 85][i])
   );
 
+  const hasC = Boolean(subscoresC);
+  const valuesC = hasC
+    ? AXIS_CONFIGS.map((axis, i) => getScore(subscoresC!, axis.key, [80, 75, 75, 80, 75][i]))
+    : [];
+
+  const hasD = Boolean(subscoresD);
+  const valuesD = hasD
+    ? AXIS_CONFIGS.map((axis, i) => getScore(subscoresD!, axis.key, [85, 70, 80, 75, 80][i]))
+    : [];
+
   // Compute vertices for Property A
   const pointsA = AXIS_CONFIGS.map((axis, idx) => {
     const r = (valuesA[idx] / 100) * MAX_RADIUS;
@@ -133,6 +149,24 @@ export function DualRadarChart({
     return polarToCartesian(r, axis.angleRad);
   });
   const polyStringB = pointsB.map((p) => `${p.x},${p.y}`).join(' ');
+
+  // Compute vertices for Property C
+  const pointsC = hasC
+    ? AXIS_CONFIGS.map((axis, idx) => {
+        const r = (valuesC[idx] / 100) * MAX_RADIUS;
+        return polarToCartesian(r, axis.angleRad);
+      })
+    : [];
+  const polyStringC = pointsC.map((p) => `${p.x},${p.y}`).join(' ');
+
+  // Compute vertices for Property D
+  const pointsD = hasD
+    ? AXIS_CONFIGS.map((axis, idx) => {
+        const r = (valuesD[idx] / 100) * MAX_RADIUS;
+        return polarToCartesian(r, axis.angleRad);
+      })
+    : [];
+  const polyStringD = pointsD.map((p) => `${p.x},${p.y}`).join(' ');
 
   // Concentric pentagons
   const ringPolygons = GRID_RINGS.map((pct) => {
@@ -193,6 +227,18 @@ export function DualRadarChart({
               <feComposite in="SourceGraphic" in2="blur" operator="over" />
             </filter>
 
+            {/* Neon Purple filter for Property C */}
+            <filter id="glow-purple" x="-20%" y="-20%" width="140%" height="140%">
+              <feGaussianBlur stdDeviation="3" result="blur" />
+              <feComposite in="SourceGraphic" in2="blur" operator="over" />
+            </filter>
+
+            {/* Neon Emerald filter for Property D */}
+            <filter id="glow-emerald" x="-20%" y="-20%" width="140%" height="140%">
+              <feGaussianBlur stdDeviation="3" result="blur" />
+              <feComposite in="SourceGraphic" in2="blur" operator="over" />
+            </filter>
+
             {/* Linear/Radial gradients for polygon fillings */}
             <radialGradient id="cyan-radial" cx="50%" cy="50%" r="50%">
               <stop offset="0%" stopColor="#06b6d4" stopOpacity="0.38" />
@@ -201,6 +247,14 @@ export function DualRadarChart({
             <radialGradient id="amber-radial" cx="50%" cy="50%" r="50%">
               <stop offset="0%" stopColor="#f59e0b" stopOpacity="0.38" />
               <stop offset="100%" stopColor="#f59e0b" stopOpacity="0.08" />
+            </radialGradient>
+            <radialGradient id="purple-radial" cx="50%" cy="50%" r="50%">
+              <stop offset="0%" stopColor="#a855f7" stopOpacity="0.38" />
+              <stop offset="100%" stopColor="#a855f7" stopOpacity="0.08" />
+            </radialGradient>
+            <radialGradient id="emerald-radial" cx="50%" cy="50%" r="50%">
+              <stop offset="0%" stopColor="#10b981" stopOpacity="0.38" />
+              <stop offset="100%" stopColor="#10b981" stopOpacity="0.08" />
             </radialGradient>
           </defs>
 
@@ -317,6 +371,64 @@ export function DualRadarChart({
               style={{ opacity: opacityB, transition: 'opacity 300ms ease' }}
             />
           ))}
+
+          {/* ================= PROPERTY C POLYGON (Purple) ================= */}
+          {hasC && polyStringC && (
+            <>
+              <polygon
+                id="radar-poly-c"
+                data-testid="radar-poly-c"
+                points={polyStringC}
+                fill="url(#purple-radial)"
+                filter="url(#glow-purple)"
+                stroke="#a855f7"
+                strokeDasharray="4 2"
+                strokeWidth="2"
+                strokeLinejoin="round"
+                style={{ opacity: 0.85, transition: 'opacity 300ms ease' }}
+              />
+              {pointsC.map((p, idx) => (
+                <circle
+                  key={`vertex-c-${idx}`}
+                  cx={p.x}
+                  cy={p.y}
+                  r="4"
+                  fill="#a855f7"
+                  stroke="#0b1326"
+                  strokeWidth="1.5"
+                />
+              ))}
+            </>
+          )}
+
+          {/* ================= PROPERTY D POLYGON (Emerald) ================= */}
+          {hasD && polyStringD && (
+            <>
+              <polygon
+                id="radar-poly-d"
+                data-testid="radar-poly-d"
+                points={polyStringD}
+                fill="url(#emerald-radial)"
+                filter="url(#glow-emerald)"
+                stroke="#10b981"
+                strokeDasharray="2 2"
+                strokeWidth="2"
+                strokeLinejoin="round"
+                style={{ opacity: 0.85, transition: 'opacity 300ms ease' }}
+              />
+              {pointsD.map((p, idx) => (
+                <circle
+                  key={`vertex-d-${idx}`}
+                  cx={p.x}
+                  cy={p.y}
+                  r="4"
+                  fill="#10b981"
+                  stroke="#0b1326"
+                  strokeWidth="1.5"
+                />
+              ))}
+            </>
+          )}
 
           {/* 5 Axis Text Labels & Comparative Values */}
           {AXIS_CONFIGS.map((axis, idx) => {

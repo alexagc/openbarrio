@@ -307,4 +307,94 @@ describe('OpenBarrioWidget', () => {
     shadow = widget.getShadowRoot();
     expect(shadow?.innerHTML).toContain('⚡ CEE G (Caducado ⚠️)');
   });
+
+  it('should render visual warning banner for Presunto local comercial / Infravivienda when typology is COMMERCIAL', () => {
+    const commercialReport: PropertyAuditReport = {
+      ...mockReport,
+      typology: 'COMMERCIAL',
+      property: {
+        ...mockReport.property,
+        building: {
+          ...mockReport.property.building,
+          primaryUse: 'Comercial',
+        },
+        unit: {
+          cadastralReference: '9872023VH5797S0001WX',
+          builtSurfaceM2: 55,
+          floor: '00',
+          door: '01',
+          use: 'Comercial',
+        },
+      },
+    };
+
+    const widget = new OpenBarrioWidget();
+    widget.showReport(commercialReport, 'http://localhost:3000', {
+      builtSurfaceM2: 55,
+      priceEur: 180000,
+    });
+
+    const shadow = widget.getShadowRoot();
+    const alertEl = shadow?.querySelector('.ob-substandard-alert');
+    expect(alertEl).not.toBeNull();
+    expect(alertEl?.innerHTML).toContain('Presunto local comercial / Infravivienda');
+    expect(alertEl?.innerHTML).toContain('Comercial');
+    expect(alertEl?.innerHTML).toContain('cédula de habitabilidad');
+    expect(widget.isSubstandardWarningActive()).toBe(true);
+  });
+
+  it('should render substandard warning banner when score.keyRisks explicitly mentions local comercial or infravivienda', () => {
+    const riskReport: PropertyAuditReport = {
+      ...mockReport,
+      score: {
+        ...mockReport.score,
+        keyRisks: ['Alerta: Presunto local comercial / Infravivienda sin cédula de habitabilidad'],
+      },
+    };
+
+    const widget = new OpenBarrioWidget();
+    widget.showReport(riskReport, 'http://localhost:3000');
+
+    const shadow = widget.getShadowRoot();
+    const alertEl = shadow?.querySelector('.ob-substandard-alert');
+    expect(alertEl).not.toBeNull();
+    expect(alertEl?.innerHTML).toContain('Presunto local comercial / Infravivienda');
+    expect(widget.isSubstandardWarningActive()).toBe(true);
+  });
+
+  it('should render substandard warning banner when report.substandardHousing indicates HIGH severity', () => {
+    const substandardReport: PropertyAuditReport = {
+      ...mockReport,
+      substandardHousing: {
+        severity: 'HIGH',
+        isAlert: true,
+        detectedUse: 'ALMACÉN',
+        floor: 'PB',
+        warningMessage: 'High risk of substandard housing / illegal commercial-to-residential fraud (Infravivienda)',
+        legalRisks: ['Lack of Cédula de Habitabilidad'],
+        isGroundFloorOrBasement: true,
+        lacksResidentialSubdivision: true,
+        penaltyApplied: 25,
+      },
+    };
+
+    const widget = new OpenBarrioWidget();
+    widget.showReport(substandardReport, 'http://localhost:3000');
+
+    const shadow = widget.getShadowRoot();
+    const alertEl = shadow?.querySelector('.ob-substandard-alert');
+    expect(alertEl).not.toBeNull();
+    expect(alertEl?.innerHTML).toContain('Presunto local comercial / Infravivienda');
+    expect(alertEl?.innerHTML).toContain('ALMACÉN');
+    expect(widget.isSubstandardWarningActive()).toBe(true);
+  });
+
+  it('should not render substandard warning banner for standard residential home', () => {
+    const widget = new OpenBarrioWidget();
+    widget.showReport(mockReport, 'http://localhost:3000');
+
+    const shadow = widget.getShadowRoot();
+    expect(shadow?.querySelector('.ob-substandard-alert')).toBeNull();
+    expect(widget.isSubstandardWarningActive()).toBe(false);
+  });
 });

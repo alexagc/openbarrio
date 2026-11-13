@@ -11,6 +11,7 @@ import { RadonEvaluationSchema } from './radon.js';
 import { VutEvaluationSchema } from './vut.js';
 import { FiscalEstimateSchema } from './fiscal.js';
 import { BuildingSurroundingsSchema } from './surroundings.js';
+import { SubstandardHousingAlertSchema } from './substandard-housing.js';
 
 if (!FormatRegistry.Has('uuid')) {
   FormatRegistry.Set('uuid', (value) => typeof value === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value));
@@ -37,6 +38,7 @@ export const AuditScoreBreakdownSchema = Type.Object({
   climateSafetyScore: Type.Number({ minimum: 0, maximum: 100, description: 'Flood and climate safety rating (0-100)' }),
   keyHighlights: Type.Array(Type.String(), { description: 'Positive attributes and strengths identified in public registers' }),
   keyRisks: Type.Array(Type.String(), { description: 'Due diligence alerts, potential renovation requirements, or environmental risks' }),
+  substandardHousing: Type.Optional(SubstandardHousingAlertSchema),
 });
 
 export const RentalBenchmarkSchema = Type.Object({
@@ -65,9 +67,11 @@ export const PropertyAuditReportSchema = Type.Object({
   vut: Type.Optional(VutEvaluationSchema),
   fiscal: Type.Optional(FiscalEstimateSchema),
   surroundings: Type.Optional(BuildingSurroundingsSchema),
+  substandardHousing: Type.Optional(SubstandardHousingAlertSchema),
 });
 
 export type AuditSubscores = Static<typeof AuditSubscoresSchema>;
 export type AuditScoreBreakdown = Static<typeof AuditScoreBreakdownSchema>;
 export type RentalBenchmark = Static<typeof RentalBenchmarkSchema>;
+export type SubstandardHousing = Static<typeof SubstandardHousingAlertSchema>;
 export type PropertyAuditReport = Static<typeof PropertyAuditReportSchema>;

@@ -127,6 +127,61 @@ export function renderMiniRadar(subscores?: Partial<AuditSubscores>): string {
   `.trim();
 }
 
+export function isSubstandardHousingReport(
+  report: PropertyAuditReport,
+  _extracted?: { builtSurfaceM2?: number; priceEur?: number; isRental?: boolean }
+): boolean {
+  // 1. Direct core field if provided by API / Core
+  if (report.substandardHousing) {
+    if (report.substandardHousing.severity === 'HIGH' || report.substandardHousing.isAlert) {
+      return true;
+    }
+    if (report.substandardHousing.severity === 'NONE') {
+      return false;
+    }
+  }
+
+  const property = report.property;
+  const building = property?.building;
+  const typology: PropertyTypology =
+    report.typology ??
+    property?.typology ??
+    detectPropertyTypology(
+      building?.primaryUse,
+      building?.constructionYear,
+      building?.unitsCount,
+      property?.cadastralReference
+    );
+
+  // 2. Explicit risk text in keyRisks
+  const hasSubstandardRisk = Boolean(
+    report.score?.keyRisks?.some((r) =>
+      /local\s*comercial|infravivienda|substandard|cambio\s*de\s*uso|sin\s*c[eé]dula/i.test(r)
+    )
+  );
+
+  // 3. Explicit boolean flag if present on report or property
+  const hasExplicitFlag = Boolean(
+    (report as unknown as { isSubstandardHousing?: boolean; substandardAlert?: boolean }).isSubstandardHousing ||
+    (report as unknown as { isSubstandardHousing?: boolean; substandardAlert?: boolean }).substandardAlert ||
+    (property as unknown as { isSubstandardHousing?: boolean; substandardAlert?: boolean })?.isSubstandardHousing ||
+    (property as unknown as { isSubstandardHousing?: boolean; substandardAlert?: boolean })?.substandardAlert
+  );
+
+  // 4. Cadastral use is Commercial or Almacén
+  const isCommercialUse =
+    typology === 'COMMERCIAL' ||
+    Boolean(property?.unit?.use && /comercial|almac[eé]n|industrial|oficina|local/i.test(property.unit.use)) ||
+    Boolean(building?.primaryUse && /comercial|almac[eé]n|industrial|local/i.test(building.primaryUse));
+
+  // 5. Ground floor non-residential unit
+  const isGroundFloorCommercial =
+    Boolean(property?.unit && /PB|00|BAJO|ENTRESUELO|EN/i.test(property.unit.floor || '')) &&
+    Boolean(property?.unit?.use && !/residencial|vivienda/i.test(property.unit.use));
+
+  return hasSubstandardRisk || hasExplicitFlag || isCommercialUse || isGroundFloorCommercial;
+}
+
 export function renderAuditCard(
   report: PropertyAuditReport,
   webUrl: string,
@@ -176,6 +231,28 @@ export function renderAuditCard(
       <a href="${unitsDossierUrl}" target="_blank" rel="noopener noreferrer" class="ob-unit-pill-link">
         <div class="ob-unit-pill">🏢 Edificio (${unitsCount} inmuebles) · Ver unidades</div>
       </a>
+    `;
+  }
+
+  // Visual warning banner for "Presunto local comercial / Infravivienda"
+  let substandardHtml = '';
+  if (isSubstandardHousingReport(report, extracted)) {
+    const commercialUseDesc =
+      report.substandardHousing?.detectedUse ||
+      property.unit?.use ||
+      (building.primaryUse && !/residencial/i.test(building.primaryUse) ? building.primaryUse : '') ||
+      (typology === 'COMMERCIAL' ? 'Comercial' : 'Local / Almacén');
+
+    substandardHtml = `
+      <div class="ob-substandard-alert" data-testid="ob-substandard-alert">
+        <div class="ob-substandard-icon">🚨</div>
+        <div class="ob-substandard-content">
+          <div class="ob-substandard-title">Presunto local comercial / Infravivienda</div>
+          <p class="ob-substandard-detail">
+            Inmueble registrado en Catastro con uso <strong>${escapeHtml(commercialUseDesc)}</strong>. Riesgo de carecer de cédula de habitabilidad o licencia de cambio de uso residencial.
+          </p>
+        </div>
+      </div>
     `;
   }
 
@@ -345,6 +422,9 @@ export function renderAuditCard(
             </p>
           </div>
         </div>
+
+        <!-- Substandard Housing / Presunto local comercial Alert -->
+        ${substandardHtml}
 
         <!-- Horizontal Division Unit Switcher Pill -->
         ${unitPillHtml}

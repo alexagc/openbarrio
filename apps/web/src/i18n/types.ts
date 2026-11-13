@@ -292,6 +292,15 @@ export interface TranslationSchema {
     verdictAdvantage: string;
     candidateA: string;
     candidateB: string;
+    candidateC: string;
+    candidateD: string;
+    addCandidate: string;
+    removeCandidate: string;
+    maxCandidatesReached: string;
+    substandardRowTitle: string;
+    substandardRowDesc: string;
+    substandardAlertBadge: string;
+    substandardConformBadge: string;
     technicalArbitrageTitle: string;
     modeBoth: string;
     modeOnlyA: string;
@@ -534,6 +543,10 @@ export interface TranslationSchema {
     discrepancyAlert: string;
     floodAlert: string;
     expiredCeeAlert: string;
+    substandardHousingAlert: string;
+    substandardHousingTitle: string;
+    substandardHousingDesc: string;
+    substandardCheckAdvice: string;
     unitPickerSubtitleSpecific: string;
     unitPickerSubtitleBuilding: string;
     compareDuelTooltip: string;

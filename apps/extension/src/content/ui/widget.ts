@@ -5,7 +5,10 @@ import {
   renderAuditCard,
   renderCollapsedPill,
   renderErrorState,
+  isSubstandardHousingReport,
 } from './templates.js';
+
+export { isSubstandardHousingReport };
 
 export const WIDGET_ROOT_ID = 'openbarrio-audit-root';
 
@@ -79,6 +82,11 @@ export class OpenBarrioWidget {
     if (!this.currentReport) return;
     this.isCollapsed = false;
     this.renderCurrentReportState();
+  }
+
+  isSubstandardWarningActive(): boolean {
+    if (!this.currentReport) return false;
+    return isSubstandardHousingReport(this.currentReport, this.currentExtracted);
   }
 
   destroy(): void {

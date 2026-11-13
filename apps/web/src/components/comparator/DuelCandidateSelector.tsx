@@ -48,6 +48,7 @@ export interface DuelCandidateSelectorProps {
   onSelectPreset: (preset: PresetCandidate) => void;
   onSelectCustomRefcat: (refcat: string) => void;
   isLoading?: boolean;
+  targetCandidateLabel?: string;
 }
 
 export function DuelCandidateSelector({
@@ -56,6 +57,7 @@ export function DuelCandidateSelector({
   onSelectPreset,
   onSelectCustomRefcat,
   isLoading = false,
+  targetCandidateLabel,
 }: DuelCandidateSelectorProps) {
   const { t } = useTranslation();
   const [customRefInput, setCustomRefInput] = useState('');
@@ -83,7 +85,7 @@ export function DuelCandidateSelector({
         <div className="flex items-center justify-between border-b border-outline-variant/60 pb-3">
           <div>
             <h3 className="font-headline font-bold text-base text-on-surface">
-              {t('duel.modalTitle')}
+              {targetCandidateLabel || t('duel.modalTitle')}
             </h3>
             <p className="font-body text-xs text-on-surface-variant">
               {t('duel.modalSubtitle')}

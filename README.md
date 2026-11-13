@@ -1,7 +1,7 @@
 # OpenBarrio 🏘️🇪🇸
 
 [![CI Pipeline](https://github.com/alexcg1/openbarrio/actions/workflows/ci.yml/badge.svg)](https://github.com/alexcg1/openbarrio/actions/workflows/ci.yml)
-[![Version: v1.1.0](https://img.shields.io/badge/Version-v1.1.0-blue.svg)](CHANGELOG.md)
+[![Version: v1.2.0](https://img.shields.io/badge/Version-v1.2.0-blue.svg)](CHANGELOG.md)
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 [![Runtime: Node.js 22 LTS](https://img.shields.io/badge/Runtime-Node.js_22_LTS-green.svg)](https://nodejs.org/)
 [![Monorepo: pnpm](https://img.shields.io/badge/Monorepo-pnpm_workspaces-orange.svg)](https://pnpm.io/)
@@ -39,7 +39,7 @@ flowchart TD
 
     subgraph ClientTier ["User Delivery Interfaces"]
         Web["React 18 + MapLibre GL Dashboard (apps/web)<br/>• 3D Building Extrusions & Solar Shading<br/>• Typology-Aware Bento Dossier<br/>• Side-by-Side Property Comparator"]
-        Ext["Chrome Manifest V3 Companion (apps/extension)<br/>• Injected Idealista & Fotocasa Cards<br/>• Instant ITP/IBI Fiscal Estimates<br/>• Surface Discrepancy Alerts"]
+        Ext["Chrome Manifest V3 Companion (apps/extension)<br/>• Injected Idealista, Fotocasa, Habitaclia, Pisos.com & YaEncontre<br/>• Instant ITP/IBI Fiscal Estimates<br/>• Substandard Housing & Surface Alerts"]
     end
 
     Service --> Web
@@ -51,7 +51,13 @@ flowchart TD
 
 ## ✨ Key Platform Features
 
-### 1. Sovereign PMTiles Vector Streaming
+### 1. Multi-Portal Expansion, Antifraud Infravivienda & Property Duel 2.0 (v1.2.0)
+* **Expanded Portal Companion Widget:** Abstract `BasePortalAdapter` with unified Shadow DOM lifecycle across 5 top real estate portals: **Idealista**, **Fotocasa**, **Habitaclia**, **Pisos.com**, and **YaEncontre**.
+* **Substandard Housing & Commercial Conversion Antifraud:** Algorithmic heuristic detecting non-residential Cadastral uses (`COMERCIAL`, `ALMACÉN`, `OFICINAS`) on ground floors or basements without cédula de habitabilidad or horizontal division. Penalizes BarrioScore by up to 25 points and alerts users to municipal fines up to €600,000.
+* **Property Duel 2.0 — Multi-Property Matrix:** Multi-asset comparative matrix comparing up to 4 properties simultaneously (A: Cyan, B: Amber, C: Purple, D: Emerald) with 4-polygon SVG radar overlays, differential telemetry deltas, and shareable URL state persistence via `?compare=ref1,ref2,ref3,ref4`.
+* **Playwright Synthetic Monitoring:** Automated weekly CI/CD workflow testing frozen canonical DOM snapshots of all 5 portals to catch selector breakage and anti-bot anomalies before they impact end-users.
+
+### 2. Sovereign PMTiles Vector Streaming
 All national administrative, demographic, and environmental layers are compiled into sovereign **PMTiles v3** vector archives hosted on Cloudflare R2:
 * **`census_tracts.pmtiles` (85.3 MB):** All ~37,000 Spanish census sections with embedded household net revenue and municipal percentile ranks.
 * **`floods.pmtiles` (556.5 MB):** All 28,021 official MITECO SNCZI flood hazard polygons across T=10, 50, 100, 500 return periods and Preferential Flow Zones (ZFP).
@@ -117,7 +123,7 @@ docker compose up -d
 
 ### 3. Running Containerized Tests & Linting
 ```bash
-# Execute Vitest across all 5 workspace projects (435/435 passing):
+# Execute Vitest across all workspace projects (512/512 passing):
 make docker-test
 
 # Run ESLint with zero warnings:

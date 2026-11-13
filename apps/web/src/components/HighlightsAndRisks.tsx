@@ -44,15 +44,36 @@ export function HighlightsAndRisks({
         ))}
 
         {/* Risk & Caution Chips */}
-        {risks.map((item, idx) => (
-          <div
-            key={`rk-${idx}`}
-            className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-secondary-container/20 border border-secondary/40 text-secondary text-xs font-mono"
-          >
-            <AlertTriangle className="w-3.5 h-3.5 text-secondary shrink-0" />
-            <span>{item}</span>
-          </div>
-        ))}
+        {risks.map((item, idx) => {
+          const isSub =
+            item.toLowerCase().includes('presunto local') ||
+            item.toLowerCase().includes('infravivienda') ||
+            item.toLowerCase().includes('substandard') ||
+            item.toLowerCase().includes('local comercial');
+
+          if (isSub) {
+            return (
+              <div
+                key={`rk-${idx}`}
+                data-testid="substandard-risk-chip"
+                className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-rose-950/70 border border-rose-500 text-rose-300 text-xs font-mono font-bold animate-pulse"
+              >
+                <AlertTriangle className="w-3.5 h-3.5 text-rose-400 shrink-0" />
+                <span>{item}</span>
+              </div>
+            );
+          }
+
+          return (
+            <div
+              key={`rk-${idx}`}
+              className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-secondary-container/20 border border-secondary/40 text-secondary text-xs font-mono"
+            >
+              <AlertTriangle className="w-3.5 h-3.5 text-secondary shrink-0" />
+              <span>{item}</span>
+            </div>
+          );
+        })}
 
         {highlights.length === 0 && risks.length === 0 && (
           <div className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-surface-container border border-outline-variant text-on-surface-variant text-xs font-mono">

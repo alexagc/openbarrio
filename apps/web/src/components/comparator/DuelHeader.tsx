@@ -4,18 +4,32 @@ import { useTranslation } from '../../i18n';
 
 export interface DuelHeaderProps {
   reportA: PropertyAuditReport;
-  candidateB: PropertyAuditReport;
+  candidateB?: PropertyAuditReport;
+  candidates?: PropertyAuditReport[];
   verdictBadgeText: string;
   onClose: () => void;
+  onAddCandidate?: () => void;
+  canAddCandidate?: boolean;
 }
 
 export function DuelHeader({
   reportA,
   candidateB,
+  candidates,
   verdictBadgeText,
   onClose,
+  onAddCandidate,
+  canAddCandidate = false,
 }: DuelHeaderProps) {
   const { t } = useTranslation();
+  const allCandidates = candidates && candidates.length > 0 ? candidates : [reportA, candidateB].filter(Boolean) as PropertyAuditReport[];
+  const secondCand = candidateB || allCandidates[1];
+  const refs = allCandidates.map((c) => c.property.cadastralReference).filter(Boolean);
+  const refA = reportA.property.cadastralReference;
+  const refB = secondCand ? secondCand.property.cadastralReference : '';
+  const displayQuery = refB
+    ? `?refcat=${refA}&vs=${refB}&compare=${refs.join(',')}`
+    : `?refcat=${refA}&compare=${refs.join(',')}`;
 
   return (
     <header className="w-full bg-surface-container border-b border-outline-variant sticky top-0 z-50 shrink-0">
@@ -37,6 +51,17 @@ export function DuelHeader({
 
         {/* Institutional Badges & Close [Esc] button */}
         <div className="flex items-center gap-2">
+          {canAddCandidate && onAddCandidate && (
+            <button
+              type="button"
+              data-testid="add-candidate-header-btn"
+              onClick={onAddCandidate}
+              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded bg-primary/20 hover:bg-primary/30 text-primary font-mono text-xs border border-primary/40 transition-colors cursor-pointer"
+            >
+              <span>+ {t('duel.addCandidate')} ({allCandidates.length}/4)</span>
+            </button>
+          )}
+
           <span className="hidden md:inline-flex items-center gap-1 px-2 py-0.5 rounded bg-surface-container-high border border-outline-variant text-on-surface font-mono text-[10px]">
             <Shield className="w-3 h-3 text-secondary" />
             <span>EPSG:25830 · ETRS89</span>
@@ -68,7 +93,9 @@ export function DuelHeader({
           <span className="text-outline">/</span>
           <span className="text-on-surface font-semibold flex items-center gap-1.5">
             <span className="w-2 h-2 rounded-full bg-primary inline-block" />
-            Duelo Inmobiliario 1 vs 1
+            {allCandidates.length > 2
+              ? `Matriz Multicomparador (${allCandidates.length} Inmuebles)`
+              : 'Duelo Inmobiliario 1 vs 1'}
           </span>
 
           {/* URL Query Synced Capsule */}
@@ -78,7 +105,7 @@ export function DuelHeader({
           >
             <LinkIcon className="w-3 h-3 text-primary shrink-0" />
             <span className="tracking-tight truncate max-w-xs sm:max-w-md">
-              ?refcat={reportA.property.cadastralReference}&vs={candidateB.property.cadastralReference}
+              {displayQuery}
             </span>
           </div>
         </div>

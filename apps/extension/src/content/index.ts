@@ -1,4 +1,4 @@
-import { findExtractorForUrl } from './extractors/index.js';
+import { findExtractorForUrl, PORTAL_NAMES } from './extractors/index.js';
 import { OpenBarrioWidget } from './ui/widget.js';
 import {
   AuditResponse,
@@ -34,7 +34,7 @@ async function runAuditInjection(): Promise<void> {
   if (!widgetInstance) {
     widgetInstance = new OpenBarrioWidget();
   }
-  const portalName = extractor.portal === 'idealista' ? 'Idealista' : 'Fotocasa';
+  const portalName = PORTAL_NAMES[extractor.portal] || 'Portal Inmobiliario';
   widgetInstance.showLoading(portalName);
 
   // Fetch extension configuration for web dashboard URL

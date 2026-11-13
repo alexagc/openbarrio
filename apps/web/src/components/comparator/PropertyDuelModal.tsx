@@ -1,23 +1,27 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { PropertyAuditReport } from '@openbarrio/core';
 import { DualRadarChart, DualRadarMode } from './DualRadarChart';
 import { DuelHeader } from './DuelHeader';
 import { DuelCandidateSelector, PresetCandidate, PRESET_CANDIDATES } from './DuelCandidateSelector';
-import { DuelPillarComparison } from './DuelPillarComparison';
+import { DuelPillarComparison, CANDIDATE_METAS } from './DuelPillarComparison';
 import { deriveBuildingCapEx } from '../dossier/BuildingCapExCard';
 import { apiClient } from '../../services/api.client';
 import { useTranslation } from '../../i18n';
+import { isSubstandardHousing } from '../../utils/substandard';
 import {
   Layers,
   Sparkles,
   FileText,
   ChevronDown,
   CheckCircle,
+  Plus,
+  AlertTriangle,
 } from 'lucide-react';
 
 export interface PropertyDuelModalProps {
   reportA: PropertyAuditReport;
   reportB?: PropertyAuditReport;
+  initialCompareRefs?: string[];
   isOpen: boolean;
   onClose: () => void;
   onSelectCandidateB?: (refcatOrReport: string | PropertyAuditReport) => void;
@@ -26,86 +30,148 @@ export interface PropertyDuelModalProps {
 export function PropertyDuelModal({
   reportA,
   reportB: initialReportB,
+  initialCompareRefs,
   isOpen,
   onClose,
   onSelectCandidateB,
 }: PropertyDuelModalProps) {
   const { t } = useTranslation();
-  const [activeReportB, setActiveReportB] = useState<PropertyAuditReport | null>(
-    initialReportB || null
-  );
+
+  // Multi-property candidates array (up to 4 properties: A, B, C, D)
+  const [candidates, setCandidates] = useState<PropertyAuditReport[]>(() => {
+    if (initialReportB) return [reportA, initialReportB];
+    return [reportA];
+  });
+
   const [radarMode, setRadarMode] = useState<DualRadarMode>('both');
   const [copiedA, setCopiedA] = useState(false);
   const [copiedB, setCopiedB] = useState(false);
   const [showCandidateSelector, setShowCandidateSelector] = useState(false);
-  const [isLoadingB, setIsLoadingB] = useState(false);
+  const [targetSelectorIndex, setTargetSelectorIndex] = useState<number>(1);
+  const [isLoadingCandidate, setIsLoadingCandidate] = useState(false);
 
-  // Fallback candidate B initialization
+  // Helper to build synthetic report fallback if offline or mock
+  const buildFallbackCandidate = useCallback(
+    (refcat: string, label?: string, preset?: PresetCandidate): PropertyAuditReport => {
+      const municipality = label?.includes('Barcelona')
+        ? 'Barcelona'
+        : label?.includes('València')
+        ? 'València'
+        : label?.includes('Sevilla')
+        ? 'Sevilla'
+        : 'Madrid';
+
+      return {
+        ...reportA,
+        id: 'mock-candidate-' + refcat,
+        property: {
+          ...reportA.property,
+          cadastralReference: refcat,
+          address: {
+            street: label ? label.split(',')[0] : 'Inmueble con RC ' + refcat,
+            number: '28',
+            postalCode: '28013',
+            municipality,
+            province: municipality === 'Madrid' ? 'Madrid' : municipality,
+          },
+          building: {
+            constructionYear: preset ? (preset.refcat.includes('9872') ? 1968 : 1978) : 1972,
+            builtSurfaceM2: preset ? 112 : 95,
+            primaryUse: 'Residencial',
+            unitsCount: 20,
+            hasCommercialGroundFloor: false,
+          },
+        },
+        score: {
+          ...reportA.score,
+          overallScore: Math.max(45, Math.min(95, reportA.score.overallScore + (refcat.charCodeAt(0) % 15) - 7)),
+        },
+      };
+    },
+    [reportA]
+  );
+
+  // Initialize Candidate B if only Candidate A is present
   useEffect(() => {
     if (initialReportB) {
-      setActiveReportB(initialReportB);
+      setCandidates((prev) => {
+        if (prev.length <= 1) return [reportA, initialReportB];
+        const next = [...prev];
+        next[0] = reportA;
+        next[1] = initialReportB;
+        return next;
+      });
       return;
     }
 
-    if (!activeReportB) {
-      const differentPreset =
-        PRESET_CANDIDATES.find(
-          (p) => p.refcat !== reportA.property.cadastralReference
-        ) || PRESET_CANDIDATES[0];
+    // Check if URL has ?compare=ref1,ref2,... or ?vs=...
+    if (typeof window !== 'undefined') {
+      const searchParams = new URLSearchParams(window.location.search);
+      const compareQuery = searchParams.get('compare');
+      const vsQuery = searchParams.get('vs');
 
-      setIsLoadingB(true);
+      const compareRefs = compareQuery
+        ? compareQuery.split(',').map((s) => s.trim().toUpperCase()).filter((s) => s.length >= 14)
+        : initialCompareRefs || (vsQuery ? [reportA.property.cadastralReference, vsQuery.toUpperCase().trim()] : []);
+
+      if (compareRefs.length >= 2) {
+        // Load candidates from compareRefs
+        const refsToFetch = compareRefs.slice(1, 4); // index 1, 2, 3
+        Promise.all(
+          refsToFetch.map((ref) =>
+            apiClient.auditByCadastralReference(ref).catch(() => buildFallbackCandidate(ref))
+          )
+        ).then((fetched) => {
+          setCandidates([reportA, ...fetched]);
+        });
+        return;
+      }
+    }
+
+    // Default fallback to first preset different from A
+    if (candidates.length <= 1) {
+      const differentPreset =
+        PRESET_CANDIDATES.find((p) => p.refcat !== reportA.property.cadastralReference) ||
+        PRESET_CANDIDATES[0];
+
+      setIsLoadingCandidate(true);
       apiClient
         .auditByCadastralReference(differentPreset.refcat, {
           lat: differentPreset.lat,
           lon: differentPreset.lon,
         })
         .then((data) => {
-          setActiveReportB(data);
+          setCandidates([reportA, data]);
         })
         .catch(() => {
-          // If offline/error, use local synthetic structure for tests
-          setActiveReportB({
-            ...reportA,
-            id: 'mock-b-' + differentPreset.refcat,
-            property: {
-              ...reportA.property,
-              cadastralReference: differentPreset.refcat,
-              address: {
-                street: differentPreset.label.split(',')[0],
-                number: '28',
-                postalCode: '28013',
-                municipality: 'Madrid',
-                province: 'Madrid',
-              },
-              building: {
-                constructionYear: 1968,
-                builtSurfaceM2: 112,
-                primaryUse: 'Residencial',
-                unitsCount: 24,
-                hasCommercialGroundFloor: false,
-              },
-            },
-          });
+          const fallback = buildFallbackCandidate(differentPreset.refcat, differentPreset.label, differentPreset);
+          setCandidates([reportA, fallback]);
         })
         .finally(() => {
-          setIsLoadingB(false);
+          setIsLoadingCandidate(false);
         });
     }
-  }, [initialReportB, reportA.property.cadastralReference]);
+  }, [initialReportB, reportA, buildFallbackCandidate, initialCompareRefs]);
 
-  const candidateB = activeReportB || reportA;
+  const candidateA = candidates[0] || reportA;
+  const candidateB = candidates[1] || candidateA;
 
-  // Sync URL query params: ?refcat=...&vs=... and register Escape key listener
+  // Sync URL query params: ?refcat=...&vs=...&compare=ref1,ref2,... and register Escape key
   useEffect(() => {
     if (!isOpen || typeof window === 'undefined') return;
 
-    const refA = reportA.property.cadastralReference;
-    const refB = candidateB.property.cadastralReference;
+    const refs = candidates.map((c) => c.property.cadastralReference).filter(Boolean);
+    const refA = refs[0] || reportA.property.cadastralReference;
+    const refB = refs[1] || candidateB.property.cadastralReference;
 
     try {
       const params = new URLSearchParams(window.location.search);
       params.set('refcat', refA);
-      params.set('vs', refB);
+      if (refB) {
+        params.set('vs', refB);
+      }
+      params.set('compare', refs.join(','));
+
       const path = window.location.pathname || '/';
       const target = `${path}?${params.toString()}`;
       window.history.pushState({ openbarrio: true }, '', target);
@@ -126,6 +192,7 @@ export function PropertyDuelModal({
       try {
         const params = new URLSearchParams(window.location.search);
         params.delete('vs');
+        params.delete('compare');
         const path = window.location.pathname || '/';
         const query = params.toString();
         const target = query ? `${path}?${query}` : path;
@@ -134,16 +201,16 @@ export function PropertyDuelModal({
         // Ignore
       }
     };
-  }, [isOpen, reportA.property.cadastralReference, candidateB.property.cadastralReference, onClose]);
+  }, [isOpen, candidates, candidateB.property.cadastralReference, reportA.property.cadastralReference, onClose]);
 
   if (!isOpen) return null;
 
-  // CapEx assessment derivation
+  // CapEx assessment derivations
   const capexA =
-    reportA.capex ||
+    candidateA.capex ||
     deriveBuildingCapEx(
-      reportA.property.building.constructionYear || 1984,
-      reportA.property.building.builtSurfaceM2 || 88
+      candidateA.property.building.constructionYear || 1984,
+      candidateA.property.building.builtSurfaceM2 || 88
     );
   const capexB =
     candidateB.capex ||
@@ -153,15 +220,29 @@ export function PropertyDuelModal({
     );
 
   // Global Algorithmic Verdict computation
-  const scoreA = reportA.score.overallScore;
+  const scoreA = candidateA.score.overallScore;
   const scoreB = candidateB.score.overallScore;
   const globalDelta = scoreA - scoreB;
 
   let verdictBadgeText = t('duel.verdictParity');
-  if (globalDelta > 0) {
-    verdictBadgeText = t('duel.verdictAdvantageA', { delta: globalDelta });
-  } else if (globalDelta < 0) {
-    verdictBadgeText = t('duel.verdictAdvantageB', { delta: Math.abs(globalDelta) });
+  if (candidates.length <= 2) {
+    if (globalDelta > 0) {
+      verdictBadgeText = t('duel.verdictAdvantageA', { delta: globalDelta });
+    } else if (globalDelta < 0) {
+      verdictBadgeText = t('duel.verdictAdvantageB', { delta: Math.abs(globalDelta) });
+    }
+  } else {
+    // Multi-candidate winner detection
+    let bestIdx = 0;
+    let highestScore = candidates[0].score.overallScore;
+    for (let i = 1; i < candidates.length; i++) {
+      if (candidates[i].score.overallScore > highestScore) {
+        highestScore = candidates[i].score.overallScore;
+        bestIdx = i;
+      }
+    }
+    const bestLetter = CANDIDATE_METAS[bestIdx]?.letter || 'A';
+    verdictBadgeText = `Inmueble ${bestLetter} lidera (${highestScore} pts)`;
   }
 
   // Copy helpers
@@ -176,105 +257,89 @@ export function PropertyDuelModal({
     }
   };
 
-  // Change candidate B via API
-  const handleSelectPresetCandidateB = async (preset: PresetCandidate) => {
-    setIsLoadingB(true);
+  // Open candidate selector for replacing candidate or adding new one
+  const handleOpenCandidateSelector = (index = 1) => {
+    setTargetSelectorIndex(index);
+    setShowCandidateSelector(true);
+  };
+
+  const handleOpenAddCandidate = () => {
+    if (candidates.length >= 4) return;
+    setTargetSelectorIndex(candidates.length);
+    setShowCandidateSelector(true);
+  };
+
+  // Remove a candidate
+  const handleRemoveCandidate = (indexToRemove: number) => {
+    if (indexToRemove === 0) return; // Prevent removing Candidate A (base reference)
+    setCandidates((prev) => prev.filter((_, idx) => idx !== indexToRemove));
+  };
+
+  // Selection handlers from DuelCandidateSelector
+  const handleSelectPresetCandidate = async (preset: PresetCandidate) => {
+    setIsLoadingCandidate(true);
     try {
       const data = await apiClient.auditByCadastralReference(preset.refcat, {
         lat: preset.lat,
         lon: preset.lon,
       });
-      setActiveReportB(data);
-      onSelectCandidateB?.(data);
+      applyNewCandidate(data);
     } catch {
-      const fallback: PropertyAuditReport = {
-        ...reportA,
-        id: 'mock-b-' + preset.refcat,
-        property: {
-          ...reportA.property,
-          cadastralReference: preset.refcat,
-          address: {
-            street: preset.label.split(',')[0],
-            number: '1',
-            postalCode: '28001',
-            municipality: preset.label.includes('Barcelona')
-              ? 'Barcelona'
-              : preset.label.includes('València')
-              ? 'València'
-              : preset.label.includes('Sevilla')
-              ? 'Sevilla'
-              : 'Madrid',
-            province: 'Madrid',
-          },
-          building: {
-            constructionYear: 1975,
-            builtSurfaceM2: 95,
-            primaryUse: 'Residencial',
-            unitsCount: 16,
-            hasCommercialGroundFloor: false,
-          },
-        },
-      };
-      setActiveReportB(fallback);
-      onSelectCandidateB?.(fallback);
+      const fallback = buildFallbackCandidate(preset.refcat, preset.label, preset);
+      applyNewCandidate(fallback);
     } finally {
-      setIsLoadingB(false);
+      setIsLoadingCandidate(false);
       setShowCandidateSelector(false);
     }
   };
 
   const handleSelectCustomRefcat = async (refcat: string) => {
-    setIsLoadingB(true);
+    setIsLoadingCandidate(true);
     try {
       const data = await apiClient.auditByCadastralReference(refcat);
-      setActiveReportB(data);
-      onSelectCandidateB?.(data);
+      applyNewCandidate(data);
     } catch {
-      const fallback: PropertyAuditReport = {
-        ...reportA,
-        id: 'custom-b-' + refcat,
-        property: {
-          ...reportA.property,
-          cadastralReference: refcat,
-          address: {
-            street: 'Inmueble con RC ' + refcat,
-            number: '1',
-            postalCode: '28001',
-            municipality: 'Madrid',
-            province: 'Madrid',
-          },
-          building: {
-            constructionYear: 1980,
-            builtSurfaceM2: 90,
-            primaryUse: 'Residencial',
-            unitsCount: 10,
-            hasCommercialGroundFloor: false,
-          },
-        },
-      };
-      setActiveReportB(fallback);
-      onSelectCandidateB?.(fallback);
+      const fallback = buildFallbackCandidate(refcat);
+      applyNewCandidate(fallback);
     } finally {
-      setIsLoadingB(false);
+      setIsLoadingCandidate(false);
       setShowCandidateSelector(false);
     }
   };
 
+  const applyNewCandidate = (newReport: PropertyAuditReport) => {
+    setCandidates((prev) => {
+      const next = [...prev];
+      if (targetSelectorIndex < next.length) {
+        // Replace existing candidate slot
+        next[targetSelectorIndex] = newReport;
+      } else if (next.length < 4) {
+        // Append new candidate slot up to 4
+        next.push(newReport);
+      }
+      return next;
+    });
+
+    if (targetSelectorIndex === 1) {
+      onSelectCandidateB?.(newReport);
+    }
+  };
+
   // Technical Arbitrage Synthesis
-  const noiseA = reportA.environment.noise?.dayEveningNightDecibels || 58;
+  const noiseA = candidateA.environment.noise?.dayEveningNightDecibels || 58;
   const noiseB = candidateB.environment.noise?.dayEveningNightDecibels || 67;
   const noiseDiff = noiseB - noiseA;
 
-  const incomeA = reportA.neighborhood.averageNetHouseholdIncomeEur || 34200;
+  const incomeA = candidateA.neighborhood.averageNetHouseholdIncomeEur || 34200;
   const incomeB = candidateB.neighborhood.averageNetHouseholdIncomeEur || 40400;
   const incomeDiff = incomeB - incomeA;
 
-  const yearA = reportA.property.building.constructionYear || 1984;
+  const yearA = candidateA.property.building.constructionYear || 1984;
   const yearB = candidateB.property.building.constructionYear || 1968;
   const ageA = new Date().getFullYear() - yearA;
   const ageB = new Date().getFullYear() - yearB;
 
-  const walkScoreA = reportA.score.subscores.connectivity;
+  const walkScoreA = candidateA.score.subscores.connectivity;
   const walkScoreB = candidateB.score.subscores.connectivity;
 
   return (
@@ -285,10 +350,13 @@ export function PropertyDuelModal({
       aria-modal="true"
     >
       <DuelHeader
-        reportA={reportA}
+        reportA={candidateA}
         candidateB={candidateB}
+        candidates={candidates}
         verdictBadgeText={verdictBadgeText}
         onClose={onClose}
+        onAddCandidate={handleOpenAddCandidate}
+        canAddCandidate={candidates.length < 4}
       />
 
       <main className="flex-1 w-full max-w-[1720px] mx-auto p-space-md lg:p-space-lg flex flex-col gap-space-lg">
@@ -301,134 +369,138 @@ export function PropertyDuelModal({
               </div>
               <div>
                 <h1 className="font-headline text-lg sm:text-xl text-on-surface font-bold tracking-tight">
-                  {t('duel.title')}
+                  {candidates.length > 2
+                    ? `Matriz Comparativa Multidominio (${candidates.length} Inmuebles)`
+                    : t('duel.title')}
                 </h1>
                 <p className="font-body text-xs text-on-surface-variant mt-0.5">
                   {t('duel.desc')}
                 </p>
               </div>
             </div>
+
+            {candidates.length < 4 && (
+              <button
+                type="button"
+                data-testid="add-candidate-btn"
+                onClick={handleOpenAddCandidate}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary/20 hover:bg-primary/30 text-primary font-mono text-xs border border-primary/40 transition-colors cursor-pointer"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>+ {t('duel.addCandidate')} ({candidates.length}/4)</span>
+              </button>
+            )}
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-space-lg items-center">
-            <div className="lg:col-span-7 flex flex-col items-center justify-center">
+            <div className="lg:col-span-6 xl:col-span-7 flex flex-col items-center justify-center">
               <DualRadarChart
-                subscoresA={reportA.score.subscores}
-                subscoresB={candidateB.score.subscores}
+                subscoresA={candidates[0]?.score.subscores}
+                subscoresB={candidates[1]?.score.subscores}
+                subscoresC={candidates[2]?.score.subscores}
+                subscoresD={candidates[3]?.score.subscores}
                 labelA={t('duel.candidateA')}
                 labelB={t('duel.candidateB')}
+                labelC={t('duel.candidateC')}
+                labelD={t('duel.candidateD')}
                 mode={radarMode}
                 onModeChange={setRadarMode}
               />
             </div>
 
-            <div className="lg:col-span-5 flex flex-col gap-3">
-              {/* Score Card A */}
-              <div
-                data-testid="score-card-a"
-                className="bg-surface-container border border-cyan-500/40 rounded-lg p-space-md relative overflow-hidden group hover:border-cyan-400 transition-colors"
-              >
-                <div className="flex items-start justify-between">
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <span className="w-2.5 h-2.5 rounded-full bg-cyan-400 shadow-[0_0_8px_#06b6d4]" />
-                      <span className="font-mono text-xs font-semibold text-cyan-300">
-                        INMUEBLE A · {reportA.property.address.street} {reportA.property.address.number}
-                      </span>
-                    </div>
-                    <div className="mt-1 text-xs text-on-surface-variant font-mono">
-                      {reportA.property.address.municipality} ({reportA.property.address.province})
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <div className="text-2xl sm:text-3xl font-bold font-mono text-cyan-400 leading-none">
-                      {scoreA}
-                      <span className="text-xs text-on-surface-variant font-normal">/100</span>
-                    </div>
-                    <span className="inline-block px-2 py-0.5 mt-1 rounded bg-cyan-950/60 border border-cyan-500/30 text-cyan-300 font-mono text-[10px]">
-                      {scoreA >= 75 ? 'Calidad Muy Alta' : scoreA >= 50 ? 'Calidad Media' : 'Atención Requerida'}
-                    </span>
-                  </div>
-                </div>
+            <div className="lg:col-span-6 xl:col-span-5 flex flex-col gap-3">
+              {/* Dynamic Score Cards Grid (Supports 2, 3, or 4 candidates) */}
+              <div className={`grid grid-cols-1 ${candidates.length > 2 ? 'sm:grid-cols-2' : ''} gap-3`}>
+                {candidates.map((cand, idx) => {
+                  const meta = CANDIDATE_METAS[idx] || CANDIDATE_METAS[0];
+                  const cScore = cand.score.overallScore;
+                  const cCapex =
+                    cand.capex ||
+                    deriveBuildingCapEx(
+                      cand.property.building.constructionYear || 1975,
+                      cand.property.building.builtSurfaceM2 || 90
+                    );
+                  const cNoise = cand.environment.noise?.dayEveningNightDecibels || 60;
+                  const isSub = isSubstandardHousing(cand);
 
-                <div className="w-full bg-surface-container-highest h-2 rounded-full mt-3 overflow-hidden">
-                  <div className="bg-cyan-400 h-full rounded-full" style={{ width: `${scoreA}%` }} />
-                </div>
+                  return (
+                    <div
+                      key={cand.property.cadastralReference || idx}
+                      data-testid={`score-card-${meta.letter.toLowerCase()}`}
+                      className={`bg-surface-container border ${meta.borderClass} rounded-lg p-space-md relative overflow-hidden group ${meta.hoverBorderClass} transition-colors`}
+                    >
+                      <div className="flex items-start justify-between">
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span className={`w-2.5 h-2.5 rounded-full ${meta.dotClass}`} />
+                            <span className={`font-mono text-xs font-semibold ${meta.textLightClass}`}>
+                              INMUEBLE {meta.letter} · {cand.property.address.street} {cand.property.address.number}
+                            </span>
+                          </div>
+                          <div className="mt-1 text-xs text-on-surface-variant font-mono">
+                            {cand.property.address.municipality} ({cand.property.address.province})
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <div className={`text-2xl sm:text-3xl font-bold font-mono ${meta.textAccentClass} leading-none`}>
+                            {cScore}
+                            <span className="text-xs text-on-surface-variant font-normal">/100</span>
+                          </div>
+                          <span className={`inline-block px-2 py-0.5 mt-1 rounded ${meta.bgBadgeClass}/60 border ${meta.borderBadgeClass}/30 ${meta.textLightClass} font-mono text-[10px]`}>
+                            {cScore >= 75 ? 'Calidad Muy Alta' : cScore >= 50 ? 'Calidad Media' : 'Atención Requerida'}
+                          </span>
+                        </div>
+                      </div>
 
-                <div className="grid grid-cols-3 gap-2 mt-3 pt-3 border-t border-outline-variant/50 text-[11px] font-mono">
-                  <div>
-                    <div className="text-on-surface-variant">ITE Vigente</div>
-                    <div className="text-on-surface font-semibold">
-                      {capexA.iteStatus === 'favorable_active' ? `Favorable (${capexA.iteDeadlineYear})` : 'Pendiente'}
-                    </div>
-                  </div>
-                  <div>
-                    <div className="text-on-surface-variant">Nivel Ruido</div>
-                    <div className="text-on-surface font-semibold text-primary">
-                      {noiseA} dBA ({noiseA < 60 ? 'Óptimo' : 'Moderado'})
-                    </div>
-                  </div>
-                  <div>
-                    <div className="text-on-surface-variant">CapEx Est.</div>
-                    <div className="text-on-surface font-semibold">
-                      {capexA.estimatedCapExPerM2Eur.min}-{capexA.estimatedCapExPerM2Eur.max} €/m²
-                    </div>
-                  </div>
-                </div>
-              </div>
+                      {/* Substandard Housing Warning Badge on Score Card */}
+                      {isSub && (
+                        <div
+                          data-testid="substandard-scorecard-alert"
+                          className="mt-2 p-1.5 rounded bg-rose-950/70 border border-rose-500/80 text-rose-300 text-[10px] font-mono flex items-center gap-1.5"
+                        >
+                          <AlertTriangle className="w-3.5 h-3.5 text-rose-400 shrink-0" />
+                          <span>Alerta de Infravivienda (Presunto Local)</span>
+                        </div>
+                      )}
 
-              {/* Score Card B */}
-              <div
-                data-testid="score-card-b"
-                className="bg-surface-container border border-amber-500/40 rounded-lg p-space-md relative overflow-hidden group hover:border-amber-400 transition-colors"
-              >
-                <div className="flex items-start justify-between">
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <span className="w-2.5 h-2.5 rounded-full bg-amber-400 shadow-[0_0_8px_#f59e0b]" />
-                      <span className="font-mono text-xs font-semibold text-amber-300">
-                        INMUEBLE B · {candidateB.property.address.street} {candidateB.property.address.number}
-                      </span>
-                    </div>
-                    <div className="mt-1 text-xs text-on-surface-variant font-mono">
-                      {candidateB.property.address.municipality} ({candidateB.property.address.province})
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <div className="text-2xl sm:text-3xl font-bold font-mono text-amber-400 leading-none">
-                      {scoreB}
-                      <span className="text-xs text-on-surface-variant font-normal">/100</span>
-                    </div>
-                    <span className="inline-block px-2 py-0.5 mt-1 rounded bg-amber-950/60 border border-amber-500/30 text-amber-300 font-mono text-[10px]">
-                      {scoreB >= 75 ? 'Calidad Muy Alta' : scoreB >= 50 ? 'Calidad Media-Alta' : 'Atención Requerida'}
-                    </span>
-                  </div>
-                </div>
+                      <div className="w-full bg-surface-container-highest h-2 rounded-full mt-3 overflow-hidden">
+                        <div
+                          className={`h-full rounded-full ${
+                            meta.letter === 'A'
+                              ? 'bg-cyan-400'
+                              : meta.letter === 'B'
+                              ? 'bg-amber-400'
+                              : meta.letter === 'C'
+                              ? 'bg-purple-400'
+                              : 'bg-emerald-400'
+                          }`}
+                          style={{ width: `${cScore}%` }}
+                        />
+                      </div>
 
-                <div className="w-full bg-surface-container-highest h-2 rounded-full mt-3 overflow-hidden">
-                  <div className="bg-amber-400 h-full rounded-full" style={{ width: `${scoreB}%` }} />
-                </div>
-
-                <div className="grid grid-cols-3 gap-2 mt-3 pt-3 border-t border-outline-variant/50 text-[11px] font-mono">
-                  <div>
-                    <div className="text-on-surface-variant">ITE Estado</div>
-                    <div className="text-amber-300 font-semibold">
-                      {capexB.iteStatus === 'favorable_active' ? `Favorable` : 'Pendiente / Subsan.'}
+                      <div className="grid grid-cols-3 gap-2 mt-3 pt-3 border-t border-outline-variant/50 text-[11px] font-mono">
+                        <div>
+                          <div className="text-on-surface-variant">ITE Estado</div>
+                          <div className={`font-semibold ${cCapex.iteStatus === 'favorable_active' ? 'text-on-surface' : meta.textAccentClass}`}>
+                            {cCapex.iteStatus === 'favorable_active' ? 'Favorable' : 'Pendiente'}
+                          </div>
+                        </div>
+                        <div>
+                          <div className="text-on-surface-variant">Nivel Ruido</div>
+                          <div className={`font-semibold ${meta.textAccentClass}`}>
+                            {cNoise} dBA ({cNoise < 60 ? 'Óptimo' : cNoise <= 65 ? 'Moderado' : 'ZPAE'})
+                          </div>
+                        </div>
+                        <div>
+                          <div className="text-on-surface-variant">CapEx Est.</div>
+                          <div className="text-on-surface font-semibold">
+                            {cCapex.estimatedCapExPerM2Eur.min}-{cCapex.estimatedCapExPerM2Eur.max} €/m²
+                          </div>
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                  <div>
-                    <div className="text-on-surface-variant">Nivel Ruido</div>
-                    <div className="text-amber-400 font-semibold">
-                      {noiseB} dBA ({noiseB > 65 ? 'ZPAE' : 'Moderado'})
-                    </div>
-                  </div>
-                  <div>
-                    <div className="text-on-surface-variant">CapEx Est.</div>
-                    <div className="text-amber-300 font-semibold">
-                      {capexB.estimatedCapExPerM2Eur.min}-{capexB.estimatedCapExPerM2Eur.max} €/m²
-                    </div>
-                  </div>
-                </div>
+                  );
+                })}
               </div>
 
               {/* Technical Arbitrage Callout */}
@@ -460,8 +532,9 @@ export function PropertyDuelModal({
 
         {/* SECTION 2 & 3: PILLAR COMPARISON & DIFFERENTIAL MATRIX TABLE */}
         <DuelPillarComparison
-          reportA={reportA}
+          reportA={candidateA}
           candidateB={candidateB}
+          candidates={candidates}
           capexA={capexA}
           capexB={capexB}
           scoreA={scoreA}
@@ -479,7 +552,9 @@ export function PropertyDuelModal({
           onCopy={handleCopy}
           copiedA={copiedA}
           copiedB={copiedB}
-          onOpenCandidateSelector={() => setShowCandidateSelector(true)}
+          onOpenCandidateSelector={handleOpenCandidateSelector}
+          onRemoveCandidate={handleRemoveCandidate}
+          onAddCandidate={handleOpenAddCandidate}
         />
       </main>
 
@@ -497,12 +572,24 @@ export function PropertyDuelModal({
             <button
               type="button"
               data-testid="change-candidate-btn"
-              onClick={() => setShowCandidateSelector(true)}
+              onClick={() => handleOpenCandidateSelector(1)}
               className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-surface-container-high border border-outline-variant hover:border-outline text-on-surface rounded text-xs font-mono transition-colors cursor-pointer"
             >
               <span>{t('duel.changeCandidateB')}</span>
               <ChevronDown className="w-3.5 h-3.5" />
             </button>
+
+            {candidates.length < 4 && (
+              <button
+                type="button"
+                data-testid="add-candidate-footer-btn"
+                onClick={handleOpenAddCandidate}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-surface-container-high border border-primary/40 hover:border-primary text-primary rounded text-xs font-mono transition-colors cursor-pointer"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>+ {t('duel.addCandidate')} ({candidates.length}/4)</span>
+              </button>
+            )}
 
             <button
               type="button"
@@ -520,9 +607,14 @@ export function PropertyDuelModal({
       <DuelCandidateSelector
         isOpen={showCandidateSelector}
         onClose={() => setShowCandidateSelector(false)}
-        onSelectPreset={handleSelectPresetCandidateB}
+        onSelectPreset={handleSelectPresetCandidate}
         onSelectCustomRefcat={handleSelectCustomRefcat}
-        isLoading={isLoadingB}
+        isLoading={isLoadingCandidate}
+        targetCandidateLabel={
+          targetSelectorIndex >= candidates.length
+            ? `Añadir Inmueble ${CANDIDATE_METAS[targetSelectorIndex]?.letter || ''} al Comparador`
+            : `Cambiar Inmueble ${CANDIDATE_METAS[targetSelectorIndex]?.letter || 'B'}`
+        }
       />
     </div>
   );

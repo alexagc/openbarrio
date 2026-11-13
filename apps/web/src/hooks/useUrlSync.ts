@@ -21,6 +21,7 @@ export interface UrlParamsState {
   refcat?: string;
   coords?: { lat: number; lon: number };
   vs?: string;
+  compare?: string[];
   municipalitySlug?: string;
   isEmbed?: boolean;
 }
@@ -38,6 +39,18 @@ export function parseUrlState(): UrlParamsState {
   const lonParam = searchParams.get('lon');
   const tabParam = searchParams.get('tab');
   const vsParam = searchParams.get('vs') || undefined;
+  const compareParam = searchParams.get('compare') || undefined;
+
+  let compareRefs: string[] | undefined;
+  if (compareParam) {
+    const list = compareParam
+      .split(',')
+      .map((s) => s.trim().toUpperCase())
+      .filter((s) => s.length >= 14);
+    if (list.length > 0) {
+      compareRefs = list.slice(0, 4);
+    }
+  }
 
   let coords: { lat: number; lon: number } | undefined;
   if (latParam && lonParam) {
@@ -62,12 +75,22 @@ export function parseUrlState(): UrlParamsState {
     }
   }
 
-  const effectiveRefcat = refcatParam ? refcatParam.toUpperCase().trim() : (localized.refcat || pathRefcat);
-  const isMapPath = path.startsWith('/map') || path.startsWith('/mapa') || Boolean(effectiveRefcat);
+  let effectiveRefcat = refcatParam ? refcatParam.toUpperCase().trim() : (localized.refcat || pathRefcat);
+  if (!effectiveRefcat && compareRefs && compareRefs.length > 0) {
+    effectiveRefcat = compareRefs[0];
+  }
+
+  const effectiveVs = vsParam
+    ? vsParam.toUpperCase().trim()
+    : compareRefs && compareRefs.length >= 2
+    ? compareRefs[1]
+    : undefined;
+
+  const isMapPath = path.startsWith('/map') || path.startsWith('/mapa') || Boolean(effectiveRefcat) || Boolean(compareRefs);
 
   let viewMode: ViewMode = localized.viewMode || 'landing';
   if (!localized.viewMode || localized.viewMode === 'landing') {
-    if (isMapPath || Boolean(effectiveRefcat) || Boolean(coords)) {
+    if (isMapPath || Boolean(effectiveRefcat) || Boolean(coords) || Boolean(compareRefs)) {
       viewMode = 'map';
     }
   }
@@ -86,7 +109,8 @@ export function parseUrlState(): UrlParamsState {
     dossierTab,
     refcat: effectiveRefcat,
     coords,
-    vs: vsParam ? vsParam.toUpperCase().trim() : undefined,
+    vs: effectiveVs,
+    compare: compareRefs,
     municipalitySlug,
     isEmbed,
   };

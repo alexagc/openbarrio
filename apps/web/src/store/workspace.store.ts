@@ -37,6 +37,7 @@ export interface WorkspaceState {
   isDuelOpen: boolean;
   duelCandidateB: PropertyAuditReport | null;
   isLoadingDuelB: boolean;
+  compareRefs?: string[];
 
   // Certified PDF Modal
   isCertifiedPdfOpen: boolean;
@@ -65,6 +66,7 @@ export interface WorkspaceState {
   setIsDuelOpen: (open: boolean) => void;
   setDuelCandidateB: (candidate: PropertyAuditReport | null) => void;
   setIsLoadingDuelB: (isLoadingDuelB: boolean) => void;
+  setCompareRefs: (refs?: string[]) => void;
 
   setIsCertifiedPdfOpen: (open: boolean) => void;
 
@@ -105,7 +107,8 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
   unitsData: null,
   isLoadingUnits: false,
 
-  isDuelOpen: Boolean(initialUrl.vs),
+  isDuelOpen: Boolean(initialUrl.vs || (initialUrl.compare && initialUrl.compare.length >= 2)),
+  compareRefs: initialUrl.compare,
   duelCandidateB: null,
   isLoadingDuelB: false,
 
@@ -168,6 +171,10 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
   },
 
   setIsLoadingDuelB: (isLoadingDuelB) => set({ isLoadingDuelB }),
+  setCompareRefs: (compareRefs) => {
+    set({ compareRefs });
+    get().syncUrl();
+  },
   setIsCertifiedPdfOpen: (isCertifiedPdfOpen) => set({ isCertifiedPdfOpen }),
 
   loadAuditByCoords: async (lat: number, lon: number) => {
@@ -377,8 +384,14 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
       params.set('tab', dossierTab);
     }
 
-    if (isDuelOpen && duelCandidateB?.property.cadastralReference) {
-      params.set('vs', duelCandidateB.property.cadastralReference);
+    if (isDuelOpen) {
+      if (duelCandidateB?.property.cadastralReference) {
+        params.set('vs', duelCandidateB.property.cadastralReference);
+      }
+      const compareRefs = get().compareRefs;
+      if (compareRefs && compareRefs.length > 0) {
+        params.set('compare', compareRefs.join(','));
+      }
     }
 
     const qs = params.toString();
@@ -394,6 +407,7 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
   initFromUrl: () => {
     if (typeof window === 'undefined') return;
     const state = parseUrlState();
+    const isDuelOpen = Boolean(state.vs || (state.compare && state.compare.length >= 2));
     set({
       viewMode: state.viewMode,
       municipalitySlug: state.municipalitySlug,
@@ -402,7 +416,8 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
       dossierTab: state.dossierTab,
       sheetSnapPoint: state.activeTab === 'dossier' ? 'full' : 'peek',
       mobileNavDestination: state.activeTab === 'dossier' ? 'report' : 'map',
-      isDuelOpen: Boolean(state.vs),
+      isDuelOpen,
+      compareRefs: state.compare,
     });
 
     if (state.refcat) {
@@ -418,6 +433,7 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
 }));
 
 // Precise Selectors to prevent unnecessary re-rendering
+export const useCompareRefs = () => useWorkspaceStore((state) => state.compareRefs);
 export const useViewMode = () => useWorkspaceStore((state) => state.viewMode);
 export const useActiveTab = () => useWorkspaceStore((state) => state.activeTab);
 export const useDossierTab = () => useWorkspaceStore((state) => state.dossierTab);
