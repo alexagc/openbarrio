@@ -43,16 +43,20 @@ vi.mock('maplibre-gl', () => {
     isOpen = vi.fn().mockReturnValue(false);
   }
 
+  const MockMapConstructor = vi.fn(function () {
+    return mockMapInstance;
+  });
+
   return {
     default: {
-      Map: vi.fn(() => mockMapInstance),
+      Map: MockMapConstructor,
       Marker: MockMarker,
       Popup: MockPopup,
       setWorkerUrl: vi.fn(),
       getWorkerUrl: vi.fn(),
       addProtocol: vi.fn(),
     },
-    Map: vi.fn(() => mockMapInstance),
+    Map: MockMapConstructor,
     Marker: MockMarker,
     Popup: MockPopup,
     setWorkerUrl: vi.fn(),
