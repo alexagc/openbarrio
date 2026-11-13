@@ -111,10 +111,10 @@ export const LanguageProvider: React.FC<LanguageProviderProps> = ({ children, in
         return path;
       }
 
-      // Parameter interpolation {{param}}
+      // Parameter interpolation {{param}} or {param}
       if (params) {
         return Object.entries(params).reduce((acc, [key, val]) => {
-          return acc.replace(new RegExp(`{{\\s*${key}\\s*}}`, 'g'), String(val));
+          return acc.replace(new RegExp(`\\{{1,2}\\s*${key}\\s*\\}{1,2}`, 'g'), String(val));
         }, template);
       }
 

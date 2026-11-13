@@ -18,7 +18,7 @@ db.exec('PRAGMA journal_mode = WAL;');
 db.exec('PRAGMA synchronous = NORMAL;');
 
 // 1. Always apply all migrations idempotently
-console.log('📦 Applying D1 schemas (0001 - 0007)...');
+console.log('📦 Applying D1 schemas (0001 - 0008)...');
 const migrationFiles = [
   'apps/api/migrations/0001_initial_schema.sql',
   'apps/api/migrations/0002_civic_facilities.sql',
@@ -27,6 +27,7 @@ const migrationFiles = [
   'apps/api/migrations/0005_serpavi_benchmarks.sql',
   'apps/api/migrations/0006_environmental_risk_precalc.sql',
   'apps/api/migrations/0007_cadastral_cache.sql',
+  'apps/api/migrations/0008_building_inspection_and_seismic.sql',
 ];
 
 for (const mig of migrationFiles) {
@@ -283,6 +284,38 @@ if (sicaDistSql) {
   console.log(`🔊 Loading MITECO SICA noise distribution from ${sicaDistSql}...`);
   const sql = fs.readFileSync(sicaDistSql, 'utf8');
   db.exec(sql);
+}
+
+// 3f. Seed Municipal Technical Building Inspection (ITE/IEE) Records
+const iteCandidates = [
+  'packages/etl/dist/openbarrio-etl-dist/municipal_ite.sql',
+  'packages/etl/dist/municipal_ite.sql',
+];
+const iteDistSql = iteCandidates.find((p) => fs.existsSync(p));
+const iteCount = Number(db.prepare('SELECT count(*) as total FROM municipal_ite_records').get()?.total || 0);
+
+if (iteDistSql && iteCount < 10) {
+  console.log(`🏗️ Loading Municipal ITE/IEE records from ${iteDistSql}...`);
+  const sql = fs.readFileSync(iteDistSql, 'utf8');
+  db.exec(sql);
+  const newCount = db.prepare('SELECT count(*) as total FROM municipal_ite_records').get()?.total || 0;
+  console.log(`✅ Loaded ${newCount} Municipal ITE/IEE records.`);
+}
+
+// 3g. Seed IGN NCSE-02 Basic Seismic Hazard Records
+const seismicCandidates = [
+  'packages/etl/dist/openbarrio-etl-dist/ign_seismic.sql',
+  'packages/etl/dist/ign_seismic.sql',
+];
+const seismicDistSql = seismicCandidates.find((p) => fs.existsSync(p));
+const seismicCount = Number(db.prepare('SELECT count(*) as total FROM ign_seismic_hazard').get()?.total || 0);
+
+if (seismicDistSql && seismicCount < 50) {
+  console.log(`🌋 Loading IGN NCSE-02 Seismic Hazard reference from ${seismicDistSql}...`);
+  const sql = fs.readFileSync(seismicDistSql, 'utf8');
+  db.exec(sql);
+  const newCount = db.prepare('SELECT count(*) as total FROM ign_seismic_hazard').get()?.total || 0;
+  console.log(`✅ Loaded ${newCount} IGN NCSE-02 Seismic Hazard municipal records.`);
 }
 
 // 4. Check & Load real INE ADRH data

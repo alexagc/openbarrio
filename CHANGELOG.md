@@ -5,6 +5,35 @@ All notable changes to the **OpenBarrio** platform are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.0] - 2026-11-13
+
+### Added
+- **Building Technical Inspection (ITE/IEE) Official Registry Ingestion & Preventive Statutory Alert (`@openbarrio/core`, `packages/etl`, `apps/api`, `apps/web`)**:
+  - Autonomous ETL ingestion and normalization pipeline in `packages/etl/src/process_municipal_ite.py` for open municipal ITE/IEE censuses (Madrid, Barcelona, Euskadi, and Valencia).
+  - Core domain models and runtime schemas (`BuildingInspectionSchema`, `evaluateBuildingInspectionAlert()`, `resolveMunicipalRegistry()`) in `@openbarrio/core`.
+  - Statutory preventive alert mechanism: buildings $\ge 50$ years without registered inspection in municipalities without digitalized registries receive an official preventive advisory under RD-L 7/2015 art. 29 (*Ley de Suelo y Rehabilitación Urbana*).
+  - SQLite & Cloudflare D1 migration `0008_building_inspection_and_seismic.sql` indexing building inspection records by `cadastral_reference`, `municipality_code`, and `inspection_date`.
+  - BarrioScore integration: unfavorable ITE penalizes `buildingHealthScore` by -20 points, favorable inspection rewards +5 bonus points, and overdue/statutory alert triggers a critical dossier warning.
+  - Dedicated dossier card `BuildingInspectionCard.tsx` with inspection status pills (FAVORABLE, DESFAVORABLE, SUBSANADO, EXENTO, NO_CONSTA), defects breakdown, next statutory inspection interval, and official municipal registry links.
+- **15-Minute City Pedestrian Isochrones & WalkScore Catchment Engine (`@openbarrio/core`, `apps/web`)**:
+  - Client-side parametric isochrone generator (`calculatePedestrianIsochrones`, `generateParametricIsochrones`) computing 5-minute (375m), 10-minute (750m), and 15-minute (1125m) pedestrian catchment polygons based on a standard 4.5 km/h walking speed with a 1.25x urban tortuosity factor.
+  - Density and diversity metric calculation across 8 core urban amenity categories (supermarkets, pharmacies, schools, healthcare centers, transit hubs, parks, libraries, sports facilities).
+  - Dedicated interactive card `PedestrianIsochronesCard.tsx` rendering isochrone rings, accessibility breakdown, and WalkScore rating (0-100).
+  - MapLibre GL integration in the "Vida Urbana" lens displaying concentric pedestrian buffers centered on the audited parcel.
+- **IGN NCSE-02 Seismic Hazard & Structural Pre-Normative Vulnerability (`@openbarrio/core`, `packages/etl`, `apps/api`, `apps/web`)**:
+  - Official seismic hazard database ingestion from IGN NCSE-02 normative catalog (`packages/etl/src/process_ign_seismic.py`) covering all ~8,131 Spanish municipalities.
+  - Evaluation of basic seismic acceleration ($a_b$) and risk tiers (VERY_LOW $a_b < 0.04g$, LOW $0.04g \le a_b < 0.08g$, MODERATE $0.08g \le a_b < 0.12g$, HIGH $a_b \ge 0.12g$, VERY_HIGH $a_b \ge 0.16g$).
+  - Structural vulnerability cross-correlation (`evaluateSeismicVulnerability`): buildings constructed prior to modern seismic codes (NCSE-94 / NCSE-02) located in zones with $a_b \ge 0.08g$ receive a -8 point penalty in `buildingHealthScore` and an engineering advisory.
+  - High seismic acceleration ($a_b \ge 0.12g$) penalizes `environmentalScore` by up to -8 points.
+  - Dedicated dossier card `SeismicSafetyCard.tsx` with acceleration gauge, seismic risk level, building structural code classification, and safety recommendations.
+- **Extension & Multilingual Parity (`apps/extension`, `apps/web`)**:
+  - Injected ITE/IEE status badge into the Chrome Extension companion widget template.
+  - Full 5-language translation parity (`es`, `en`, `ca`, `gl`, `eu`) across all new domain terms (`ite`, `seismic`, `walkscore`).
+- **Packaging & Monorepo Version Elevation to v1.3.0**:
+  - Bumped version to `1.3.0` monorepo-wide across `package.json`, `packages/core`, `packages/etl`, `apps/api`, `apps/web`, and `apps/extension`.
+  - Generated store-ready Chrome Manifest V3 package: `apps/extension/openbarrio-extension-v1.3.0.zip` (42.96 KB).
+  - Total test suite expanded to 538 passing tests (100% success rate) with zero ESLint warnings inside Docker Desktop.
+
 ## [1.2.0] - 2026-11-13
 
 ### Added

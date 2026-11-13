@@ -5,9 +5,11 @@ import {
   LandClassification,
   detectPropertyTypology,
   detectCadastralJurisdiction,
+  evaluateBuildingInspectionAlert,
+  evaluateSeismicVulnerability,
 } from '@openbarrio/core';
 import { ScoreGauge } from './ScoreGauge';
-import { PillarCards } from './PillarCard';
+import { PillarCards, BuildingCadastralCard } from './PillarCard';
 import { RentalModule } from './RentalModule';
 import { HighlightsAndRisks } from './HighlightsAndRisks';
 import { BuildingCapExCard } from './dossier/BuildingCapExCard';
@@ -16,6 +18,9 @@ import { NeighborhoodTrendsCard } from './dossier/NeighborhoodTrendsCard';
 import { RadonCard } from './dossier/RadonCard';
 import { VutSaturationCard } from './dossier/VutSaturationCard';
 import { FiscalSimulatorCard } from './dossier/FiscalSimulatorCard';
+import { BuildingInspectionCard } from './dossier/BuildingInspectionCard';
+import { SeismicSafetyCard } from './dossier/SeismicSafetyCard';
+import { PedestrianIsochronesCard } from './dossier/PedestrianIsochronesCard';
 import { downloadCadastralGML } from '../utils/gml';
 import { DossierTab } from '../hooks/useUrlSync';
 import { useWorkspaceStore } from '../store/workspace.store';
@@ -87,6 +92,9 @@ export function AuditDossier({
     vut,
     fiscal,
     generatedAt,
+    buildingInspection,
+    seismicHazard,
+    pedestrianIsochrones,
   } = report;
 
   const fullAddress = property.unit
@@ -520,10 +528,26 @@ export function AuditDossier({
                   environment.floodRisk.returnPeriodYears <= 500));
             const hasExpiredCee = Boolean(energy?.isExpired);
             const hasSubstandard = isSubstandardHousing(report);
+            const activeInspection = buildingInspection || evaluateBuildingInspectionAlert(property);
+            const activeSeismic = seismicHazard || evaluateSeismicVulnerability(
+              property.address.municipalityCode || '28079',
+              property.building.constructionYear,
+              undefined,
+              property.address.municipality,
+              property.address.provinceCode
+            );
 
             const criticalAlerts: string[] = [];
             if (hasSubstandard) {
               criticalAlerts.push(t('dossier.substandardHousingAlert'));
+            }
+            if (activeInspection.status === 'UNFAVORABLE') {
+              criticalAlerts.push(t('dossier.iteUnfavorableAlert'));
+            } else if (activeInspection.isPreventiveAlert) {
+              criticalAlerts.push(t('dossier.itePreventiveAlert'));
+            }
+            if (activeSeismic.isVulnerableToSeismic) {
+              criticalAlerts.push(t('dossier.seismicVulnerabilityAlert'));
             }
             if (hasDiscrepancyAlert) {
               criticalAlerts.push(t('dossier.discrepancyAlert'));
@@ -626,33 +650,36 @@ export function AuditDossier({
           className={currentTab === 'building' ? 'space-y-4 p-space-lg' : 'hidden'}
         >
           {/* Cadastral Building Technical Overview */}
-          <div className="p-4 rounded-lg bg-surface-container-low border border-outline-variant space-y-3">
-            <div className="flex items-center justify-between border-b border-outline-variant pb-2">
-              <span className="font-headline text-sm font-bold text-on-surface">{t('dossier.cadastralRecords')}</span>
-              <span className="font-mono text-xs text-primary font-semibold">Año {property.building.constructionYear}</span>
+          <div className="page-break-inside-avoid">
+            <BuildingCadastralCard property={property} urbanPlanning={urbanPlanning} />
+          </div>
+
+          {/* Technical Building Inspection (ITE/IEE) */}
+          {!isUnbuilt && (
+            <div className="page-break-inside-avoid">
+              <BuildingInspectionCard
+                inspection={buildingInspection || evaluateBuildingInspectionAlert(property)}
+                property={property}
+              />
             </div>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
-              <div>
-                <span className="text-on-surface-variant block">
-                  {isUnbuilt ? t('dossier.plotArea') : t('dossier.builtArea')}
-                </span>
-                <span className="font-mono font-bold text-on-surface">
-                  {(isUnbuilt ? (plotArea || property.building.builtSurfaceM2 || 0) : property.building.builtSurfaceM2).toLocaleString('es-ES')} m² {isUnbuilt ? t('dossier.landWord') : ''}
-                </span>
-              </div>
-              <div>
-                <span className="text-on-surface-variant block">{t('dossier.primaryUse')}</span>
-                <span className="font-semibold text-on-surface">{property.building.primaryUse}</span>
-              </div>
-              <div>
-                <span className="text-on-surface-variant block">{t('dossier.registeredProperties')}</span>
-                <span className="font-mono font-bold text-on-surface">{property.building.unitsCount || 1} {t('dossier.units')}</span>
-              </div>
-              <div>
-                <span className="text-on-surface-variant block">{t('dossier.commercialGroundFloor')}</span>
-                <span className="font-semibold text-on-surface">{property.building.hasCommercialGroundFloor ? t('dossier.yesCommercial') : t('dossier.noCommercial')}</span>
-              </div>
-            </div>
+          )}
+
+          {/* IGN NCSE-02 Seismic Hazard & Vulnerability */}
+          <div className="page-break-inside-avoid">
+            <SeismicSafetyCard
+              seismic={
+                seismicHazard ||
+                evaluateSeismicVulnerability(
+                  property.address.municipalityCode || '28079',
+                  property.building.constructionYear,
+                  undefined,
+                  property.address.municipality,
+                  property.address.provinceCode
+                )
+              }
+              constructionYear={property.building.constructionYear}
+              municipality={property.address.municipality}
+            />
           </div>
 
           {/* Radon Geological Evaluation */}
@@ -738,6 +765,14 @@ export function AuditDossier({
             </div>
           )}
 
+          {/* 15-Minute City Pedestrian Isochrones & Catchment */}
+          <div className="page-break-inside-avoid">
+            <PedestrianIsochronesCard
+              isochrones={pedestrianIsochrones}
+              connectivity={connectivity}
+            />
+          </div>
+
           {/* 5 Dedicated Pillars */}
           <div className="page-break-inside-avoid">
             <PillarCards
@@ -747,6 +782,8 @@ export function AuditDossier({
               connectivity={connectivity}
               urbanPlanning={urbanPlanning}
               rentalBenchmark={rentalBenchmark}
+              hideConnectivityPillar={true}
+              hideBuildingPillar={true}
             />
           </div>
         </div>

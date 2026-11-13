@@ -370,6 +370,34 @@ export function renderAuditCard(
     `;
   }
 
+  // ITE/IEE Technical Building Inspection status banner
+  let iteHtml = '';
+  const ite = report.buildingInspection;
+  if (ite) {
+    if (ite.status === 'FAVORABLE') {
+      iteHtml = `
+        <div class="ob-ite-badge" style="margin-bottom: 10px; padding: 6px 10px; background: rgba(16, 185, 129, 0.12); border: 1px solid rgba(16, 185, 129, 0.3); border-radius: 6px; font-size: 11px; color: #34d399; display: flex; align-items: center; justify-content: space-between;">
+          <span>✓ ITE/IEE Favorable</span>
+          <span style="font-family: monospace; font-size: 10px;">${ite.inspectionYear ? `Año ${ite.inspectionYear}` : 'Vigente'}</span>
+        </div>
+      `;
+    } else if (ite.status === 'UNFAVORABLE') {
+      iteHtml = `
+        <div class="ob-ite-badge" style="margin-bottom: 10px; padding: 6px 10px; background: rgba(244, 63, 94, 0.15); border: 1px solid rgba(244, 63, 94, 0.4); border-radius: 6px; font-size: 11px; color: #fb7185; display: flex; align-items: center; justify-content: space-between;">
+          <span>⚠ ITE Desfavorable (Defectos activos)</span>
+          <span style="font-family: monospace; font-size: 10px;">Subsanación obligatoria</span>
+        </div>
+      `;
+    } else if (ite.isPreventiveAlert) {
+      iteHtml = `
+        <div class="ob-ite-badge" style="margin-bottom: 10px; padding: 6px 10px; background: rgba(245, 158, 11, 0.15); border: 1px solid rgba(245, 158, 11, 0.4); border-radius: 6px; font-size: 11px; color: #fcd34d; display: flex; align-items: center; justify-content: space-between;">
+          <span>⚠ IEE Pendiente >50 años (RD-L 7/2015)</span>
+          <span style="font-family: monospace; font-size: 10px;">Deber de conservación</span>
+        </div>
+      `;
+    }
+  }
+
   // Adaptive typology titles & badges
   const typologyBadgeLabel =
     typology === 'VACANT_PLOT' ? 'Solar Urbano' :
@@ -425,6 +453,9 @@ export function renderAuditCard(
 
         <!-- Substandard Housing / Presunto local comercial Alert -->
         ${substandardHtml}
+
+        <!-- Technical Building Inspection (ITE/IEE) Status -->
+        ${iteHtml}
 
         <!-- Horizontal Division Unit Switcher Pill -->
         ${unitPillHtml}

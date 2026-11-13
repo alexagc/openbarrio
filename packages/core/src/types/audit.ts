@@ -2,7 +2,7 @@ import { Type, Static, FormatRegistry } from '@sinclair/typebox';
 import { CadastralPropertySchema, PropertyTypologySchema } from './catastro.js';
 import { CensusTractIncomeSchema } from './ine.js';
 import { EnvironmentalDataSchema } from './environmental.js';
-import { CivicConnectivityDataSchema } from './connectivity.js';
+import { CivicConnectivityDataSchema, PedestrianIsochronesSchema } from './connectivity.js';
 import { UrbanPlanningDataSchema } from './urban-planning.js';
 import { BuildingCapExRiskSchema } from './capex.js';
 import { EnergyPerformanceCertificateSchema } from './energy.js';
@@ -12,6 +12,8 @@ import { VutEvaluationSchema } from './vut.js';
 import { FiscalEstimateSchema } from './fiscal.js';
 import { BuildingSurroundingsSchema } from './surroundings.js';
 import { SubstandardHousingAlertSchema } from './substandard-housing.js';
+import { BuildingInspectionSchema } from './building-inspection.js';
+import { SeismicHazardSchema } from './seismic.js';
 
 if (!FormatRegistry.Has('uuid')) {
   FormatRegistry.Set('uuid', (value) => typeof value === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value));
@@ -39,6 +41,8 @@ export const AuditScoreBreakdownSchema = Type.Object({
   keyHighlights: Type.Array(Type.String(), { description: 'Positive attributes and strengths identified in public registers' }),
   keyRisks: Type.Array(Type.String(), { description: 'Due diligence alerts, potential renovation requirements, or environmental risks' }),
   substandardHousing: Type.Optional(SubstandardHousingAlertSchema),
+  buildingInspection: Type.Optional(BuildingInspectionSchema),
+  seismicHazard: Type.Optional(SeismicHazardSchema),
 });
 
 export const RentalBenchmarkSchema = Type.Object({
@@ -68,6 +72,9 @@ export const PropertyAuditReportSchema = Type.Object({
   fiscal: Type.Optional(FiscalEstimateSchema),
   surroundings: Type.Optional(BuildingSurroundingsSchema),
   substandardHousing: Type.Optional(SubstandardHousingAlertSchema),
+  buildingInspection: Type.Optional(BuildingInspectionSchema),
+  seismicHazard: Type.Optional(SeismicHazardSchema),
+  pedestrianIsochrones: Type.Optional(PedestrianIsochronesSchema),
 });
 
 export type AuditSubscores = Static<typeof AuditSubscoresSchema>;

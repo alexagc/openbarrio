@@ -1,7 +1,7 @@
 # OpenBarrio 🏘️🇪🇸
 
 [![CI Pipeline](https://github.com/alexcg1/openbarrio/actions/workflows/ci.yml/badge.svg)](https://github.com/alexcg1/openbarrio/actions/workflows/ci.yml)
-[![Version: v1.2.0](https://img.shields.io/badge/Version-v1.2.0-blue.svg)](CHANGELOG.md)
+[![Version: v1.3.0](https://img.shields.io/badge/Version-v1.3.0-blue.svg)](CHANGELOG.md)
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 [![Runtime: Node.js 22 LTS](https://img.shields.io/badge/Runtime-Node.js_22_LTS-green.svg)](https://nodejs.org/)
 [![Monorepo: pnpm](https://img.shields.io/badge/Monorepo-pnpm_workspaces-orange.svg)](https://pnpm.io/)
@@ -51,13 +51,19 @@ flowchart TD
 
 ## ✨ Key Platform Features
 
-### 1. Multi-Portal Expansion, Antifraud Infravivienda & Property Duel 2.0 (v1.2.0)
+### 1. Building Structural Health (ITE/IEE), 15-Minute City WalkScore & Seismic Hazard (v1.3.0)
+* **Building Technical Inspection (ITE/IEE) Integration:** Municipal open data ingestion (Madrid, Barcelona, Euskadi, Valencia) cross-referenced with official Sede del Catastro construction years. Evaluates favorable/unfavorable outcomes, active structural defects, and statutory preventive alerts for buildings $\ge 50$ years in un-digitalized municipalities under RD-L 7/2015 art. 29.
+* **15-Minute City Pedestrian Isochrones:** Client-side parametric isochrones in MapLibre GL generating 5-minute (375m), 10-minute (750m), and 15-minute (1125m) walking catchment zones with 1.25x urban tortuosity and multi-category civic amenities density analysis.
+* **IGN NCSE-02 Seismic Hazard & Vulnerability:** Municipal basic seismic acceleration ($a_b$) mapping across all ~8,131 Spanish municipalities. Identifies pre-1994 unreinforced structural vulnerabilities in moderate-to-high risk zones ($a_b \ge 0.08g$).
+* **Companion Extension & Dossier Parity:** Injected ITE status badges in real estate portals and dedicated interactive cards (`BuildingInspectionCard`, `PedestrianIsochronesCard`, `SeismicSafetyCard`) in the due diligence dossier with full 5-language translation.
+
+### 2. Multi-Portal Expansion, Antifraud Infravivienda & Property Duel 2.0 (v1.2.0)
 * **Expanded Portal Companion Widget:** Abstract `BasePortalAdapter` with unified Shadow DOM lifecycle across 5 top real estate portals: **Idealista**, **Fotocasa**, **Habitaclia**, **Pisos.com**, and **YaEncontre**.
 * **Substandard Housing & Commercial Conversion Antifraud:** Algorithmic heuristic detecting non-residential Cadastral uses (`COMERCIAL`, `ALMACÉN`, `OFICINAS`) on ground floors or basements without cédula de habitabilidad or horizontal division. Penalizes BarrioScore by up to 25 points and alerts users to municipal fines up to €600,000.
 * **Property Duel 2.0 — Multi-Property Matrix:** Multi-asset comparative matrix comparing up to 4 properties simultaneously (A: Cyan, B: Amber, C: Purple, D: Emerald) with 4-polygon SVG radar overlays, differential telemetry deltas, and shareable URL state persistence via `?compare=ref1,ref2,ref3,ref4`.
 * **Playwright Synthetic Monitoring:** Automated weekly CI/CD workflow testing frozen canonical DOM snapshots of all 5 portals to catch selector breakage and anti-bot anomalies before they impact end-users.
 
-### 2. Sovereign PMTiles Vector Streaming
+### 3. Sovereign PMTiles Vector Streaming
 All national administrative, demographic, and environmental layers are compiled into sovereign **PMTiles v3** vector archives hosted on Cloudflare R2:
 * **`census_tracts.pmtiles` (85.3 MB):** All ~37,000 Spanish census sections with embedded household net revenue and municipal percentile ranks.
 * **`floods.pmtiles` (556.5 MB):** All 28,021 official MITECO SNCZI flood hazard polygons across T=10, 50, 100, 500 return periods and Preferential Flow Zones (ZFP).
@@ -65,7 +71,7 @@ All national administrative, demographic, and environmental layers are compiled 
 
 Served via HTTP Range requests with sub-15ms tile latency and zero external ministerial dependency.
 
-### 2. Civic Micro-Tools & Programmatic SEO (v1.1.0)
+### 4. Civic Micro-Tools & Programmatic SEO (v1.1.0)
 * **High-Intent Standalone & Embeddable Micro-Tools:**
   * `/comprobar-metros-catastro`: Instant surface discrepancy check between listing m² and official Catastro OVC records with >15% legal alert threshold and overpayment estimate.
   * `/calculadora-alquiler-legal`: Statutory rent cap calculator under Ley 12/2023 por el Derecho a la Vivienda, evaluating Zonas Tensionadas, Gran Tenedor rules, and SERPAVI benchmarks.
@@ -80,25 +86,25 @@ Served via HTTP Range requests with sub-15ms tile latency and zero external mini
 * **Web-to-Extension Conversion CTA:**
   * Contextual in-content banners and non-intrusive floating sticky notification bar with automatic Chromium detection.
 
-### 3. MapLibre Thematic Lenses & Progressive Executive Disclosure (v1.0.0)
+### 5. MapLibre Thematic Lenses & Progressive Executive Disclosure (v1.0.0)
 * **Thematic Lenses Selector:** 4 specialized cartographic views centered atop the map (`Vida Urbana`, `Silencio`, `Riesgos Naturales`, `Luz 3D`) with adaptive auto-activation based on property typology (e.g. rustic parcels automatically activate flood risk cartography).
 * **3-Second Executive Summary:** Instant executive dossier signal with overall score, critical alert banners (surface discrepancy >15%, active flood zones, expired energy certificates under RD 390/2021), and 3 instant verdict pills before progressive disclosure of in-depth technical analysis.
 * **Unified Sovereign Search:** Single unified search input with auto-detection of cadastral references and addresses, eliminating manual mode toggling.
-* **Store-Ready Extension Bundle:** Zero-dependency packaging pipeline (`pnpm package:extension`) generating audited, verified `openbarrio-extension-v1.0.0.zip` ready for Chrome Web Store.
+* **Store-Ready Extension Bundle:** Zero-dependency packaging pipeline (`pnpm package:extension`) generating audited, verified `openbarrio-extension-v1.3.0.zip` ready for Chrome Web Store.
 * **Dedicated Data Transparency Portal:** Independent `/fuentes-oficiales` route detailing compliance with Directive INSPIRE 2007/2/EC and Law 19/2013.
 
-### 2. Urban 3D Extrusion & Solar Simulation
+### 6. Urban 3D Extrusion & Solar Simulation
 * **INSPIRE 3D Volumetric Extrusions:** Live rendering of cadastral parcels with true building heights and adjoining surrounding building context.
 * **Dynamic Solar Shading HUD:** Real-time astronomical solar position calculation throughout the year with cast shadows onto facades to assess winter light exposure and thermal comfort.
 
-### 3. Non-Residential Typology Adaptation
-Diligence reports automatically adapt according to official Catastro usage typology (`PropertyTypology`):
+### 7. Non-Residential Typology Adaptation
+Diligent reports automatically adapt according to official Catastro usage typology (`PropertyTypology`):
 * **`VACANT_PLOT` (*Solar Urbano*):** Evaluates development potential without penalizing lack of building antiquity, ITE, or residential energy certificates.
 * **`INDUSTRIAL` (*Nave Industrial*):** Assesses logistics connectivity, RSCIEI fire standards, and environmental corridors without residential rent caps.
 * **`RUSTIC` (*Finca Rústica*):** Emphasizes environmental preservation and hydrological safety while suppressing residential CapEx.
 * **`COMMERCIAL` / `EQUIPMENT` / `RESIDENTIAL`:** Tailored metric benchmarks for every real estate asset class.
 
-### 4. High-Performance Autonomous ETL Pipeline
+### 8. High-Performance Autonomous ETL Pipeline
 * **GitHub Actions 4-Job Concurrency Matrix:** Independent parallel execution across `etl-ine-ign`, `etl-snczi-floods`, `etl-sica-noise`, and `etl-civic-cee`.
 * **Adaptive Connection Pooling:** 6 concurrent worker threads with exponential backoff and randomized jitter (`0.5s - 2.5s`) for ministerial GeoServers.
 * **Zero-Transfer No-Op Caching:** Inspects upstream `ETag`/`Last-Modified` against `data/etl_manifest.json` and skips redundant downloads when datasets are current.
@@ -123,7 +129,7 @@ docker compose up -d
 
 ### 3. Running Containerized Tests & Linting
 ```bash
-# Execute Vitest across all workspace projects (512/512 passing):
+# Execute Vitest across all workspace projects (538/538 passing):
 make docker-test
 
 # Run ESLint with zero warnings:

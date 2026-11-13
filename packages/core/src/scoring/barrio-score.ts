@@ -1,12 +1,14 @@
 import { CadastralProperty, PropertyTypology, detectPropertyTypology } from '../types/catastro.js';
 import { CensusTractIncome } from '../types/ine.js';
 import { EnvironmentalData } from '../types/environmental.js';
-import { CivicConnectivityData } from '../types/connectivity.js';
+import { CivicConnectivityData, PedestrianIsochrones } from '../types/connectivity.js';
 import { UrbanPlanningData } from '../types/urban-planning.js';
 import { EnergyPerformanceCertificate } from '../types/energy.js';
 import { VutEvaluationDTO } from '../types/vut.js';
 import { AuditScoreBreakdown, RentalBenchmark } from '../types/audit.js';
 import { detectSubstandardHousingAlert } from '../types/substandard-housing.js';
+import { BuildingInspection } from '../types/building-inspection.js';
+import { SeismicHazard } from '../types/seismic.js';
 
 export interface ScoringWeights {
   connectivity: number;
@@ -116,7 +118,10 @@ export function calculateBarrioScore(
   urbanPlanning?: Partial<UrbanPlanningData>,
   weights: ScoringWeights = DEFAULT_SCORING_WEIGHTS,
   energy?: Partial<EnergyPerformanceCertificate>,
-  vut?: Partial<VutEvaluationDTO>
+  vut?: Partial<VutEvaluationDTO>,
+  buildingInspection?: Partial<BuildingInspection>,
+  seismicHazard?: Partial<SeismicHazard>,
+  pedestrianIsochrones?: Partial<PedestrianIsochrones>
 ): AuditScoreBreakdown {
   const highlights: string[] = [];
   const risks: string[] = [];
@@ -216,6 +221,36 @@ export function calculateBarrioScore(
     buildingScore = Math.max(10, buildingScore - penalty);
   }
 
+  // Phase 23: Technical Building Inspection (ITE/IEE) status
+  if (buildingInspection) {
+    if (buildingInspection.status === 'UNFAVORABLE') {
+      buildingScore = Math.max(10, buildingScore - 20);
+      risks.push(
+        `CRITICAL: Unfavorable Technical Building Inspection (ITE/IEE desfavorable) recorded with municipal authority (${buildingInspection.municipalRegistry ?? 'Ayuntamiento'}). Actionable structural or safety defects require remediation.`
+      );
+    } else if (buildingInspection.status === 'FAVORABLE') {
+      buildingScore = Math.min(100, buildingScore + 5);
+      highlights.push(
+        `Favorable Technical Building Inspection (ITE/IEE favorable) certified in municipal registry (${buildingInspection.municipalRegistry ?? 'Registro ITE/IEE'}). Structural safety and conservation confirmed.`
+      );
+    }
+
+    if (buildingInspection.isPreventiveAlert) {
+      risks.push(
+        'Preventive IEE/ITE alert: Building age exceeds 50 years without official digital inspection recorded. Mandatory inspection required under Real Decreto Legislativo 7/2015 art. 29.'
+      );
+    }
+  }
+
+  // Phase 23: Seismic vulnerability impact on Building Health (Pre-NCSE-94 construction in moderate/high seismic hazard zone)
+  if (seismicHazard?.isVulnerableToSeismic) {
+    const seismicPenalty = 8;
+    buildingScore = Math.max(10, buildingScore - seismicPenalty);
+    risks.push(
+      `Seismic vulnerability alert: Built in ${property.building.constructionYear} prior to NCSE-94 standard in moderate/high seismic hazard zone (ab = ${seismicHazard.basicAccelerationG}g >= 0.08g). Lacks modern seismic ductility reinforcement.`
+    );
+  }
+
   const buildingHealthScore = Math.min(100, Math.max(0, buildingScore));
 
   // 3. Civic Connectivity 15-Minute Dimension (0 - 100)
@@ -256,6 +291,13 @@ export function calculateBarrioScore(
       if (p.distanceMeters <= 700) {
         highlights.push(`Public green space nearby: ${p.name} (${Math.round(p.distanceMeters)}m)`);
       }
+    }
+
+    // Phase 23: Immediate 5-minute pedestrian cluster from isochrones
+    if (pedestrianIsochrones?.isochrone5Min?.facilitiesCount && pedestrianIsochrones.isochrone5Min.facilitiesCount >= 3) {
+      highlights.push(
+        `Immediate 5-minute pedestrian cluster: ${pedestrianIsochrones.isochrone5Min.facilitiesCount} essential civic services within 375m`
+      );
     }
   } else {
     // Baseline walkability estimation from urban fabric
@@ -363,6 +405,15 @@ export function calculateBarrioScore(
   } else {
     environmentalScore = Math.round(acousticComfortScore * 0.55 + climateSafetyScore * 0.45);
   }
+
+  // Phase 23: Elevated seismic hazard impact on environmental pillar (ab >= 0.12g)
+  if (seismicHazard?.basicAccelerationG !== undefined && seismicHazard.basicAccelerationG >= 0.12) {
+    environmentalScore = Math.max(10, environmentalScore - 8);
+    risks.push(
+      `Elevated seismic hazard zone: Basic seismic acceleration ab = ${seismicHazard.basicAccelerationG}g (>= 0.12g) according to IGN NCSE-02.`
+    );
+  }
+
   environmentalScore = Math.min(100, Math.max(0, environmentalScore));
 
   // 5. Urban Planning & Legal Dimension (0 - 100)
@@ -489,6 +540,8 @@ export function calculateBarrioScore(
     keyHighlights: highlights,
     keyRisks: risks,
     substandardHousing,
+    buildingInspection: buildingInspection as any,
+    seismicHazard: seismicHazard as any,
   };
 }
 

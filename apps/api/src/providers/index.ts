@@ -97,6 +97,7 @@ export interface ProviderContainer {
   radon: IRadonProvider;
   vut: IVutProvider;
   municipality: IMunicipalityProvider;
+  db?: D1Database;
 }
 
 export function createMockProviders(overrides?: Partial<ProviderContainer>): ProviderContainer {
@@ -214,10 +215,12 @@ export function createProviders(
     radon: overrides?.radon || defaultRadon,
     vut: overrides?.vut || defaultVut,
     municipality: overrides?.municipality || defaultMunicipality,
+    db: overrides?.db || db,
   };
 }
 
 export function injectDatabase(providers: ProviderContainer, db: D1Database): void {
+  providers.db = db;
   for (const provider of Object.values(providers)) {
     if (provider && typeof (provider as any).setDatabase === 'function') {
       (provider as any).setDatabase(db);

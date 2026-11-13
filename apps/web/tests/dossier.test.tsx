@@ -186,7 +186,7 @@ describe('AuditDossier Component (Stitch Civic Precision)', () => {
     expect(screen.getByText(/Jardines de Sabatini/i)).toBeTruthy();
 
     // Pillar 2: Building Health
-    expect(screen.getByText(/CTE \(Código Técnico RD 314\/2006\)|Pre-normativa/i)).toBeTruthy();
+    expect(screen.getAllByText(/CTE \(Código Técnico RD 314\/2006\)|Pre-normativa/i).length).toBeGreaterThanOrEqual(1);
     expect(screen.getByText(/2 registradas \(última en 2018\)/i)).toBeTruthy();
 
     // Pillar 3: Socioeconomic Profile

@@ -19,6 +19,12 @@ import {
   FiscalEstimateDTO,
   calculateFiscalEstimate,
   calculateBarrioScore,
+  BuildingInspection,
+  SeismicHazard,
+  PedestrianIsochrones,
+  evaluateBuildingInspectionAlert,
+  evaluateSeismicVulnerability,
+  calculatePedestrianIsochrones,
 } from '@openbarrio/core';
 import { ProviderContainer, calculateBuildingCapExRisk } from '../providers/index.js';
 
@@ -186,7 +192,33 @@ export class AuditService {
       typology,
     });
 
-    // 9. Calculate Barrio Due Diligence Score (5 calibrated pillars + VUT recalibration)
+    // 9. Technical Building Inspection (ITE/IEE) & Preventive Alert (RD-L 7/2015)
+    const buildingInspection: BuildingInspection = await this.resolveBuildingInspection(property);
+
+    // 10. IGN NCSE-02 Seismic Hazard & Structural Vulnerability
+    let muniCodeForSeismic = property.address.municipalityCode;
+    if (muniCodeForSeismic && muniCodeForSeismic.length === 3 && property.address.provinceCode) {
+      muniCodeForSeismic = `${property.address.provinceCode}${muniCodeForSeismic}`;
+    } else if (!muniCodeForSeismic || muniCodeForSeismic.length < 5) {
+      muniCodeForSeismic = neighborhood.censusSectionCode
+        ? neighborhood.censusSectionCode.slice(0, 5)
+        : (property.address.provinceCode ? `${property.address.provinceCode}001` : '28079');
+    }
+    const seismicHazard: SeismicHazard = evaluateSeismicVulnerability(
+      muniCodeForSeismic,
+      property.building.constructionYear,
+      undefined,
+      property.address.municipality,
+      property.address.provinceCode
+    );
+
+    // 11. 15-Minute City Pedestrian Isochrones & Catchment Breakdown
+    const pedestrianIsochrones: PedestrianIsochrones = calculatePedestrianIsochrones(
+      [lon, lat],
+      connectivity?.nearbyFacilities || []
+    );
+
+    // 12. Calculate Barrio Due Diligence Score (5 calibrated pillars + VUT, ITE & Seismic recalibration)
     const score = calculateBarrioScore(
       property,
       neighborhood,
@@ -196,15 +228,18 @@ export class AuditService {
       urbanPlanning,
       undefined,
       energy,
-      vut
+      vut,
+      buildingInspection,
+      seismicHazard,
+      pedestrianIsochrones
     );
 
-    // 10. Calculate Building CapEx & Community Risk Intelligence (omit for unbuilt plots and rustic land)
+    // 13. Calculate Building CapEx & Community Risk Intelligence (omit for unbuilt plots and rustic land)
     const capex = (typology === 'VACANT_PLOT' || typology === 'RUSTIC')
       ? undefined
       : calculateBuildingCapExRisk(property);
 
-    // 11. Fetch surrounding buildings for 3D context
+    // 14. Fetch surrounding buildings for 3D context
     let surroundings: BuildingSurroundingsDTO | undefined;
     try {
       surroundings = await this.getCadastralSurroundings(property.cadastralReference);
@@ -230,7 +265,62 @@ export class AuditService {
       vut,
       fiscal,
       surroundings,
+      buildingInspection,
+      seismicHazard,
+      pedestrianIsochrones,
     };
+  }
+
+  private async resolveBuildingInspection(property: CadastralProperty): Promise<BuildingInspection> {
+    const refcat = property.cadastralReference;
+    let officialRecord: Partial<BuildingInspection> | undefined;
+
+    const db = this.providers.db;
+    if (db) {
+      try {
+        const row = await db
+          .prepare(
+            `SELECT status, inspection_year, next_inspection_due_year, has_defects, defects_summary, municipal_registry
+             FROM municipal_ite_records
+             WHERE cadastral_reference = ?1 OR cadastral_reference = SUBSTR(?1, 1, 14) OR cadastral_reference LIKE ?1 || '%'
+             ORDER BY LENGTH(cadastral_reference) DESC
+             LIMIT 1`
+          )
+          .bind(refcat)
+          .first<{
+            status: string;
+            inspection_year: number;
+            next_inspection_due_year: number;
+            has_defects: number;
+            defects_summary: string;
+            municipal_registry: string;
+          }>();
+
+        if (row) {
+          let defectsSummary: string[] = [];
+          if (row.defects_summary) {
+            try {
+              defectsSummary = JSON.parse(row.defects_summary);
+            } catch {
+              defectsSummary = [];
+            }
+          }
+
+          officialRecord = {
+            status: row.status as any,
+            inspectionYear: row.inspection_year,
+            nextInspectionDueYear: row.next_inspection_due_year,
+            hasDefects: row.has_defects === 1,
+            defectsSummary,
+            municipalRegistry: row.municipal_registry,
+          };
+        }
+      } catch {
+        // Fallback silently to statutory evaluation
+      }
+    }
+
+    return evaluateBuildingInspectionAlert(property, officialRecord);
   }
 
   private async resolveEnergy(

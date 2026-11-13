@@ -544,6 +544,9 @@ export interface TranslationSchema {
     floodAlert: string;
     expiredCeeAlert: string;
     substandardHousingAlert: string;
+    iteUnfavorableAlert: string;
+    itePreventiveAlert: string;
+    seismicVulnerabilityAlert: string;
     substandardHousingTitle: string;
     substandardHousingDesc: string;
     substandardCheckAdvice: string;
@@ -591,6 +594,52 @@ export interface TranslationSchema {
     validUntil: string;
     expiredWarning: string;
     recommendationsTitle: string;
+  };
+  ite: {
+    cardTitle: string;
+    statusFavorable: string;
+    statusUnfavorable: string;
+    statusPreventiveRequired: string;
+    statusUnknown: string;
+    lastInspection: string;
+    noRecord: string;
+    nextDueYear: string;
+    immediateDue: string;
+    competentRegistry: string;
+    defectsStatus: string;
+    activeDefects: string;
+    noActiveDefects: string;
+    subsanacionRequiredTitle: string;
+    preventiveNoticeTitle: string;
+    preventiveNoticeBody: string;
+  };
+  seismic: {
+    cardTitle: string;
+    riskHigh: string;
+    riskMedium: string;
+    riskLow: string;
+    riskVeryLow: string;
+    basicAcceleration: string;
+    standardApplied: string;
+    municipality: string;
+    structuralVulnerability: string;
+    vulnerableHigh: string;
+    vulnerableLow: string;
+    vulnerabilityAlertTitle: string;
+    vulnerabilityAlertBody: string;
+  };
+  walkscore: {
+    cardTitle: string;
+    servicesCount: string;
+    immediateCatchment: string;
+    neighborhoodCatchment: string;
+    fifteenMinCatchment: string;
+    tortuosityLabel: string;
+    pedestrianSpeed: string;
+    walkersParadise: string;
+    veryWalkable: string;
+    somewhatWalkable: string;
+    carDependent: string;
   };
   map: {
     lensCatastro: string;

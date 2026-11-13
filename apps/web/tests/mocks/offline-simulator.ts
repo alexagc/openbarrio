@@ -11,6 +11,9 @@ import {
   CadastralUnit,
   CadastralGeometry,
   CivicFacility,
+  evaluateBuildingInspectionAlert,
+  evaluateSeismicVulnerability,
+  calculatePedestrianIsochrones,
 } from '@openbarrio/core';
 
 export interface ExtendedAuditReport extends PropertyAuditReport {
@@ -455,6 +458,18 @@ export function generateDeterministicAudit(
     },
   };
 
+  const buildingInspection = evaluateBuildingInspectionAlert(property);
+  const seismicHazard = evaluateSeismicVulnerability(
+    property.address.municipalityCode || '28079',
+    property.building.constructionYear,
+    undefined,
+    property.address.municipality
+  );
+  const pedestrianIsochrones = calculatePedestrianIsochrones(
+    [property.coordinates.longitude, property.coordinates.latitude],
+    connectivity.nearbyFacilities || []
+  );
+
   const score = calculateBarrioScore(
     property,
     neighborhood,
@@ -463,7 +478,11 @@ export function generateDeterministicAudit(
     connectivity,
     urbanPlanning,
     undefined,
-    energy
+    energy,
+    undefined,
+    buildingInspection,
+    seismicHazard,
+    pedestrianIsochrones
   );
 
   return {
@@ -478,6 +497,9 @@ export function generateDeterministicAudit(
     rentalBenchmark,
     energy,
     marketTrends,
+    buildingInspection,
+    seismicHazard,
+    pedestrianIsochrones,
     isOfflineDemo: true,
   };
 }
