@@ -17,7 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Upgraded all production and development dependencies across all monorepo workspaces to their latest releases available on npm:
     - **Core & Toolchain**: TypeScript `7.0.2`, ESLint `10.14.0`, `@eslint/js` `10.0.1`, `globals` `17.14.0`, `typescript-eslint` `8.72.2`, Vitest `5.1.0`.
     - **Backend API**: Hono `4.13.18`, `@hono/node-server` `2.1.8`, `@hono/swagger-ui` `0.6.2`, `@sinclair/typebox` `0.34.52`, `@types/node` `26.6.6`, `tsx` `4.23.15`, Wrangler `4.162.0`.
-    - **Web Frontend**: React `19.3.1`, React DOM `19.3.1`, `@types/react` `19.3.0`, `@types/react-dom` `19.3.0`, Vite `8.3.8`, `@vitejs/plugin-react` `6.3.0`, Tailwind CSS `4.3.5`, PostCSS `8.5.32`, Autoprefixer `10.6.2`, MapLibre GL `6.18.0`, Zustand `5.1.0`, Lucide React `1.72.0`, `@testing-library/react` `16.3.3`.
+    - **Web Frontend**: React `19.3.1`, React DOM `19.3.1`, `@types/react` `19.3.0`, `@types/react-dom` `19.3.0`, Vite `8.3.8`, `@vitejs/plugin-react` `6.3.0`, Tailwind CSS `4.3.5` (migrated to `@tailwindcss/vite` native Vite engine), MapLibre GL `6.18.0`, Zustand `5.1.0`, Lucide React `1.72.0`, `@testing-library/react` `16.3.3`.
     - **Chrome Extension**: `@types/chrome` `0.3.7`, `@types/jsdom` `30.0.0`, JSDOM `31.0.1`.
 - **Store-Ready Packaging & Quality Verification**:
   - Regenerated verified Chrome Web Store bundle `apps/extension/openbarrio-extension-v1.3.1.zip` (42.96 KB, Manifest V3).
