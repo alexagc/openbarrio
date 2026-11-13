@@ -1,6 +1,4 @@
 -- Cloudflare D1 Batch Insert Chunk for civic_facilities
-INSERT OR REPLACE INTO civic_facilities (id, type, subtype, name, latitude, longitude, municipality_code, postal_code) VALUES ('hlth_sanicen_c_123594', 'healthcare', 'consultorio', 'Consultorio Médico LEDANCA', 40.9250972, -2.9217985, '19159', '19195');
-
 INSERT OR REPLACE INTO civic_facilities (id, type, subtype, name, latitude, longitude, municipality_code, postal_code) VALUES ('hlth_sanicen_c_123595', 'healthcare', 'consultorio', 'Consultorio Médico MALACUERA', 40.75326870000001, -2.8299369, '19053', '19413');
 
 INSERT OR REPLACE INTO civic_facilities (id, type, subtype, name, latitude, longitude, municipality_code, postal_code) VALUES ('hlth_sanicen_c_123596', 'healthcare', 'consultorio', 'Consultorio Médico MUDUEX', 40.8295788, -2.9594616, '19196', '19196');
@@ -4998,3 +4996,5 @@ INSERT OR REPLACE INTO civic_facilities (id, type, subtype, name, latitude, long
 INSERT OR REPLACE INTO civic_facilities (id, type, subtype, name, latitude, longitude, municipality_code, postal_code) VALUES ('hlth_sanicen_c_126254', 'healthcare', 'consultorio', 'Consultorio Médico SAN ROMAN DE LOS CABALLEROS', 42.6345722, -5.8249654, '24092', '24271');
 
 INSERT OR REPLACE INTO civic_facilities (id, type, subtype, name, latitude, longitude, municipality_code, postal_code) VALUES ('hlth_sanicen_c_126255', 'healthcare', 'consultorio', 'Consultorio Médico SANTIBAÑEZ DE VALDEIGLESIAS', 42.4652913, -5.951539899999999, '24224', '24288');
+
+INSERT OR REPLACE INTO civic_facilities (id, type, subtype, name, latitude, longitude, municipality_code, postal_code) VALUES ('hlth_sanicen_c_126256', 'healthcare', 'consultorio', 'Consultorio Médico SARDONEDO', 42.5121451, -5.8611036, '24159', '24393');

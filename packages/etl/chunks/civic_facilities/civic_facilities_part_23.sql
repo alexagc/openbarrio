@@ -1,6 +1,4 @@
 -- Cloudflare D1 Batch Insert Chunk for civic_facilities
-INSERT OR REPLACE INTO civic_facilities (id, type, subtype, name, latitude, longitude, municipality_code, postal_code) VALUES ('hlth_sanicen_h_180093', 'healthcare', 'hospital', 'HOSPITAL COMARCAL DE BAZA', 37.4922747, -2.7674057, '18023', '18800');
-
 INSERT OR REPLACE INTO civic_facilities (id, type, subtype, name, latitude, longitude, municipality_code, postal_code) VALUES ('hlth_sanicen_h_180107', 'healthcare', 'hospital', 'HOSPITAL COMARCAL SANTA ANA DE MOTRIL', 36.7531259, -3.5218155, '18140', '18600');
 
 INSERT OR REPLACE INTO civic_facilities (id, type, subtype, name, latitude, longitude, municipality_code, postal_code) VALUES ('hlth_sanicen_h_180114', 'healthcare', 'hospital', 'COMPLEJO HOSPITALARIO REGIONAL VIRGEN DE LAS NIEVES', 37.1884198, -3.6095205, '18087', '18014');
@@ -4998,3 +4996,5 @@ INSERT OR REPLACE INTO civic_facilities (id, type, subtype, name, latitude, long
 INSERT OR REPLACE INTO civic_facilities (id, type, subtype, name, latitude, longitude, municipality_code, postal_code) VALUES ('hlth_sanicen_e_4326', 'healthcare', 'emergency_care', 'PUNTO DE ATENCIÓN CONTINUADA (PAC) RURAL ESPECIAL (ANCÍN)', 42.659156, -2.1904625, '31014', '31281');
 
 INSERT OR REPLACE INTO civic_facilities (id, type, subtype, name, latitude, longitude, municipality_code, postal_code) VALUES ('hlth_sanicen_e_4327', 'healthcare', 'emergency_care', 'PUNTO DE ATENCIÓN CONTINUADA (PAC) URBANO (PAMPLONA/IRUÑA)', 42.8129972, -1.637331, '31201', '31004');
+
+INSERT OR REPLACE INTO civic_facilities (id, type, subtype, name, latitude, longitude, municipality_code, postal_code) VALUES ('hlth_sanicen_e_4328', 'healthcare', 'emergency_care', 'PUNTO DE ATENCIÓN CONTINUADA (PAC) RURAL ESPECIAL (VILLATUERTA)', 42.659371, -1.9912349, '31257', '31132');

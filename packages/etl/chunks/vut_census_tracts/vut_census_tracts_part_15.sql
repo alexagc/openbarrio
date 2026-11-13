@@ -2958,5 +2958,3 @@ INSERT OR REPLACE INTO census_tract_vut (census_section_id, total_dwellings, vut
 INSERT OR REPLACE INTO census_tract_vut (census_section_id, total_dwellings, vut_count, vut_beds, vut_ratio_pct) VALUES ('2807917119', 1081, 4, 11, 0.37);
 
 INSERT OR REPLACE INTO census_tract_vut (census_section_id, total_dwellings, vut_count, vut_beds, vut_ratio_pct) VALUES ('4802001001', 1450, 22, 88, 1.52);
-
-COMMIT;

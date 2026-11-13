@@ -3,8 +3,6 @@ CREATE INDEX IF NOT EXISTS idx_facilities_coords ON civic_facilities(latitude, l
 
 CREATE INDEX IF NOT EXISTS idx_facilities_type ON civic_facilities(type);
 
-BEGIN TRANSACTION;
-
 INSERT OR REPLACE INTO civic_facilities (id, type, subtype, name, latitude, longitude, municipality_code, postal_code) VALUES ('fac_mad_hosp_lapaz', 'healthcare', 'hospital', 'Hospital Universitario La Paz', 40.4805, -3.6872, '28079', '28046');
 
 INSERT OR REPLACE INTO civic_facilities (id, type, subtype, name, latitude, longitude, municipality_code, postal_code) VALUES ('fac_mad_hosp_gregorio', 'healthcare', 'hospital', 'Hospital General Universitario Gregorio Marañón', 40.4192, -3.6714, '28079', '28007');
@@ -4998,3 +4996,5 @@ INSERT OR REPLACE INTO civic_facilities (id, type, subtype, name, latitude, long
 INSERT OR REPLACE INTO civic_facilities (id, type, subtype, name, latitude, longitude, municipality_code, postal_code) VALUES ('osm_7170008788', 'healthcare', 'primary_care', 'Sanitas', 40.4352379, -3.7180596, '28001', '28001');
 
 INSERT OR REPLACE INTO civic_facilities (id, type, subtype, name, latitude, longitude, municipality_code, postal_code) VALUES ('osm_7174798181', 'healthcare', 'primary_care', 'Centro Médico Habana', 40.4591624, -3.6809836, '28001', '28001');
+
+INSERT OR REPLACE INTO civic_facilities (id, type, subtype, name, latitude, longitude, municipality_code, postal_code) VALUES ('osm_7174798182', 'healthcare', 'primary_care', 'Clínica Armstrong Internacional', 40.4418931, -3.7124813, '28001', '28001');

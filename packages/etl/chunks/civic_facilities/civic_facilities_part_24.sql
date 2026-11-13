@@ -1,6 +1,4 @@
 -- Cloudflare D1 Batch Insert Chunk for civic_facilities
-INSERT OR REPLACE INTO civic_facilities (id, type, subtype, name, latitude, longitude, municipality_code, postal_code) VALUES ('hlth_sanicen_e_4328', 'healthcare', 'emergency_care', 'PUNTO DE ATENCIÓN CONTINUADA (PAC) RURAL ESPECIAL (VILLATUERTA)', 42.659371, -1.9912349, '31257', '31132');
-
 INSERT OR REPLACE INTO civic_facilities (id, type, subtype, name, latitude, longitude, municipality_code, postal_code) VALUES ('hlth_sanicen_e_4329', 'healthcare', 'emergency_care', 'PUNTO DE ATENCIÓN CONTINUADA (PAC) (LEÓN)', 42.6010206, -5.5867203, '24089', '24120');
 
 INSERT OR REPLACE INTO civic_facilities (id, type, subtype, name, latitude, longitude, municipality_code, postal_code) VALUES ('hlth_sanicen_e_4330', 'healthcare', 'emergency_care', 'PUNTO DE ATENCIÓN CONTINUADA (PAC) (VILLARES DE LA REINA)', 41.00882319999999, -5.6475379, '37362', '37184');
@@ -4998,3 +4996,5 @@ INSERT OR REPLACE INTO civic_facilities (id, type, subtype, name, latitude, long
 INSERT OR REPLACE INTO civic_facilities (id, type, subtype, name, latitude, longitude, municipality_code, postal_code) VALUES ('transit_rail_2481_irauregui', 'transit', 'train', 'Estación de IRAUREGUI', 43.2484138893113, -2.98997222235646, '99999', NULL);
 
 INSERT OR REPLACE INTO civic_facilities (id, type, subtype, name, latitude, longitude, municipality_code, postal_code) VALUES ('transit_rail_2482_karranza', 'transit', 'train', 'Estación de KARRANZA', 43.2388777776517, -3.35763055561956, '99999', NULL);
+
+INSERT OR REPLACE INTO civic_facilities (id, type, subtype, name, latitude, longitude, municipality_code, postal_code) VALUES ('transit_rail_2483_kastrexana', 'transit', 'train', 'Estación de KASTREXANA', 43.2554888891884, -2.97196944380933, '99999', NULL);

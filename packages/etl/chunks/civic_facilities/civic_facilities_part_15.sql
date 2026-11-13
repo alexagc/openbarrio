@@ -1,6 +1,4 @@
 -- Cloudflare D1 Batch Insert Chunk for civic_facilities
-INSERT OR REPLACE INTO civic_facilities (id, type, subtype, name, latitude, longitude, municipality_code, postal_code) VALUES ('osm_1551461917', 'park', 'urban_park', 'Plaza Maestro Maroto', 38.9983582, -3.3643042, '45001', '45001');
-
 INSERT OR REPLACE INTO civic_facilities (id, type, subtype, name, latitude, longitude, municipality_code, postal_code) VALUES ('osm_1552117469', 'park', 'urban_park', 'Parque de la Lia', 39.8148404, -4.0568466, '45001', '45001');
 
 INSERT OR REPLACE INTO civic_facilities (id, type, subtype, name, latitude, longitude, municipality_code, postal_code) VALUES ('osm_1552117486', 'park', 'urban_park', 'Parque del Cercado Largo', 39.7989359, -4.0575602, '45001', '45001');
@@ -4998,3 +4996,5 @@ INSERT OR REPLACE INTO civic_facilities (id, type, subtype, name, latitude, long
 INSERT OR REPLACE INTO civic_facilities (id, type, subtype, name, latitude, longitude, municipality_code, postal_code) VALUES ('osm_3430890494', 'healthcare', 'primary_care', 'Centre d''Atenció Primària Sant Roc', 41.4358259, 2.2259952, '08001', '08001');
 
 INSERT OR REPLACE INTO civic_facilities (id, type, subtype, name, latitude, longitude, municipality_code, postal_code) VALUES ('osm_5313275890', 'transit', 'metro', 'Sant Roc', 41.4353172, 2.2278605, '08001', '08001');
+
+INSERT OR REPLACE INTO civic_facilities (id, type, subtype, name, latitude, longitude, municipality_code, postal_code) VALUES ('osm_6008146293', 'healthcare', 'primary_care', 'Centre Mèdic Drs. Boguñà', 41.4406572, 2.2217843, '08001', '08001');

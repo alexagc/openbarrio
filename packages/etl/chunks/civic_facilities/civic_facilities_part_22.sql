@@ -1,6 +1,4 @@
 -- Cloudflare D1 Batch Insert Chunk for civic_facilities
-INSERT OR REPLACE INTO civic_facilities (id, type, subtype, name, latitude, longitude, municipality_code, postal_code) VALUES ('hlth_sanicen_c_126256', 'healthcare', 'consultorio', 'Consultorio Médico SARDONEDO', 42.5121451, -5.8611036, '24159', '24393');
-
 INSERT OR REPLACE INTO civic_facilities (id, type, subtype, name, latitude, longitude, municipality_code, postal_code) VALUES ('hlth_sanicen_c_126257', 'healthcare', 'consultorio', 'Consultorio Médico SECAREJO', 42.6856212, -5.8459341, '24055', '24273');
 
 INSERT OR REPLACE INTO civic_facilities (id, type, subtype, name, latitude, longitude, municipality_code, postal_code) VALUES ('hlth_sanicen_c_126258', 'healthcare', 'consultorio', 'Consultorio Médico VEGA DE ANTOÑAN', 42.5332128, -5.9621106, '24015', '24281');
@@ -4998,3 +4996,5 @@ INSERT OR REPLACE INTO civic_facilities (id, type, subtype, name, latitude, long
 INSERT OR REPLACE INTO civic_facilities (id, type, subtype, name, latitude, longitude, municipality_code, postal_code) VALUES ('hlth_sanicen_h_180068', 'healthcare', 'hospital', 'SANATORIO NUESTRA SEÑORA DE LA SALUD', 37.18950470000001, -3.6131704, '18087', '18014');
 
 INSERT OR REPLACE INTO civic_facilities (id, type, subtype, name, latitude, longitude, municipality_code, postal_code) VALUES ('hlth_sanicen_h_180074', 'healthcare', 'hospital', 'CLÍNICA INMACULADA CONCEPCIÓN', 37.1639399, -3.60749, '18087', '18004');
+
+INSERT OR REPLACE INTO civic_facilities (id, type, subtype, name, latitude, longitude, municipality_code, postal_code) VALUES ('hlth_sanicen_h_180093', 'healthcare', 'hospital', 'HOSPITAL COMARCAL DE BAZA', 37.4922747, -2.7674057, '18023', '18800');

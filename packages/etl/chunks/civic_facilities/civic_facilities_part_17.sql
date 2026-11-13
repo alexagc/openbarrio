@@ -1,6 +1,4 @@
 -- Cloudflare D1 Batch Insert Chunk for civic_facilities
-INSERT OR REPLACE INTO civic_facilities (id, type, subtype, name, latitude, longitude, municipality_code, postal_code) VALUES ('osm_511329934', 'park', 'urban_park', 'Plaza de El Rasico', 37.853291, -1.4267074, '30001', '30001');
-
 INSERT OR REPLACE INTO civic_facilities (id, type, subtype, name, latitude, longitude, municipality_code, postal_code) VALUES ('osm_511329943', 'park', 'urban_park', 'Plaza del Santo Ángel', 37.8563488, -1.4358371, '30001', '30001');
 
 INSERT OR REPLACE INTO civic_facilities (id, type, subtype, name, latitude, longitude, municipality_code, postal_code) VALUES ('osm_511329946', 'park', 'urban_park', 'Jardín de la Fuente de Nochebuena', 37.8549031, -1.4328002, '30001', '30001');
@@ -4998,3 +4996,5 @@ INSERT OR REPLACE INTO civic_facilities (id, type, subtype, name, latitude, long
 INSERT OR REPLACE INTO civic_facilities (id, type, subtype, name, latitude, longitude, municipality_code, postal_code) VALUES ('hlth_sanicen_c_115823', 'healthcare', 'primary_care', 'Centro de Salud BELLPUIG', 41.6282669, 1.0097143, '25050', '25250');
 
 INSERT OR REPLACE INTO civic_facilities (id, type, subtype, name, latitude, longitude, municipality_code, postal_code) VALUES ('hlth_sanicen_c_115824', 'healthcare', 'consultorio', 'Consultorio Médico BELIANES', 41.5612443, 1.0173549, '25046', '25266');
+
+INSERT OR REPLACE INTO civic_facilities (id, type, subtype, name, latitude, longitude, municipality_code, postal_code) VALUES ('hlth_sanicen_c_115825', 'healthcare', 'consultorio', 'Consultorio Médico ELS OMELLS DE NA GAIA', 41.46992, 1.08827, '25154', '43449');

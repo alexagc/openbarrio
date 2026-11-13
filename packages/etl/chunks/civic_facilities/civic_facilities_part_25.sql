@@ -1,6 +1,4 @@
 -- Cloudflare D1 Batch Insert Chunk for civic_facilities
-INSERT OR REPLACE INTO civic_facilities (id, type, subtype, name, latitude, longitude, municipality_code, postal_code) VALUES ('transit_rail_2483_kastrexana', 'transit', 'train', 'Estación de KASTREXANA', 43.2554888891884, -2.97196944380933, '99999', NULL);
-
 INSERT OR REPLACE INTO civic_facilities (id, type, subtype, name, latitude, longitude, municipality_code, postal_code) VALUES ('transit_rail_2484_la_asuncion_universidad', 'transit', 'train', 'Estación de LA ASUNCION UNIVERSIDAD', 42.6162222219572, -5.56601388866876, '99999', NULL);
 
 INSERT OR REPLACE INTO civic_facilities (id, type, subtype, name, latitude, longitude, municipality_code, postal_code) VALUES ('transit_rail_2485_cantera_de_mingorria', 'transit', 'train', 'Estación de CANTERA DE MINGORRIA', 40.73394040949, -4.67181799312, '99999', NULL);
@@ -798,5 +796,3 @@ INSERT OR REPLACE INTO civic_facilities (id, type, subtype, name, latitude, long
 INSERT OR REPLACE INTO civic_facilities (id, type, subtype, name, latitude, longitude, municipality_code, postal_code) VALUES ('fac_39_edu_malacoria', 'education', 'school', 'CEIP Malacoria', 43.316196, -4.17349, '39041', '39509');
 
 INSERT OR REPLACE INTO civic_facilities (id, type, subtype, name, latitude, longitude, municipality_code, postal_code) VALUES ('fac_39_par_bolera_villanueva', 'park', 'urban_park', 'Parque y Área Recreativa Villanueva de la Peña', 43.3178, -4.1892, '39041', '39509');
-
-COMMIT;

@@ -3,8 +3,6 @@ CREATE INDEX IF NOT EXISTS idx_radon_muni ON cte_radon_municipalities(municipali
 
 CREATE INDEX IF NOT EXISTS idx_radon_prov ON cte_radon_municipalities(province_code);
 
-BEGIN TRANSACTION;
-
 INSERT OR REPLACE INTO cte_radon_municipalities (municipality_code, municipality_name, province_code, province_name, zone) VALUES ('01003', 'Aramaio', '01', 'Araba/Álava', 'Zona I');
 
 INSERT OR REPLACE INTO cte_radon_municipalities (municipality_code, municipality_name, province_code, province_name, zone) VALUES ('01008', 'Arratzua-Ubarrundia', '01', 'Araba/Álava', 'Zona I');
@@ -4998,3 +4996,5 @@ INSERT OR REPLACE INTO cte_radon_municipalities (municipality_code, municipality
 INSERT OR REPLACE INTO cte_radon_municipalities (municipality_code, municipality_name, province_code, province_name, zone) VALUES ('34227', 'Villanueva del Rebollar', '34', 'Palencia', 'Zona I');
 
 INSERT OR REPLACE INTO cte_radon_municipalities (municipality_code, municipality_name, province_code, province_name, zone) VALUES ('34230', 'Villarmentero de Campos', '34', 'Palencia', 'Zona I');
+
+INSERT OR REPLACE INTO cte_radon_municipalities (municipality_code, municipality_name, province_code, province_name, zone) VALUES ('34231', 'Villarrabé', '34', 'Palencia', 'Zona I');

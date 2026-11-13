@@ -752,5 +752,3 @@ INSERT OR REPLACE INTO mivau_serpavi_benchmarks (cusec, municipality_code, is_st
 INSERT OR REPLACE INTO mivau_serpavi_benchmarks (cusec, municipality_code, is_stressed_market, lower_bound_eur_m2, median_eur_m2, upper_bound_eur_m2, sample_size) VALUES ('4109101001', '41091', 0, 11.2, 13.0, 15.2, 330);
 
 INSERT OR REPLACE INTO mivau_serpavi_benchmarks (cusec, municipality_code, is_stressed_market, lower_bound_eur_m2, median_eur_m2, upper_bound_eur_m2, sample_size) VALUES ('2906701001', '29067', 0, 12.4, 14.3, 16.5, 360);
-
-COMMIT;

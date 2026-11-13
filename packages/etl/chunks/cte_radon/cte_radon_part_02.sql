@@ -1,6 +1,4 @@
 -- Cloudflare D1 Batch Insert Chunk for cte_radon
-INSERT OR REPLACE INTO cte_radon_municipalities (municipality_code, municipality_name, province_code, province_name, zone) VALUES ('34231', 'Villarrabé', '34', 'Palencia', 'Zona I');
-
 INSERT OR REPLACE INTO cte_radon_municipalities (municipality_code, municipality_name, province_code, province_name, zone) VALUES ('34232', 'Villarramiel', '34', 'Palencia', 'Zona I');
 
 INSERT OR REPLACE INTO cte_radon_municipalities (municipality_code, municipality_name, province_code, province_name, zone) VALUES ('34236', 'Villaturde', '34', 'Palencia', 'Zona I');
@@ -3090,5 +3088,3 @@ INSERT OR REPLACE INTO cte_radon_municipalities (municipality_code, municipality
 INSERT OR REPLACE INTO cte_radon_municipalities (municipality_code, municipality_name, province_code, province_name, zone) VALUES ('50901', 'Biel', '50', 'Zaragoza', 'Zona I');
 
 INSERT OR REPLACE INTO cte_radon_municipalities (municipality_code, municipality_name, province_code, province_name, zone) VALUES ('51001', 'Ceuta', '51', 'Ceuta', 'Zona II');
-
-COMMIT;

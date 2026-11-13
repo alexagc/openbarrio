@@ -1,6 +1,4 @@
 -- Cloudflare D1 Batch Insert Chunk for civic_facilities
-INSERT OR REPLACE INTO civic_facilities (id, type, subtype, name, latitude, longitude, municipality_code, postal_code) VALUES ('osm_138213137', 'healthcare', 'primary_care', 'Centro de Saúde e Punto de Atención Continuada de Muros', 42.7889873, -9.0686028, '15001', '15001');
-
 INSERT OR REPLACE INTO civic_facilities (id, type, subtype, name, latitude, longitude, municipality_code, postal_code) VALUES ('osm_139594556', 'park', 'urban_park', 'Parque Eugenio Arbones', 42.2181603, -8.7331297, '15001', '15001');
 
 INSERT OR REPLACE INTO civic_facilities (id, type, subtype, name, latitude, longitude, municipality_code, postal_code) VALUES ('osm_140399591', 'park', 'urban_park', 'Parque do Sangoñedo', 42.6054437, -7.7803514, '15001', '15001');
@@ -4998,3 +4996,5 @@ INSERT OR REPLACE INTO civic_facilities (id, type, subtype, name, latitude, long
 INSERT OR REPLACE INTO civic_facilities (id, type, subtype, name, latitude, longitude, municipality_code, postal_code) VALUES ('osm_1355187580', 'healthcare', 'primary_care', 'Centro de Saúde de Castro de Ribeiras de Lea', 43.1460563, -7.4921657, '15001', '15001');
 
 INSERT OR REPLACE INTO civic_facilities (id, type, subtype, name, latitude, longitude, municipality_code, postal_code) VALUES ('osm_1355265773', 'healthcare', 'primary_care', 'Centro de Saúde de Castro de Rei', 43.2076361, -7.3968072, '15001', '15001');
+
+INSERT OR REPLACE INTO civic_facilities (id, type, subtype, name, latitude, longitude, municipality_code, postal_code) VALUES ('osm_1365008120', 'education', 'school', 'Colexio de Educación Infantil e Primaria Plurilingüe Calvo-Sotelo-Edificio A', 42.4267951, -8.0811968, '15001', '15001');

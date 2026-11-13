@@ -1,6 +1,4 @@
 -- Cloudflare D1 Batch Insert Chunk for civic_facilities
-INSERT OR REPLACE INTO civic_facilities (id, type, subtype, name, latitude, longitude, municipality_code, postal_code) VALUES ('osm_139962149', 'park', 'urban_park', 'Plaza San Juan de Dios', 38.9932619, -1.8664298, '45001', '45001');
-
 INSERT OR REPLACE INTO civic_facilities (id, type, subtype, name, latitude, longitude, municipality_code, postal_code) VALUES ('osm_139962530', 'park', 'urban_park', 'Plaza Tomás Navarro Tomás', 38.989067, -1.842199, '45001', '45001');
 
 INSERT OR REPLACE INTO civic_facilities (id, type, subtype, name, latitude, longitude, municipality_code, postal_code) VALUES ('osm_139962535', 'park', 'urban_park', 'Jardín de la Calle Miraflores', 38.9932853, -1.8424034, '45001', '45001');
@@ -4998,3 +4996,5 @@ INSERT OR REPLACE INTO civic_facilities (id, type, subtype, name, latitude, long
 INSERT OR REPLACE INTO civic_facilities (id, type, subtype, name, latitude, longitude, municipality_code, postal_code) VALUES ('osm_1549366888', 'park', 'urban_park', 'Plaza de Don Quijote', 38.9990528, -3.3649287, '45001', '45001');
 
 INSERT OR REPLACE INTO civic_facilities (id, type, subtype, name, latitude, longitude, municipality_code, postal_code) VALUES ('osm_1551461619', 'park', 'urban_park', 'Plaza Maestro Maroto', 38.9987617, -3.3643266, '45001', '45001');
+
+INSERT OR REPLACE INTO civic_facilities (id, type, subtype, name, latitude, longitude, municipality_code, postal_code) VALUES ('osm_1551461917', 'park', 'urban_park', 'Plaza Maestro Maroto', 38.9983582, -3.3643042, '45001', '45001');

@@ -1,6 +1,4 @@
 -- Cloudflare D1 Batch Insert Chunk for civic_facilities
-INSERT OR REPLACE INTO civic_facilities (id, type, subtype, name, latitude, longitude, municipality_code, postal_code) VALUES ('hlth_sanicen_c_115825', 'healthcare', 'consultorio', 'Consultorio Médico ELS OMELLS DE NA GAIA', 41.46992, 1.08827, '25154', '43449');
-
 INSERT OR REPLACE INTO civic_facilities (id, type, subtype, name, latitude, longitude, municipality_code, postal_code) VALUES ('hlth_sanicen_c_115826', 'healthcare', 'consultorio', 'Consultorio Médico LLORENÇ DE ROCAFORT', 41.5506201, 1.0389235, '25902', '25267');
 
 INSERT OR REPLACE INTO civic_facilities (id, type, subtype, name, latitude, longitude, municipality_code, postal_code) VALUES ('hlth_sanicen_c_115827', 'healthcare', 'consultorio', 'Consultorio Médico MALDÀ', 41.5503729, 1.0386088, '25130', '25266');
@@ -4998,3 +4996,5 @@ INSERT OR REPLACE INTO civic_facilities (id, type, subtype, name, latitude, long
 INSERT OR REPLACE INTO civic_facilities (id, type, subtype, name, latitude, longitude, municipality_code, postal_code) VALUES ('hlth_sanicen_c_118393', 'healthcare', 'consultorio', 'Consultorio Médico QUINTERÍA', 38.0336015, -3.962337, '23096', '23749');
 
 INSERT OR REPLACE INTO civic_facilities (id, type, subtype, name, latitude, longitude, municipality_code, postal_code) VALUES ('hlth_sanicen_c_118394', 'healthcare', 'consultorio', 'Consultorio Médico ROPERA', 38.0540904, -4.1022607, '23005', '23747');
+
+INSERT OR REPLACE INTO civic_facilities (id, type, subtype, name, latitude, longitude, municipality_code, postal_code) VALUES ('hlth_sanicen_c_118395', 'healthcare', 'consultorio', 'Consultorio Médico SAN JOSÉ ESCOBAR', 38.04027689999999, -4.055845, '23005', '23740');

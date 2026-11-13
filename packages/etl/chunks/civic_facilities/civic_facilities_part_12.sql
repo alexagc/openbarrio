@@ -1,6 +1,4 @@
 -- Cloudflare D1 Batch Insert Chunk for civic_facilities
-INSERT OR REPLACE INTO civic_facilities (id, type, subtype, name, latitude, longitude, municipality_code, postal_code) VALUES ('osm_1365008120', 'education', 'school', 'Colexio de Educación Infantil e Primaria Plurilingüe Calvo-Sotelo-Edificio A', 42.4267951, -8.0811968, '15001', '15001');
-
 INSERT OR REPLACE INTO civic_facilities (id, type, subtype, name, latitude, longitude, municipality_code, postal_code) VALUES ('osm_1365533311', 'healthcare', 'primary_care', 'Consultorio de Dacón', 42.4244618, -8.0487551, '15001', '15001');
 
 INSERT OR REPLACE INTO civic_facilities (id, type, subtype, name, latitude, longitude, municipality_code, postal_code) VALUES ('osm_1366668883', 'education', 'school', 'Escola Infantil A Galiña Azul', 42.9040154, -8.0186764, '15001', '15001');
@@ -4998,3 +4996,5 @@ INSERT OR REPLACE INTO civic_facilities (id, type, subtype, name, latitude, long
 INSERT OR REPLACE INTO civic_facilities (id, type, subtype, name, latitude, longitude, municipality_code, postal_code) VALUES ('osm_283082926', 'education', 'school', 'Escuela Educ. Infantil Virgen Del Espino', 41.7636787, -2.4772862, '47001', '47001');
 
 INSERT OR REPLACE INTO civic_facilities (id, type, subtype, name, latitude, longitude, municipality_code, postal_code) VALUES ('osm_283512652', 'healthcare', 'primary_care', 'Centro de Salud de Riaño', 42.9748576, -5.000397, '47001', '47001');
+
+INSERT OR REPLACE INTO civic_facilities (id, type, subtype, name, latitude, longitude, municipality_code, postal_code) VALUES ('osm_284566363', 'healthcare', 'primary_care', 'Consultorio Médico de La Bastida', 40.584654, -6.0580393, '47001', '47001');
