@@ -22,7 +22,7 @@ export const eu: TranslationSchema = {
     extension: 'Atarien Luzapena',
     principles: 'Metodologia Zibikoa',
     github: 'GitHub',
-    version: 'v1.3.1',
+    version: 'v1.3.2',
     openMap: 'Ikusi Mapa Interaktiboa',
     tools: 'Tresnak',
     toolsSurface: 'Metroak Egiaztatu',

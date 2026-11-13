@@ -38,4 +38,15 @@ export interface CloudflareEnv {
   ALLOWED_ORIGINS?: string;
 }
 
+export interface ScheduledController {
+  readonly scheduledTime: number;
+  readonly cron: string;
+  noRetry(): void;
+}
+
+export interface ExecutionContext {
+  waitUntil(promise: Promise<unknown>): void;
+  passThroughOnException(): void;
+}
+
 export type AppBindings = CloudflareEnv;

@@ -231,4 +231,57 @@ describe('Subphase 17D: Cadastral Write-Through LRU Cache (90-day TTL)', () => {
       expect(downstreamSpy).toHaveBeenCalledTimes(1); // Still 1, served from cache!
     });
   });
+
+  describe('FinOps Zero-Write Caching & Batch Maintenance (v1.3.2)', () => {
+    it('does not trigger write queries (UPDATE or INSERT) on cache hits to protect D1 daily quota', async () => {
+      const executedSqls: string[] = [];
+      const mockDb: any = {
+        prepare: vi.fn((sql: string) => {
+          executedSqls.push(sql);
+          return {
+            bind: vi.fn(() => ({
+              first: vi.fn(async () => ({
+                data_json: JSON.stringify(mockProperty),
+                expires_at: new Date(Date.now() + 86400000).toISOString(),
+              })),
+              run: vi.fn(async () => ({ success: true })),
+            })),
+          };
+        }),
+      };
+
+      const cache = new CadastralCache({ db: mockDb });
+      const result = await cache.get<CadastralProperty>('prop:9872023VH5797S0001WX');
+
+      expect(result).not.toBeNull();
+      expect(result?.cadastralReference).toBe('9872023VH5797S0001WX');
+
+      // Verify that no UPDATE statements were executed during the cache hit
+      const updateCalls = executedSqls.filter((sql) => sql.toUpperCase().includes('UPDATE'));
+      expect(updateCalls.length).toBe(0);
+    });
+
+    it('prunes expired entries in batch with pruneExpired()', async () => {
+      let executedDeleteSql = '';
+      const mockDb: any = {
+        prepare: vi.fn((sql: string) => {
+          if (sql.includes('DELETE FROM cadastral_cache')) {
+            executedDeleteSql = sql;
+          }
+          return {
+            bind: vi.fn(() => ({
+              run: vi.fn(async () => ({ success: true, meta: { changes: 3 } })),
+            })),
+          };
+        }),
+      };
+
+      const cache = new CadastralCache({ db: mockDb });
+      const pruned = await cache.pruneExpired(100);
+
+      expect(pruned).toBe(3);
+      expect(executedDeleteSql).toContain('DELETE FROM cadastral_cache');
+      expect(executedDeleteSql).toContain('expires_at <= ?');
+    });
+  });
 });

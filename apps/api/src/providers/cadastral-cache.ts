@@ -65,15 +65,7 @@ export class CadastralCache {
         return null;
       }
 
-      // Update LRU access telemetry
-      this.db
-        .prepare(
-          'UPDATE cadastral_cache SET access_count = access_count + 1, last_accessed_at = ? WHERE cache_key = ?'
-        )
-        .bind(nowIso, key)
-        .run()
-        .catch(() => {});
-
+      // FinOps: Return cached JSON without write amplification (no hot-path UPDATE on reads)
       return JSON.parse(row.data_json) as T;
     } catch {
       return null;
@@ -155,6 +147,33 @@ export class CadastralCache {
         .run();
 
       return (res as any)?.meta?.changes || limit;
+    } catch {
+      return 0;
+    }
+  }
+
+  /**
+   * Performs batch pruning of expired entries without touching active records.
+   * Designed for periodic or background maintenance to keep D1 storage within 5 GB.
+   */
+  async pruneExpired(limit = 5000): Promise<number> {
+    if (!this.db) return 0;
+
+    try {
+      const nowIso = new Date().toISOString();
+      const res = await this.db
+        .prepare(`
+          DELETE FROM cadastral_cache
+          WHERE cache_key IN (
+            SELECT cache_key FROM cadastral_cache
+            WHERE expires_at <= ?
+            LIMIT ?
+          )
+        `)
+        .bind(nowIso, limit)
+        .run();
+
+      return (res as any)?.meta?.changes || 0;
     } catch {
       return 0;
     }

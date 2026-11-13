@@ -187,17 +187,17 @@ export function useMapLibre({
           },
           'ine-income-pmtiles': {
             type: 'vector',
-            url: `pmtiles://${(import.meta.env.VITE_API_URL || '').replace(/\/$/, '')}/api/v1/tiles/census_tracts.pmtiles`,
+            url: `pmtiles://${(import.meta.env.VITE_TILES_URL || `${(import.meta.env.VITE_API_URL || '').replace(/\/$/, '')}/api/v1/tiles`).replace(/\/$/, '')}/census_tracts.pmtiles`,
             attribution: '&copy; Instituto Nacional de Estadística (INE ADRH) & IGN',
           },
           'miteco-sica': {
             type: 'vector',
-            url: `pmtiles://${(import.meta.env.VITE_API_URL || '').replace(/\/$/, '')}/api/v1/tiles/noise.pmtiles`,
+            url: `pmtiles://${(import.meta.env.VITE_TILES_URL || `${(import.meta.env.VITE_API_URL || '').replace(/\/$/, '')}/api/v1/tiles`).replace(/\/$/, '')}/noise.pmtiles`,
             attribution: '&copy; MITECO SICA / MER',
           },
           'miteco-snczi': {
             type: 'vector',
-            url: `pmtiles://${(import.meta.env.VITE_API_URL || '').replace(/\/$/, '')}/api/v1/tiles/floods.pmtiles`,
+            url: `pmtiles://${(import.meta.env.VITE_TILES_URL || `${(import.meta.env.VITE_API_URL || '').replace(/\/$/, '')}/api/v1/tiles`).replace(/\/$/, '')}/floods.pmtiles`,
             attribution: '&copy; MITECO SNCZI',
           },
           'walking-isochrones': {

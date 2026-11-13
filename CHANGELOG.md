@@ -5,6 +5,20 @@ All notable changes to the **OpenBarrio** platform are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.2] - 2026-11-13
+
+### FinOps & DevOps Architecture Hardening
+- **Decoupled PMTiles Vector Tile Streaming (`apps/web`)**:
+  - Implemented configurable `VITE_TILES_URL` in `useMapLibre.ts` with automatic fallback to `${VITE_API_URL}/api/v1/tiles`.
+  - Enables direct browser-to-R2/CDN streaming in production without proxying through Cloudflare Workers, eliminating Worker request consumption for map navigation and safeguarding the 100,000 req/day free tier quota.
+- **Zero-Write D1 Caching & Write Amplification Elimination (`apps/api`)**:
+  - Eliminated hot-path telemetry `UPDATE` statements during cache hits in `CadastralCache`, reducing Cloudflare D1 write transactions by >95% and reserving the 100,000 writes/day quota strictly for new data ingestion.
+  - Implemented batch maintenance method `pruneExpired(limit)` for periodic, non-blocking cleanup of stale cache records without user-facing latency.
+  - Added native Cloudflare Worker Cron Trigger in `wrangler.jsonc` (`0 3 1 * *`) and `worker.ts` with `ctx.waitUntil(cache.pruneExpired(5000))` for 100% automated, zero-cost monthly D1 maintenance.
+  - Added comprehensive FinOps verification test suite in `apps/api/tests/providers/cadastral-cache.test.ts` and `apps/api/tests/worker.test.ts` verifying zero write statements on cache hits and successful scheduled cron execution.
+- **Deployment & Architecture Documentation (`docs`)**:
+  - Updated `docs/DEPLOYMENT_GUIDE.md` with Section 8 detailing zero-cost edge operations, R2 custom domain setup, and D1 quota hardening guidelines.
+
 ## [1.3.1] - 2026-11-13
 
 ### Security & Hardening

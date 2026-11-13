@@ -232,3 +232,29 @@ Once ready to point official domains (`openbarrio.org` and `api.openbarrio.org`)
    * In Cloudflare Dashboard -> **Workers & Pages** -> Select `openbarrio-api` -> **Settings** -> **Domains & Routes**.
    * Click **Add** -> **Custom Domain** -> enter `api.openbarrio.org`.
    * Cloudflare automatically issues and manages the SSL/TLS certificates with zero downtime.
+
+---
+
+## 8. FinOps Zero-Cost Architecture & Quota Hardening (v1.3.2)
+
+OpenBarrio is engineered to run indefinitely within Cloudflare's **100% Free Tier (0,00 €/month)**:
+
+### 8.1. Decoupled PMTiles Vector Streaming (`VITE_TILES_URL`)
+MapLibre GL fetches vector tiles via RFC 7233 byte-range queries (HTTP 206 Partial Content). To prevent map navigations from consuming the Cloudflare Worker quota (100,000 requests/day):
+
+1. **Local / Docker Development:**
+   Leaves `VITE_TILES_URL` unset. The web app automatically falls back to `${VITE_API_URL}/api/v1/tiles`, served directly by the Hono local server.
+2. **Production Zero-Worker Streaming (Cloudflare R2 Direct):**
+   * In Cloudflare Dashboard -> **R2** -> select `openbarrio-r2` -> **Settings** -> **Custom Domains**.
+   * Connect a custom subdomain (e.g. `tiles.openbarrio.org`) or enable the `r2.dev` public bucket URL.
+   * Add the environment variable in Cloudflare Pages (`openbarrio-web`):
+     ```ini
+     VITE_TILES_URL=https://tiles.openbarrio.org
+     ```
+   * **FinOps Result:** All map tile chunks stream directly from Cloudflare R2 with **0 € egress fees** and **0 Worker request consumption**.
+
+### 8.2. Zero-Write D1 Caching Policy
+`CadastralCache` implements a zero-write-on-read policy:
+* **Reads:** Cached records are read with an indexed `SELECT` consuming only 1 row read. Stale entries (`expires_at <= now`) are discarded passively without hot-path write amplification.
+* **Writes:** D1 writes are strictly reserved for new cadastral ingestions, safeguarding the 100,000 writes/day free quota.
+* **Batch Maintenance:** Expired cache rows can be pruned periodically using `cache.pruneExpired(limit)` without incurring hot-path user latency.
