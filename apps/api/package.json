@@ -26,10 +26,10 @@
   },
   "dependencies": {
     "@hono/node-server": "^2.1.6",
-    "@hono/swagger-ui": "^0.6.1",
+    "@hono/swagger-ui": "^0.6.2",
     "@openbarrio/core": "workspace:*",
     "@sinclair/typebox": "^0.34.4",
-    "hono": "^4.6.8"
+    "hono": "^4.13.17"
   },
   "devDependencies": {
     "@types/node": "^22.8.4",
