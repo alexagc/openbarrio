@@ -74,7 +74,7 @@ function registerFacilityMapImages(map: MapLibreMap) {
 }
 
 export interface UseMapLibreProps {
-  containerRef: React.RefObject<HTMLDivElement>;
+  containerRef: React.RefObject<HTMLDivElement | null>;
   selectedCoords?: { lat: number; lon: number };
   onMapClick: (lat: number, lon: number) => void;
   activeBasemap: BasemapType;

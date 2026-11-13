@@ -7,9 +7,9 @@ import {
   Building,
   Code2,
   Map as MapIcon,
-  Chrome,
   ArrowRight,
 } from 'lucide-react';
+import { Chrome } from '../common/BrandIcons';
 import { isCadastralReference } from '@openbarrio/core';
 import { useTranslation } from '../../i18n';
 import { apiClient } from '../../services/api.client';

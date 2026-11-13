@@ -294,8 +294,8 @@ describe('MapView Component (Stitch Civic Precision)', () => {
         });
       });
 
-      const originalGeolocation = global.navigator.geolocation;
-      Object.defineProperty(global.navigator, 'geolocation', {
+      const originalGeolocation = globalThis.navigator.geolocation;
+      Object.defineProperty(globalThis.navigator, 'geolocation', {
         value: {
           getCurrentPosition: mockGetCurrentPosition,
         },
@@ -317,7 +317,7 @@ describe('MapView Component (Stitch Civic Precision)', () => {
       expect(mockOnMapClick).toHaveBeenCalledWith(40.415363, -3.707398);
 
       // Restore geolocation
-      Object.defineProperty(global.navigator, 'geolocation', {
+      Object.defineProperty(globalThis.navigator, 'geolocation', {
         value: originalGeolocation,
         writable: true,
         configurable: true,

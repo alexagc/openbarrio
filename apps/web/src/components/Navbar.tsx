@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Building2, Database, Github, Info, X, CheckCircle, ExternalLink } from 'lucide-react';
+import { Building2, Database, Info, X, CheckCircle, ExternalLink } from 'lucide-react';
+import { Github } from './common/BrandIcons';
 
 interface NavbarProps {
   isOfflineDemo?: boolean;

@@ -1,5 +1,6 @@
 import React from 'react';
-import { Chrome, Shield, CheckCircle2, Building, Gavel, Droplets } from 'lucide-react';
+import { Shield, CheckCircle2, Building, Gavel, Droplets } from 'lucide-react';
+import { Chrome } from '../common/BrandIcons';
 import { useTranslation } from '../../i18n';
 
 export const ExtensionShowcaseSection: React.FC = () => {
