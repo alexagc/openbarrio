@@ -16,7 +16,7 @@ export const GithubIcon: React.FC<React.SVGProps<SVGSVGElement>> = ({ className 
   </svg>
 );
 
-export const ChromeIcon: React.FC<React.SVGProps<SVGSVGElement>> = ({ className = 'w-4 h-4', ...props }) => (
+export const ChromeIcon: React.FC<React.SVGProps<SVGSVGElement>> = ({ className = 'w-5 h-5', ...props }) => (
   <svg
     className={className}
     viewBox="0 0 24 24"
