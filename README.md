@@ -90,7 +90,7 @@ Served via HTTP Range requests with sub-15ms tile latency and zero external mini
 * **Thematic Lenses Selector:** 4 specialized cartographic views centered atop the map (`Vida Urbana`, `Silencio`, `Riesgos Naturales`, `Luz 3D`) with adaptive auto-activation based on property typology (e.g. rustic parcels automatically activate flood risk cartography).
 * **3-Second Executive Summary:** Instant executive dossier signal with overall score, critical alert banners (surface discrepancy >15%, active flood zones, expired energy certificates under RD 390/2021), and 3 instant verdict pills before progressive disclosure of in-depth technical analysis.
 * **Unified Sovereign Search:** Single unified search input with auto-detection of cadastral references and addresses, eliminating manual mode toggling.
-* **Store-Ready Extension Bundle:** Zero-dependency packaging pipeline (`pnpm package:extension`) generating audited, verified `openbarrio-extension-v1.3.0.zip` ready for Chrome Web Store.
+* **Store-Ready Extension Bundle:** Zero-dependency packaging pipeline (`pnpm package:extension`) generating audited, verified `openbarrio-extension-v1.3.1.zip` ready for Chrome Web Store.
 * **Dedicated Data Transparency Portal:** Independent `/fuentes-oficiales` route detailing compliance with Directive INSPIRE 2007/2/EC and Law 19/2013.
 
 ### 6. Urban 3D Extrusion & Solar Simulation
