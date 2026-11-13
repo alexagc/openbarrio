@@ -295,6 +295,16 @@ jobs:
           python3 packages/etl/src/process_civic_facilities.py \
             --output-sql packages/etl/dist/civic_facilities.sql
 
+      - name: Process Municipal ITE/IEE Records (Open Data Censuses)
+        run: |
+          python3 packages/etl/src/process_municipal_ite.py \
+            --output-sql packages/etl/dist/municipal_ite.sql
+
+      - name: Process IGN NCSE-02 Seismic Hazard Catalog
+        run: |
+          python3 packages/etl/src/process_ign_seismic.py \
+            --output-sql packages/etl/dist/ign_seismic.sql
+
       - name: Ingest Energy Performance Certificates (CEE)
         run: |
           echo "⚡ Ingesting official Open Data Energy Certificates (Madrid, Catalunya, Euskadi)..."
@@ -307,6 +317,8 @@ jobs:
           path: |
             packages/etl/dist/civic_facilities.sql
             packages/etl/dist/energy_certificates.sql
+            packages/etl/dist/municipal_ite.sql
+            packages/etl/dist/ign_seismic.sql
           retention-days: 7
 
   # =========================================================================
@@ -418,7 +430,7 @@ jobs:
           node scripts/apply-d1-chunks.mjs packages/etl/chunks/serpavi_benchmarks --remote
 
       - name: Sync Cloudflare D1 (Municipal ITE & IGN Seismic)
-        if: inputs.dry_run != true && env.HAS_CF_TOKEN == 'true' && hashFiles('packages/etl/dist/openbarrio-etl-dist/municipal_ite.sql') != ''
+        if: inputs.dry_run != true && env.HAS_CF_TOKEN == 'true' && (hashFiles('packages/etl/dist/municipal_ite.sql') != '' || hashFiles('packages/etl/dist/openbarrio-etl-dist/municipal_ite.sql') != '')
         continue-on-error: true
         uses: cloudflare/wrangler-action@v3
         with:
@@ -427,8 +439,16 @@ jobs:
           wranglerVersion: '3.114.17'
           workingDirectory: apps/api
           command: |
-            d1 execute openbarrio-d1 --file=${{ github.workspace }}/packages/etl/dist/openbarrio-etl-dist/municipal_ite.sql --remote --yes
-            d1 execute openbarrio-d1 --file=${{ github.workspace }}/packages/etl/dist/openbarrio-etl-dist/ign_seismic.sql --remote --yes
+            ITE_FILE="${{ github.workspace }}/packages/etl/dist/municipal_ite.sql"
+            [ ! -f "$ITE_FILE" ] && ITE_FILE="${{ github.workspace }}/packages/etl/dist/openbarrio-etl-dist/municipal_ite.sql"
+            SEISMIC_FILE="${{ github.workspace }}/packages/etl/dist/ign_seismic.sql"
+            [ ! -f "$SEISMIC_FILE" ] && SEISMIC_FILE="${{ github.workspace }}/packages/etl/dist/openbarrio-etl-dist/ign_seismic.sql"
+            if [ -f "$ITE_FILE" ]; then
+              d1 execute openbarrio-d1 --file="$ITE_FILE" --remote --yes
+            fi
+            if [ -f "$SEISMIC_FILE" ]; then
+              d1 execute openbarrio-d1 --file="$SEISMIC_FILE" --remote --yes
+            fi
 
       - name: Sync Cloudflare D1 (MITECO SNCZI Flood Risk)
         if: inputs.dry_run != true && env.HAS_CF_TOKEN == 'true' && hashFiles('packages/etl/dist/snczi_risk.sql') != '' && inputs.sync_snczi_floods != false
