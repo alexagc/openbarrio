@@ -432,23 +432,21 @@ jobs:
       - name: Sync Cloudflare D1 (Municipal ITE & IGN Seismic)
         if: inputs.dry_run != true && env.HAS_CF_TOKEN == 'true' && (hashFiles('packages/etl/dist/municipal_ite.sql') != '' || hashFiles('packages/etl/dist/openbarrio-etl-dist/municipal_ite.sql') != '')
         continue-on-error: true
-        uses: cloudflare/wrangler-action@v3
-        with:
-          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          wranglerVersion: '3.114.17'
-          workingDirectory: apps/api
-          command: |
-            ITE_FILE="${{ github.workspace }}/packages/etl/dist/municipal_ite.sql"
-            [ ! -f "$ITE_FILE" ] && ITE_FILE="${{ github.workspace }}/packages/etl/dist/openbarrio-etl-dist/municipal_ite.sql"
-            SEISMIC_FILE="${{ github.workspace }}/packages/etl/dist/ign_seismic.sql"
-            [ ! -f "$SEISMIC_FILE" ] && SEISMIC_FILE="${{ github.workspace }}/packages/etl/dist/openbarrio-etl-dist/ign_seismic.sql"
-            if [ -f "$ITE_FILE" ]; then
-              d1 execute openbarrio-d1 --file="$ITE_FILE" --remote --yes
-            fi
-            if [ -f "$SEISMIC_FILE" ]; then
-              d1 execute openbarrio-d1 --file="$SEISMIC_FILE" --remote --yes
-            fi
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          cd apps/api
+          ITE_FILE="${{ github.workspace }}/packages/etl/dist/municipal_ite.sql"
+          [ ! -f "$ITE_FILE" ] && ITE_FILE="${{ github.workspace }}/packages/etl/dist/openbarrio-etl-dist/municipal_ite.sql"
+          SEISMIC_FILE="${{ github.workspace }}/packages/etl/dist/ign_seismic.sql"
+          [ ! -f "$SEISMIC_FILE" ] && SEISMIC_FILE="${{ github.workspace }}/packages/etl/dist/openbarrio-etl-dist/ign_seismic.sql"
+          if [ -f "$ITE_FILE" ]; then
+            npx wrangler d1 execute openbarrio-d1 --file="$ITE_FILE" --remote --yes
+          fi
+          if [ -f "$SEISMIC_FILE" ]; then
+            npx wrangler d1 execute openbarrio-d1 --file="$SEISMIC_FILE" --remote --yes
+          fi
 
       - name: Sync Cloudflare D1 (MITECO SNCZI Flood Risk)
         if: inputs.dry_run != true && env.HAS_CF_TOKEN == 'true' && hashFiles('packages/etl/dist/snczi_risk.sql') != '' && inputs.sync_snczi_floods != false
@@ -549,6 +547,7 @@ jobs:
 
       - name: Persist ETL Manifest Changes to Main
         if: inputs.dry_run != true && inputs.apply_only != true && contains(needs.*.result, 'success')
+        continue-on-error: true
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
