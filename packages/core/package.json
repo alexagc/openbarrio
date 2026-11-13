@@ -31,11 +31,11 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@sinclair/typebox": "^0.34.4"
+    "@sinclair/typebox": "^0.34.52"
   },
   "devDependencies": {
-    "eslint": "^9.14.0",
-    "typescript": "^5.6.3",
-    "vitest": "^3.2.6"
+    "eslint": "^10.14.0",
+    "typescript": "^7.0.2",
+    "vitest": "^5.1.0"
   }
 }
