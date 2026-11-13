@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll, beforeEach } from 'vitest';
+import { describe, it, expect, beforeAll, beforeEach, afterEach, vi } from 'vitest';
 import { Hono } from 'hono';
 import { buildApp } from '../../src/app.js';
 import { createProviders } from '../../src/providers/index.js';
@@ -223,6 +223,25 @@ describe('Hono Audit Routes Integration', () => {
   });
 
   describe('GET /api/v1/tiles/miteco', () => {
+    const dummyPng = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+
+    beforeEach(() => {
+      vi.spyOn(globalThis, 'fetch').mockImplementation(async (info: RequestInfo | URL) => {
+        const url = typeof info === 'string' ? info : info instanceof URL ? info.href : (info as Request).url;
+        if (url.includes('miteco.gob.es') || url.includes('ine.es')) {
+          return new Response(dummyPng, {
+            status: 200,
+            headers: { 'Content-Type': 'image/png' },
+          });
+        }
+        return new Response(dummyPng, { status: 200, headers: { 'Content-Type': 'image/png' } });
+      });
+    });
+
+    afterEach(() => {
+      vi.restoreAllMocks();
+    });
+
     it('returns image/png with CORS for MITECO noise proxy endpoint', async () => {
       const response = await app.request(
         '/api/v1/tiles/miteco/noise?bbox=-412554,4926988,-412054,4927488&width=256&height=256'
