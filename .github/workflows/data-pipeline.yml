@@ -36,6 +36,41 @@ on:
         required: false
         default: true
         type: boolean
+      sync_vut_radon_serpavi:
+        description: 'Sync VUT Tourist Housing, CTE Radon & SERPAVI to D1 (default: true)'
+        required: false
+        default: true
+        type: boolean
+      sync_civic_cee:
+        description: 'Sync Civic Facilities & CEE chunks to Cloudflare D1 (default: true for full runs, set false to skip)'
+        required: false
+        default: true
+        type: boolean
+      sync_ine:
+        description: 'Sync INE Income to Cloudflare D1 (default: true for full runs, set false to skip)'
+        required: false
+        default: true
+        type: boolean
+      sync_snczi_floods:
+        description: 'Sync SNCZI Floods to Cloudflare D1 & R2 (default: true for full runs, set false to skip)'
+        required: false
+        default: true
+        type: boolean
+      sync_sica_noise:
+        description: 'Sync SICA Noise to Cloudflare D1 & R2 (default: true for full runs, set false to skip)'
+        required: false
+        default: true
+        type: boolean
+      sync_r2:
+        description: 'Sync Vector Cartography to Cloudflare R2 (default: true for full runs, set false to skip)'
+        required: false
+        default: true
+        type: boolean
+      skip_integrity_gate:
+        description: 'Skip verify-etl-integrity quality gate'
+        required: false
+        default: false
+        type: boolean
       force_sample:
         description: 'Force use of rich seed dataset without remote network downloads'
         required: false
@@ -281,7 +316,7 @@ jobs:
     name: Gatekeeper & Cloudflare Deployment (D1 & R2)
     runs-on: ubuntu-latest
     needs: [etl-ine-ign, etl-snczi-floods, etl-sica-noise, etl-civic-cee]
-    if: always() && (inputs.apply_only == true || contains(needs.*.result, 'success'))
+    if: always() && (inputs.apply_only == true || inputs.sync_vut_radon_serpavi == true || contains(needs.*.result, 'success'))
     env:
       HAS_CF_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN != '' }}
       HAS_R2_S3_KEYS: ${{ secrets.R2_ACCESS_KEY_ID != '' && secrets.R2_SECRET_ACCESS_KEY != '' }}
@@ -302,7 +337,7 @@ jobs:
         run: mkdir -p packages/etl/dist
 
       - name: Download Parallel ETL Artifacts
-        if: inputs.apply_only != true
+        if: inputs.apply_only != true && contains(needs.*.result, 'success')
         uses: actions/download-artifact@v4
         with:
           pattern: artifact-*
@@ -333,10 +368,12 @@ jobs:
           node scripts/split-d1-chunks.mjs
 
       - name: Initialize Local SQLite Database from ETL Artifacts
+        if: inputs.apply_only == true || contains(needs.*.result, 'success')
         run: |
           node scripts/init-local-db.mjs
 
       - name: Run ETL Integrity Quality Gate
+        if: inputs.skip_integrity_gate != true && (inputs.apply_only == true || contains(needs.*.result, 'success'))
         run: |
           node scripts/verify-etl-integrity.mjs
 
@@ -352,7 +389,7 @@ jobs:
           command: d1 migrations apply openbarrio-d1 --remote
 
       - name: Sync Cloudflare D1 (INE Income SQLite)
-        if: inputs.dry_run != true && env.HAS_CF_TOKEN == 'true' && hashFiles('packages/etl/dist/ine_adrh.sql') != ''
+        if: inputs.dry_run != true && env.HAS_CF_TOKEN == 'true' && hashFiles('packages/etl/dist/ine_adrh.sql') != '' && inputs.sync_ine != false
         uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
@@ -362,7 +399,7 @@ jobs:
           command: d1 execute openbarrio-d1 --file=${{ github.workspace }}/packages/etl/dist/ine_adrh.sql --remote --yes
 
       - name: Apply Cloudflare D1 Chunks (Civic Facilities & Energy Certificates)
-        if: inputs.dry_run != true && env.HAS_CF_TOKEN == 'true'
+        if: inputs.dry_run != true && env.HAS_CF_TOKEN == 'true' && (github.event_name == 'schedule' || inputs.sync_civic_cee == true)
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
@@ -370,8 +407,18 @@ jobs:
           node scripts/apply-d1-chunks.mjs packages/etl/chunks/civic_facilities --remote
           node scripts/apply-d1-chunks.mjs packages/etl/chunks/energy_certificates --remote
 
+      - name: Apply Cloudflare D1 Chunks (VUT Tourist Housing, CTE Radon & SERPAVI)
+        if: inputs.dry_run != true && env.HAS_CF_TOKEN == 'true' && inputs.sync_vut_radon_serpavi != false
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          node scripts/apply-d1-chunks.mjs packages/etl/chunks/vut_census_tracts --remote
+          node scripts/apply-d1-chunks.mjs packages/etl/chunks/cte_radon --remote
+          node scripts/apply-d1-chunks.mjs packages/etl/chunks/serpavi_benchmarks --remote
+
       - name: Sync Cloudflare D1 (MITECO SNCZI Flood Risk)
-        if: inputs.dry_run != true && env.HAS_CF_TOKEN == 'true' && hashFiles('packages/etl/dist/snczi_risk.sql') != ''
+        if: inputs.dry_run != true && env.HAS_CF_TOKEN == 'true' && hashFiles('packages/etl/dist/snczi_risk.sql') != '' && inputs.sync_snczi_floods != false
         continue-on-error: true
         uses: cloudflare/wrangler-action@v3
         with:
@@ -382,7 +429,7 @@ jobs:
           command: d1 execute openbarrio-d1 --file=${{ github.workspace }}/packages/etl/dist/snczi_risk.sql --remote --yes
 
       - name: Sync Cloudflare D1 (MITECO SICA Acoustic Noise)
-        if: inputs.dry_run != true && env.HAS_CF_TOKEN == 'true' && hashFiles('packages/etl/dist/sica_noise.sql') != ''
+        if: inputs.dry_run != true && env.HAS_CF_TOKEN == 'true' && hashFiles('packages/etl/dist/sica_noise.sql') != '' && inputs.sync_sica_noise != false
         continue-on-error: true
         uses: cloudflare/wrangler-action@v3
         with:
@@ -393,7 +440,7 @@ jobs:
           command: d1 execute openbarrio-d1 --file=${{ github.workspace }}/packages/etl/dist/sica_noise.sql --remote --yes
 
       - name: Sync Cloudflare R2 (PMTiles Vector Boundaries)
-        if: inputs.dry_run != true && env.HAS_CF_TOKEN == 'true' && hashFiles('packages/etl/dist/census_tracts.pmtiles') != ''
+        if: inputs.dry_run != true && env.HAS_CF_TOKEN == 'true' && hashFiles('packages/etl/dist/census_tracts.pmtiles') != '' && inputs.sync_r2 != false
         uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
@@ -403,7 +450,7 @@ jobs:
           command: r2 object put openbarrio-r2/census_tracts.pmtiles --file=${{ github.workspace }}/packages/etl/dist/census_tracts.pmtiles
 
       - name: Sync Cloudflare R2 (MITECO Floods PMTiles via S3 Multipart)
-        if: inputs.dry_run != true && env.HAS_CF_TOKEN == 'true' && hashFiles('packages/etl/dist/floods.pmtiles') != ''
+        if: inputs.dry_run != true && env.HAS_CF_TOKEN == 'true' && hashFiles('packages/etl/dist/floods.pmtiles') != '' && inputs.sync_r2 != false
         continue-on-error: true
         env:
           CF_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
@@ -436,7 +483,7 @@ jobs:
           echo "✓ floods.pmtiles uploaded successfully to Cloudflare R2!"
 
       - name: Sync Cloudflare R2 (MITECO Noise PMTiles)
-        if: inputs.dry_run != true && env.HAS_CF_TOKEN == 'true' && hashFiles('packages/etl/dist/noise.pmtiles') != ''
+        if: inputs.dry_run != true && env.HAS_CF_TOKEN == 'true' && hashFiles('packages/etl/dist/noise.pmtiles') != '' && inputs.sync_r2 != false
         continue-on-error: true
         uses: cloudflare/wrangler-action@v3
         with:
@@ -447,7 +494,7 @@ jobs:
           command: r2 object put openbarrio-r2/noise.pmtiles --file=${{ github.workspace }}/packages/etl/dist/noise.pmtiles
 
       - name: Upload Consolidated National Artifacts
-        if: inputs.apply_only != true
+        if: inputs.apply_only != true && contains(needs.*.result, 'success')
         uses: actions/upload-artifact@v4
         with:
           name: openbarrio-etl-dist
@@ -464,11 +511,11 @@ jobs:
           retention-days: 30
 
       - name: Update Manifest from Generated Artifacts
-        if: inputs.dry_run != true && inputs.apply_only != true
+        if: inputs.dry_run != true && inputs.apply_only != true && contains(needs.*.result, 'success')
         run: node scripts/update-etl-manifest.mjs
 
       - name: Persist ETL Manifest Changes to Main
-        if: inputs.dry_run != true && inputs.apply_only != true
+        if: inputs.dry_run != true && inputs.apply_only != true && contains(needs.*.result, 'success')
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"

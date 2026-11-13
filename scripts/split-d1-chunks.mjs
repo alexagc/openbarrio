@@ -130,6 +130,33 @@ export function runAllSplits() {
       altOutDir: 'packages/etl/dist/openbarrio-etl-dist/chunks_cee',
       prefix: 'energy_certificates',
     },
+    {
+      candidates: [
+        'packages/etl/dist/vut_census_tracts.sql',
+        'packages/etl/dist/openbarrio-etl-dist/vut_census_tracts.sql',
+      ],
+      outDir: 'packages/etl/chunks/vut_census_tracts',
+      altOutDir: 'packages/etl/dist/openbarrio-etl-dist/chunks_vut',
+      prefix: 'vut_census_tracts',
+    },
+    {
+      candidates: [
+        'packages/etl/dist/cte_radon.sql',
+        'packages/etl/dist/openbarrio-etl-dist/cte_radon.sql',
+      ],
+      outDir: 'packages/etl/chunks/cte_radon',
+      altOutDir: 'packages/etl/dist/openbarrio-etl-dist/chunks_radon',
+      prefix: 'cte_radon',
+    },
+    {
+      candidates: [
+        'packages/etl/dist/serpavi_benchmarks.sql',
+        'packages/etl/dist/openbarrio-etl-dist/serpavi_benchmarks.sql',
+      ],
+      outDir: 'packages/etl/chunks/serpavi_benchmarks',
+      altOutDir: 'packages/etl/dist/openbarrio-etl-dist/chunks_serpavi',
+      prefix: 'serpavi_benchmarks',
+    },
   ];
 
   for (const t of targets) {
