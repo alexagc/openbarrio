@@ -22,7 +22,7 @@ export const ca: TranslationSchema = {
     extension: 'Extensió Portals',
     principles: 'Metodologia Cívica',
     github: 'GitHub',
-    version: 'v1.3.0',
+    version: 'v1.3.1',
     openMap: 'Veure Mapa Interactiu',
     tools: 'Eines',
     toolsSurface: 'Comprovar Metres',
