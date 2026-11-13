@@ -5,6 +5,9 @@ import { Protocol } from 'pmtiles';
 import { generate3dBuildingFootprints } from '../../../utils/solar';
 
 let pmtilesProtocolRegistered = false;
+export function _resetPMTilesProtocolForTesting() {
+  pmtilesProtocolRegistered = false;
+}
 function registerPMTilesProtocol() {
   if (!pmtilesProtocolRegistered && typeof (maplibregl as any).addProtocol === 'function') {
     const protocol = new Protocol();
