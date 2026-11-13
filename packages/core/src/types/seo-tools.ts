@@ -217,7 +217,7 @@ export function calculateLegalRentCap(options: {
 
   const notes: string[] = [];
   let legalMaxRentEur = monthlyRange.upper;
-  let clauseLegalType = 'LIBRE_MERCADO';
+  let clauseLegalType: string;
 
   if (!isStressedMarket) {
     clauseLegalType = 'LIBRE_MERCADO';

@@ -1,4 +1,26 @@
-# OpenBarrio Security Advisory & Hotfix Release v0.12.4 🛡️
+# OpenBarrio Security Advisories & Hardening Releases 🛡️
+
+## Release v1.3.1 — CodeQL Remediation & Supply Chain Hardening
+
+**Release Date:** 2026-11-13  
+**Advisory Severity:** Security & Quality Hardening  
+**Release Version:** `v1.3.1`  
+**Classification:** Security & Code Quality Hardening (CodeQL SAST / Supply Chain Remediation)
+
+### Executive Summary
+
+The `v1.3.1` maintenance release cleans all active static analysis security testing (SAST) CodeQL alerts and hardens the dependency supply chain across the monorepo:
+1. **CodeQL Alert #98 (CWE-020):** Incomplete URL substring sanitization in extension test suite was remediated by enforcing strict WHATWG `URL` host validation (`parsed.hostname === 'test-portal.com' || parsed.hostname.endsWith('.test-portal.com')`).
+2. **CodeQL Alert #97 (CWE-563):** Dead store / useless variable assignment in `calculateLegalRentCap` (`packages/core/src/types/seo-tools.ts`) was eradicated.
+3. **CodeQL Alerts #100, #99, #96 (Maintainability):** Unused `sys` and `math` imports across Python ETL scripts (`process_municipal_ite.py`, `process_ign_seismic.py`, `process_ine_vut.py`) were eliminated.
+4. **Supply Chain Hardening (pnpm audit / Dependabot):**
+   - Hono framework upgraded to `^4.13.16` mitigating CSRF ping audit bypass and HTML injection in css templates.
+   - Test framework modernized to Vitest 3 (`^3.2.6`), eliminating `tinypool <= 2.1.0` Prototype Pollution gadgets and Vitest UI server arbitrary file read vulnerabilities.
+   - Configured safe transitive overrides for `ws >= 8.21.0`, `undici >= 6.21.1`, `minimatch >= 9.0.5`, `sharp >= 0.35.0`, and `@fastify/busboy >= 3.0.0`, eliminating all critical supply chain vulnerabilities.
+
+---
+
+## Release v0.12.4 — Pentesting & Comprehensive Security Hardening
 
 **Release Date:** 2026-11-12  
 **Advisory Severity:** Critical / High  

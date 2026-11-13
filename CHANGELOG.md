@@ -5,6 +5,21 @@ All notable changes to the **OpenBarrio** platform are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.1] - 2026-11-13
+
+### Security & Hardening
+- **CodeQL SAST Remediation & Code Quality Cleansing**:
+  - Eliminated unused `sys` and `math` imports across Python ETL scripts (`packages/etl/src/process_municipal_ite.py`, `packages/etl/src/process_ign_seismic.py`, `packages/etl/src/process_ine_vut.py`), resolving CodeQL alerts #100, #99, and #96 (`py/unused-import`).
+  - Strengthened URL sanitization in extension test suite (`apps/extension/tests/base.adapter.test.ts`) by enforcing strict WHATWG `URL` host validation (`hostname === 'test-portal.com' || hostname.endsWith('.test-portal.com')`), resolving CodeQL alert #98 (`js/incomplete-url-substring-sanitization`).
+  - Eliminated dead store / useless variable assignment in `calculateLegalRentCap` (`packages/core/src/types/seo-tools.ts`), resolving CodeQL alert #97 (`js/useless-assignment-to-local`).
+- **Dependency Vulnerability Eradication & Toolchain Modernization**:
+  - Upgraded Hono framework to `^4.13.16` resolving multiple upstream security advisories (CSRF auditing bypass, RegExpRouter line terminator handling, and HTML injection in css helper).
+  - Modernized testing framework to Vitest 3 (`^3.2.6`), eliminating critical prototype pollution gadgets (`tinypool <= 2.1.0`) and Vitest UI server arbitrary file read vulnerabilities (`GHSA-5xrq-8626-4rwp`).
+  - Applied targeted `pnpm.overrides` for `ws >= 8.21.0`, `undici >= 6.21.1`, `minimatch >= 9.0.5`, `sharp >= 0.35.0`, and `@fastify/busboy >= 3.0.0`, reducing open vulnerabilities from 46 to zero critical and zero runtime high vulnerabilities.
+- **Store-Ready Packaging & Quality Verification**:
+  - Regenerated verified Chrome Web Store bundle `apps/extension/openbarrio-extension-v1.3.1.zip` (42.96 KB).
+  - Maintained 100% test pass rate (538/538 passing) and zero ESLint warnings across all monorepo workspaces.
+
 ## [1.3.0] - 2026-11-13
 
 ### Added
