@@ -1,14 +1,28 @@
 import { useEffect, useCallback, useRef } from 'react';
+import { parseLocalizedRoute, getLocalizedPath } from '../utils/seo-routes';
+import { SupportedLanguage } from '../i18n/types';
 
 export type DossierTab = 'summary' | 'building' | 'environment' | 'market';
 
+export type ViewMode =
+  | 'landing'
+  | 'map'
+  | 'transparency'
+  | 'tool-surface'
+  | 'tool-rent'
+  | 'tool-itp'
+  | 'municipality'
+  | 'municipios-directory';
+
 export interface UrlParamsState {
-  viewMode: 'landing' | 'map' | 'transparency';
+  viewMode: ViewMode;
   activeTab: 'dossier' | 'map';
   dossierTab: DossierTab;
   refcat?: string;
   coords?: { lat: number; lon: number };
   vs?: string;
+  municipalitySlug?: string;
+  isEmbed?: boolean;
 }
 
 export function parseUrlState(): UrlParamsState {
@@ -34,30 +48,29 @@ export function parseUrlState(): UrlParamsState {
     }
   }
 
-  // Canonical & multilingual paths support: /fuentes-oficiales, /sources, /fonts-oficials, /informe/:refcat, /map
-  const isTransparencyPath =
-    path.startsWith('/fuentes-oficiales') ||
-    path.startsWith('/transparencia') ||
-    path.startsWith('/fuentes') ||
-    path.startsWith('/sources') ||
-    path.startsWith('/transparency') ||
-    path.startsWith('/fonts-oficials');
+  // Canonical & multilingual paths support (es, en, ca) via parseLocalizedRoute
+  const localized = parseLocalizedRoute(path, window.location.search);
+
+  const isEmbed = searchParams.get('embed') === 'true' || searchParams.get('embed') === '1' || Boolean(localized.isEmbed);
+  const municipalitySlug = localized.slug;
 
   let pathRefcat: string | undefined;
-  if (path.startsWith('/informe/')) {
-    const segment = path.replace('/informe/', '').split('/')[0].split('?')[0];
+  if (path.startsWith('/informe/') || path.startsWith('/report/')) {
+    const segment = path.replace(/^\/(informe|report)\//, '').split('/')[0].split('?')[0];
     if (segment) {
       pathRefcat = segment.toUpperCase().trim();
     }
   }
 
-  const effectiveRefcat = refcatParam ? refcatParam.toUpperCase().trim() : pathRefcat;
-  const isMapPath = path.startsWith('/map') || Boolean(pathRefcat);
-  const viewMode: 'landing' | 'map' | 'transparency' = isTransparencyPath
-    ? 'transparency'
-    : isMapPath || Boolean(effectiveRefcat)
-    ? 'map'
-    : 'landing';
+  const effectiveRefcat = refcatParam ? refcatParam.toUpperCase().trim() : (localized.refcat || pathRefcat);
+  const isMapPath = path.startsWith('/map') || path.startsWith('/mapa') || Boolean(effectiveRefcat);
+
+  let viewMode: ViewMode = localized.viewMode || 'landing';
+  if (!localized.viewMode || localized.viewMode === 'landing') {
+    if (isMapPath || Boolean(effectiveRefcat) || Boolean(coords)) {
+      viewMode = 'map';
+    }
+  }
 
   // Support both mobile map tab toggle ('map' | 'dossier') and 4-way dossier tabs
   const validDossierTabs: DossierTab[] = ['summary', 'building', 'environment', 'market'];
@@ -74,6 +87,8 @@ export function parseUrlState(): UrlParamsState {
     refcat: effectiveRefcat,
     coords,
     vs: vsParam ? vsParam.toUpperCase().trim() : undefined,
+    municipalitySlug,
+    isEmbed,
   };
 }
 
@@ -100,14 +115,32 @@ export function useUrlSync(
         return;
       }
 
-      if (newState.viewMode === 'transparency') {
+      let currentLang: SupportedLanguage = 'es';
+      try {
+        const saved = localStorage.getItem('openbarrio_lang');
+        if (saved === 'es' || saved === 'en' || saved === 'ca') {
+          currentLang = saved;
+        }
+      } catch {
+        // Ignore localStorage error
+      }
+
+      if (
+        newState.viewMode === 'transparency' ||
+        newState.viewMode === 'tool-surface' ||
+        newState.viewMode === 'tool-rent' ||
+        newState.viewMode === 'tool-itp' ||
+        newState.viewMode === 'municipios-directory' ||
+        newState.viewMode === 'municipality'
+      ) {
+        const target = getLocalizedPath(newState.viewMode, currentLang, {
+          slug: newState.municipalitySlug,
+          isEmbed: newState.isEmbed,
+        });
         const currentPathAndSearch = window.location.pathname + window.location.search;
-        if (currentPathAndSearch !== '/fuentes-oficiales') {
-          if (replace) {
-            window.history.replaceState({ openbarrio: true }, '', '/fuentes-oficiales');
-          } else {
-            window.history.pushState({ openbarrio: true }, '', '/fuentes-oficiales');
-          }
+        if (currentPathAndSearch !== target) {
+          if (replace) window.history.replaceState({ openbarrio: true }, '', target);
+          else window.history.pushState({ openbarrio: true }, '', target);
         }
         return;
       }

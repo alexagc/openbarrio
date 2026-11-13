@@ -1,5 +1,6 @@
 import { Shield, CheckCircle, X, Link as LinkIcon, TrendingUp } from 'lucide-react';
 import { PropertyAuditReport } from '@openbarrio/core';
+import { useTranslation } from '../../i18n';
 
 export interface DuelHeaderProps {
   reportA: PropertyAuditReport;
@@ -14,6 +15,8 @@ export function DuelHeader({
   verdictBadgeText,
   onClose,
 }: DuelHeaderProps) {
+  const { t } = useTranslation();
+
   return (
     <header className="w-full bg-surface-container border-b border-outline-variant sticky top-0 z-50 shrink-0">
       {/* Row 1: Top Brand & Action cluster */}
@@ -27,7 +30,7 @@ export function DuelHeader({
               OpenBarrio
             </span>
             <span className="font-mono text-[9px] text-on-surface-variant uppercase tracking-wider hidden sm:inline">
-              Comparador Cívico & Duelo Inmobiliario
+              {t('duel.subtitle')}
             </span>
           </div>
         </div>
@@ -48,10 +51,10 @@ export function DuelHeader({
             data-testid="duel-close-btn"
             onClick={onClose}
             className="inline-flex items-center gap-1 px-2.5 py-1 rounded bg-surface-container-high hover:bg-surface-variant text-on-surface font-mono text-xs border border-outline-variant transition-colors ml-2 cursor-pointer"
-            title="Cerrar comparador [Esc]"
+            title={t('duel.close')}
           >
             <X className="w-4 h-4 text-on-surface-variant" />
-            <span>Cerrar [Esc]</span>
+            <span>{t('duel.close')} [Esc]</span>
           </button>
         </div>
       </div>

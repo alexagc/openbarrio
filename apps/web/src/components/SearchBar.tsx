@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Search, MapPin, X, Loader2, Sparkles, Navigation, Copy, Check } from 'lucide-react';
 import { isCadastralReference } from '@openbarrio/core';
+import { useTranslation } from '../i18n';
 import { apiClient } from '../services/api.client';
 
 export interface SearchPreset {
@@ -71,6 +72,7 @@ export function SearchBar({
   activeRefcat,
   activeAddress,
 }: SearchBarProps) {
+  const { t } = useTranslation();
   const [query, setQuery] = useState(activeAddress ? `${activeAddress} (RC: ${activeRefcat || ''})` : '');
   const [copiedRc, setCopiedRc] = useState(false);
   const [suggestions, setSuggestions] = useState<
@@ -209,7 +211,7 @@ export function SearchBar({
 
   const handleCurrentLocation = () => {
     if (!navigator.geolocation) {
-      alert('La geolocalización no está soportada en tu navegador.');
+      alert(t('searchBar.geoNotSupported'));
       return;
     }
 
@@ -221,7 +223,7 @@ export function SearchBar({
       },
       (err) => {
         console.warn('Geolocation error:', err);
-        alert('No se pudo obtener tu ubicación actual. Revisa los permisos.');
+        alert(t('searchBar.geoError'));
       },
       { timeout: 10000, enableHighAccuracy: true }
     );
@@ -252,7 +254,7 @@ export function SearchBar({
             onFocus={() => {
               if (suggestions.length > 0) setShowDropdown(true);
             }}
-            placeholder="Buscar dirección, refcat o coordenadas..."
+            placeholder={t('searchBar.placeholder')}
             className="bg-transparent border-0 p-0 text-on-surface font-mono text-[16px] md:text-xs w-full focus:outline-none focus:ring-0 truncate placeholder:text-outline"
           />
 
@@ -265,7 +267,7 @@ export function SearchBar({
                 setShowDropdown(false);
               }}
               className="text-outline hover:text-on-surface p-0.5 mr-1"
-              title="Limpiar"
+              title={t('searchBar.clear')}
             >
               <X className="w-3.5 h-3.5" />
             </button>
@@ -276,7 +278,7 @@ export function SearchBar({
               type="button"
               onClick={handleCopyRc}
               className="flex items-center gap-1 text-on-surface-variant hover:text-primary px-1.5 py-0.5 rounded hover:bg-surface-container-high transition-colors text-[10px] font-mono shrink-0 ml-1"
-              title="Copiar Referencia Catastral"
+              title={t('searchBar.copyRc')}
             >
               {copiedRc ? <Check className="w-3 h-3 text-primary" /> : <Copy className="w-3 h-3" />}
               <span className="hidden sm:inline">RC</span>
@@ -288,7 +290,7 @@ export function SearchBar({
           <div className="hidden sm:flex items-center gap-1.5 px-2 py-0.5 rounded bg-primary-container/20 border border-primary/30 shrink-0">
             <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
             <span className="text-primary text-[10px] font-mono font-semibold tracking-tight">
-              Catastro Validado
+              {t('searchBar.validatedCatastro')}
             </span>
           </div>
         </form>
@@ -297,7 +299,7 @@ export function SearchBar({
         {showDropdown && suggestions.length > 0 && (
           <div className="absolute left-0 right-0 top-full mt-1 bg-surface-container border border-outline-variant rounded shadow-xl overflow-hidden z-50 max-h-60 overflow-y-auto">
             <div className="p-2 border-b border-outline-variant bg-surface-container-high text-[10px] font-mono uppercase text-on-surface-variant flex items-center justify-between">
-              <span>Sugerencias CartoCiudad / Catastro</span>
+              <span>{t('searchBar.suggestionsTitle')}</span>
               {isSearchingSuggestions && <Loader2 className="w-3 h-3 animate-spin text-primary" />}
             </div>
             {suggestions.map((item, idx) => (
@@ -308,13 +310,13 @@ export function SearchBar({
                 onClick={() => {
                   setQuery(item.label);
                   setShowDropdown(false);
-                                      const coords = { lat: item.lat, lon: item.lon };
-                    const portal = item.portal || (item.label.match(/\b\d+\s*([a-zA-Z])\b/) || [])[1];
-                    if (item.refcat) {
-                      onSearchRefcat(item.refcat, coords, portal);
-                    } else {
-                      onSearchCoords(item.lat, item.lon);
-                    }
+                  const coords = { lat: item.lat, lon: item.lon };
+                  const portal = item.portal || (item.label.match(/\b\d+\s*([a-zA-Z])\b/) || [])[1];
+                  if (item.refcat) {
+                    onSearchRefcat(item.refcat, coords, portal);
+                  } else {
+                    onSearchCoords(item.lat, item.lon);
+                  }
                 }}
                 className="w-full text-left px-3 py-2 text-xs text-on-surface hover:bg-surface-container-high border-b border-outline-variant/40 last:border-0 flex items-center justify-between space-x-2 transition cursor-pointer"
               >
@@ -354,7 +356,7 @@ export function SearchBar({
             onFocus={() => {
               if (suggestions.length > 0) setShowDropdown(true);
             }}
-            placeholder="Introduce Referencia Catastral (14-20 car.), coordenadas o dirección..."
+            placeholder={t('searchBar.heroPlaceholder')}
             className="w-full pl-11 pr-24 py-3 bg-surface-container border border-outline-variant rounded text-[16px] md:text-sm text-on-surface placeholder:text-outline focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary shadow-sm transition"
           />
 
@@ -368,7 +370,7 @@ export function SearchBar({
                   setShowDropdown(false);
                 }}
                 className="p-1.5 text-outline hover:text-on-surface rounded hover:bg-surface-container-high transition"
-                title="Limpiar"
+                title={t('searchBar.clear')}
               >
                 <X className="w-4 h-4" />
               </button>
@@ -378,7 +380,7 @@ export function SearchBar({
               type="button"
               onClick={handleCurrentLocation}
               className="p-1.5 text-outline hover:text-primary rounded hover:bg-surface-container-high transition"
-              title="Mi ubicación actual"
+              title={t('searchBar.myLocation')}
             >
               <Navigation className="w-4 h-4" />
             </button>
@@ -390,7 +392,7 @@ export function SearchBar({
           disabled={isLoading || !query.trim()}
           className="ml-2.5 px-4 sm:px-6 py-3 bg-primary hover:bg-primary-container text-on-primary font-semibold text-sm rounded shadow-sm flex items-center space-x-2 transition cursor-pointer"
         >
-          <span>Auditar</span>
+          <span>{t('searchBar.auditBtn')}</span>
         </button>
       </form>
 
@@ -398,7 +400,7 @@ export function SearchBar({
       {showDropdown && suggestions.length > 0 && (
         <div className="absolute left-0 right-0 top-full mt-1.5 bg-surface-container rounded shadow-xl border border-outline-variant overflow-hidden z-40 max-h-60 overflow-y-auto">
           <div className="p-2 border-b border-outline-variant bg-surface-container-high text-[11px] font-mono uppercase text-on-surface-variant flex items-center justify-between">
-            <span>Sugerencias de Dirección</span>
+            <span>{t('searchBar.suggestionsTitle')}</span>
             {isSearchingSuggestions && <Loader2 className="w-3 h-3 animate-spin text-primary" />}
           </div>
           {suggestions.map((item, idx) => (
@@ -409,13 +411,13 @@ export function SearchBar({
               onClick={() => {
                 setQuery(item.label);
                 setShowDropdown(false);
-                                    const coords = { lat: item.lat, lon: item.lon };
-                    const portal = item.portal || (item.label.match(/\b\d+\s*([a-zA-Z])\b/) || [])[1];
-                    if (item.refcat) {
-                      onSearchRefcat(item.refcat, coords, portal);
-                    } else {
-                      onSearchCoords(item.lat, item.lon);
-                    }
+                const coords = { lat: item.lat, lon: item.lon };
+                const portal = item.portal || (item.label.match(/\b\d+\s*([a-zA-Z])\b/) || [])[1];
+                if (item.refcat) {
+                  onSearchRefcat(item.refcat, coords, portal);
+                } else {
+                  onSearchCoords(item.lat, item.lon);
+                }
               }}
               className="w-full text-left px-3.5 py-2.5 text-xs text-on-surface hover:bg-surface-container-high border-b border-outline-variant/40 last:border-0 flex items-center justify-between space-x-2 transition cursor-pointer"
             >
@@ -425,7 +427,7 @@ export function SearchBar({
               </div>
               {item.refcat && (
                 <span className="shrink-0 px-1.5 py-0.5 rounded bg-surface-variant text-tertiary font-mono text-[10px] font-semibold border border-outline-variant">
-                  RC Oficial
+                  {t('searchBar.rcOfficial')}
                 </span>
               )}
             </button>
@@ -436,7 +438,7 @@ export function SearchBar({
       {/* Instant Presets Bar */}
       <div className="mt-2.5 flex items-center flex-wrap gap-1.5 text-xs text-on-surface-variant">
         <span className="inline-flex items-center text-[11px] font-mono text-outline mr-1">
-          <Sparkles className="w-3.5 h-3.5 mr-1 text-secondary" /> Ejemplos:
+          <Sparkles className="w-3.5 h-3.5 mr-1 text-secondary" /> {t('searchBar.examples')}
         </span>
         {SAMPLE_PRESETS.map((preset) => (
           <button

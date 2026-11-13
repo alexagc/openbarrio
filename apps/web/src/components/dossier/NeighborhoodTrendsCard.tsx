@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { NeighborhoodTrends, PropertyTypology } from '@openbarrio/core';
 import { TrendingUp, Info } from 'lucide-react';
+import { useTranslation } from '../../i18n';
 
 interface NeighborhoodTrendsCardProps {
   trends?: NeighborhoodTrends;
@@ -57,17 +58,18 @@ export function NeighborhoodTrendsCard({ trends, typology }: NeighborhoodTrendsC
 
   const areaD = `${pathD} L ${points[points.length - 1].x} ${height - paddingBottom} L ${points[0].x} ${height - paddingBottom} Z`;
 
+  const { t } = useTranslation();
   const gentrificationLabels: Record<string, { label: string; color: string }> = {
-    high: { label: 'Revalorización Rápida / Gentrificación', color: 'text-amber-400 border-amber-500/40 bg-amber-500/10' },
-    moderate: { label: 'Crecimiento Sostenido', color: 'text-emerald-400 border-emerald-500/40 bg-emerald-500/10' },
-    stable: { label: 'Tendencia Estable', color: 'text-blue-400 border-blue-500/40 bg-blue-500/10' },
-    cooling: { label: 'Enfriamiento de Renta', color: 'text-rose-400 border-rose-500/40 bg-rose-500/10' },
+    high: { label: t('trends.rapidGentrification'), color: 'text-amber-400 border-amber-500/40 bg-amber-500/10' },
+    moderate: { label: t('trends.sustainedGrowth'), color: 'text-emerald-400 border-emerald-500/40 bg-emerald-500/10' },
+    stable: { label: t('trends.stableTrend'), color: 'text-blue-400 border-blue-500/40 bg-blue-500/10' },
+    cooling: { label: t('trends.coolingIncome'), color: 'text-rose-400 border-rose-500/40 bg-rose-500/10' },
   };
 
   const status = isRustic
-    ? { label: 'Entorno Rural / Demografía Estable', color: 'text-blue-400 border-blue-500/40 bg-blue-500/10' }
+    ? { label: t('trends.ruralStable'), color: 'text-blue-400 border-blue-500/40 bg-blue-500/10' }
     : isIndustrial
-      ? { label: 'Área Industrial / Actividad Productiva', color: 'text-cyan-400 border-cyan-500/40 bg-cyan-500/10' }
+      ? { label: t('trends.industrialActive'), color: 'text-cyan-400 border-cyan-500/40 bg-cyan-500/10' }
       : gentrificationLabels[trends.summary.gentrificationIndicator] || gentrificationLabels.moderate;
 
   const formatPointValue = (val: number) => {
@@ -89,7 +91,7 @@ export function NeighborhoodTrendsCard({ trends, typology }: NeighborhoodTrendsC
         <div className="flex items-center gap-2">
           <TrendingUp className="w-4 h-4 text-primary" />
           <h3 className="text-sm font-semibold text-on-surface">
-            {isRustic ? 'Evolución Histórica de Renta Municipal' : 'Evolución y Tendencia Histórica del Barrio'}
+            {isRustic ? t('trends.rusticTitle') : t('trends.title')}
           </h3>
         </div>
 
@@ -107,7 +109,7 @@ export function NeighborhoodTrendsCard({ trends, typology }: NeighborhoodTrendsC
                   metric === 'income' ? 'bg-primary text-on-primary font-semibold' : 'text-outline hover:text-on-surface'
                 }`}
               >
-                Renta Media (€)
+                {t('trends.averageIncome')}
               </button>
               <button
                 type="button"
@@ -119,7 +121,7 @@ export function NeighborhoodTrendsCard({ trends, typology }: NeighborhoodTrendsC
                   metric === 'ipv' ? 'bg-primary text-on-primary font-semibold' : 'text-outline hover:text-on-surface'
                 }`}
               >
-                IPV Precios
+                {t('trends.priceIndex')}
               </button>
             </div>
           )}
@@ -136,7 +138,7 @@ export function NeighborhoodTrendsCard({ trends, typology }: NeighborhoodTrendsC
                 windowYears === 3 ? 'bg-surface-variant text-on-surface font-semibold' : 'text-outline hover:text-on-surface'
               }`}
             >
-              3A
+              {t('trends.window3Years')}
             </button>
             <button
               type="button"
@@ -148,7 +150,7 @@ export function NeighborhoodTrendsCard({ trends, typology }: NeighborhoodTrendsC
                 windowYears === 5 ? 'bg-surface-variant text-on-surface font-semibold' : 'text-outline hover:text-on-surface'
               }`}
             >
-              5A
+              {t('trends.window5Years')}
             </button>
           </div>
         </div>
@@ -267,7 +269,7 @@ export function NeighborhoodTrendsCard({ trends, typology }: NeighborhoodTrendsC
       {/* Telemetry Summary Chips */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs font-mono mb-2.5">
         <div className="p-2 rounded bg-surface-container-high border border-outline-variant/40">
-          <span className="text-[10px] text-outline uppercase block">Crecimiento Renta (5A)</span>
+          <span className="text-[10px] text-outline uppercase block">{t('trends.incomeGrowth5Y')}</span>
           <span className="text-sm font-semibold text-emerald-400">
             {trends.summary.fiveYearIncomeGrowthPct > 0 ? '+' : ''}
             {trends.summary.fiveYearIncomeGrowthPct}%
@@ -276,21 +278,21 @@ export function NeighborhoodTrendsCard({ trends, typology }: NeighborhoodTrendsC
 
         {isRustic ? (
           <div className="p-2 rounded bg-surface-container-high border border-outline-variant/40">
-            <span className="text-[10px] text-outline uppercase block">Ámbito Territorial</span>
+            <span className="text-[10px] text-outline uppercase block">{t('trends.territorialScope')}</span>
             <span className="text-sm font-semibold text-primary">
-              Finca Rústica
+              {t('trends.rusticEstate')}
             </span>
           </div>
         ) : isIndustrial ? (
           <div className="p-2 rounded bg-surface-container-high border border-outline-variant/40">
-            <span className="text-[10px] text-outline uppercase block">Ámbito Territorial</span>
+            <span className="text-[10px] text-outline uppercase block">{t('trends.territorialScope')}</span>
             <span className="text-sm font-semibold text-cyan-400">
-              Polígono / Suelo Industrial
+              {t('trends.industrialZone')}
             </span>
           </div>
         ) : (
           <div className="p-2 rounded bg-surface-container-high border border-outline-variant/40">
-            <span className="text-[10px] text-outline uppercase block">Crecimiento IPV Vivienda</span>
+            <span className="text-[10px] text-outline uppercase block">{t('trends.priceGrowth5Y')}</span>
             <span className="text-sm font-semibold text-primary">
               {trends.summary.fiveYearPriceIndexGrowthPct > 0 ? '+' : ''}
               {trends.summary.fiveYearPriceIndexGrowthPct}%
@@ -300,7 +302,7 @@ export function NeighborhoodTrendsCard({ trends, typology }: NeighborhoodTrendsC
 
         <div className="p-2 rounded bg-surface-container-high border border-outline-variant/40">
           <span className="text-[10px] text-outline uppercase block">
-            {isRustic ? 'Dinámica del Entorno' : 'Dinámica del Barrio'}
+            {isRustic ? t('trends.environmentDynamics') : t('trends.neighborhoodDynamics')}
           </span>
           <span className={`inline-block px-1.5 py-0.5 rounded text-[10px] font-semibold border ${status.color} mt-0.5`}>
             {status.label}
@@ -314,11 +316,11 @@ export function NeighborhoodTrendsCard({ trends, typology }: NeighborhoodTrendsC
         <span>
           {isRustic ? (
             <>
-              <strong>Fuentes Oficiales INE:</strong> Renta de Hogares del <em>Atlas ADRH</em> (sección censal {trends.censusSectionId}) en entorno rural.
+              <strong>{t('trends.ineSources')}</strong> Renta de Hogares del <em>Atlas ADRH</em> (sección censal {trends.censusSectionId}) en entorno rural.
             </>
           ) : (
             <>
-              <strong>Fuentes Oficiales INE:</strong> Renta de Hogares del <em>Atlas ADRH</em> (sección censal {trends.censusSectionId}) e <em>Índice de Precios de Vivienda (IPV)</em> de {trends.autonomousCommunity || trends.provinceName}.
+              <strong>{t('trends.ineSources')}</strong> Renta de Hogares del <em>Atlas ADRH</em> (sección censal {trends.censusSectionId}) e <em>Índice de Precios de Vivienda (IPV)</em> de {trends.autonomousCommunity || trends.provinceName}.
             </>
           )}
         </span>

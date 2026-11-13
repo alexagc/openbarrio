@@ -6,6 +6,7 @@ import { DuelCandidateSelector, PresetCandidate, PRESET_CANDIDATES } from './Due
 import { DuelPillarComparison } from './DuelPillarComparison';
 import { deriveBuildingCapEx } from '../dossier/BuildingCapExCard';
 import { apiClient } from '../../services/api.client';
+import { useTranslation } from '../../i18n';
 import {
   Layers,
   Sparkles,
@@ -29,6 +30,7 @@ export function PropertyDuelModal({
   onClose,
   onSelectCandidateB,
 }: PropertyDuelModalProps) {
+  const { t } = useTranslation();
   const [activeReportB, setActiveReportB] = useState<PropertyAuditReport | null>(
     initialReportB || null
   );
@@ -155,11 +157,11 @@ export function PropertyDuelModal({
   const scoreB = candidateB.score.overallScore;
   const globalDelta = scoreA - scoreB;
 
-  let verdictBadgeText = 'Paridad global técnica (0 pts de diferencia)';
+  let verdictBadgeText = t('duel.verdictParity');
   if (globalDelta > 0) {
-    verdictBadgeText = `Inmueble A +${globalDelta} pts ventaja global ponderada`;
+    verdictBadgeText = t('duel.verdictAdvantageA', { delta: globalDelta });
   } else if (globalDelta < 0) {
-    verdictBadgeText = `Inmueble B +${Math.abs(globalDelta)} pts ventaja global ponderada`;
+    verdictBadgeText = t('duel.verdictAdvantageB', { delta: Math.abs(globalDelta) });
   }
 
   // Copy helpers
@@ -299,10 +301,10 @@ export function PropertyDuelModal({
               </div>
               <div>
                 <h1 className="font-headline text-lg sm:text-xl text-on-surface font-bold tracking-tight">
-                  Análisis Pentagonal Multidimensional de Idoneidad Urbanística
+                  {t('duel.title')}
                 </h1>
                 <p className="font-body text-xs text-on-surface-variant mt-0.5">
-                  Superposición geométrica de 5 vectores auditados mediante APIs oficiales (Sede del Catastro, MITECO SNCZI, INE Censo 2024, SICA Ruido).
+                  {t('duel.desc')}
                 </p>
               </div>
             </div>
@@ -313,8 +315,8 @@ export function PropertyDuelModal({
               <DualRadarChart
                 subscoresA={reportA.score.subscores}
                 subscoresB={candidateB.score.subscores}
-                labelA="Inmueble A"
-                labelB="Inmueble B"
+                labelA={t('duel.candidateA')}
+                labelB={t('duel.candidateB')}
                 mode={radarMode}
                 onModeChange={setRadarMode}
               />
@@ -437,7 +439,7 @@ export function PropertyDuelModal({
                 <Sparkles className="w-5 h-5 text-primary shrink-0 mt-0.5" />
                 <div className="text-xs font-body leading-relaxed">
                   <strong className="text-on-surface font-semibold block mb-0.5">
-                    Resumen de Arbitraje Técnico:
+                    {t('duel.arbitrageSummaryTitle')}
                   </strong>
                   <span className="text-on-surface-variant">
                     {scoreA >= scoreB
@@ -487,7 +489,7 @@ export function PropertyDuelModal({
           <div className="flex items-center gap-2 text-[11px] font-mono text-on-surface-variant">
             <CheckCircle className="w-4 h-4 text-primary shrink-0" />
             <span>
-              <strong className="text-on-surface">Doble Hash SHA-256 verificado</strong> · Datos oficiales Sede Catastro + INE + MITECO SICA · OpenBarrio Civic Engine v2.4
+              <strong className="text-on-surface">{t('duel.verifiedDoubleHash')}</strong> · Datos oficiales Sede Catastro + INE + MITECO SICA · OpenBarrio Civic Engine v2.4
             </span>
           </div>
 
@@ -498,7 +500,7 @@ export function PropertyDuelModal({
               onClick={() => setShowCandidateSelector(true)}
               className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-surface-container-high border border-outline-variant hover:border-outline text-on-surface rounded text-xs font-mono transition-colors cursor-pointer"
             >
-              <span>Cambiar Inmueble B</span>
+              <span>{t('duel.changeCandidateB')}</span>
               <ChevronDown className="w-3.5 h-3.5" />
             </button>
 
@@ -508,7 +510,7 @@ export function PropertyDuelModal({
               className="inline-flex items-center gap-2 px-4 py-1.5 bg-primary-container text-on-primary-container hover:bg-primary font-semibold rounded text-xs font-mono transition-all shadow-md cursor-pointer"
             >
               <FileText className="w-4 h-4" />
-              <span>Descargar Auditoría Certificada (PDF)</span>
+              <span>{t('duel.downloadCertifiedPdf')}</span>
             </button>
           </div>
         </div>

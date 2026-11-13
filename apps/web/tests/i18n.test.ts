@@ -3,9 +3,9 @@ import { es, en, ca, SUPPORTED_LANGUAGES } from '../src/i18n';
 
 describe('i18n Architecture & Dictionaries', () => {
   it('should define supported languages with labels and short codes', () => {
-    expect(SUPPORTED_LANGUAGES).toHaveLength(3);
-    expect(SUPPORTED_LANGUAGES.map((l) => l.code)).toEqual(['es', 'en', 'ca']);
-    expect(SUPPORTED_LANGUAGES.map((l) => l.shortLabel)).toEqual(['ES', 'EN', 'CA']);
+    expect(SUPPORTED_LANGUAGES).toHaveLength(5);
+    expect(SUPPORTED_LANGUAGES.map((l) => l.code)).toEqual(['es', 'en', 'ca', 'gl', 'eu']);
+    expect(SUPPORTED_LANGUAGES.map((l) => l.shortLabel)).toEqual(['ES', 'EN', 'CA', 'GL', 'EU']);
   });
 
   function getKeys(obj: any, prefix = ''): string[] {

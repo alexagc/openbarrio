@@ -1,11 +1,13 @@
 import { RentalBenchmark } from '@openbarrio/core';
 import { Euro, AlertOctagon, CheckCircle2 } from 'lucide-react';
+import { useTranslation } from '../i18n';
 
 interface RentalModuleProps {
   rental?: RentalBenchmark;
 }
 
 export function RentalModule({ rental }: RentalModuleProps) {
+  const { t } = useTranslation();
   if (!rental) return null;
 
   const {
@@ -34,7 +36,7 @@ export function RentalModule({ rental }: RentalModuleProps) {
       <div className="p-3 bg-surface-container-low border border-outline-variant rounded">
         <div className="flex items-baseline justify-between mb-1">
           <span className="text-[10px] font-mono text-outline uppercase">
-            Rango Estatal Oficial Alquiler
+            {t('rentCalculator.serpaviRange')}
           </span>
           <span className="font-mono text-sm sm:text-base font-bold text-on-surface">
             {lowerFormatted} €/m² - {upperFormatted} €/m²
@@ -50,14 +52,14 @@ export function RentalModule({ rental }: RentalModuleProps) {
 
         <div className="flex flex-col sm:flex-row sm:items-center justify-between text-[10px] font-mono text-on-surface-variant gap-1">
           <div className="flex items-center gap-1.5">
-            <span>Zona Tensionada:</span>
+            <span>{t('rentCalculator.labelStressedMarket')}:</span>
             {isStressedHousingZone ? (
               <span className="inline-flex items-center gap-1 text-error font-semibold">
-                <AlertOctagon className="w-3 h-3 text-error" /> Declarada (Topes Vigentes)
+                <AlertOctagon className="w-3 h-3 text-error" /> {t('rentCalculator.isStressedYes')}
               </span>
             ) : (
               <span className="inline-flex items-center gap-1 text-primary font-semibold">
-                <CheckCircle2 className="w-3 h-3 text-primary" /> No declarada
+                <CheckCircle2 className="w-3 h-3 text-primary" /> {t('rentCalculator.isStressedNo')}
               </span>
             )}
           </div>

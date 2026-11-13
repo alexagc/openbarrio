@@ -103,7 +103,7 @@ export const AuditModal: React.FC<AuditModalProps> = ({
               {data.isLoading ? (
                 <span className="px-2 py-0.5 rounded bg-primary/10 text-primary font-mono text-[10px] font-semibold flex items-center gap-1">
                   <Loader2 className="w-3 h-3 animate-spin" />
-                  <span>Consultando...</span>
+                  <span>{t('auditPreview.consulting')}</span>
                 </span>
               ) : data.isLive ? (
                 <span className="px-2 py-0.5 rounded bg-primary/20 text-primary font-mono text-[10px] font-semibold flex items-center gap-1">
@@ -113,7 +113,7 @@ export const AuditModal: React.FC<AuditModalProps> = ({
               ) : (
                 <span className="px-2 py-0.5 rounded bg-secondary/20 text-secondary font-mono text-[10px] font-semibold flex items-center gap-1 border border-secondary/30">
                   <AlertTriangle className="w-3 h-3" />
-                  <span>Modo Offline</span>
+                  <span>{t('auditPreview.offlineMode')}</span>
                 </span>
               )}
             </div>
@@ -132,10 +132,10 @@ export const AuditModal: React.FC<AuditModalProps> = ({
             <Loader2 className="w-9 h-9 text-primary animate-spin" />
             <div className="text-center max-w-md">
               <p className="font-headline text-base font-semibold text-on-surface">
-                Consultando fuentes oficiales en tiempo real...
+                {t('auditPreview.consultingTitle')}
               </p>
               <p className="font-body text-xs text-on-surface-variant mt-1.5 leading-relaxed">
-                Conectando con la Sede Electrónica del Catastro (OVC), Instituto Nacional de Estadística (ADRH) y cartografía ambiental MITECO.
+                {t('auditPreview.consultingDesc')}
               </p>
             </div>
             <div className="w-full space-y-3 mt-4">
@@ -178,10 +178,10 @@ export const AuditModal: React.FC<AuditModalProps> = ({
                   </div>
                   <div className="min-w-0">
                     <p className="font-headline text-xs font-bold text-on-surface truncate">
-                      División Horizontal e Inmuebles
+                      {t('auditPreview.horizontalDivisionTitle')}
                     </p>
                     <p className="font-body text-[11px] text-on-surface-variant truncate">
-                      Audita tu piso o local específico con sus m² privativos
+                      {t('auditPreview.horizontalDivisionDesc')}
                     </p>
                   </div>
                 </div>
@@ -193,7 +193,7 @@ export const AuditModal: React.FC<AuditModalProps> = ({
                   }}
                   className="px-3 py-1.5 rounded bg-primary text-on-primary hover:bg-primary-container font-headline text-xs font-bold transition-all shadow-xs shrink-0 cursor-pointer flex items-center gap-1"
                 >
-                  <span>Ver inmuebles ▾</span>
+                  <span>{t('auditPreview.viewUnitsBtn')}</span>
                 </button>
               </div>
             )}
@@ -354,7 +354,7 @@ export const AuditModal: React.FC<AuditModalProps> = ({
             }`}
           >
             <Building2 className="w-3.5 h-3.5" />
-            <span>Ver Dossier</span>
+            <span>{t('auditPreview.viewDossier')}</span>
           </button>
           <button
             type="button"
@@ -371,7 +371,7 @@ export const AuditModal: React.FC<AuditModalProps> = ({
             {data.isLoading ? (
               <>
                 <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                <span>Consultando...</span>
+                <span>{t('auditPreview.consulting')}</span>
               </>
             ) : (
               <>

@@ -18,3 +18,9 @@
   * Green: High score / low environmental risk / fair rental price.
   * Amber: Moderate caution (e.g., noisy street, older unrenovated building).
   * Red: High risk (flood zone, severe rental price inflation).
+
+## 4. Multilingual i18n & Programmatic SEO Mandate
+* Zero hardcoded user-facing strings: every component must consume copy via `useTranslation()` (`t('namespace.key')`).
+* Full 5-language support: Spanish (`es`), English (`en`), Catalan/Valencian (`ca`), Galician (`gl`), Basque (`eu`).
+* Localized path routing and dynamic `<SeoHead>` (`<link rel="canonical">` + `<link rel="alternate" hreflang="...">` for all 5 languages + `x-default`).
+* Refer to [i18n & Programmatic SEO Rules](file:///.agent/rules/i18n-and-seo.md).

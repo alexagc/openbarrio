@@ -1,5 +1,5 @@
-import React from 'react';
-import { Building2, Compass, Github } from 'lucide-react';
+import React, { useState, useRef, useEffect } from 'react';
+import { Building2, Compass, Github, ChevronDown, Ruler, Scale, Coins } from 'lucide-react';
 import { useTranslation, SupportedLanguage } from '../../i18n';
 import { useWorkspaceStore } from '../../store/workspace.store';
 
@@ -10,6 +10,23 @@ interface HeaderProps {
 export const Header: React.FC<HeaderProps> = ({ onOpenMap }) => {
   const { t, language, setLanguage, availableLanguages } = useTranslation();
   const setViewMode = useWorkspaceStore((s) => s.setViewMode);
+  const [isToolsOpen, setIsToolsOpen] = useState(false);
+  const toolsDropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (
+        toolsDropdownRef.current &&
+        !toolsDropdownRef.current.contains(event.target as Node)
+      ) {
+        setIsToolsOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
 
   return (
     <header className="sticky top-0 z-40 w-full h-14 bg-surface-container border-b border-outline-variant shadow-sm flex items-center justify-between px-space-lg backdrop-blur-md bg-surface-container/95">
@@ -40,6 +57,114 @@ export const Header: React.FC<HeaderProps> = ({ onOpenMap }) => {
         >
           {t('nav.officialSources')}
         </button>
+
+        {/* Tools Dropdown */}
+        <div className="relative" ref={toolsDropdownRef}>
+          <button
+            type="button"
+            onClick={() => setIsToolsOpen(!isToolsOpen)}
+            className="flex items-center gap-1.5 font-body text-sm text-on-surface-variant hover:text-primary transition-colors cursor-pointer py-1"
+            aria-expanded={isToolsOpen}
+          >
+            <span>{t('nav.tools')}</span>
+            <ChevronDown
+              className={`w-3.5 h-3.5 transition-transform duration-200 ${
+                isToolsOpen ? 'rotate-180 text-primary' : ''
+              }`}
+            />
+          </button>
+
+          {isToolsOpen && (
+            <div className="absolute top-full mt-2 -left-4 w-72 p-2 rounded-2xl bg-surface-container-high/95 border border-outline-variant shadow-2xl backdrop-blur-xl z-50 space-y-1">
+              <button
+                type="button"
+                onClick={() => {
+                  setIsToolsOpen(false);
+                  setViewMode('tool-surface' as any);
+                }}
+                className="w-full flex items-start gap-3 p-2.5 rounded-xl hover:bg-surface-container text-left transition-colors group cursor-pointer"
+              >
+                <div className="p-2 rounded-lg bg-emerald-500/15 text-emerald-400 shrink-0 mt-0.5">
+                  <Ruler className="w-4 h-4" />
+                </div>
+                <div>
+                  <div className="text-xs font-bold text-on-surface group-hover:text-primary transition-colors">
+                    {t('nav.toolsSurface')}
+                  </div>
+                  <div className="text-[11px] text-on-surface-variant leading-tight">
+                    {t('nav.toolsSurfaceDesc')}
+                  </div>
+                </div>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setIsToolsOpen(false);
+                  setViewMode('tool-rent' as any);
+                }}
+                className="w-full flex items-start gap-3 p-2.5 rounded-xl hover:bg-surface-container text-left transition-colors group cursor-pointer"
+              >
+                <div className="p-2 rounded-lg bg-amber-500/15 text-amber-400 shrink-0 mt-0.5">
+                  <Scale className="w-4 h-4" />
+                </div>
+                <div>
+                  <div className="text-xs font-bold text-on-surface group-hover:text-amber-400 transition-colors">
+                    {t('nav.toolsRent')}
+                  </div>
+                  <div className="text-[11px] text-on-surface-variant leading-tight">
+                    {t('nav.toolsRentDesc')}
+                  </div>
+                </div>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setIsToolsOpen(false);
+                  setViewMode('tool-itp' as any);
+                }}
+                className="w-full flex items-start gap-3 p-2.5 rounded-xl hover:bg-surface-container text-left transition-colors group cursor-pointer"
+              >
+                <div className="p-2 rounded-lg bg-sky-500/15 text-sky-400 shrink-0 mt-0.5">
+                  <Coins className="w-4 h-4" />
+                </div>
+                <div>
+                  <div className="text-xs font-bold text-on-surface group-hover:text-sky-400 transition-colors">
+                    {t('nav.toolsItp')}
+                  </div>
+                  <div className="text-[11px] text-on-surface-variant leading-tight">
+                    {t('nav.toolsItpDesc')}
+                  </div>
+                </div>
+              </button>
+
+              <div className="border-t border-outline-variant/60 my-1" />
+
+              <button
+                type="button"
+                onClick={() => {
+                  setIsToolsOpen(false);
+                  setViewMode('municipios-directory' as any);
+                }}
+                className="w-full flex items-start gap-3 p-2.5 rounded-xl hover:bg-surface-container text-left transition-colors group cursor-pointer"
+              >
+                <div className="p-2 rounded-lg bg-surface-container-highest text-on-surface-variant shrink-0 mt-0.5">
+                  <Building2 className="w-4 h-4 text-primary" />
+                </div>
+                <div>
+                  <div className="text-xs font-bold text-on-surface group-hover:text-primary transition-colors">
+                    {t('nav.toolsMunicipalities')}
+                  </div>
+                  <div className="text-[11px] text-on-surface-variant leading-tight">
+                    {t('nav.toolsMunicipalitiesDesc')}
+                  </div>
+                </div>
+              </button>
+            </div>
+          )}
+        </div>
+
         <a
           className="font-body text-sm text-on-surface-variant hover:text-primary transition-colors"
           href="#extension"

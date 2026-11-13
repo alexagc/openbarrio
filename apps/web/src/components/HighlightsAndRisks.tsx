@@ -1,4 +1,5 @@
 import { CheckCircle2, AlertTriangle, ShieldCheck } from 'lucide-react';
+import { useTranslation } from '../i18n';
 
 interface HighlightsAndRisksProps {
   highlights: string[];
@@ -13,6 +14,7 @@ export function HighlightsAndRisks({
   refcat = '28900A012000340001LM',
   municipality = 'Madrid',
 }: HighlightsAndRisksProps) {
+  const { t } = useTranslation();
   const shortRef = refcat.substring(0, 8);
   const prefix = municipality.substring(0, 3).toUpperCase();
   const expedienteId = `${prefix}-AUD-2026-${shortRef}`;
@@ -22,10 +24,10 @@ export function HighlightsAndRisks({
       <div className="flex items-center justify-between">
         <h4 className="text-[11px] font-mono text-outline uppercase tracking-wider font-semibold flex items-center gap-1.5">
           <ShieldCheck className="w-3.5 h-3.5 text-primary" />
-          <span>Dictámenes de Due Diligence & Afecciones Legales</span>
+          <span>{t('dossier.dueDiligenceTitle')}</span>
         </h4>
         <span className="text-[10px] font-mono text-outline">
-          {highlights.length + risks.length} dictámenes
+          {highlights.length + risks.length} {t('dossier.opinionsCount')}
         </span>
       </div>
 
@@ -54,15 +56,15 @@ export function HighlightsAndRisks({
 
         {highlights.length === 0 && risks.length === 0 && (
           <div className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-surface-container border border-outline-variant text-on-surface-variant text-xs font-mono">
-            <span>Sin afecciones registrales críticas detectadas.</span>
+            <span>{t('dossier.noCriticalRisks')}</span>
           </div>
         )}
       </div>
 
       {/* Municipal Sign-off Bar */}
       <div className="mt-4 pt-3 border-t border-outline-variant flex items-center justify-between text-[10px] font-mono text-outline">
-        <span>Expediente: {expedienteId}</span>
-        <span>Sede Electrónica Catastro & INE Telemetría</span>
+        <span>{t('dossier.fileExpediente')}: {expedienteId}</span>
+        <span>{t('dossier.signOffAgency')}</span>
       </div>
     </div>
   );

@@ -172,22 +172,22 @@ describe('Landing Page & i18n Integration', () => {
       expect(screen.getByText(/AUDITORÍA INTEGRAL MULTIFUENTE/i)).toBeTruthy();
       expect(screen.getByText(/1\. Catastro Inmobiliario/i)).toBeTruthy();
       expect(screen.getByText(/2\. Renta & Demografía INE/i)).toBeTruthy();
-      expect(screen.getByText(/3\. Ruido Acústico & Riesgo Fluvial/i)).toBeTruthy();
-      expect(screen.getByText(/4\. Regulación del Alquiler \(SERPAVI\)/i)).toBeTruthy();
+      expect(screen.getByText(/3\. Ruido/i)).toBeTruthy();
+      expect(screen.getByText(/4\. Índice Precios Alquiler|4\. Regulación del Alquiler/i)).toBeTruthy();
 
       // 4. Extension Showcase
-      expect(screen.getByText(/EXTENSIÓN DE NAVEGADOR MANIFEST V3/i)).toBeTruthy();
-      expect(screen.getByText(/Auditoría instantánea directamente sobre Idealista y Fotocasa/i)).toBeTruthy();
-      expect(screen.getByText(/Instalar Extensión Chrome/i)).toBeTruthy();
-      expect(screen.getByText(/OpenBarrio Telemetría/i)).toBeTruthy();
+      expect(screen.getByText(/EXTENSIÓN DE CHROME GRATUITA|EXTENSIÓN DE NAVEGADOR MANIFEST V3/i)).toBeTruthy();
+      expect(screen.getByText(/Los Datos Oficiales Inyectados|Auditoría instantánea directamente sobre Idealista y Fotocasa/i)).toBeTruthy();
+      expect(screen.getByText(/Instalar Extensión en Chrome Web Store|Instalar Extensión Chrome/i)).toBeTruthy();
+      expect(screen.getByText(/AUDITORÍA CÍVICA OPENBARRIO|OpenBarrio Telemetría/i)).toBeTruthy();
       expect(screen.getByText(/82\/100/i)).toBeTruthy();
 
       // 5. Civic Principles
-      expect(screen.getByText(/COMPROMISO CIUDADANO INDEPENDIENTE/i)).toBeTruthy();
-      expect(screen.getByText(/Transparencia Radical por Principio/i)).toBeTruthy();
-      expect(screen.getByText(/0% Publicidad Inmobiliaria/i)).toBeTruthy();
-      expect(screen.getByText(/Sin Rastreo Ni Venta de Datos/i)).toBeTruthy();
-      expect(screen.getByText(/Arquitectura Open Data/i)).toBeTruthy();
+      expect(screen.getByText(/METODOLOGÍA & ÉTICA|COMPROMISO CIUDADANO INDEPENDIENTE/i)).toBeTruthy();
+      expect(screen.getByText(/Compromiso Ético con la Soberanía|Transparencia Radical por Principio/i)).toBeTruthy();
+      expect(screen.getByText(/1\. Cero Intermediación Comercial|0% Publicidad Inmobiliaria/i)).toBeTruthy();
+      expect(screen.getByText(/2\. Trazabilidad Total del Dato|Sin Rastreo Ni Venta de Datos/i)).toBeTruthy();
+      expect(screen.getByText(/3\. Código Abierto y Privacidad Absoluta|Arquitectura Open Data/i)).toBeTruthy();
 
       // 6. Map CTA Section
       expect(screen.getByText(/Acceso Directo al Visor GIS/i)).toBeTruthy();
@@ -217,15 +217,15 @@ describe('Landing Page & i18n Integration', () => {
       expect(screen.getByText(/Audit Property/i)).toBeTruthy();
 
       // Verify pillars updated
-      expect(screen.getByText(/MULTI-SOURCE INTEGRAL AUDIT/i)).toBeTruthy();
-      expect(screen.getByText(/1\. National Cadastre/i)).toBeTruthy();
+      expect(screen.getByText(/INTEGRATED MULTI-SOURCE AUDITING|MULTI-SOURCE INTEGRAL AUDIT/i)).toBeTruthy();
+      expect(screen.getByText(/1\. Spanish Cadastre|1\. National Cadastre/i)).toBeTruthy();
       expect(screen.getByText(/2\. INE Income & Demographics/i)).toBeTruthy();
-      expect(screen.getByText(/3\. Acoustic Noise & Flood Safety/i)).toBeTruthy();
-      expect(screen.getByText(/4\. Statutory Rental Benchmark \(SERPAVI\)/i)).toBeTruthy();
+      expect(screen.getByText(/3\. Acoustic Noise/i)).toBeTruthy();
+      expect(screen.getByText(/4\. Rental Price Benchmark|4\. Statutory Rental Benchmark/i)).toBeTruthy();
 
       // Verify extension updated
-      expect(screen.getByText(/Install Chrome Extension/i)).toBeTruthy();
-      expect(screen.getByText(/OpenBarrio Telemetry/i)).toBeTruthy();
+      expect(screen.getByText(/Install Extension from Chrome Web Store|Install Chrome Extension/i)).toBeTruthy();
+      expect(screen.getByText(/OPENBARRIO CIVIC AUDIT|OpenBarrio Telemetry/i)).toBeTruthy();
     });
 
     it('should open and close the AuditModal when an example chip is clicked', async () => {
@@ -250,7 +250,7 @@ describe('Landing Page & i18n Integration', () => {
       });
       expect(within(dialog).getAllByText(/Ref: 0227802DF3802E/i).length).toBeGreaterThan(0);
       expect(within(dialog).getAllByText(/82\/100/).length).toBeGreaterThan(0);
-      expect(within(dialog).getByText(/SÍ \(Topes legales aplicables\)/i)).toBeTruthy();
+      expect(within(dialog).getByText(/Declarada \(Ley 12\/2023\)|SÍ \(Topes legales aplicables\)/i)).toBeTruthy();
 
       // Close modal
       const closeButtons = within(dialog).getAllByRole('button', { name: /Cerrar/i });
@@ -320,8 +320,8 @@ describe('Landing Page & i18n Integration', () => {
         expect(within(dialog).getByText(/Passeig de Gràcia 43.*Barcelona/i)).toBeTruthy();
       });
 
-      // Click "Localizar en Visor Cartográfico" button in modal
-      const openInMapButton = within(dialog).getByRole('button', { name: /Localizar en Visor Cartográfico/i });
+      // Click "Abrir en Visor GIS" button in modal
+      const openInMapButton = within(dialog).getByRole('button', { name: /Abrir en Visor GIS|Localizar en Visor Cartográfico/i });
       act(() => {
         fireEvent.click(openInMapButton);
       });

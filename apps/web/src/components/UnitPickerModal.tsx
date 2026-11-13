@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect } from 'react';
 import { CadastralUnit, CadastralUnitsResponse } from '@openbarrio/core';
+import { useTranslation } from '../i18n';
 import {
   X,
   Search,
@@ -35,6 +36,7 @@ export function UnitPickerModal({
   onCompareUnit,
   isLoading = false,
 }: UnitPickerModalProps) {
+  const { t } = useTranslation();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedUseFilter, setSelectedUseFilter] = useState<string>('all');
   const [selectedPortalFilter, setSelectedPortalFilter] = useState<string>('all');
@@ -186,7 +188,7 @@ export function UnitPickerModal({
                     : 'bg-surface-container hover:bg-surface-container-high text-on-surface-variant'
                 }`}
               >
-                Todos ({isLoading || !unitsData ? '...' : counts.all})
+                {t('unitPicker.filterAll')} ({isLoading || !unitsData ? '...' : counts.all})
               </button>
               <button
                 type="button"
@@ -198,7 +200,7 @@ export function UnitPickerModal({
                 }`}
               >
                 <Home className="w-3 h-3" />
-                Viviendas ({isLoading || !unitsData ? '...' : counts.viviendas})
+                {t('unitPicker.filterResidential')} ({isLoading || !unitsData ? '...' : counts.viviendas})
               </button>
               <button
                 type="button"
@@ -210,7 +212,7 @@ export function UnitPickerModal({
                 }`}
               >
                 <Store className="w-3 h-3" />
-                Locales ({isLoading || !unitsData ? '...' : counts.comerciales})
+                {t('unitPicker.filterCommercial')} ({isLoading || !unitsData ? '...' : counts.comerciales})
               </button>
               {counts.otros > 0 && (
                 <button
@@ -223,7 +225,7 @@ export function UnitPickerModal({
                   }`}
                 >
                   <Warehouse className="w-3 h-3" />
-                  Otros ({isLoading || !unitsData ? '...' : counts.otros})
+                  {t('unitPicker.filterStorage')} ({isLoading || !unitsData ? '...' : counts.otros})
                 </button>
               )}
             </div>
@@ -235,7 +237,7 @@ export function UnitPickerModal({
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Buscar planta, puerta (ej. 3º B)..."
+                placeholder={t('unitPicker.searchPlaceholder')}
                 className="w-full bg-surface-container border border-outline-variant rounded-lg pl-9 pr-3 py-1.5 text-xs text-on-surface placeholder:text-outline focus:outline-none focus:border-primary font-mono transition-colors"
               />
             </div>
@@ -290,7 +292,7 @@ export function UnitPickerModal({
           ) : filteredUnits.length === 0 ? (
             <div className="py-16 text-center text-on-surface-variant">
               <Building className="w-10 h-10 mx-auto mb-2 text-outline/60" />
-              <p className="text-sm font-semibold text-on-surface">No se encontraron inmuebles</p>
+              <p className="text-sm font-semibold text-on-surface">{t('unitPicker.noUnitsFound')}</p>
               <p className="text-xs text-outline mt-1">Prueba a cambiar el filtro de uso o término de búsqueda.</p>
             </div>
           ) : (

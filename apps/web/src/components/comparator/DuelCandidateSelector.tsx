@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { X, Search, Loader2 } from 'lucide-react';
+import { useTranslation } from '../../i18n';
 
 export interface PresetCandidate {
   label: string;
@@ -56,6 +57,7 @@ export function DuelCandidateSelector({
   onSelectCustomRefcat,
   isLoading = false,
 }: DuelCandidateSelectorProps) {
+  const { t } = useTranslation();
   const [customRefInput, setCustomRefInput] = useState('');
 
   if (!isOpen) return null;
@@ -81,10 +83,10 @@ export function DuelCandidateSelector({
         <div className="flex items-center justify-between border-b border-outline-variant/60 pb-3">
           <div>
             <h3 className="font-headline font-bold text-base text-on-surface">
-              Seleccionar Inmueble B para el Duelo
+              {t('duel.modalTitle')}
             </h3>
             <p className="font-body text-xs text-on-surface-variant">
-              Compara Inmueble A contra referencias emblemáticas o introduce una Referencia Catastral.
+              {t('duel.modalSubtitle')}
             </p>
           </div>
           <button
@@ -100,14 +102,14 @@ export function DuelCandidateSelector({
         {isLoading && (
           <div className="flex items-center gap-3 p-3 rounded-xl bg-primary/10 border border-primary/30 text-primary text-xs font-mono animate-pulse">
             <Loader2 className="w-4 h-4 animate-spin" />
-            <span>Consultando datos oficiales en Catastro OVC...</span>
+            <span>{t('duel.consultingOvc')}</span>
           </div>
         )}
 
         {/* Preset Candidates List */}
         <div className="space-y-2">
           <span className="text-[10px] font-mono uppercase tracking-wider text-outline font-bold block">
-            Candidatos Preestablecidos
+            {t('duel.presetCandidates')}
           </span>
           <div className="space-y-2 max-h-56 overflow-y-auto">
             {PRESET_CANDIDATES.map((preset) => (
@@ -127,7 +129,7 @@ export function DuelCandidateSelector({
                   </div>
                 </div>
                 <span className="text-[10px] font-mono px-2 py-1 rounded bg-surface-container text-primary border border-outline-variant">
-                  Comparar
+                  {t('duel.compareBtn')}
                 </span>
               </button>
             ))}
@@ -137,7 +139,7 @@ export function DuelCandidateSelector({
         {/* Custom Refcat Search Input */}
         <form onSubmit={handleSubmit} className="space-y-2 pt-2 border-t border-outline-variant/60">
           <span className="text-[10px] font-mono uppercase tracking-wider text-outline font-bold block">
-            Referencia Catastral Personalizada (14 o 20 dígitos)
+            {t('duel.customRefLabel')}
           </span>
           <div className="flex gap-2">
             <input
@@ -154,7 +156,7 @@ export function DuelCandidateSelector({
               className="px-4 py-2 rounded-xl bg-primary text-on-primary text-xs font-mono font-bold flex items-center gap-1.5 hover:bg-primary-container disabled:opacity-40 transition cursor-pointer"
             >
               {isLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Search className="w-3.5 h-3.5" />}
-              <span>Consultar</span>
+              <span>{t('duel.consultBtn')}</span>
             </button>
           </div>
         </form>

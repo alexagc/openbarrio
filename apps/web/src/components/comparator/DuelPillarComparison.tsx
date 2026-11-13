@@ -2,6 +2,7 @@ import {
   PropertyAuditReport,
   BuildingCapExRisk,
 } from '@openbarrio/core';
+import { useTranslation } from '../../i18n';
 import {
   AlertTriangle,
   Award,
@@ -62,6 +63,7 @@ export function DuelPillarComparison({
   copiedB,
   onOpenCandidateSelector,
 }: DuelPillarComparisonProps) {
+  const { t } = useTranslation();
   return (
     <>
       {/* SECTION: SIDE-BY-SIDE CANDIDATE BENTO CARDS */}
@@ -283,12 +285,12 @@ export function DuelPillarComparison({
           <div className="flex items-center gap-2">
             <div className="w-2 h-2 rounded-full bg-primary" />
             <h2 className="font-headline font-bold text-on-surface text-sm sm:text-base">
-              Matriz Diferencial de Telemetría Territorial y Financiera
+              {t('duel.matrixTitle')}
             </h2>
           </div>
           <div className="flex items-center gap-2 font-mono text-xs text-on-surface-variant">
-            <span className="inline-block w-2 h-2 rounded-full bg-cyan-400" /> Inmueble A
-            <span className="inline-block w-2 h-2 rounded-full bg-amber-400 ml-2" /> Inmueble B
+            <span className="inline-block w-2 h-2 rounded-full bg-cyan-400" /> {t('duel.candidateA')}
+            <span className="inline-block w-2 h-2 rounded-full bg-amber-400 ml-2" /> {t('duel.candidateB')}
             <span className="text-outline ml-2">|</span>
             <span className="text-primary font-medium">Margen Cartográfico &lt;0.05%</span>
           </div>
@@ -298,15 +300,15 @@ export function DuelPillarComparison({
           <table data-testid="differential-matrix-table" className="w-full text-left border-collapse text-xs">
             <thead>
               <tr className="bg-surface-container-high/80 text-on-surface-variant font-mono uppercase tracking-wider border-b border-outline-variant text-[10px]">
-                <th className="py-3 px-space-md w-1/5">Vector Analítico</th>
+                <th className="py-3 px-space-md w-1/5">{t('duel.vectorCol')}</th>
                 <th className="py-3 px-space-md w-1/4 text-cyan-300">
-                  Inmueble A ({reportA.property.address.street.substring(0, 16)})
+                  {t('duel.candidateA')} ({reportA.property.address.street.substring(0, 16)})
                 </th>
                 <th className="py-3 px-space-md w-1/4 text-amber-300">
-                  Inmueble B ({candidateB.property.address.street.substring(0, 16)})
+                  {t('duel.candidateB')} ({candidateB.property.address.street.substring(0, 16)})
                 </th>
-                <th className="py-3 px-space-md w-1/6 font-mono font-semibold">Delta Diferencial</th>
-                <th className="py-3 px-space-md w-1/6 text-right">Veredicto Auditor</th>
+                <th className="py-3 px-space-md w-1/6 font-mono font-semibold">{t('duel.deltaCol')}</th>
+                <th className="py-3 px-space-md w-1/6 text-right">{t('duel.verdictCol')}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-outline-variant/60 font-body">
@@ -335,9 +337,9 @@ export function DuelPillarComparison({
                 </td>
                 <td className="py-3 px-space-md font-mono font-semibold">
                   {walkScoreA >= walkScoreB ? (
-                    <span className="text-cyan-300">+{walkScoreA - walkScoreB} pts Inmueble A</span>
+                    <span className="text-cyan-300">+{walkScoreA - walkScoreB} pts {t('duel.candidateA')}</span>
                   ) : (
-                    <span className="text-amber-300">+{walkScoreB - walkScoreA} pts Inmueble B</span>
+                    <span className="text-amber-300">+{walkScoreB - walkScoreA} pts {t('duel.candidateB')}</span>
                   )}
                 </td>
                 <td className="py-3 px-space-md text-right">
@@ -349,7 +351,7 @@ export function DuelPillarComparison({
                     }`}
                   >
                     <Award className="w-3 h-3" />
-                    <span>Ganador: {walkScoreA >= walkScoreB ? 'Inmueble A' : 'Inmueble B'}</span>
+                    <span>{t('duel.verdictLabel')}: {walkScoreA >= walkScoreB ? t('duel.winnerA') : t('duel.winnerB')}</span>
                   </span>
                 </td>
               </tr>

@@ -10,6 +10,7 @@ export * from './types/surroundings.js';
 export * from './types/radon.js';
 export * from './types/vut.js';
 export * from './types/fiscal.js';
+export * from './types/seo-tools.js';
 export * from './types/audit.js';
 export * from './types/http.js';
 export * from './tokens/index.js';

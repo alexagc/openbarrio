@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Map, FileText, Layers, Search } from 'lucide-react';
+import { useTranslation } from '../i18n';
 
 export type MobileNavDestination = 'map' | 'report' | 'layers' | 'search';
 
@@ -16,13 +17,6 @@ interface DestinationItem {
   icon: React.ComponentType<{ className?: string }>;
 }
 
-const DESTINATIONS: DestinationItem[] = [
-  { id: 'map', label: 'Mapa', icon: Map },
-  { id: 'report', label: 'Informe', icon: FileText },
-  { id: 'layers', label: 'Capas', icon: Layers },
-  { id: 'search', label: 'Buscar', icon: Search },
-];
-
 /**
  * Mobile Bottom Navigation Bar for OpenBarrio (Stitch Civic Precision v0.6.3)
  * Adheres strictly to the Stitch Shell Border Ban (prohibits border-t, uses tonal elevation).
@@ -33,14 +27,26 @@ export function MobileBottomNav({
   layersCount,
   className = '',
 }: MobileBottomNavProps) {
+  const { t } = useTranslation();
+
+  const destinations: DestinationItem[] = useMemo(
+    () => [
+      { id: 'map', label: t('workspace.mobileNavMap'), icon: Map },
+      { id: 'report', label: t('workspace.mobileNavReport'), icon: FileText },
+      { id: 'layers', label: t('workspace.mobileNavLayers'), icon: Layers },
+      { id: 'search', label: t('workspace.mobileNavSearch'), icon: Search },
+    ],
+    [t]
+  );
+
   return (
     <nav
       role="navigation"
-      aria-label="Navegación móvil inferior"
+      aria-label={t('workspace.mobileNavAria')}
       className={`fixed bottom-0 left-0 right-0 z-40 md:hidden bg-surface-container-lowest shadow-lg pb-[env(safe-area-inset-bottom,0.5rem)] pt-1.5 px-3 select-none no-print ${className}`}
     >
       <div className="flex items-center justify-around h-12 max-w-lg mx-auto">
-        {DESTINATIONS.map(({ id, label, icon: Icon }) => {
+        {destinations.map(({ id, label, icon: Icon }) => {
           const isActive = activeDestination === id;
           return (
             <button

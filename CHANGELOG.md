@@ -5,6 +5,44 @@ All notable changes to the **OpenBarrio** platform are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.0] - 2026-11-13
+
+### Added
+- **Complete Monorepo Multilingual i18n & Zero Hardcoded Copy (`apps/web`)**:
+  - Full support for 5 official languages: Spanish (`es`), English (`en`), Catalan (`ca`), Galician (`gl`), and Basque (`eu`).
+  - Strict TypeScript schema enforcement (`TranslationSchema`) across all 5 dictionaries, eliminating string divergence and untranslated keys.
+  - Complete i18n wiring across all application components: Landing Page, Unified Search bar, Audit Modal, Cartographic Legends HUD, Solar Simulation HUD, Mobile Bottom Navigation, Cadastral Bottom Sheet, Bento Pillar Cards, and civic micro-tools (`/comprobar-metros-catastro`, `/calculadora-alquiler-legal`, `/simulador-itp-ibi`).
+  - Enhanced double-brace parameter interpolation (`{{param}}`) with fallback resolution in `LanguageContext.tsx`.
+- **Multilingual Programmatic SEO & Routing Engine (`apps/web`)**:
+  - Dynamic `<SeoHead>` component emitting automated `<link rel="canonical">` and `<link rel="alternate" hreflang="...">` tags for all 5 languages plus `x-default`.
+  - Localized URL aliases and slug resolution (`/mapa` & `/map`, `/fuentes-oficiales` & `/sources`, `/municipios` & `/territories`, `/comprobar-metros-catastro` & `/verify-square-meters`).
+  - Scroll restoration and URL state synchronization preserving active language across path transitions.
+- **Architectural Agent Directives for i18n and SEO (`.agent/rules` & `AGENTS.md`)**:
+  - Created `.agent/rules/i18n-and-seo.md` establishing strict guidelines for zero hardcoded copy, 5-language parity, typed schemas, and programmatic SEO tags.
+  - Integrated rule into universal `AGENTS.md` (Sections 3.3 and 5) and `.agent/rules/frontend-react.md` to guarantee persistent agent compliance in all future development turns.
+- **High-Intent Civic Micro-Tools (`apps/web` & `packages/core`)**:
+  - `/comprobar-metros-catastro`: Real-time surface divergence calculator comparing real estate listing advertised m² against official Sede del Catastro OVC records. Detects legal discrepancy thresholds (>15% per Spanish Supreme Court case law), overpayment estimates, and official cadastral rectification links.
+  - `/calculadora-alquiler-legal`: Statutory rental price cap calculator compliant with Spanish Housing Law 12/2023 (*Ley por el Derecho a la Vivienda*) and MIVAU SERPAVI index. Evaluates Stressed Housing Zones (*Zonas Tensionadas*), Large Landlord (*Gran Tenedor*) restrictions, previous contract caps, and CEE energy improvement uplifts.
+  - `/simulador-itp-ibi`: Comprehensive regional property transfer tax (*ITP*) simulator across all 17 Autonomous Communities and 2 Autonomous Cities (4% to 10%), including concession brackets (youth <35, large families, VPO), statutory notary and land registry fees (RD 1426/1989 and RD 1427/1989), and annual municipal property tax (*IBI*) estimates.
+  - Added responsive zero-distraction embed mode (`?embed=true`) allowing civic media, blogs, and public administration portals to embed any micro-tool as an interactive iframe widget.
+- **Programmatic Municipal & District SEO Engine (`apps/api` & `apps/web`)**:
+  - `/municipio/:slug`: Dynamic high-density civic intelligence landing pages covering ~8,000 Spanish municipalities (e.g. `/municipio/madrid`, `/municipio/barcelona`, `/municipio/valencia`, `/municipio/bilbao`).
+  - Aggregates official INE ADRH net household income (€/year) and national percentiles, statutory MIVAU SERPAVI rental stress classification, CTE DB-HS 6 municipal radon exposure zones, and municipal BarrioScore estimates.
+  - `/municipios`: Searchable and filterable national directory indexing Spanish municipalities by province and INE code.
+  - Enriched with full Schema.org structured data (`AdministrativeArea`, `BreadcrumbList`, `Dataset`, `SoftwareApplication`, `FinancialProduct`) and strict canonical URLs.
+- **Dynamic Edge OpenGraph Social Card Generator (`apps/api`)**:
+  - Endpoints `GET /api/v1/og/municipio/:slug` and `GET /api/v1/og/tool/:tool` generating dynamic, semantic 1200x630 SVG social preview cards in Obsidian `#0B1326` dark theme with high-contrast metric chips and official administration seals.
+  - Ultra-lightweight and native to Cloudflare Workers Edge with aggressive caching headers (`Cache-Control: public, max-age=604800, s-maxage=604800, stale-while-revalidate=86400`).
+- **Contextual Web-to-Extension Conversion Engine (`apps/web`)**:
+  - Built `ChromeExtensionBanner.tsx` featuring both non-intrusive in-content contextual callouts and a floating sticky notification bar with automatic Chromium browser detection and persistent local dismissal.
+- **Automated XML Sitemaps (`apps/api` & `apps/web`)**:
+  - Served canonical dynamic XML sitemap via `GET /api/v1/sitemap/sitemap.xml` and pre-built `apps/web/public/sitemap.xml` referencing core routes, micro-tools, and municipal directories.
+
+### Changed
+- **Version Elevation to v1.1.0**:
+  - Bumped monorepo package versions across `@openbarrio/core`, `@openbarrio/api`, `@openbarrio/web`, `@openbarrio/extension`, `@openbarrio/etl`, root `package.json`, and `manifest.json`.
+  - Packaged store-ready Chrome Manifest V3 release: `apps/extension/openbarrio-extension-v1.1.0.zip` (38.88 KB).
+
 ## [1.0.0] - 2026-11-12
 
 ### Added

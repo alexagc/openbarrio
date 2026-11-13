@@ -1,5 +1,6 @@
 import { useState, useRef } from 'react';
 import { ArrowLeft, MapPin, Download, Printer, Sparkles, ChevronLeft, ChevronRight } from 'lucide-react';
+import { useTranslation } from '../i18n';
 import { SearchBar, SAMPLE_PRESETS } from '../components/SearchBar';
 import { MapView } from '../components/map/MapView';
 import { AuditDossier } from '../components/AuditDossier';
@@ -22,6 +23,7 @@ import {
 import { apiClient } from '../services/api.client';
 
 export function GisWorkspaceView() {
+  const { t } = useTranslation();
   const report = useReport();
   const selectedCoords = useSelectedCoords();
   const isLoading = useIsLoading();
@@ -146,10 +148,10 @@ export function GisWorkspaceView() {
             onClick={() => setViewMode('landing')}
             className="flex items-center gap-1.5 px-2.5 py-1.5 rounded bg-surface-container-high border border-outline-variant hover:border-primary text-on-surface hover:text-primary transition-colors text-xs font-semibold cursor-pointer shrink-0 min-h-[36px]"
             type="button"
-            title="Volver a la portada de OpenBarrio"
+            title={t('workspace.backToHomeTitle')}
           >
             <ArrowLeft className="w-4 h-4" />
-            <span className="hidden sm:inline">Portada</span>
+            <span className="hidden sm:inline">{t('workspace.backToHome')}</span>
           </button>
 
           <div className="flex items-center gap-2 min-w-0">
@@ -162,7 +164,7 @@ export function GisWorkspaceView() {
                 OpenBarrio
               </span>
               <span className="font-mono text-[9px] text-on-surface-variant font-medium tracking-wider uppercase mt-0.5 truncate hidden sm:inline max-w-[160px] md:max-w-[200px]">
-                Visor Cartográfico Catastral & Auditoría Territorial
+                {t('workspace.viewerSubtitle')}
               </span>
             </div>
           </div>
@@ -193,10 +195,10 @@ export function GisWorkspaceView() {
               data-testid="topbar-duel-btn"
               onClick={() => handleOpenDuel()}
               className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-surface-container-high border border-primary/50 text-primary hover:bg-primary/20 rounded text-xs font-mono font-semibold transition-colors cursor-pointer min-h-[36px]"
-              title="Comparar este inmueble en duelo 1 vs 1"
+              title={t('dossier.compareDuelTooltip')}
             >
               <Sparkles className="w-3.5 h-3.5 text-primary" />
-              <span className="hidden sm:inline">Comparar</span>
+              <span className="hidden sm:inline">{t('duel.compareBtn')}</span>
             </button>
           )}
 
@@ -205,7 +207,7 @@ export function GisWorkspaceView() {
               type="button"
               onClick={() => downloadCadastralGML(report)}
               className="hidden lg:flex bg-surface-container-low hover:bg-surface-container-high text-on-surface border border-outline-variant text-xs font-mono px-3 py-1.5 rounded items-center gap-1.5 transition-colors cursor-pointer min-h-[36px]"
-              title="Descargar archivo GML INSPIRE oficial de la parcela"
+              title={t('dossier.downloadGmlTooltip')}
             >
               <Download className="w-3.5 h-3.5 text-primary" />
               <span className="hidden xl:inline">Descargar GML</span>
@@ -216,10 +218,10 @@ export function GisWorkspaceView() {
             type="button"
             onClick={() => window.print()}
             className="bg-inverse-primary hover:bg-primary-container text-white text-xs font-semibold px-3 py-1.5 rounded flex items-center gap-1.5 transition-colors shadow-sm cursor-pointer min-h-[36px]"
-            title="Exportar informe de due diligence en formato PDF"
+            title={t('dossier.exportPdfTooltip')}
           >
             <Printer className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">Exportar Dossier PDF</span>
+            <span className="hidden sm:inline">{t('workspace.exportPdf')}</span>
           </button>
         </div>
       </header>
@@ -301,7 +303,7 @@ export function GisWorkspaceView() {
         {/* Tablet & Desktop Draggable Split Divider */}
         <div
           role="separator"
-          aria-label="Ajustar división del espacio de trabajo"
+          aria-label={t('workspace.adjustDividerAria')}
           aria-orientation="vertical"
           aria-valuenow={Math.round(splitRatio)}
           tabIndex={0}
@@ -309,7 +311,7 @@ export function GisWorkspaceView() {
           onKeyDown={handleDividerKeyDown}
           onPointerDown={handleDividerPointerDown}
           className="hidden md:flex items-center justify-center relative w-2 hover:w-2.5 cursor-col-resize bg-surface-container-high border-x border-outline-variant hover:border-primary/50 hover:bg-primary/10 transition-colors z-20 group shrink-0 select-none"
-          title="Arrastrar para ajustar tamaño · Doble clic para 50/50"
+          title={t('workspace.adjustDividerTitle')}
         >
           <div className="w-0.5 h-8 rounded-full bg-outline-variant group-hover:bg-primary transition-colors" />
 
@@ -322,8 +324,8 @@ export function GisWorkspaceView() {
                 setSplitRatio(35);
               }}
               className="p-1 rounded hover:bg-surface-container-high text-on-surface-variant hover:text-primary transition-colors"
-              title="Colapsar panel izquierdo (35%)"
-              aria-label="Colapsar panel izquierdo a 35%"
+              title={t('workspace.collapseLeftTitle')}
+              aria-label={t('workspace.collapseLeftAria')}
             >
               <ChevronLeft className="w-3 h-3" />
             </button>
@@ -334,7 +336,7 @@ export function GisWorkspaceView() {
                 setSplitRatio(50);
               }}
               className="px-1 py-0.5 rounded hover:bg-surface-container-high text-on-surface-variant hover:text-primary font-mono text-[9px] transition-colors"
-              title="Centrar 50/50"
+              title={t('workspace.centerDividerTitle')}
             >
               50/50
             </button>
@@ -345,8 +347,8 @@ export function GisWorkspaceView() {
                 setSplitRatio(65);
               }}
               className="p-1 rounded hover:bg-surface-container-high text-on-surface-variant hover:text-primary transition-colors"
-              title="Expandir panel izquierdo (65%)"
-              aria-label="Expandir panel izquierdo a 65%"
+              title={t('workspace.expandLeftTitle')}
+              aria-label={t('workspace.expandLeftAria')}
             >
               <ChevronRight className="w-3 h-3" />
             </button>
@@ -384,9 +386,9 @@ export function GisWorkspaceView() {
           ) : (
             <div className="text-center py-16 bg-surface-container rounded border border-dashed border-outline-variant p-8 m-4">
               <MapPin className="w-10 h-10 text-outline mx-auto mb-3" />
-              <h3 className="font-bold text-on-surface">Selecciona un inmueble</h3>
+              <h3 className="font-bold text-on-surface">{t('workspace.selectPropertyTitle')}</h3>
               <p className="text-xs text-on-surface-variant mt-1 max-w-sm mx-auto">
-                Usa el buscador superior o haz click en cualquier parcela del mapa para generar su informe de due diligence oficial.
+                {t('workspace.selectPropertyDesc')}
               </p>
             </div>
           )}

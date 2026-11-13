@@ -16,6 +16,8 @@ import {
   BuildingSurroundingsDTO,
   RadonEvaluationDTO,
   VutEvaluationDTO,
+  MunicipalitySummaryDTO,
+  MunicipalityDetailDTO,
 } from '@openbarrio/core';
 
 export interface ICatastroProvider {
@@ -169,5 +171,25 @@ export interface IVutProvider {
   /**
    * Evaluate INE tourist dwelling saturation and calculate civic coexistence impact.
    */
-  getVutEvaluation(censusSectionId: string): Promise<VutEvaluationDTO>;
+  getVutEvaluation(
+    censusSectionId: string,
+    coords?: { latitude: number; longitude: number }
+  ): Promise<VutEvaluationDTO>;
+}
+
+export interface IMunicipalityProvider {
+  /**
+   * List or search Spanish municipalities with aggregated income, radon and rental status.
+   */
+  listMunicipalities(params?: {
+    query?: string;
+    province?: string;
+    page?: number;
+    limit?: number;
+  }): Promise<{ items: MunicipalitySummaryDTO[]; total: number; page: number; limit: number }>;
+
+  /**
+   * Retrieve rich municipal profile and aggregated civic intelligence by canonical slug or 5-digit INE code.
+   */
+  getBySlugOrCode(slugOrCode: string): Promise<MunicipalityDetailDTO>;
 }

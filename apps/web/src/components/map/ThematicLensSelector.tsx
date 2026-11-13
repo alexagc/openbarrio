@@ -1,5 +1,6 @@
 import React from 'react';
 import { Footprints, Volume2, Waves, Sun } from 'lucide-react';
+import { useTranslation } from '../../i18n';
 
 export type ThematicLens = 'urban' | 'silence' | 'risks' | 'solar';
 
@@ -11,7 +12,8 @@ export interface ThematicLensSelectorProps {
 
 interface LensDefinition {
   id: ThematicLens;
-  label: string;
+  labelKey: string;
+  defaultLabel: string;
   icon: React.ComponentType<{ className?: string }>;
   description: string;
   activeColor: string;
@@ -20,28 +22,32 @@ interface LensDefinition {
 const LENSES: LensDefinition[] = [
   {
     id: 'urban',
-    label: 'Vida Urbana',
+    labelKey: 'map.lensUrban',
+    defaultLabel: 'Vida Urbana',
     icon: Footprints,
     description: 'Servicios a 15 min, renta INE y parcela catastral',
     activeColor: 'bg-primary text-on-primary shadow-sm',
   },
   {
     id: 'silence',
-    label: 'Silencio',
+    labelKey: 'map.lensSilence',
+    defaultLabel: 'Silencio',
     icon: Volume2,
     description: 'Mapa estratégico de ruido ambiental MITECO SICA',
     activeColor: 'bg-amber-500 text-slate-950 font-bold shadow-sm',
   },
   {
     id: 'risks',
-    label: 'Riesgos Naturales',
+    labelKey: 'map.lensRisks',
+    defaultLabel: 'Riesgos Naturales',
     icon: Waves,
     description: 'Zonas inundables SNCZI y afección fluvial T=10..500',
     activeColor: 'bg-sky-500 text-slate-950 font-bold shadow-sm',
   },
   {
     id: 'solar',
-    label: 'Luz 3D',
+    labelKey: 'map.lensSolar3D',
+    defaultLabel: 'Luz 3D',
     icon: Sun,
     description: 'Huella 3D y simulación solar con sombras en tiempo real',
     activeColor: 'bg-yellow-400 text-slate-950 font-bold shadow-sm',
@@ -53,6 +59,8 @@ export const ThematicLensSelector: React.FC<ThematicLensSelectorProps> = ({
   onSelectLens,
   className = '',
 }) => {
+  const { t } = useTranslation();
+
   return (
     <div
       onClick={(e) => e.stopPropagation()}
@@ -62,6 +70,7 @@ export const ThematicLensSelector: React.FC<ThematicLensSelectorProps> = ({
       {LENSES.map((lens) => {
         const Icon = lens.icon;
         const isActive = activeLens === lens.id;
+        const label = t(lens.labelKey) || lens.defaultLabel;
         return (
           <button
             key={lens.id}
@@ -76,7 +85,7 @@ export const ThematicLensSelector: React.FC<ThematicLensSelectorProps> = ({
             }`}
           >
             <Icon className={`w-3.5 h-3.5 shrink-0 ${isActive && lens.id === 'solar' ? 'animate-spin-slow' : ''}`} />
-            <span className="font-semibold">{lens.label}</span>
+            <span className="font-semibold">{label}</span>
           </button>
         );
       })}

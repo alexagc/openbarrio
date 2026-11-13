@@ -9,6 +9,7 @@ import {
   TrendingUp,
   Scale,
 } from 'lucide-react';
+import { useTranslation } from '../../i18n';
 
 export interface BuildingCapExCardProps {
   report?: PropertyAuditReport;
@@ -118,6 +119,7 @@ export function BuildingCapExCard({
   capex: directCapex,
   className = '',
 }: BuildingCapExCardProps) {
+  const { t } = useTranslation();
   const capexData =
     directCapex ||
     report?.capex ||
@@ -143,27 +145,27 @@ export function BuildingCapExCard({
       case 'favorable_active':
         return {
           icon: <CheckCircle className="w-4 h-4 text-primary" />,
-          label: `Favorable (Vigente hasta ${capexData.iteDeadlineYear})`,
+          label: `${t('capex.statusFavorable')} (${capexData.iteDeadlineYear})`,
           badgeClass: 'bg-primary/10 border-primary/30 text-primary',
         };
       case 'mandatory_in_progress':
       case 'due_soon':
         return {
           icon: <Clock className="w-4 h-4 text-amber-400" />,
-          label: 'Obligatoria en curso / Pendiente',
+          label: t('capex.statusPending'),
           badgeClass: 'bg-amber-950/40 border-amber-500/40 text-amber-300',
         };
       case 'mandatory_overdue':
         return {
           icon: <AlertTriangle className="w-4 h-4 text-rose-400" />,
-          label: 'Desfavorable / Vencida',
+          label: t('capex.statusOverdue'),
           badgeClass: 'bg-rose-950/40 border-rose-500/40 text-rose-300',
         };
       case 'exempt':
       default:
         return {
           icon: <Shield className="w-4 h-4 text-on-surface-variant" />,
-          label: `Exento por antigüedad (<50 años)`,
+          label: t('capex.statusExempt'),
           badgeClass: 'bg-surface-container border-outline-variant text-on-surface-variant',
         };
     }
@@ -181,7 +183,7 @@ export function BuildingCapExCard({
         <div className="flex items-center gap-2">
           <Wrench className="w-4 h-4 text-primary" />
           <h3 className="font-title-md text-title-md text-on-surface font-semibold flex items-center gap-2">
-            <span>Diagnóstico CapEx & Salud ITE</span>
+            <span>{t('capex.title')}</span>
             <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-surface-container border border-outline-variant text-on-surface-variant font-normal uppercase">
               {capexData.buildingAgeYears} años
             </span>
@@ -199,7 +201,7 @@ export function BuildingCapExCard({
           <div>
             <div className="text-[10px] font-mono text-outline uppercase flex items-center gap-1.5">
               <Shield className="w-3.5 h-3.5 text-primary" />
-              <span>Estado ITE / IEE</span>
+              <span>{t('capex.iteStatus')}</span>
             </div>
             <div className="mt-2">
               <span
@@ -221,7 +223,7 @@ export function BuildingCapExCard({
           <div>
             <div className="text-[10px] font-mono text-outline uppercase flex items-center gap-1.5">
               <Scale className="w-3.5 h-3.5 text-secondary" />
-              <span>Riesgo Derramas</span>
+              <span>{t('capex.derramasRisk')}</span>
             </div>
             <div className="mt-2 flex items-center gap-1.5" data-testid="derramas-risk-gauge">
               {[1, 2, 3, 4, 5].map((lvl) => {
@@ -257,7 +259,7 @@ export function BuildingCapExCard({
                     : 'text-rose-400'
                 }
               >
-                {derramasLevel <= 2 ? 'Bajo' : derramasLevel === 3 ? 'Moderado' : 'Alto / Inminente'}
+                {derramasLevel <= 2 ? t('capex.riskLow') : derramasLevel === 3 ? t('capex.riskMedium') : t('capex.riskHigh')}
               </span>
             </div>
           </div>
@@ -271,7 +273,7 @@ export function BuildingCapExCard({
           <div>
             <div className="text-[10px] font-mono text-outline uppercase flex items-center gap-1.5">
               <Coins className="w-3.5 h-3.5 text-tertiary" />
-              <span>Fondo de Reserva LPH</span>
+              <span>{t('capex.reserveFund')}</span>
             </div>
             <div className="mt-2 flex items-baseline gap-1.5">
               <span
@@ -303,7 +305,7 @@ export function BuildingCapExCard({
           <div>
             <div className="text-[10px] font-mono text-outline uppercase flex items-center gap-1.5">
               <TrendingUp className="w-3.5 h-3.5 text-primary" />
-              <span>Cuota Comunidad Est.</span>
+              <span>{t('capex.communityQuotaEst')}</span>
             </div>
             <div className="mt-2 flex items-baseline gap-1.5">
               <span
@@ -326,7 +328,7 @@ export function BuildingCapExCard({
       {capexData.renovationPriorities && capexData.renovationPriorities.length > 0 && (
         <div className="pt-1">
           <div className="text-[11px] font-mono text-outline mb-2">
-            Prioridades de Intervención & Conservación Detectadas:
+            {t('capex.renovationPriorities')}:
           </div>
           <div className="flex flex-wrap gap-2">
             {capexData.renovationPriorities.map((item, idx) => (

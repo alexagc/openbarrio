@@ -144,15 +144,15 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onAudit, onOpenMap }) 
           <div className="flex items-center justify-between border-b border-outline-variant pb-2 mb-2.5 px-1 font-mono text-xs text-on-surface-variant">
             <div className="flex items-center gap-1.5">
               <ShieldCheck className="w-4 h-4 text-primary" />
-              <span className="font-semibold text-on-surface">Búsqueda Soberana Unificada</span>
+              <span className="font-semibold text-on-surface">{t('hero.searchTitle')}</span>
               {isCadastralReference(searchValue.trim()) && (
                 <span className="px-1.5 py-0.5 rounded bg-primary/20 text-primary text-[10px] font-bold border border-primary/40 animate-pulse">
-                  ✓ Ref. Catastral Detectada
+                  {t('hero.refcatDetected')}
                 </span>
               )}
             </div>
             <div className="hidden sm:flex items-center gap-1.5 text-on-surface-variant font-mono text-xs">
-              <span>CartoCiudad + Sede Electrónica OVC</span>
+              <span>{t('hero.searchSources')}</span>
             </div>
           </div>
 
@@ -176,7 +176,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onAudit, onOpenMap }) 
                     isFocusedRef.current = false;
                   }, 200);
                 }}
-                placeholder="Introduce dirección completa o referencia catastral (ej. Gran Vía 28 o 14/20 dígitos)..."
+                placeholder={t('hero.placeholderUnified')}
                 className="w-full pl-10 pr-4 py-2.5 rounded bg-surface-container-lowest border border-outline-variant focus:border-primary focus:ring-1 focus:ring-primary text-on-surface font-body text-sm placeholder:text-outline outline-hidden transition-colors"
               />
 
@@ -184,9 +184,9 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onAudit, onOpenMap }) 
               {showDropdown && suggestions.length > 0 && (
                 <div className="absolute left-0 right-0 top-full mt-1.5 bg-surface-container-low border border-outline-variant rounded-lg shadow-2xl overflow-hidden z-50 max-h-60 overflow-y-auto">
                   <div className="p-2 border-b border-outline-variant bg-surface-container text-[11px] font-semibold text-on-surface-variant uppercase tracking-wider flex items-center justify-between">
-                    <span>Sugerencias Oficiales Sede Catastro ({suggestions.length})</span>
+                    <span>{t('hero.searchSuggestions')} ({suggestions.length})</span>
                     {isSearching ? (
-                      <span className="text-primary text-[10px]">Buscando...</span>
+                      <span className="text-primary text-[10px]">{t('hero.searching')}</span>
                     ) : (
                       <span className="text-primary text-[10px] font-mono">WFS Online</span>
                     )}
@@ -217,7 +217,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onAudit, onOpenMap }) 
                       </div>
                       {item.refcat && (
                         <span className="shrink-0 px-1.5 py-0.5 rounded bg-primary/20 text-primary font-mono text-[10px] font-semibold border border-primary/30">
-                          RC Oficial
+                          {t('searchBar.rcOfficial')}
                         </span>
                       )}
                     </button>
@@ -236,7 +236,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onAudit, onOpenMap }) 
 
           {/* Guarantee Subtext */}
           <p className="mt-2 text-center sm:text-left font-mono text-[11px] text-on-surface-variant">
-            Búsqueda directa sobre la Sede Electrónica del Catastro (OVC) y CartoCiudad. Detección automática de referencias catastrales y coordenadas.
+            {t('hero.searchGuarantee')}
           </p>
         </form>
 
@@ -324,14 +324,14 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onAudit, onOpenMap }) 
             </div>
             <div>
               <span className="font-mono text-[10px] text-primary uppercase font-bold tracking-wider block">
-                Acceso Directo al Visor GIS
+                {t('hero.gisDirectAccess')}
               </span>
               <div className="font-headline text-sm font-bold text-on-surface group-hover:text-primary transition-colors flex items-center gap-1.5 mt-0.5">
-                <span>Lanzar Visor GIS Completo</span>
+                <span>{t('hero.gisLaunchFull')}</span>
                 <ArrowRight className="w-4 h-4" />
               </div>
               <p className="font-body text-xs text-on-surface-variant mt-0.5">
-                Explora cualquier rincón de España con capas de ruido, inundaciones y parcelas INSPIRE.
+                {t('hero.gisLaunchDesc')}
               </p>
             </div>
           </button>
@@ -346,11 +346,11 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onAudit, onOpenMap }) 
             </div>
             <div>
               <div className="font-headline text-sm font-bold text-on-surface group-hover:text-sky transition-colors flex items-center gap-1.5">
-                <span>Extensión para Portales</span>
+                <span>{t('hero.extensionCardTitle')}</span>
                 <ArrowRight className="w-4 h-4" />
               </div>
               <p className="font-body text-xs text-on-surface-variant mt-0.5">
-                Auditoría instantánea inyectada directamente en Idealista y Fotocasa con Shadow DOM.
+                {t('hero.extensionCardDesc')}
               </p>
             </div>
           </a>

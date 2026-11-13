@@ -6,6 +6,7 @@ import {
   calculateFiscalEstimate,
 } from '@openbarrio/core';
 import { Coins, AlertTriangle, Building2 } from 'lucide-react';
+import { useTranslation } from '../../i18n';
 
 interface FiscalSimulatorCardProps {
   property: CadastralProperty;
@@ -14,6 +15,7 @@ interface FiscalSimulatorCardProps {
 }
 
 export function FiscalSimulatorCard({ property, fiscal, typology }: FiscalSimulatorCardProps) {
+  const { t } = useTranslation();
   const isRustic = typology === 'RUSTIC' || property.typology === 'RUSTIC';
   const isVacantPlot = typology === 'VACANT_PLOT' || property.typology === 'VACANT_PLOT';
   const isIndustrial = typology === 'INDUSTRIAL' || property.typology === 'INDUSTRIAL';
@@ -96,7 +98,7 @@ export function FiscalSimulatorCard({ property, fiscal, typology }: FiscalSimula
               ? 'Simulador Fiscal Rústico (ITP & IBI)'
               : isIndustrial
                 ? 'Simulador Fiscal Inmueble Industrial (ITP & IBI)'
-                : 'Simulador Fiscal ITP & IBI Municipal'}
+                : t('itpSimulator.title')}
           </span>
         </div>
         <span className="font-mono text-[11px] font-semibold px-2 py-0.5 rounded bg-primary/10 text-primary border border-primary/20">
@@ -110,7 +112,7 @@ export function FiscalSimulatorCard({ property, fiscal, typology }: FiscalSimula
         <div className="space-y-1.5">
           <div className="flex items-center justify-between text-xs">
             <label htmlFor="purchase-price-slider" className="text-on-surface-variant font-medium">
-              Precio Estimado de Compraventa
+              {t('itpSimulator.labelPrice')}
             </label>
             <span className="font-mono font-bold text-primary text-sm">
               €{purchasePrice.toLocaleString('es-ES')}
@@ -174,13 +176,13 @@ export function FiscalSimulatorCard({ property, fiscal, typology }: FiscalSimula
       {/* Calculated Tax Quotas Grid */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs pt-1 border-t border-outline-variant">
         <div>
-          <span className="text-on-surface-variant block">Tipo ITP Autonómico</span>
+          <span className="text-on-surface-variant block">{t('itpSimulator.itpRate')}</span>
           <span className="font-mono font-bold text-on-surface">
             {currentFiscal.itpRatePct.toFixed(1)}%
           </span>
         </div>
         <div>
-          <span className="text-on-surface-variant block">Cuota ITP a Liquidar</span>
+          <span className="text-on-surface-variant block">{t('itpSimulator.itpQuota')}</span>
           <span className="font-mono font-bold text-primary text-sm">
             €{currentFiscal.itpQuotaEur.toLocaleString('es-ES')}
           </span>
@@ -195,7 +197,7 @@ export function FiscalSimulatorCard({ property, fiscal, typology }: FiscalSimula
         </div>
         <div>
           <span className="text-on-surface-variant block">
-            {isRustic ? 'IBI Rústico Estimado' : 'IBI Anual Estimado'}
+            {isRustic ? 'IBI Rústico Estimado' : t('itpSimulator.annualIbi')}
           </span>
           <span className="font-mono font-bold text-on-surface text-sm">
             €{currentFiscal.ibiEstimatedAnnualQuotaEur.toLocaleString('es-ES')} / año

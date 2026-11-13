@@ -1,5 +1,6 @@
 import { EnergyPerformanceCertificate } from '@openbarrio/core';
 import { Zap, Leaf, AlertCircle, ShieldCheck, HelpCircle, Wrench } from 'lucide-react';
+import { useTranslation } from '../../i18n';
 
 interface EnergyPerformanceCardProps {
   energy?: EnergyPerformanceCertificate;
@@ -48,6 +49,7 @@ function getRecommendedActions(rating: string): { title: string; subsidy: string
 }
 
 export function EnergyPerformanceCard({ energy }: EnergyPerformanceCardProps) {
+  const { t } = useTranslation();
   if (!energy) return null;
 
   const currentRating = energy.ratingEmissions || 'E';
@@ -64,7 +66,7 @@ export function EnergyPerformanceCard({ energy }: EnergyPerformanceCardProps) {
         <div className="flex items-center gap-2">
           <Zap className="w-4 h-4 text-primary" />
           <h3 className="text-sm font-semibold text-on-surface">
-            Certificado de Eficiencia Energética (CEE)
+            {t('energy.title')}
           </h3>
         </div>
 
@@ -84,7 +86,7 @@ export function EnergyPerformanceCard({ energy }: EnergyPerformanceCardProps) {
             title="Inmueble sin CEE registrado en bases autonómicas abiertas: estimación por año de construcción"
           >
             <AlertCircle className="w-3 h-3" />
-            <span>Estimación CTE / NBE</span>
+            <span>{t('energy.estimatedCertificate')}</span>
           </span>
         ) : (
           <span
@@ -93,7 +95,7 @@ export function EnergyPerformanceCard({ energy }: EnergyPerformanceCardProps) {
             title={energy.dataSource || 'Registro Oficial Autonómico'}
           >
             <ShieldCheck className="w-3 h-3" />
-            <span>{energy.dataSource || 'Registro Oficial Autonómico'}</span>
+            <span>{energy.dataSource || t('energy.officialCertificate')}</span>
           </span>
         )}
       </div>
@@ -165,7 +167,7 @@ export function EnergyPerformanceCard({ energy }: EnergyPerformanceCardProps) {
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs font-mono mb-3">
         <div className="p-2.5 rounded bg-surface-container-high border border-outline-variant/50">
           <span className="text-[10px] text-outline uppercase block">
-            Emisiones CO₂ ({energy.ratingEmissions})
+            {t('energy.emissionsRating')} ({energy.ratingEmissions})
           </span>
           <span className="text-sm font-semibold text-on-surface">
             {energy.co2Emissions !== undefined ? `${energy.co2Emissions} ` : '— '}
@@ -175,7 +177,7 @@ export function EnergyPerformanceCard({ energy }: EnergyPerformanceCardProps) {
 
         <div className="p-2.5 rounded bg-surface-container-high border border-outline-variant/50">
           <span className="text-[10px] text-outline uppercase block">
-            Consumo Energía ({energy.ratingConsumption})
+            {t('energy.consumptionRating')} ({energy.ratingConsumption})
           </span>
           <span className="text-sm font-semibold text-on-surface">
             {energy.primaryEnergyConsumption !== undefined ? `${energy.primaryEnergyConsumption} ` : '— '}
@@ -204,7 +206,7 @@ export function EnergyPerformanceCard({ energy }: EnergyPerformanceCardProps) {
         <div className="pt-2 border-t border-outline-variant/40">
           <div className="text-[11px] font-mono text-outline mb-2 flex items-center gap-1.5">
             <Wrench className="w-3.5 h-3.5 text-primary" />
-            <span>Medidas de Mejora y Rehabilitación Energética Recomendadas:</span>
+            <span>{t('energy.recommendationsTitle')}</span>
           </div>
           <div className="space-y-1.5">
             {actions.map((act, idx) => (

@@ -124,6 +124,42 @@ export const Footer: React.FC<FooterProps> = ({ onOpenMap }) => {
                 </button>
               </li>
               <li>
+                <button
+                  type="button"
+                  onClick={() => setViewMode('tool-surface' as any)}
+                  className="hover:text-primary transition-colors text-left cursor-pointer"
+                >
+                  Comprobar Metros Catastro
+                </button>
+              </li>
+              <li>
+                <button
+                  type="button"
+                  onClick={() => setViewMode('tool-rent' as any)}
+                  className="hover:text-primary transition-colors text-left cursor-pointer"
+                >
+                  Calculadora Alquiler Legal
+                </button>
+              </li>
+              <li>
+                <button
+                  type="button"
+                  onClick={() => setViewMode('tool-itp' as any)}
+                  className="hover:text-primary transition-colors text-left cursor-pointer"
+                >
+                  Simulador ITP e IBI
+                </button>
+              </li>
+              <li>
+                <button
+                  type="button"
+                  onClick={() => setViewMode('municipios-directory' as any)}
+                  className="hover:text-primary transition-colors text-left cursor-pointer"
+                >
+                  Directorio de Municipios
+                </button>
+              </li>
+              <li>
                 <a className="hover:text-primary transition-colors" href="#extension">
                   {t('footer.linkExtension')}
                 </a>

@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { Play, Pause, Compass, Sun, Zap, ChevronDown, ChevronUp, X, Sparkles } from 'lucide-react';
+import { useTranslation } from '../../i18n';
 import {
   SeasonPreset,
   calculateSolarPosition,
@@ -38,6 +39,7 @@ export function SolarSimulationHud({
   onClose,
   onSolarChange,
 }: SolarSimulationHudProps) {
+  const { t } = useTranslation();
   const [season, setSeason] = useState<SeasonPreset>(initialSeason);
   const [timeMinutes, setTimeMinutes] = useState<number>(initialTimeMinutes);
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
@@ -136,10 +138,10 @@ export function SolarSimulationHud({
             </span>
             <div className="flex items-center gap-1.5 flex-wrap">
               <span className="font-headline font-bold text-xs sm:text-sm text-on-surface tracking-tight">
-                SIMULADOR SOLAR & SOMBRAS
+                {t('hud.solarSimTitle')}
               </span>
               <span className="hidden sm:inline font-mono text-[9px] text-outline uppercase tracking-widest pl-2 border-l border-outline-variant">
-                Cálculo Astronómico Algorítmico
+                {t('hud.solarAstronomical')}
               </span>
             </div>
           </div>
@@ -151,15 +153,15 @@ export function SolarSimulationHud({
               className="flex items-center gap-2 sm:gap-3 text-[10px] sm:text-xs font-mono bg-surface-container-low px-2.5 py-1 rounded border border-outline-variant"
             >
               <div>
-                Azimut: <span className="text-secondary font-bold">{Math.round(solarPosition.azimuth)}° ({cardinalShort})</span>
+                {t('hud.solarAzimuth')} <span className="text-secondary font-bold">{Math.round(solarPosition.azimuth)}° ({cardinalShort})</span>
               </div>
               <div className="text-outline">|</div>
               <div>
-                Elevación: <span className="text-primary font-bold">{solarPosition.altitude.toFixed(1)}°</span>
+                {t('hud.solarElevation')} <span className="text-primary font-bold">{solarPosition.altitude.toFixed(1)}°</span>
               </div>
               <div className="text-outline">|</div>
               <div>
-                Radiación: <span className="text-secondary font-bold">{solarPosition.directRadiationWm2} W/m²</span>
+                {t('hud.solarRadiation')} <span className="text-secondary font-bold">{solarPosition.directRadiationWm2} W/m²</span>
               </div>
             </div>
 
@@ -168,8 +170,8 @@ export function SolarSimulationHud({
               type="button"
               onClick={() => setIsCollapsed(!isCollapsed)}
               className="p-1 rounded hover:bg-surface-container-high text-on-surface-variant hover:text-on-surface transition-colors cursor-pointer"
-              title={isCollapsed ? 'Expandir HUD Solar' : 'Minimizar HUD Solar'}
-              aria-label={isCollapsed ? 'Expandir HUD Solar' : 'Minimizar HUD Solar'}
+              title={isCollapsed ? t('hud.expandSolar') : t('hud.minimizeSolar')}
+              aria-label={isCollapsed ? t('hud.expandSolar') : t('hud.minimizeSolar')}
             >
               {isCollapsed ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
             </button>
@@ -180,8 +182,8 @@ export function SolarSimulationHud({
                 type="button"
                 onClick={onClose}
                 className="p-1 rounded hover:bg-surface-container-high text-on-surface-variant hover:text-rose-400 transition-colors cursor-pointer"
-                title="Cerrar Simulador Solar"
-                aria-label="Cerrar Simulador Solar"
+                title={t('hud.closeSolar')}
+                aria-label={t('hud.closeSolar')}
               >
                 <X className="w-4 h-4" />
               </button>
@@ -197,9 +199,9 @@ export function SolarSimulationHud({
               <div className="md:col-span-5 flex items-center bg-surface-container-low p-1 rounded-lg border border-outline-variant gap-1">
                 {(['winter', 'equinox', 'summer'] as const).map((s) => {
                   const labels: Record<SeasonPreset, string> = {
-                    winter: 'Invierno (21 Dic)',
-                    equinox: 'Equinoccio (21 Mar)',
-                    summer: 'Verano (21 Jun)',
+                    winter: t('hud.seasonWinter'),
+                    equinox: t('hud.seasonEquinox'),
+                    summer: t('hud.seasonSummer'),
                   };
                   const isSelected = season === s;
                   return (
@@ -226,9 +228,9 @@ export function SolarSimulationHud({
                 <button
                   type="button"
                   onClick={() => setIsPlaying(!isPlaying)}
-                  aria-label={isPlaying ? 'Pausar simulación solar' : 'Reproducir simulación solar'}
+                  aria-label={isPlaying ? t('hud.pauseSimulation') : t('hud.playSimulation')}
                   className="w-8 h-8 rounded-md bg-primary text-on-primary flex items-center justify-center hover:bg-primary-container transition-colors shadow-sm shrink-0 cursor-pointer"
-                  title={isPlaying ? 'Pausar animación' : 'Reproducir simulación diurna'}
+                  title={isPlaying ? t('hud.pauseSimulation') : t('hud.playSimulation')}
                 >
                   {isPlaying ? (
                     <Pause className="w-4 h-4 fill-current" />
@@ -243,7 +245,7 @@ export function SolarSimulationHud({
                     {timeFormatted} <span className="text-[10px] font-normal text-outline">{tzLabel}</span>
                   </span>
                   <span className="text-[10px] text-on-surface-variant font-mono mt-0.5">
-                    Solar: {solarPosition.solarTimeStr}
+                    {t('hud.solarTime')} {solarPosition.solarTimeStr}
                   </span>
                 </div>
 
@@ -265,7 +267,7 @@ export function SolarSimulationHud({
                         setTimeMinutes(parseFloat(e.target.value));
                       }}
                       className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
-                      aria-label="Control temporal solar (hora del día)"
+                      aria-label={t('hud.timeControlAria')}
                     />
 
                     {/* Scrub Thumb Visual Indicator */}
@@ -276,9 +278,9 @@ export function SolarSimulationHud({
                   </div>
 
                   <div className="flex justify-between text-[9px] text-outline font-mono">
-                    <span>06:00 (Amanecer)</span>
-                    <span className="text-secondary font-bold">14:00 Cenit</span>
-                    <span>22:00 (Ocaso)</span>
+                    <span>{t('hud.dawn')}</span>
+                    <span className="text-secondary font-bold">{t('hud.zenith')}</span>
+                    <span>{t('hud.sunset')}</span>
                   </div>
                 </div>
               </div>
@@ -290,7 +292,7 @@ export function SolarSimulationHud({
               <div className="bg-surface-container-low px-2.5 py-1.5 rounded border border-outline-variant flex items-center gap-2">
                 <Compass className="w-4 h-4 text-outline shrink-0" />
                 <div className="flex flex-col min-w-0">
-                  <span className="text-[9px] text-outline uppercase font-mono truncate">Orientación Fachada</span>
+                  <span className="text-[9px] text-outline uppercase font-mono truncate">{t('hud.facadeOrientation')}</span>
                   <span className="text-[11px] text-on-surface font-semibold font-mono truncate">
                     {facadeAnalysis.facadeOrientation}
                   </span>
@@ -301,9 +303,9 @@ export function SolarSimulationHud({
               <div className="bg-surface-container-low px-2.5 py-1.5 rounded border border-outline-variant flex items-center gap-2">
                 <Sun className="w-4 h-4 text-secondary shrink-0" />
                 <div className="flex flex-col min-w-0">
-                  <span className="text-[9px] text-outline uppercase font-mono truncate">Insolación Directa</span>
+                  <span className="text-[9px] text-outline uppercase font-mono truncate">{t('hud.directSunlight')}</span>
                   <span className="text-[11px] text-secondary font-bold font-mono truncate">
-                    {facadeAnalysis.directSunlightHours} h / día
+                    {facadeAnalysis.directSunlightHours} h / {t('hud.day')}
                   </span>
                 </div>
               </div>
@@ -312,7 +314,7 @@ export function SolarSimulationHud({
               <div className="bg-surface-container-low px-2.5 py-1.5 rounded border border-outline-variant flex items-center gap-2">
                 <Sparkles className="w-4 h-4 text-primary shrink-0" />
                 <div className="flex flex-col min-w-0">
-                  <span className="text-[9px] text-outline uppercase font-mono truncate">Confort Lumínico</span>
+                  <span className="text-[9px] text-outline uppercase font-mono truncate">{t('hud.lightingComfort')}</span>
                   <span className="text-[11px] text-primary font-bold font-mono truncate">
                     {facadeAnalysis.comfortRating.toUpperCase()} ({facadeAnalysis.comfortScore}/100)
                   </span>
@@ -323,9 +325,9 @@ export function SolarSimulationHud({
               <div className="bg-surface-container-low px-2.5 py-1.5 rounded border border-outline-variant flex items-center gap-2">
                 <Zap className="w-4 h-4 text-amber-300 shrink-0" />
                 <div className="flex flex-col min-w-0">
-                  <span className="text-[9px] text-outline uppercase font-mono truncate">Potencial Fotovoltaico</span>
+                  <span className="text-[9px] text-outline uppercase font-mono truncate">{t('hud.photovoltaicPotential')}</span>
                   <span className="text-[11px] text-amber-300 font-bold font-mono truncate">
-                    {facadeAnalysis.photovoltaicPotentialMWh} MWh / año
+                    {facadeAnalysis.photovoltaicPotentialMWh} MWh / {t('hud.year')}
                   </span>
                 </div>
               </div>

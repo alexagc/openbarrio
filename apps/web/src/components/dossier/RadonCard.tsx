@@ -1,5 +1,6 @@
 import { RadonEvaluationDTO } from '@openbarrio/core';
 import { ShieldAlert, ShieldCheck, Info } from 'lucide-react';
+import { useTranslation } from '../../i18n';
 
 interface RadonCardProps {
   radon?: RadonEvaluationDTO;
@@ -8,6 +9,7 @@ interface RadonCardProps {
 }
 
 export function RadonCard({ radon, municipality, floor }: RadonCardProps) {
+  const { t } = useTranslation();
   if (!radon) return null;
 
   const isNegligible = radon.riskLevel === 'negligible';
@@ -39,7 +41,7 @@ export function RadonCard({ radon, municipality, floor }: RadonCardProps) {
             <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0" />
           )}
           <span className="font-headline text-sm font-bold text-on-surface">
-            Diagnóstico de Gas Radón
+            {t('radon.title')}
           </span>
         </div>
         <span
@@ -51,11 +53,11 @@ export function RadonCard({ radon, municipality, floor }: RadonCardProps) {
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
         <div>
-          <span className="text-on-surface-variant block">Municipio</span>
+          <span className="text-on-surface-variant block">{t('radon.municipality')}</span>
           <span className="font-semibold text-on-surface">{municipality || 'Término Municipal'}</span>
         </div>
         <div>
-          <span className="text-on-surface-variant block">Cota de Planta</span>
+          <span className="text-on-surface-variant block">{t('radon.floorLevel')}</span>
           <span className="font-mono font-bold text-on-surface">
             {floor !== undefined && floor !== ''
               ? `Planta ${floor}`
@@ -65,25 +67,25 @@ export function RadonCard({ radon, municipality, floor }: RadonCardProps) {
           </span>
         </div>
         <div>
-          <span className="text-on-surface-variant block">Exigencia CTE DB-HS 6</span>
+          <span className="text-on-surface-variant block">{t('radon.cteObligation')}</span>
           <span
             className={`font-mono font-bold ${
               radon.requiresMitigation ? 'text-amber-400' : 'text-emerald-400'
             }`}
           >
-            {radon.requiresMitigation ? 'Barrera obligatoria' : 'Sin prescripción'}
+            {radon.requiresMitigation ? t('radon.mitigationRequired') : t('radon.mitigationNotRequired')}
           </span>
         </div>
         <div>
-          <span className="text-on-surface-variant block">Riesgo Interior</span>
+          <span className="text-on-surface-variant block">{t('radon.riskLevel')}</span>
           <span
             className={`font-mono font-bold px-1.5 py-0.5 rounded border inline-block text-[11px] ${badgeColorClass}`}
           >
             {radon.riskLevel === 'negligible'
-              ? 'Despreciable'
+              ? t('radon.riskNegligible')
               : radon.riskLevel === 'moderate'
-              ? 'Moderado'
-              : 'Elevado'}
+              ? t('radon.riskModerate')
+              : t('radon.riskHigh')}
           </span>
         </div>
       </div>

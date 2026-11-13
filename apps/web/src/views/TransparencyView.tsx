@@ -2,14 +2,36 @@ import { ArrowLeft, Database, ShieldCheck, ExternalLink, Map as MapIcon } from '
 import { DataTransparencyMatrix } from '../components/landing/DataTransparencyMatrix';
 import { Footer } from '../components/landing/Footer';
 import { Header } from '../components/landing/Header';
+import { SeoHead } from '../components/common/SeoHead';
 import { useWorkspaceStore } from '../store/workspace.store';
+import { useTranslation } from '../i18n';
 
 export function TransparencyView() {
+  const { language, t } = useTranslation();
   const setViewMode = useWorkspaceStore((s) => s.setViewMode);
 
   return (
     <div className="min-h-screen min-h-[100dvh] flex flex-col bg-background text-on-surface">
       <Header onOpenMap={() => setViewMode('map')} />
+
+      <SeoHead
+        viewMode="transparency"
+        lang={language}
+        title={
+          language === 'en'
+            ? 'Official Data Sources & Transparency Catalog (Law 37/2007) | OpenBarrio'
+            : language === 'ca'
+            ? 'Catàleg de Fonts Oficials i Sobirania de Dades | OpenBarrio'
+            : 'Catálogo de Fuentes Oficiales & Soberanía de Datos | OpenBarrio'
+        }
+        description={
+          language === 'en'
+            ? 'Complete inventory of official open data sources consumed by OpenBarrio: Cadastre (OVC), INE ADRH, MITECO SICA/SNCZI, and MIVAU SERPAVI.'
+            : language === 'ca'
+            ? 'Inventari de fonts públiques oficials emprades per OpenBarrio: Cadastre, INE ADRH, MITECO i MIVAU.'
+            : 'Inventario exhaustivo de fuentes de datos públicos oficiales consumidas por OpenBarrio: Catastro, INE ADRH, MITECO SICA y MIVAU SERPAVI.'
+        }
+      />
 
       <main className="flex-1 flex flex-col items-center py-10 px-space-md sm:px-space-lg lg:px-space-xl">
         <div className="w-full max-w-7xl">
@@ -21,7 +43,7 @@ export function TransparencyView() {
               className="inline-flex items-center gap-2 text-xs font-mono text-primary hover:text-primary-container px-3 py-1.5 rounded bg-surface-container border border-outline-variant transition-colors cursor-pointer"
             >
               <ArrowLeft className="w-4 h-4" />
-              <span>Volver a la Portada</span>
+              <span>{t('common.backToHome')}</span>
             </button>
 
             <button
@@ -30,7 +52,7 @@ export function TransparencyView() {
               className="inline-flex items-center gap-1.5 text-xs font-mono text-on-surface px-3 py-1.5 rounded bg-surface-container-high border border-outline-variant hover:border-primary transition-colors cursor-pointer"
             >
               <MapIcon className="w-4 h-4 text-primary" />
-              <span>Explorar en Visor GIS</span>
+              <span>{t('common.exploreInGis')}</span>
             </button>
           </div>
 

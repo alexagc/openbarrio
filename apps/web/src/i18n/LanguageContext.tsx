@@ -3,11 +3,16 @@ import { SupportedLanguage, SUPPORTED_LANGUAGES, TranslationSchema, LanguageCont
 import { es } from './translations/es';
 import { en } from './translations/en';
 import { ca } from './translations/ca';
+import { gl } from './translations/gl';
+import { eu } from './translations/eu';
+import { parseLocalizedRoute, getLocalizedPath } from '../utils/seo-routes';
 
 const DICTIONARIES: Record<SupportedLanguage, TranslationSchema> = {
   es,
   en,
   ca,
+  gl,
+  eu,
 };
 
 const STORAGE_KEY = 'openbarrio_lang';
@@ -17,17 +22,28 @@ export const LanguageContext = createContext<LanguageContextType | null>(null);
 function detectInitialLanguage(): SupportedLanguage {
   if (typeof window === 'undefined') return 'es';
 
+  // 1. Detect from URL (localized slugs or /en/, /ca/, /gl/, /eu/ prefix)
+  const parsed = parseLocalizedRoute(window.location.pathname, window.location.search);
+  if (parsed.lang) {
+    return parsed.lang;
+  }
+
+  // 2. Detect from persisted storage
   try {
     const saved = localStorage.getItem(STORAGE_KEY);
-    if (saved === 'es' || saved === 'en' || saved === 'ca') {
-      return saved;
+    if (saved === 'es' || saved === 'en' || saved === 'ca' || saved === 'gl' || saved === 'eu') {
+      return saved as SupportedLanguage;
     }
   } catch {
     // Ignore localStorage errors
   }
 
+  // 3. Fallback to browser locale preference
   const browserLang = (navigator.language || '').toLowerCase();
+  if (browserLang.startsWith('gl')) return 'gl';
+  if (browserLang.startsWith('eu')) return 'eu';
   if (browserLang.startsWith('ca')) return 'ca';
+  if (browserLang.startsWith('en')) return 'en';
   return 'es';
 }
 
@@ -56,6 +72,21 @@ export const LanguageProvider: React.FC<LanguageProviderProps> = ({ children, in
       localStorage.setItem(STORAGE_KEY, newLang);
     } catch {
       // Ignore localStorage errors
+    }
+
+    // Automatically synchronize browser URL to localized route equivalent
+    if (typeof window !== 'undefined') {
+      const parsed = parseLocalizedRoute(window.location.pathname, window.location.search);
+      if (parsed.viewMode && parsed.viewMode !== 'landing') {
+        const newPath = getLocalizedPath(parsed.viewMode, newLang, {
+          slug: parsed.slug,
+          refcat: parsed.refcat,
+          isEmbed: parsed.isEmbed,
+        });
+        if (window.location.pathname + window.location.search !== newPath) {
+          window.history.pushState({ openbarrio: true }, '', newPath);
+        }
+      }
     }
   };
 
@@ -107,7 +138,28 @@ export const LanguageProvider: React.FC<LanguageProviderProps> = ({ children, in
 export function useTranslation(): LanguageContextType {
   const context = useContext(LanguageContext);
   if (!context) {
-    throw new Error('useTranslation must be used within a LanguageProvider');
+    // Resilient fallback for isolated tests or standalone component mounting
+    const fallbackT = (path: string, params?: Record<string, string | number>): string => {
+      const keys = path.split('.');
+      let current: any = DICTIONARIES.es;
+      for (const k of keys) {
+        if (!current || typeof current !== 'object') return path;
+        current = current[k];
+      }
+      if (typeof current !== 'string') return path;
+      if (!params) return current;
+      let text = current;
+      for (const [pk, pv] of Object.entries(params)) {
+        text = text.replace(new RegExp(`{{\\s*${pk}\\s*}}|{\\s*${pk}\\s*}`, 'g'), String(pv));
+      }
+      return text;
+    };
+    return {
+      language: 'es',
+      setLanguage: () => {},
+      t: fallbackT,
+      availableLanguages: SUPPORTED_LANGUAGES,
+    };
   }
   return context;
 }

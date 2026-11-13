@@ -71,6 +71,8 @@ openbarrio/
 * **Component Design:** Clean, modular React components styled with Tailwind CSS.
 * **Map Engine:** Use **MapLibre GL** for rendering vector tiles, cadastral parcels, and census tract overlays.
 * **Resilience:** Handle missing or partial provider data gracefully (e.g. when an address is found in Catastro but noise data is unavailable).
+* **Multilingual & Zero Hardcoded Copy:** Every component must use `useTranslation()` (`t('namespace.key')`). Zero hardcoded text. Full 5-language support: `es`, `en`, `ca`, `gl`, `eu`.
+* **Programmatic SEO & URL Sync:** Dynamic `<SeoHead>` with canonical and `hreflang` alternates across all 5 languages + `x-default`. Localized route slugs and instant scroll reset on route changes.
 
 ### 3.4. Chrome Extension Rules (`apps/extension`)
 * **Manifest V3 Only:** Strictly adhere to Chrome Manifest V3 standards.
@@ -109,6 +111,7 @@ To support concurrent work between humans and autonomous AI agents:
 Refer to `.agent/rules/` for in-depth guidelines:
 * [Backend Hono Rules](file:///.agent/rules/backend-hono.md)
 * [Frontend React Rules](file:///.agent/rules/frontend-react.md)
+* [i18n & Programmatic SEO Rules](file:///.agent/rules/i18n-and-seo.md)
 * [Chrome Extension Rules](file:///.agent/rules/chrome-extension.md)
 * [Git & Workflow Rules](file:///.agent/rules/git-workflow.md)
 * [Testing Standards](file:///.agent/rules/testing-standards.md)

@@ -19,6 +19,7 @@ import { FiscalSimulatorCard } from './dossier/FiscalSimulatorCard';
 import { downloadCadastralGML } from '../utils/gml';
 import { DossierTab } from '../hooks/useUrlSync';
 import { useWorkspaceStore } from '../store/workspace.store';
+import { useTranslation } from '../i18n';
 import {
   Printer,
   Copy,
@@ -51,6 +52,7 @@ export function AuditDossier({
   activeTab: controlledTab,
   onTabChange,
 }: AuditDossierProps) {
+  const { t, language } = useTranslation();
   const storeDossierTab = useWorkspaceStore((s) => s.dossierTab);
   const setStoreDossierTab = useWorkspaceStore((s) => s.setDossierTab);
 
@@ -99,7 +101,18 @@ export function AuditDossier({
         .join(' · ')
     : null;
 
-  const formattedDate = new Date(generatedAt).toLocaleDateString('es-ES', {
+  const dateLocale =
+    language === 'en'
+      ? 'en-US'
+      : language === 'ca'
+      ? 'ca-ES'
+      : language === 'gl'
+      ? 'gl-ES'
+      : language === 'eu'
+      ? 'eu-ES'
+      : 'es-ES';
+
+  const formattedDate = new Date(generatedAt).toLocaleDateString(dateLocale, {
     day: '2-digit',
     month: 'long',
     year: 'numeric',
@@ -186,21 +199,21 @@ export function AuditDossier({
   ): string => {
     switch (classification) {
       case 'RUSTIC_PROTECTED':
-        return 'Suelo No Urbanizable Protegido (SNU-P) · Régimen Rústico';
+        return t('dossier.landClassificationSNUP');
       case 'RUSTIC_COMMON':
-        return 'Suelo No Urbanizable Común (SNU-C) · Rústico Ordinario';
+        return t('dossier.landClassificationSNUC');
       case 'DEVELOPABLE':
-        return 'Suelo Urbanizable (SURB) · Desarrollo Pendiente';
+        return t('dossier.landClassificationSURB');
       case 'URBAN_UNCONSOLIDATED':
-        return 'Suelo Urbano No Consolidado (SUNC) · Gestión Pendiente';
+        return t('dossier.landClassificationSUNC');
       case 'URBAN_CONSOLIDATED':
-        return 'Régimen SUC Consolidado · INSPIRE Compliant';
+        return t('dossier.landClassificationSUC');
       default:
         return propTypology === 'RUSTIC'
-          ? 'Suelo Rústico · No Urbanizable'
+          ? t('dossier.landClassificationSNUC')
           : propTypology === 'VACANT_PLOT'
-            ? 'Solar Urbano · Suelo sin edificar'
-            : 'Suelo Urbano Consolidado (SUC)';
+            ? t('dossier.typologyVacantPlot')
+            : t('dossier.landClassificationSUC');
     }
   };
 
@@ -208,33 +221,33 @@ export function AuditDossier({
     switch (typ) {
       case 'VACANT_PLOT':
         return {
-          label: 'Solar Urbano · Suelo sin edificar',
+          label: t('dossier.typologyVacantPlot'),
           className: 'bg-amber-500/20 text-amber-300 border-amber-500/40',
         };
       case 'INDUSTRIAL':
         return {
-          label: 'Nave Industrial / Logístico',
+          label: t('dossier.typologyIndustrial'),
           className: 'bg-cyan-500/20 text-cyan-300 border-cyan-500/40',
         };
       case 'RUSTIC':
         return {
-          label: 'Finca Rústica / Agrario',
+          label: t('dossier.typologyRustic'),
           className: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40',
         };
       case 'COMMERCIAL':
         return {
-          label: 'Local Comercial / Terciario',
+          label: t('dossier.typologyCommercial'),
           className: 'bg-blue-500/20 text-blue-300 border-blue-500/40',
         };
       case 'EQUIPMENT':
         return {
-          label: 'Dotacional / Equipamiento',
+          label: t('dossier.typologyEquipment'),
           className: 'bg-purple-500/20 text-purple-300 border-purple-500/40',
         };
       case 'RESIDENTIAL':
       default:
         return {
-          label: year > 0 && year < 1940 ? 'Edificio Singular Histórico' : (primaryUse || 'Residencial Colectivo'),
+          label: year > 0 && year < 1940 ? t('dossier.typologyHistoric') : (primaryUse || t('dossier.typologyResidential')),
           className: 'bg-primary-container/20 text-primary border-primary/40',
         };
     }
@@ -286,7 +299,7 @@ export function AuditDossier({
             className={`p-2 rounded hover:bg-surface-container transition-colors ${
               bookmarked ? 'text-primary' : 'text-on-surface-variant hover:text-on-surface'
             }`}
-            title="Marcar inmueble como guardado"
+            title={bookmarked ? t('dossier.bookmarkSaved') : t('dossier.bookmarkProperty')}
           >
             <Bookmark className={`w-5 h-5 ${bookmarked ? 'fill-primary' : ''}`} />
           </button>
@@ -298,7 +311,7 @@ export function AuditDossier({
             <MapPin className="text-secondary w-4 h-4 shrink-0" />
             <div className="flex flex-col min-w-0">
               <span className="text-[10px] font-mono text-outline uppercase leading-none">
-                Referencia Catastral Inmueble
+                {t('dossier.cadastralRef')}
               </span>
               <span className="font-mono text-xs sm:text-sm text-on-surface font-semibold truncate tracking-wider mt-0.5">
                 {property.cadastralReference}
@@ -311,17 +324,17 @@ export function AuditDossier({
               type="button"
               onClick={handleCopyRefcat}
               className="px-2.5 py-1 bg-surface-container-high hover:bg-surface-variant text-on-surface text-xs font-mono rounded border border-outline-variant transition-colors flex items-center gap-1 cursor-pointer"
-              title="Copiar Referencia Catastral"
+              title={t('dossier.copyRefcat')}
             >
               {copied ? (
                 <>
                   <Check className="w-3.5 h-3.5 text-primary" />
-                  <span className="text-primary">Copiada</span>
+                  <span className="text-primary">{t('dossier.copied')}</span>
                 </>
               ) : (
                 <>
                   <Copy className="w-3.5 h-3.5" />
-                  <span>Copiar</span>
+                  <span>{t('dossier.copyRefcat')}</span>
                 </>
               )}
             </button>
@@ -352,16 +365,16 @@ export function AuditDossier({
               <div className="min-w-0">
                 {property.unit ? (
                   <p className="font-semibold text-on-surface truncate">
-                    Inmueble Privativo: {unitDetail} ({property.unit.builtSurfaceM2} m²
+                    {t('dossier.privateUnit')}: {unitDetail} ({property.unit.builtSurfaceM2} m²
                     {property.unit.participationCoefficient ? ` · cpt: ${property.unit.participationCoefficient}%` : ''})
                   </p>
                 ) : (
                   <p className="font-semibold text-on-surface truncate">
-                    Edificio en División Horizontal ({property.building.unitsCount} inmuebles registrados)
+                    {t('dossier.horizontalDivisionTitle')} ({property.building.unitsCount} {t('dossier.unitsRegistered')})
                   </p>
                 )}
                 <p className="text-[10px] text-on-surface-variant truncate">
-                  {property.unit ? 'Auditoría individualizada con cuota de comunidad y SERPAVI recalculados' : 'Puedes auditar una vivienda o local específico'}
+                  {property.unit ? t('dossier.unitPickerSubtitleSpecific') : t('dossier.unitPickerSubtitleBuilding')}
                 </p>
               </div>
             </div>
@@ -371,7 +384,7 @@ export function AuditDossier({
               onClick={() => onOpenUnitPicker?.()}
               className="px-2.5 py-1.5 rounded bg-primary/20 hover:bg-primary/30 text-primary border border-primary/40 font-semibold text-[11px] font-mono transition-colors shrink-0 cursor-pointer flex items-center gap-1"
             >
-              <span>{property.unit ? 'Cambiar inmueble ▾' : 'Ver inmuebles ▾'}</span>
+              <span>{property.unit ? `${t('dossier.changeUnit')} ▾` : `${t('dossier.viewUnits')} ▾`}</span>
             </button>
           </div>
         )}
@@ -384,30 +397,30 @@ export function AuditDossier({
               data-testid="dossier-duel-btn"
               onClick={onOpenDuel}
               className="bg-primary/20 hover:bg-primary/30 text-primary border border-primary/40 text-xs font-mono px-3 py-1.5 rounded flex items-center gap-1.5 transition-colors cursor-pointer"
-              title="Comparar este inmueble en duelo 1 vs 1"
+              title={t('dossier.compareDuelTooltip')}
             >
               <Sparkles className="w-3.5 h-3.5 text-primary" />
-              <span>Añadir a Comparar</span>
+              <span>{t('dossier.addToDuel')}</span>
             </button>
           )}
           <button
             type="button"
             onClick={handleDownloadGML}
             className="bg-surface-container-high hover:bg-surface-variant text-on-surface border border-outline-variant text-xs font-mono px-3 py-1.5 rounded flex items-center gap-1.5 transition-colors cursor-pointer"
-            title="Descargar archivo GML INSPIRE oficial de la parcela"
+            title={t('dossier.downloadGmlTooltip')}
           >
             <Download className="w-3.5 h-3.5 text-primary" />
-            <span>Descargar GML</span>
+            <span>{t('dossier.downloadGml')}</span>
           </button>
 
           <button
             type="button"
             onClick={handlePrint}
             className="bg-inverse-primary hover:bg-primary-container text-white text-xs font-semibold px-3 py-1.5 rounded flex items-center gap-1.5 transition-colors shadow-sm cursor-pointer"
-            title="Exportar informe de due diligence en formato PDF"
+            title={t('dossier.exportPdfTooltip')}
           >
             <Printer className="w-3.5 h-3.5" />
-            <span>Exportar Dossier PDF</span>
+            <span>{t('dossier.exportPdf')}</span>
           </button>
 
           <span className="text-[10px] font-mono text-outline ml-auto flex items-center gap-1">
@@ -430,7 +443,7 @@ export function AuditDossier({
           }`}
         >
           <BarChart3 className="w-3.5 h-3.5" />
-          <span>Resumen & Score</span>
+          <span>{t('dossier.tabSummary')}</span>
         </button>
 
         <button
@@ -445,7 +458,7 @@ export function AuditDossier({
           }`}
         >
           <Building className="w-3.5 h-3.5" />
-          <span>Edificio & Sostenibilidad</span>
+          <span>{t('dossier.tabBuilding')}</span>
         </button>
 
         <button
@@ -460,7 +473,7 @@ export function AuditDossier({
           }`}
         >
           <MapPin className="w-3.5 h-3.5" />
-          <span>Entorno & Conectividad</span>
+          <span>{t('dossier.tabEnvironment')}</span>
         </button>
 
         <button
@@ -475,7 +488,7 @@ export function AuditDossier({
           }`}
         >
           <Coins className="w-3.5 h-3.5" />
-          <span>Mercado & Finanzas</span>
+          <span>{t('dossier.tabMarket')}</span>
         </button>
       </nav>
 
@@ -507,13 +520,13 @@ export function AuditDossier({
 
             const criticalAlerts: string[] = [];
             if (hasDiscrepancyAlert) {
-              criticalAlerts.push('Discrepancia de superficie privativa >15% respecto a registros oficiales');
+              criticalAlerts.push(t('dossier.discrepancyAlert'));
             }
             if (hasFloodAlert) {
-              criticalAlerts.push(`Afección por lámina de inundabilidad fluvial SNCZI (${environment.floodRisk.level})`);
+              criticalAlerts.push(t('dossier.floodAlert', { level: environment.floodRisk.level }));
             }
             if (hasExpiredCee) {
-              criticalAlerts.push('Certificado Energético (CEE) caducado según RD 390/2021');
+              criticalAlerts.push(t('dossier.expiredCeeAlert'));
             }
             if (criticalAlerts.length === 0) return null;
 
@@ -525,7 +538,7 @@ export function AuditDossier({
                 <AlertTriangle className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
                 <div className="min-w-0">
                   <span className="font-bold font-mono uppercase text-[10px] tracking-wide text-rose-300 block">
-                    Alerta Máxima Detectada · Atención Crítica Requerida
+                    {t('dossier.criticalAlertDetected')}
                   </span>
                   <ul className="list-disc list-inside mt-1 space-y-0.5 text-[11px] text-rose-200 font-mono">
                     {criticalAlerts.map((alert, i) => (
@@ -552,7 +565,7 @@ export function AuditDossier({
               <div className="p-3 rounded-lg bg-surface-container-low border border-outline-variant flex items-center justify-between text-xs">
                 <span className="text-on-surface-variant flex items-center gap-1.5">
                   <ShieldCheck className="w-4 h-4 text-primary" />
-                  <span>Régimen Urbanístico del Suelo:</span>
+                  <span>{t('dossier.landClassification')}</span>
                 </span>
                 <span className="font-mono text-primary font-bold">
                   {getLandClassificationLabel(urbanPlanning?.landClassification, typology)}
@@ -580,29 +593,29 @@ export function AuditDossier({
           {/* Cadastral Building Technical Overview */}
           <div className="p-4 rounded-lg bg-surface-container-low border border-outline-variant space-y-3">
             <div className="flex items-center justify-between border-b border-outline-variant pb-2">
-              <span className="font-headline text-sm font-bold text-on-surface">Datos Registrales Catastro</span>
+              <span className="font-headline text-sm font-bold text-on-surface">{t('dossier.cadastralRecords')}</span>
               <span className="font-mono text-xs text-primary font-semibold">Año {property.building.constructionYear}</span>
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
               <div>
                 <span className="text-on-surface-variant block">
-                  {isUnbuilt ? 'Superficie de Parcela' : 'Superficie Construida'}
+                  {isUnbuilt ? t('dossier.plotArea') : t('dossier.builtArea')}
                 </span>
                 <span className="font-mono font-bold text-on-surface">
-                  {(isUnbuilt ? (plotArea || property.building.builtSurfaceM2 || 0) : property.building.builtSurfaceM2).toLocaleString('es-ES')} m² {isUnbuilt ? 'terreno' : ''}
+                  {(isUnbuilt ? (plotArea || property.building.builtSurfaceM2 || 0) : property.building.builtSurfaceM2).toLocaleString('es-ES')} m² {isUnbuilt ? t('dossier.landWord') : ''}
                 </span>
               </div>
               <div>
-                <span className="text-on-surface-variant block">Uso Principal</span>
+                <span className="text-on-surface-variant block">{t('dossier.primaryUse')}</span>
                 <span className="font-semibold text-on-surface">{property.building.primaryUse}</span>
               </div>
               <div>
-                <span className="text-on-surface-variant block">Inmuebles Registrados</span>
-                <span className="font-mono font-bold text-on-surface">{property.building.unitsCount || 1} unidades</span>
+                <span className="text-on-surface-variant block">{t('dossier.registeredProperties')}</span>
+                <span className="font-mono font-bold text-on-surface">{property.building.unitsCount || 1} {t('dossier.units')}</span>
               </div>
               <div>
-                <span className="text-on-surface-variant block">Planta Baja Comercial</span>
-                <span className="font-semibold text-on-surface">{property.building.hasCommercialGroundFloor ? 'Sí (Local PB)' : 'No'}</span>
+                <span className="text-on-surface-variant block">{t('dossier.commercialGroundFloor')}</span>
+                <span className="font-semibold text-on-surface">{property.building.hasCommercialGroundFloor ? t('dossier.yesCommercial') : t('dossier.noCommercial')}</span>
               </div>
             </div>
           </div>
@@ -622,41 +635,41 @@ export function AuditDossier({
           {typology === 'VACANT_PLOT' ? (
             <div data-testid="vacant-plot-notice" className="p-4 rounded-lg bg-surface-container-low border border-outline-variant text-xs space-y-1.5">
               <div className="flex items-center gap-2 text-amber-400 font-semibold">
-                <span>🏗️ Parcela sin edificación existente</span>
+                <span>{t('dossier.vacantPlotTitle')}</span>
               </div>
               <p className="text-on-surface-variant">
-                Al tratarse de un solar urbano vacante, no aplican inspecciones técnicas de la edificación (ITE/IEE), certificados de eficiencia energética (CEE) ni derramas de conservación comunitaria.
+                {t('dossier.vacantPlotDesc')}
               </p>
             </div>
           ) : typology === 'RUSTIC' ? (
             <div data-testid="rustic-plot-notice" className="p-4 rounded-lg bg-surface-container-low border border-outline-variant text-xs space-y-1.5">
               <div className="flex items-center gap-2 text-emerald-400 font-semibold">
-                <span>🌾 Finca rústica / Parcela no residencial</span>
+                <span>{t('dossier.rusticPlotTitle')}</span>
               </div>
               <p className="text-on-surface-variant">
-                Inmueble de naturaleza rústica o agraria no sujeto a régimen de propiedad horizontal residencial ni certificados energéticos de edificación continua.
+                {t('dossier.rusticPlotDesc')}
               </p>
             </div>
           ) : typology === 'INDUSTRIAL' ? (
             <div data-testid="industrial-notice" className="p-4 rounded-lg bg-surface-container-low border border-outline-variant text-xs space-y-2">
               <div className="flex items-center gap-2 text-cyan-400 font-semibold text-sm">
-                <span>🏭 Diagnóstico Técnico & CapEx Industrial (RSCIEI)</span>
+                <span>{t('dossier.industrialTitle')}</span>
               </div>
               <p className="text-on-surface-variant leading-relaxed">
-                Inmueble de naturaleza industrial / logística. No aplican derramas vecinales de propiedad horizontal residencial. La diligencia técnica se rige por el <strong>RSCIEI (Reglamento de Seguridad Contra Incendios en Establecimientos Industriales, RD 2267/2004)</strong>, sobrecargas de solera, altura libre y estanqueidad de cubiertas.
+                {t('dossier.industrialDesc')}
               </p>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-1 font-mono text-[11px]">
                 <div className="p-2 rounded bg-surface-container border border-outline-variant/60">
-                  <span className="text-outline block text-[10px]">Normativa de Incendios</span>
+                  <span className="text-outline block text-[10px]">{t('dossier.fireRegulation')}</span>
                   <span className="text-primary font-semibold">RSCIEI / CTE DB-SI</span>
                 </div>
                 <div className="p-2 rounded bg-surface-container border border-outline-variant/60">
-                  <span className="text-outline block text-[10px]">Cubiertas & Envolvente</span>
-                  <span className="text-on-surface font-semibold">Inspección de estanqueidad</span>
+                  <span className="text-outline block text-[10px]">{t('dossier.roofEnclosure')}</span>
+                  <span className="text-on-surface font-semibold">{t('dossier.leakInspection')}</span>
                 </div>
                 <div className="p-2 rounded bg-surface-container border border-outline-variant/60">
-                  <span className="text-outline block text-[10px]">Régimen de Comunidad</span>
-                  <span className="text-emerald-400 font-semibold">Exento de derramas vecinales</span>
+                  <span className="text-outline block text-[10px]">{t('dossier.communityRegime')}</span>
+                  <span className="text-emerald-400 font-semibold">{t('dossier.exemptDerramas')}</span>
                 </div>
               </div>
             </div>
@@ -733,10 +746,10 @@ export function AuditDossier({
       {/* 4. METHODOLOGICAL & LEGAL DISCLAIMER */}
       <div className="p-space-lg bg-surface text-[11px] text-outline font-mono leading-relaxed space-y-1 shrink-0">
         <p className="font-semibold text-on-surface-variant">
-          Nota Metodológica & Descargo Cívico:
+          {t('dossier.methodologicalNote')}
         </p>
         <p>
-          Este informe ha sido generado de forma automatizada por la plataforma de código abierto OpenBarrio mediante agregación y normalización en tiempo real de registros públicos de la Sede Electrónica del Catastro (OVC), Instituto Nacional de Estadística (INE ADRH), Ministerio para la Transición Ecológica (MITECO SICA y SNCZI) y Ministerio de Vivienda y Agenda Urbana (MIVAU SERPAVI). Los datos ofrecidos tienen carácter informativo y no sustituyen certificaciones administrativas formales ni tasaciones periciales oficiales.
+          {t('dossier.methodologicalDesc')}
         </p>
       </div>
     </div>

@@ -3,12 +3,20 @@ import { LanguageProvider } from './i18n';
 import { LandingView } from './views/LandingView';
 import { GisWorkspaceView } from './views/GisWorkspaceView';
 import { TransparencyView } from './views/TransparencyView';
+import { SurfaceCheckerToolView } from './views/tools/SurfaceCheckerToolView';
+import { RentLegalCalculatorToolView } from './views/tools/RentLegalCalculatorToolView';
+import { ItpIbiSimulatorToolView } from './views/tools/ItpIbiSimulatorToolView';
+import { MunicipalityView } from './views/municipality/MunicipalityView';
+import { MunicipalitiesDirectoryView } from './views/municipality/MunicipalitiesDirectoryView';
 import { UnitPickerModal } from './components/UnitPickerModal';
 import { PropertyDuelModal } from './components/comparator/PropertyDuelModal';
 import { CertifiedPdfReport } from './components/CertifiedPdfReport';
+import { ChromeExtensionBanner } from './components/common/ChromeExtensionBanner';
 import {
   useWorkspaceStore,
   useViewMode,
+  useMunicipalitySlug,
+  useIsEmbed,
   useReport,
   useSelectedCoords,
   useIsUnitPickerOpen,
@@ -21,6 +29,8 @@ import { apiClient } from './services/api.client';
 
 export function AppContent() {
   const viewMode = useViewMode();
+  const municipalitySlug = useMunicipalitySlug();
+  const isEmbed = useIsEmbed();
   const report = useReport();
   const selectedCoords = useSelectedCoords();
   const isUnitPickerOpen = useIsUnitPickerOpen();
@@ -41,14 +51,36 @@ export function AppContent() {
     initFromUrl();
   }, [initFromUrl]);
 
+  // Scroll to top on route / view transition
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+    }
+  }, [viewMode, municipalitySlug]);
+
   return (
     <>
       {viewMode === 'map' ? (
         <GisWorkspaceView />
       ) : viewMode === 'transparency' ? (
         <TransparencyView />
+      ) : viewMode === 'tool-surface' ? (
+        <SurfaceCheckerToolView isEmbed={Boolean(isEmbed)} />
+      ) : viewMode === 'tool-rent' ? (
+        <RentLegalCalculatorToolView isEmbed={Boolean(isEmbed)} />
+      ) : viewMode === 'tool-itp' ? (
+        <ItpIbiSimulatorToolView isEmbed={Boolean(isEmbed)} />
+      ) : viewMode === 'municipality' ? (
+        <MunicipalityView slug={municipalitySlug || 'madrid'} />
+      ) : viewMode === 'municipios-directory' ? (
+        <MunicipalitiesDirectoryView />
       ) : (
         <LandingView />
+      )}
+
+      {/* Floating sticky extension banner for programmatic & tool views when not in embed mode */}
+      {!isEmbed && viewMode !== 'map' && (
+        <ChromeExtensionBanner variant="sticky" />
       )}
 
       {/* Global Modals Connected to Zustand Store */}

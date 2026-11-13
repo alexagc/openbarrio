@@ -8,6 +8,7 @@ import {
   Loader2,
 } from 'lucide-react';
 import { getCardinalOrientation } from '../../utils/solar';
+import { useTranslation } from '../../i18n';
 
 export interface MapControlsProps {
   is3DMode: boolean;
@@ -42,6 +43,8 @@ export function MapControls({
   onLocateMe,
   isLocating = false,
 }: MapControlsProps) {
+  const { t } = useTranslation();
+
   return (
     <>
       {/* ================= MOBILE TOUCH FAB TOOLBAR (Top-Right, >=44x44px) ================= */}
@@ -89,8 +92,8 @@ export function MapControls({
           onClick={onLocateMe}
           disabled={isLocating}
           className="w-11 h-11 min-w-[44px] min-h-[44px] rounded-xl bg-surface-container-low/95 backdrop-blur-md border border-outline-variant text-primary flex items-center justify-center shadow-xl active:scale-95 transition-transform cursor-pointer disabled:opacity-50"
-          aria-label="Mi ubicación"
-          title="Mi ubicación"
+          aria-label={t('map.locateMe')}
+          title={t('map.locateMe')}
           data-testid="mobile-fab-locate"
         >
           {isLocating ? (
@@ -106,8 +109,8 @@ export function MapControls({
             type="button"
             onClick={onZoomIn}
             className="w-11 h-11 min-w-[44px] min-h-[44px] flex items-center justify-center text-on-surface hover:text-primary active:bg-surface-container transition-colors cursor-pointer"
-            aria-label="Acercar mapa"
-            title="Acercar (+)"
+            aria-label={t('map.zoomIn')}
+            title={`${t('map.zoomIn')} (+)`}
             data-testid="mobile-fab-zoom-in"
           >
             <Plus className="w-5 h-5" />
@@ -117,8 +120,8 @@ export function MapControls({
             type="button"
             onClick={onZoomOut}
             className="w-11 h-11 min-w-[44px] min-h-[44px] flex items-center justify-center text-on-surface hover:text-primary active:bg-surface-container transition-colors cursor-pointer"
-            aria-label="Alejar mapa"
-            title="Alejar (-)"
+            aria-label={t('map.zoomOut')}
+            title={`${t('map.zoomOut')} (-)`}
             data-testid="mobile-fab-zoom-out"
           >
             <Minus className="w-5 h-5" />
@@ -201,8 +204,8 @@ export function MapControls({
                 type="button"
                 onClick={onZoomIn}
                 className="w-7 h-7 flex items-center justify-center text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high transition-colors cursor-pointer"
-                title="Acercar (+)"
-                aria-label="Acercar (+)"
+                title={`${t('map.zoomIn')} (+)`}
+                aria-label={`${t('map.zoomIn')} (+)`}
               >
                 <Plus className="w-3.5 h-3.5" />
               </button>
@@ -211,8 +214,8 @@ export function MapControls({
                 type="button"
                 onClick={onZoomOut}
                 className="w-7 h-7 flex items-center justify-center text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high transition-colors cursor-pointer"
-                title="Alejar (-)"
-                aria-label="Alejar (-)"
+                title={`${t('map.zoomOut')} (-)`}
+                aria-label={`${t('map.zoomOut')} (-)`}
               >
                 <Minus className="w-3.5 h-3.5" />
               </button>
@@ -233,8 +236,8 @@ export function MapControls({
               onClick={onLocateMe}
               disabled={isLocating}
               className="w-7 h-7 bg-surface-container hover:bg-surface-container-high border border-outline-variant/60 rounded flex items-center justify-center text-primary transition-colors cursor-pointer disabled:opacity-50"
-              title="Mi ubicación GPS"
-              aria-label="Mi ubicación"
+              title={t('map.locateMe')}
+              aria-label={t('map.locateMe')}
             >
               {isLocating ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Navigation className="w-3.5 h-3.5" />}
             </button>

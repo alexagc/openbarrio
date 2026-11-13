@@ -37,8 +37,20 @@ for (const mig of migrationFiles) {
 }
 
 // 2. Seed Radon Municipalities if empty
+const radonCandidates = [
+  'packages/etl/dist/openbarrio-etl-dist/cte_radon.sql',
+  'packages/etl/dist/cte_radon.sql',
+];
+const radonDistSql = radonCandidates.find((p) => fs.existsSync(p));
 const radonCount = Number(db.prepare('SELECT count(*) as total FROM cte_radon_municipalities').get()?.total || 0);
-if (radonCount === 0) {
+
+if (radonDistSql && radonCount < 1000) {
+  console.log(`☢️ Loading CTE DB-HS 6 Radon distribution from ${radonDistSql}...`);
+  const sql = fs.readFileSync(radonDistSql, 'utf8');
+  db.exec(sql);
+  const newCount = db.prepare('SELECT count(*) as total FROM cte_radon_municipalities').get()?.total || 0;
+  console.log(`✅ Loaded ${newCount} CTE DB-HS 6 Radon municipalities.`);
+} else if (radonCount === 0) {
   console.log('☢️ Seeding CTE DB-HS 6 Radon Municipal Classifications...');
   const radonStmt = db.prepare(`
     INSERT OR REPLACE INTO cte_radon_municipalities (municipality_code, municipality_name, province_code, province_name, zone)
@@ -82,8 +94,20 @@ if (radonCount === 0) {
 }
 
 // 3. Seed VUT Census Sections if empty
+const vutCandidates = [
+  'packages/etl/dist/openbarrio-etl-dist/vut_census_tracts.sql',
+  'packages/etl/dist/vut_census_tracts.sql',
+];
+const vutDistSql = vutCandidates.find((p) => fs.existsSync(p));
 const vutCount = Number(db.prepare('SELECT count(*) as total FROM census_tract_vut').get()?.total || 0);
-if (vutCount === 0) {
+
+if (vutDistSql && vutCount < 1000) {
+  console.log(`🏖️ Loading INE Experimental VUT distribution from ${vutDistSql}...`);
+  const sql = fs.readFileSync(vutDistSql, 'utf8');
+  db.exec(sql);
+  const newCount = db.prepare('SELECT count(*) as total FROM census_tract_vut').get()?.total || 0;
+  console.log(`✅ Loaded ${newCount} INE VUT census tracts.`);
+} else if (vutCount < 14) {
   console.log('🏖️ Seeding INE Experimental VUT Tourist Housing datasets...');
   const vutStmt = db.prepare(`
     INSERT OR REPLACE INTO census_tract_vut (census_section_id, total_dwellings, vut_count, vut_beds, vut_ratio_pct)
@@ -102,6 +126,8 @@ if (vutCount === 0) {
     ['4109101001', 1200, 48, 192, 4.0],
     // Low
     ['2807917001', 1600, 8, 32, 0.5],
+    ['2807917119', 1081, 4, 11, 0.37],
+    ['2807917113', 1081, 4, 11, 0.37],
     ['2807904001', 1300, 26, 104, 2.0],
     ['4802001001', 1450, 22, 88, 1.52],
     ['3120101001', 1100, 20, 80, 1.82],
@@ -116,8 +142,20 @@ if (vutCount === 0) {
 }
 
 // 3b. Seed MIVAU SERPAVI Statutory Rental Benchmarks if empty
+const serpaviCandidates = [
+  'packages/etl/dist/openbarrio-etl-dist/serpavi_benchmarks.sql',
+  'packages/etl/dist/serpavi_benchmarks.sql',
+];
+const serpaviDistSql = serpaviCandidates.find((p) => fs.existsSync(p));
 const serpaviCount = Number(db.prepare('SELECT count(*) as total FROM mivau_serpavi_benchmarks').get()?.total || 0);
-if (serpaviCount === 0) {
+
+if (serpaviDistSql && serpaviCount < 100) {
+  console.log(`⚖️ Loading MIVAU SERPAVI rental benchmarks from ${serpaviDistSql}...`);
+  const sql = fs.readFileSync(serpaviDistSql, 'utf8');
+  db.exec(sql);
+  const newCount = db.prepare('SELECT count(*) as total FROM mivau_serpavi_benchmarks').get()?.total || 0;
+  console.log(`✅ Loaded ${newCount} MIVAU SERPAVI benchmarks.`);
+} else if (serpaviCount === 0) {
   console.log('⚖️ Seeding MIVAU SERPAVI Statutory Rental Benchmarks...');
   const serpaviStmt = db.prepare(`
     INSERT OR REPLACE INTO mivau_serpavi_benchmarks (cusec, municipality_code, is_stressed_market, lower_bound_eur_m2, median_eur_m2, upper_bound_eur_m2, sample_size)

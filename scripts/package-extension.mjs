@@ -135,7 +135,7 @@ function collectFiles(dir, baseDir = dir) {
 }
 
 async function main() {
-  console.log('📦 OpenBarrio v1.0.0 — Chrome Web Store Packaging Pipeline');
+  console.log('📦 OpenBarrio v1.1.0 — Chrome Web Store Packaging Pipeline');
 
   if (!fs.existsSync(distDir)) {
     console.error('❌ Error: apps/extension/dist not found. Please run "pnpm --filter @openbarrio/extension run build" first.');

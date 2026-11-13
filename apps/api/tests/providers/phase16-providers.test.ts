@@ -52,7 +52,7 @@ describe('Phase 16 Providers: Radon & VUT', () => {
     });
 
     it('fallback provider calculates deterministic realistic saturation without database', async () => {
-      const liveVut = new VutProvider(undefined);
+      const liveVut = new VutProvider(undefined, { enableLiveLookup: false });
       const res = await liveVut.getVutEvaluation('2807904001');
       expect(res.censusSectionId).toBe('2807904001');
       expect(res.totalDwellings).toBeGreaterThan(0);

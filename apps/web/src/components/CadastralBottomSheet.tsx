@@ -1,4 +1,5 @@
 import React, { useState, useRef } from 'react';
+import { useTranslation } from '../i18n';
 import { ExtendedAuditReport } from '../services/api.client';
 import {
   ShieldCheck,
@@ -45,6 +46,7 @@ export function CadastralBottomSheet({
   onDraggingChange,
   className = '',
 }: CadastralBottomSheetProps) {
+  const { t } = useTranslation();
   const [copied, setCopied] = useState(false);
   const [bookmarked, setBookmarked] = useState(false);
   const isDraggingRef = useRef(false);
@@ -166,7 +168,7 @@ export function CadastralBottomSheet({
     return (
       <section
         role="region"
-        aria-label="Auditoría Catastral"
+        aria-label={t('bottomSheet.regionAria')}
         className={`z-20 w-full bg-surface-container border-t border-outline-variant rounded-t-xl shadow-2xl flex flex-col p-4 animate-pulse ${snapHeightClasses[snapPoint]} ${className}`}
       >
         <div className="w-10 h-1 rounded-full bg-outline-variant mx-auto mb-3" />
@@ -191,12 +193,12 @@ export function CadastralBottomSheet({
     return (
       <section
         role="region"
-        aria-label="Auditoría Catastral"
+        aria-label={t('bottomSheet.regionAria')}
         className={`z-20 w-full bg-surface-container border-t border-outline-variant rounded-t-xl shadow-2xl flex flex-col items-center justify-center p-4 text-center ${snapHeightClasses[snapPoint]} ${className}`}
       >
         <div className="w-10 h-1 rounded-full bg-outline-variant mx-auto mb-2" />
         <p className="font-body-sm text-on-surface-variant text-xs">
-          Selecciona una parcela o inmueble para ver su auditoría catastral.
+          {t('bottomSheet.emptyPrompt')}
         </p>
       </section>
     );
@@ -214,16 +216,16 @@ export function CadastralBottomSheet({
   const overallScore = score?.overallScore ?? 82;
 
   // Score badge determination
-  let scoreBadgeText = 'AUDITORÍA FAVORABLE';
+  let scoreBadgeText = t('bottomSheet.scoreFavorable');
   let scoreBadgeColor = 'text-primary bg-primary/10 border-primary/30';
   let ScoreIcon = ShieldCheck;
 
   if (overallScore < 50) {
-    scoreBadgeText = 'ALERTA / PRECAUCIÓN';
+    scoreBadgeText = t('bottomSheet.scoreAlert');
     scoreBadgeColor = 'text-error bg-error/10 border-error/30';
     ScoreIcon = ShieldAlert;
   } else if (overallScore < 75) {
-    scoreBadgeText = 'AUDITORÍA MODERADA';
+    scoreBadgeText = t('bottomSheet.scoreModerate');
     scoreBadgeColor = 'text-secondary bg-secondary/10 border-secondary/30';
     ScoreIcon = AlertTriangle;
   }
@@ -231,16 +233,16 @@ export function CadastralBottomSheet({
   // Micro-pills Telemetry computations
   const constYear = property.building.constructionYear || 1954;
   const iteHighlight = score?.keyHighlights?.some((h) => h.toLowerCase().includes('ite')) ?? true;
-  const yearAndIte = `Año ${constYear} (${iteHighlight ? 'ITE Favorable' : 'ITE Conforme'})`;
+  const yearAndIte = `${t('bottomSheet.yearPrefix')} ${constYear} (${iteHighlight ? t('bottomSheet.iteFavorable') : t('bottomSheet.iteCompliant')})`;
 
   const builtM2 = property.building.builtSurfaceM2 || 102;
   const usefulM2 = Math.round(builtM2 * 0.84);
-  const surfacesText = `${usefulM2} m² Útiles (${builtM2.toLocaleString('es-ES')} m² Const.)`;
+  const surfacesText = `${usefulM2} ${t('bottomSheet.usefulM2')} (${builtM2.toLocaleString('es-ES')} ${t('bottomSheet.builtM2')})`;
 
   const incomeEur = neighborhood?.averageNetHouseholdIncomeEur;
   const incomeFormatted = incomeEur ? Math.round(incomeEur).toLocaleString('es-ES') + '€' : '38.500€';
   const percentile = neighborhood?.percentileInMunicipality ?? 82;
-  const incomeText = `Renta ${incomeFormatted} (ADRH P${percentile})`;
+  const incomeText = `${t('bottomSheet.incomePrefix')} ${incomeFormatted} (ADRH P${percentile})`;
 
   const noiseDba = environment?.noise?.dayEveningNightDecibels ?? 56;
   const noiseText = `Lden ${noiseDba} dBA (SICA)`;
@@ -283,7 +285,7 @@ export function CadastralBottomSheet({
   }
   const walkSubtext = summaryParts.length > 0
     ? summaryParts.slice(0, 3).join(' · ')
-    : 'Sin equipamientos en radio de proximidad';
+    : t('bottomSheet.noEquipments');
 
   // SERPAVI card computations
   const isStressed = rentalBenchmark?.isStressedHousingZone ?? report.urbanPlanning?.isStressedHousingZone ?? false;
@@ -309,7 +311,7 @@ export function CadastralBottomSheet({
   return (
     <section
       role="region"
-      aria-label="Auditoría Catastral"
+      aria-label={t('bottomSheet.regionAria')}
       className={`z-20 w-full bg-surface-container border-t border-outline-variant rounded-t-xl shadow-2xl flex flex-col shrink-0 overflow-hidden pb-[env(safe-area-inset-bottom)] transition-transform duration-300 ${snapHeightClasses[snapPoint]} ${className}`}
       style={{
         transform: dragDeltaY !== 0 ? `translateY(${Math.max(-80, Math.min(80, dragDeltaY))}px)` : undefined,
@@ -329,7 +331,7 @@ export function CadastralBottomSheet({
         {/* Tactile drag handle with accessible keyboard trigger */}
         <button
           type="button"
-          aria-label="Ajustar panel de auditoría"
+          aria-label={t('bottomSheet.adjustPanelAria')}
           onClick={cycleSnapPoint}
           onKeyDown={handleHandleKeyDown}
           className="w-full flex items-center justify-center py-1 mb-1 focus:outline-none focus-visible:ring-1 focus-visible:ring-primary rounded"
@@ -345,7 +347,7 @@ export function CadastralBottomSheet({
               </span>
               <button
                 type="button"
-                aria-label="Guardar inmueble"
+                aria-label={t('bottomSheet.bookmarkAria')}
                 onClick={(e) => {
                   e.stopPropagation();
                   setBookmarked(!bookmarked);
@@ -360,7 +362,7 @@ export function CadastralBottomSheet({
             <p className="font-body text-xs text-on-surface-variant flex items-center gap-1 truncate">
               <span>{`Distrito Centro · ${municipality}`}</span>
               <span className="text-outline">|</span>
-              <span className="text-secondary font-medium">Uso {usage}</span>
+              <span className="text-secondary font-medium">{t('bottomSheet.usePrefix')} {usage}</span>
             </p>
           </div>
 
@@ -382,14 +384,14 @@ export function CadastralBottomSheet({
             type="button"
             onClick={handleCopyRefcat}
             className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-lg bg-surface-container-lowest border border-outline-variant text-on-surface-variant hover:text-primary hover:border-primary transition-colors text-left"
-            title="Copiar Referencia Catastral"
-            aria-label="Copiar Referencia Catastral"
+            title={t('bottomSheet.copyRcTitle')}
+            aria-label={t('bottomSheet.copyRcTitle')}
           >
             {copied ? <Check className="w-3 h-3 text-primary" /> : <Copy className="w-3 h-3" />}
             <span className="font-mono text-[11px] text-tertiary font-medium">RC {refcat}</span>
-            {copied && <span className="text-[10px] text-primary font-bold ml-1">¡Copiado!</span>}
+            {copied && <span className="text-[10px] text-primary font-bold ml-1">{t('bottomSheet.copied')}</span>}
           </button>
-          <span className="font-mono text-[10px] text-on-surface-variant">Sede Catastro: Oficial</span>
+          <span className="font-mono text-[10px] text-on-surface-variant">{t('bottomSheet.officialCatastro')}</span>
         </div>
       </div>
 
@@ -427,9 +429,9 @@ export function CadastralBottomSheet({
         {/* 5-Pillar Bento Risk Indicators Grid */}
         <div>
           <div className="flex items-center justify-between mb-2">
-            <h4 className="font-headline font-semibold text-sm text-on-surface">Pilares de Riesgo Territorial</h4>
+            <h4 className="font-headline font-semibold text-sm text-on-surface">{t('bottomSheet.riskPillarsTitle')}</h4>
             <span className="font-mono text-[10px] text-primary bg-primary/10 px-1.5 py-0.5 rounded border border-primary/20">
-              5 verificados
+              {t('bottomSheet.verifiedPillars', { count: 5 })}
             </span>
           </div>
 
@@ -437,7 +439,7 @@ export function CadastralBottomSheet({
             {/* Pillar 1: Seguridad Hídrica */}
             <div className="p-2.5 rounded-lg bg-surface-container-low border border-outline-variant/60 flex flex-col justify-between">
               <div className="flex items-center justify-between text-on-surface-variant mb-1">
-                <span className="font-body text-[11px] leading-tight text-on-surface font-medium">Seguridad Hídrica</span>
+                <span className="font-body text-[11px] leading-tight text-on-surface font-medium">{t('bottomSheet.waterSecurity')}</span>
                 <Droplets className="text-primary w-4 h-4" />
               </div>
               <div className="flex items-baseline justify-between mt-1">
@@ -455,7 +457,7 @@ export function CadastralBottomSheet({
             {/* Pillar 2: Socioeconomía INE */}
             <div className="p-2.5 rounded-lg bg-surface-container-low border border-outline-variant/60 flex flex-col justify-between">
               <div className="flex items-center justify-between text-on-surface-variant mb-1">
-                <span className="font-body text-[11px] leading-tight text-on-surface font-medium">Socioeconomía INE</span>
+                <span className="font-body text-[11px] leading-tight text-on-surface font-medium">{t('bottomSheet.ineSocioeconomics')}</span>
                 <TrendingUp className="text-tertiary w-4 h-4" />
               </div>
               <div className="flex items-baseline justify-between mt-1">
@@ -463,7 +465,7 @@ export function CadastralBottomSheet({
                   {ineScore}
                   <span className="text-[10px] text-outline font-normal">/100</span>
                 </span>
-                <span className="font-mono text-[9px] text-tertiary">Decil {decil}</span>
+                <span className="font-mono text-[9px] text-tertiary">{t('bottomSheet.decile')} {decil}</span>
               </div>
               <div className="w-full bg-surface-container-highest h-1 rounded-full mt-1.5 overflow-hidden">
                 <div className="bg-tertiary h-full rounded-full" style={{ width: `${ineScore}%` }} />
@@ -473,7 +475,7 @@ export function CadastralBottomSheet({
             {/* Pillar 3: Calidad ITE/IEE */}
             <div className="p-2.5 rounded-lg bg-surface-container-low border border-outline-variant/60 flex flex-col justify-between">
               <div className="flex items-center justify-between text-on-surface-variant mb-1">
-                <span className="font-body text-[11px] leading-tight text-on-surface font-medium">Calidad ITE/IEE</span>
+                <span className="font-body text-[11px] leading-tight text-on-surface font-medium">{t('bottomSheet.buildingHealth')}</span>
                 <Building2 className="text-secondary w-4 h-4" />
               </div>
               <div className="flex items-baseline justify-between mt-1">
@@ -491,7 +493,7 @@ export function CadastralBottomSheet({
             {/* Pillar 4: Acústica MITECO */}
             <div className="p-2.5 rounded-lg bg-surface-container-low border border-outline-variant/60 flex flex-col justify-between">
               <div className="flex items-center justify-between text-on-surface-variant mb-1">
-                <span className="font-body text-[11px] leading-tight text-on-surface font-medium">Acústica MITECO</span>
+                <span className="font-body text-[11px] leading-tight text-on-surface font-medium">{t('bottomSheet.mitecoAcoustics')}</span>
                 <Volume2 className="text-on-surface-variant w-4 h-4" />
               </div>
               <div className="flex items-baseline justify-between mt-1">
@@ -514,7 +516,7 @@ export function CadastralBottomSheet({
                 </div>
                 <div className="min-w-0">
                   <div className="font-body text-xs font-semibold text-on-surface truncate">
-                    Caminabilidad de Proximidad 15-Min
+                    {t('bottomSheet.walkability15Min')}
                   </div>
                   <div className="font-mono text-[10px] text-on-surface-variant truncate">
                     {walkSubtext}
@@ -535,7 +537,7 @@ export function CadastralBottomSheet({
             <div className="flex items-center gap-1.5">
               <Scale className="text-secondary w-4 h-4" />
               <span className="font-headline text-xs font-semibold text-on-surface">
-                Índice SERPAVI · Ley 12/2023
+                {t('bottomSheet.serpaviLaw')}
               </span>
             </div>
             <span
@@ -545,23 +547,23 @@ export function CadastralBottomSheet({
                   : 'bg-primary/15 text-primary border border-primary/30'
               }`}
             >
-              {isStressed ? 'Zona Tensionada' : 'Mercado Libre'}
+              {isStressed ? t('bottomSheet.stressedZone') : t('bottomSheet.freeMarket')}
             </span>
           </div>
 
           <div className="grid grid-cols-2 gap-2 text-left mb-2">
             <div className="p-2 rounded bg-surface-container-lowest border border-outline-variant/40">
-              <div className="font-mono text-[10px] text-on-surface-variant">Rango Estatal Regulado</div>
+              <div className="font-mono text-[10px] text-on-surface-variant">{t('bottomSheet.regulatedRange')}</div>
               <div className="font-mono text-xs sm:text-sm font-bold text-primary">
                 {lowerRent.toLocaleString('es-ES')}€ - {upperRent.toLocaleString('es-ES')}€
-                <span className="text-[9px] font-normal text-on-surface-variant">/mes</span>
+                <span className="text-[9px] font-normal text-on-surface-variant">{t('bottomSheet.perMonth')}</span>
               </div>
             </div>
             <div className="p-2 rounded bg-surface-container-lowest border border-outline-variant/40">
-              <div className="font-mono text-[10px] text-on-surface-variant">Oferta Testigo Mercado</div>
+              <div className="font-mono text-[10px] text-on-surface-variant">{t('bottomSheet.marketOffer')}</div>
               <div className="font-mono text-xs sm:text-sm font-bold text-secondary">
                 {marketRent.toLocaleString('es-ES')}€
-                <span className="text-[9px] font-normal text-on-surface-variant">/mes</span>
+                <span className="text-[9px] font-normal text-on-surface-variant">{t('bottomSheet.perMonth')}</span>
               </div>
             </div>
           </div>
@@ -585,7 +587,7 @@ export function CadastralBottomSheet({
               <Building2 className="text-tertiary w-4 h-4 shrink-0 group-hover:text-primary transition-colors" />
               <div className="min-w-0">
                 <span className="font-body text-xs sm:text-sm font-medium text-on-surface block truncate">
-                  División Horizontal ({unitsCount} Fincas)
+                  {t('bottomSheet.horizontalDivision', { count: unitsCount })}
                 </span>
                 <span className="font-mono text-[10px] text-on-surface-variant block truncate">
                   {unitsBreakdown}
@@ -604,7 +606,7 @@ export function CadastralBottomSheet({
               onClick={onOpenDuel}
               className="w-full py-2 px-3 rounded-lg bg-surface-container-high border border-primary/40 hover:bg-surface-variant text-primary font-mono text-xs font-semibold flex items-center justify-center gap-2 transition-all cursor-pointer"
             >
-              <span>+ Comparar Inmueble 1 vs 1</span>
+              <span>{t('bottomSheet.compare1vs1')}</span>
             </button>
           )}
 
@@ -615,7 +617,7 @@ export function CadastralBottomSheet({
             className="w-full py-2.5 px-4 rounded-lg bg-primary-container text-on-primary-container font-headline text-xs sm:text-sm font-semibold flex items-center justify-center gap-2 shadow-lg hover:bg-primary transition-all active:scale-95"
           >
             <FileDown className="w-4 h-4" />
-            <span>Exportar Dossier PDF Oficial</span>
+            <span>{t('bottomSheet.exportPdf')}</span>
           </button>
         </div>
 
@@ -624,7 +626,7 @@ export function CadastralBottomSheet({
           <div className="flex items-center justify-between">
             <span className="flex items-center gap-1">
               <CheckCircle2 className="w-3 h-3 text-primary" />
-              Certificado Sede Electrónica Catastro OVC
+              {t('bottomSheet.certifiedOvc')}
             </span>
             <span>ETRS89 Huso 30N</span>
           </div>

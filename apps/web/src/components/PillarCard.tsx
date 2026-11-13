@@ -21,6 +21,7 @@ import {
   UrbanPlanningData,
   RentalBenchmark,
 } from '@openbarrio/core';
+import { useTranslation } from '../i18n';
 
 export interface PillarCardsProps {
   property: CadastralProperty;
@@ -39,6 +40,7 @@ export function PillarCards({
   urbanPlanning,
   rentalBenchmark,
 }: PillarCardsProps) {
+  const { t } = useTranslation();
   // 1. Building regulation era helper
   const year = property.building.constructionYear;
   let codeStandard = 'Pre-normativa (Sin código térmico)';
@@ -220,7 +222,7 @@ export function PillarCards({
             <div className="p-2.5 bg-surface-container-low border border-outline-variant rounded-lg">
               <div className="flex items-center gap-1 text-[10px] font-mono text-outline uppercase">
                 <HeartPulse className="w-3.5 h-3.5 text-primary" />
-                <span>Salud Primaria (CAP)</span>
+                <span>{t('bento.facilityHealthcare')}</span>
               </div>
               <span className="font-sans text-xs font-semibold text-on-surface block mt-1 truncate" title={conn.nearestHealthcare?.name || 'No detectado en radio próximo'}>
                 {conn.nearestHealthcare?.name || 'No detectado en radio próximo'}
@@ -234,7 +236,7 @@ export function PillarCards({
             <div className="p-2.5 bg-surface-container-low border border-outline-variant rounded-lg">
               <div className="flex items-center gap-1 text-[10px] font-mono text-outline uppercase">
                 <GraduationCap className="w-3.5 h-3.5 text-secondary" />
-                <span>Educación (Colegio/IES)</span>
+                <span>{t('bento.facilityEducation')}</span>
               </div>
               <span className="font-sans text-xs font-semibold text-on-surface block mt-1 truncate" title={conn.nearestEducation?.name || 'No detectado en radio próximo'}>
                 {conn.nearestEducation?.name || 'No detectado en radio próximo'}
@@ -248,7 +250,7 @@ export function PillarCards({
             <div className="p-2.5 bg-surface-container-low border border-outline-variant rounded-lg">
               <div className="flex items-center gap-1 text-[10px] font-mono text-outline uppercase">
                 <Train className="w-3.5 h-3.5 text-tertiary" />
-                <span>Transporte Rápido</span>
+                <span>{t('bento.facilityTransit')}</span>
               </div>
               <span className="font-sans text-xs font-semibold text-on-surface block mt-1 truncate" title={conn.nearestTransit?.name || 'No detectado en radio próximo'}>
                 {conn.nearestTransit?.name || 'No detectado en radio próximo'}
@@ -262,7 +264,7 @@ export function PillarCards({
             <div className="p-2.5 bg-surface-container-low border border-outline-variant rounded-lg">
               <div className="flex items-center gap-1 text-[10px] font-mono text-outline uppercase">
                 <Trees className="w-3.5 h-3.5 text-primary" />
-                <span>Parque & Zona Verde</span>
+                <span>{t('bento.facilityPark')}</span>
               </div>
               <span className="font-sans text-xs font-semibold text-on-surface block mt-1 truncate" title={conn.nearestPark?.name || 'No detectado en radio próximo'}>
                 {conn.nearestPark?.name || 'No detectado en radio próximo'}
@@ -280,21 +282,23 @@ export function PillarCards({
             <div className="flex items-center gap-1.5">
               <Building2 className="text-secondary w-4 h-4" />
               <h3 className="font-title-md text-title-md text-on-surface font-semibold">
-                Ficha Catastral Oficial
+                {t('bento.pillarBuildingTitle')}
               </h3>
             </div>
-            <span className="text-[10px] font-mono text-outline">Fuente: OVC D.G. Catastro</span>
+            <span className="text-[10px] font-mono text-outline">{t('bento.pillarBuildingBadge')}</span>
           </div>
 
           <div className="grid grid-cols-2 gap-2">
             <div className="p-2.5 bg-surface-container-low border border-outline-variant rounded-lg">
-              <span className="text-[10px] font-mono text-outline uppercase block">Año Construcción</span>
+              <span className="text-[10px] font-mono text-outline uppercase block">
+                {t('bento.yearBuilt').replace(':', '')}
+              </span>
               <span className="font-mono text-xl font-bold text-on-surface">{year > 0 ? year : '—'}</span>
               <span className="text-[10px] text-secondary block font-medium mt-0.5">{eraTag}</span>
             </div>
             <div className="p-2.5 bg-surface-container-low border border-outline-variant rounded-lg">
               <span className="text-[10px] font-mono text-outline uppercase block">
-                {isUnbuilt ? 'Superficie de Suelo' : 'Superficie Construida'}
+                {isUnbuilt ? 'Superficie de Suelo' : t('bento.surfaceBuilt').replace(':', '')}
               </span>
               <span className="font-mono text-xl font-bold text-primary">
                 {(isUnbuilt ? (plotArea || surface) : surface).toLocaleString('es-ES')} m²
@@ -319,7 +323,7 @@ export function PillarCards({
                   <td className="p-2 text-on-surface font-sans font-medium">{primaryUse}</td>
                 </tr>
                 <tr className="hover:bg-surface-container/50 transition-colors">
-                  <td className="p-2 text-outline">Unidades Urbanas</td>
+                  <td className="p-2 text-outline">{t('bento.unitsRegistered').replace(':', '')}</td>
                   <td className="p-2 text-on-surface">
                     {isUnbuilt
                       ? 'Sin división horizontal (Finca íntegra)'
@@ -327,7 +331,7 @@ export function PillarCards({
                   </td>
                 </tr>
                 <tr className="hover:bg-surface-container/50 transition-colors">
-                  <td className="p-2 text-outline">Calidad Normativa</td>
+                  <td className="p-2 text-outline">{t('bento.standardEra').replace(':', '')}</td>
                   <td className="p-2 text-on-surface flex items-center justify-between">
                     <span>{codeStandard}</span>
                     <span className={`px-1.5 py-0.2 rounded text-[9px] border font-semibold ${codeBadge}`}>
@@ -336,7 +340,7 @@ export function PillarCards({
                   </td>
                 </tr>
                 <tr className="hover:bg-surface-container/50 transition-colors">
-                  <td className="p-2 text-outline">Reformas Catastro</td>
+                  <td className="p-2 text-outline">{t('bento.renovationsCount').replace(':', '')}</td>
                   <td className="p-2 text-on-surface font-sans">
                     {urbanPlan.declaredRenovationsCount > 0
                       ? `${urbanPlan.declaredRenovationsCount} registradas ${urbanPlan.lastRenovationYear ? `(última en ${urbanPlan.lastRenovationYear})` : ''}`
@@ -354,15 +358,15 @@ export function PillarCards({
             <div className="flex items-center gap-1.5">
               <TrendingUp className="text-tertiary w-4 h-4" />
               <h3 className="font-title-md text-title-md text-on-surface font-semibold">
-                Demografía & Renta de Hogar
+                {t('bento.pillarSocioeconomicTitle')}
               </h3>
             </div>
-            <span className="text-[10px] font-mono text-outline">INE ADRH 2024</span>
+            <span className="text-[10px] font-mono text-outline">{t('bento.pillarSocioeconomicBadge')}</span>
           </div>
 
           <div className="p-3 bg-surface-container-low border border-outline-variant rounded-lg">
             <div className="flex items-baseline justify-between mb-1">
-              <span className="text-[11px] font-mono text-outline">Renta Neta Media por Hogar</span>
+              <span className="text-[11px] font-mono text-outline">{t('bento.householdIncome').replace(':', '')}</span>
               <span className="font-mono text-lg font-bold text-tertiary">
                 €{neighborhood.averageNetHouseholdIncomeEur.toLocaleString('es-ES')}
                 <span className="text-xs text-outline font-normal"> / año</span>
@@ -370,7 +374,7 @@ export function PillarCards({
             </div>
             <div className="flex items-center justify-between text-[10px] font-mono text-on-surface-variant">
               <span>
-                Percentil {neighborhood.percentileInMunicipality}º {property.address.province}
+                {t('bento.incomePercentile')} {neighborhood.percentileInMunicipality}º {property.address.province}
               </span>
               <span className="text-primary font-semibold flex items-center gap-1">
                 <TrendingUp className="w-3 h-3" /> Ranking #{neighborhood.rankingInCity?.rank ?? 1} / {neighborhood.rankingInCity?.totalSections ?? 100}
@@ -380,14 +384,14 @@ export function PillarCards({
 
           <div className="grid grid-cols-2 gap-2 text-xs">
             <div className="p-2.5 bg-surface-container-low border border-outline-variant rounded-lg">
-              <span className="text-[10px] font-mono text-outline uppercase block">Edad Media Residente</span>
+              <span className="text-[10px] font-mono text-outline uppercase block">{t('bento.medianAge').replace(':', '')}</span>
               <span className="font-mono text-sm font-semibold text-on-surface">
                 {neighborhood.demographics?.medianAge != null ? `${neighborhood.demographics.medianAge} años` : '42 años'}
               </span>
               <span className="text-[10px] text-outline block mt-0.5">Pirámide demográfica</span>
             </div>
             <div className="p-2.5 bg-surface-container-low border border-outline-variant rounded-lg">
-              <span className="text-[10px] font-mono text-outline uppercase block">Hogares Unipersonales</span>
+              <span className="text-[10px] font-mono text-outline uppercase block">{t('bento.singlePerson').replace(':', '')}</span>
               <span className="font-mono text-sm font-semibold text-on-surface">
                 {neighborhood.demographics?.singlePersonHouseholdPercentage != null
                   ? `${neighborhood.demographics.singlePersonHouseholdPercentage}%`
@@ -404,15 +408,15 @@ export function PillarCards({
             <div className="flex items-center gap-1.5">
               <Volume2 className="text-secondary w-4 h-4" />
               <h3 className="font-title-md text-title-md text-on-surface font-semibold">
-                Confort Acústico & Tráfico
+                {t('bento.pillarEnvironmentalTitle')}
               </h3>
             </div>
-            <span className="text-[10px] font-mono text-outline">MITECO SICA Cartografía</span>
+            <span className="text-[10px] font-mono text-outline">{t('bento.pillarEnvironmentalBadge')}</span>
           </div>
 
           <div className="p-3 bg-surface-container-low border border-outline-variant rounded-lg flex items-center justify-between">
             <div>
-              <div className="text-[10px] font-mono text-outline uppercase">Nivel Global Día / Tarde / Noche</div>
+              <div className="text-[10px] font-mono text-outline uppercase">{t('bento.noiseLden').replace(':', '')}</div>
               <div className={`font-mono text-lg font-bold ${noiseTextClass} mt-0.5`}>
                 {noise.dayEveningNightDecibels} dBA Lden
               </div>
@@ -421,7 +425,7 @@ export function PillarCards({
               </div>
             </div>
             <div className="text-right">
-              <div className="text-[10px] font-mono text-outline uppercase">Aislamiento Exigido</div>
+              <div className="text-[10px] font-mono text-outline uppercase">{t('bento.insulationRequired').replace(':', '')}</div>
               <div className="font-mono text-sm font-semibold text-primary mt-0.5">
                 {noise.dayEveningNightDecibels >= 65 ? '38 dBA' : '32 dBA'}
               </div>
@@ -436,7 +440,7 @@ export function PillarCards({
             <div className="p-2.5 bg-surface-container-low border border-outline-variant rounded-lg">
               <div className="flex items-center gap-1 text-[10px] font-mono text-outline uppercase">
                 <ShieldCheck className="w-3.5 h-3.5 text-primary" />
-                <span>Riesgo Hidrológico & Climático</span>
+                <span>{t('bento.floodRiskLevel').replace(':', '')}</span>
               </div>
               <span className={`font-mono text-xs font-bold ${floodClass} flex items-center gap-1 mt-1`}>
                 <FloodIcon className="w-3 h-3" />
@@ -448,7 +452,7 @@ export function PillarCards({
             <div className="p-2.5 bg-surface-container-low border border-outline-variant rounded-lg">
               <div className="flex items-center gap-1 text-[10px] font-mono text-outline uppercase">
                 <Wind className="w-3.5 h-3.5 text-primary" />
-                <span>Calidad del Aire (AQI)</span>
+                <span>{t('bento.airQualityIndex').replace(':', '')}</span>
               </div>
               <span className="font-mono text-xs font-bold text-primary block mt-1">
                 {aqi ? `${aqi.aqiIndex} AQI · ${aqi.category === 'GOOD' ? 'Buena' : aqi.category === 'FAIR' ? 'Razonable' : 'Moderada'}` : '32 AQI · Buena'}
@@ -467,15 +471,15 @@ export function PillarCards({
           <div className="flex items-center gap-1.5">
             <Scale className="text-primary w-4 h-4" />
             <h3 className="font-title-md text-title-md text-on-surface font-semibold">
-              Planeamiento Urbanístico & Régimen Legal
+              {t('bento.pillarUrbanPlanningTitle')}
             </h3>
           </div>
-          <span className="text-[10px] font-mono text-outline">MIVAU SIU & Ley 12/2023</span>
+          <span className="text-[10px] font-mono text-outline">{t('bento.pillarUrbanPlanningBadge')}</span>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <div className="p-3 bg-surface-container-low border border-outline-variant rounded-lg">
-            <span className="text-[10px] font-mono text-outline uppercase block">Clasificación del Suelo</span>
+            <span className="text-[10px] font-mono text-outline uppercase block">{t('bento.landClassification').replace(':', '')}</span>
             <div className="font-sans text-xs font-bold text-on-surface mt-1">
               {landClassificationLabels[urbanPlan.landClassification] || 'Suelo Urbano Consolidado (SUC)'}
             </div>
@@ -485,7 +489,7 @@ export function PillarCards({
           </div>
 
           <div className="p-3 bg-surface-container-low border border-outline-variant rounded-lg">
-            <span className="text-[10px] font-mono text-outline uppercase block">Zona Tensionada (Ley 12/2023)</span>
+            <span className="text-[10px] font-mono text-outline uppercase block">{t('bento.stressedZone').replace(':', '')}</span>
             <div className="font-sans text-xs font-bold mt-1">
               {urbanPlan.isStressedHousingZone ? (
                 <span className="text-secondary flex items-center gap-1">

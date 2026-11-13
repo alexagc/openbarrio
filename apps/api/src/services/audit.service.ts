@@ -135,7 +135,10 @@ export class AuditService {
     let vut: VutEvaluationDTO | undefined;
     if (typology === 'RESIDENTIAL') {
       try {
-        vut = await this.providers.vut.getVutEvaluation(neighborhood.censusSectionCode);
+        vut = await this.providers.vut.getVutEvaluation(neighborhood.censusSectionCode, {
+          latitude: lat,
+          longitude: lon,
+        });
       } catch {
         vut = undefined;
       }

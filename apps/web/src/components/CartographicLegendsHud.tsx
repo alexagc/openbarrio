@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { ChevronUp, ChevronDown, Layers, Volume2, Droplets, TrendingUp, Footprints } from 'lucide-react';
+import { useTranslation } from '../i18n';
 
 export interface ActiveLayersState {
   cadastre: boolean;
@@ -20,6 +21,7 @@ export function CartographicLegendsHud({
   defaultCollapsed = false,
   isDragging = false,
 }: CartographicLegendsHudProps) {
+  const { t } = useTranslation();
   const [isCollapsed, setIsCollapsed] = useState(defaultCollapsed);
 
   // If no thematic layers are active, hide HUD cleanly
@@ -36,7 +38,7 @@ export function CartographicLegendsHud({
         className="absolute bottom-10 left-3 z-20 px-3 py-1.5 bg-surface-container/80 backdrop-blur-md border border-primary/40 rounded-full shadow-lg flex items-center gap-2 font-mono text-[11px] text-primary transition-all pointer-events-none opacity-80 animate-pulse no-print"
       >
         <span className="w-1.5 h-1.5 rounded-full bg-primary" />
-        <span>HUD: Cartografía Activa</span>
+        <span>{t('hud.activeCartography')}</span>
       </div>
     );
   }
@@ -48,7 +50,7 @@ export function CartographicLegendsHud({
         <div className="flex items-center gap-2">
           <Layers className="w-3.5 h-3.5 text-primary" />
           <span className="text-xs font-bold font-headline text-on-surface tracking-tight">
-            Leyenda Cartográfica
+            {t('hud.legendTitle')}
           </span>
         </div>
 
@@ -56,8 +58,8 @@ export function CartographicLegendsHud({
           type="button"
           onClick={() => setIsCollapsed(!isCollapsed)}
           className="p-1 rounded text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high transition-colors cursor-pointer"
-          aria-label={isCollapsed ? 'Expandir leyendas' : 'Colapsar leyendas'}
-          title={isCollapsed ? 'Expandir leyendas' : 'Colapsar leyendas'}
+          aria-label={isCollapsed ? t('hud.expandLegends') : t('hud.collapseLegends')}
+          title={isCollapsed ? t('hud.expandLegends') : t('hud.collapseLegends')}
         >
           {isCollapsed ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
         </button>
@@ -72,9 +74,9 @@ export function CartographicLegendsHud({
               <div className="flex items-center justify-between text-[11px] font-semibold text-on-surface">
                 <span className="flex items-center gap-1.5">
                   <TrendingUp className="w-3 h-3 text-secondary" />
-                  Renta Neta Hogar (INE ADRH)
+                  {t('hud.netHouseholdIncome')}
                 </span>
-                <span className="text-[10px] font-mono text-outline">€/año</span>
+                <span className="text-[10px] font-mono text-outline">{t('hud.eurYear')}</span>
               </div>
 
               {/* Color gradient ramp matching MapLibre 8-stop interpolation */}
@@ -100,7 +102,7 @@ export function CartographicLegendsHud({
               <div className="flex items-center justify-between text-[11px] font-semibold text-on-surface">
                 <span className="flex items-center gap-1.5">
                   <Volume2 className="w-3 h-3 text-amber-400" />
-                  Ruido SICA (Lden dBA)
+                  {t('hud.noiseSica')}
                 </span>
                 <span className="text-[10px] font-mono text-outline">MITECO</span>
               </div>
@@ -120,10 +122,10 @@ export function CartographicLegendsHud({
                 </div>
               </div>
               <div className="flex justify-between text-[9px] text-outline pt-0.5">
-                <span>Confort</span>
-                <span>Moderado</span>
-                <span>Elevado</span>
-                <span>Crítico</span>
+                <span>{t('hud.noiseComfort')}</span>
+                <span>{t('hud.noiseModerate')}</span>
+                <span>{t('hud.noiseElevated')}</span>
+                <span>{t('hud.noiseCritical')}</span>
               </div>
             </div>
           )}
@@ -134,46 +136,46 @@ export function CartographicLegendsHud({
               <div className="flex items-center justify-between text-[11px] font-semibold text-on-surface">
                 <span className="flex items-center gap-1.5">
                   <Droplets className="w-3 h-3 text-cyan-400" />
-                  Riesgo Inundación (SNCZI)
+                  {t('hud.floodRiskTitle')}
                 </span>
-                <span className="text-[10px] font-mono text-outline">Período T</span>
+                <span className="text-[10px] font-mono text-outline">{t('hud.periodT')}</span>
               </div>
 
               <div className="space-y-1 text-[10px]">
                 <div className="flex items-center justify-between">
                   <span className="flex items-center gap-1.5">
                     <span className="w-2.5 h-2.5 rounded-sm bg-[#172554] border border-[#1e1b4b]" />
-                    Zona Flujo Preferente (ZFP)
+                    {t('hud.floodZfp')}
                   </span>
-                  <span className="font-mono text-outline">Muy Alto</span>
+                  <span className="font-mono text-outline">{t('hud.floodVeryHigh')}</span>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="flex items-center gap-1.5">
                     <span className="w-2.5 h-2.5 rounded-sm bg-[#1e3a8a] border border-[#2563eb]" />
-                    Alta Probabilidad (T=10 años)
+                    {t('hud.floodT10')}
                   </span>
-                  <span className="font-mono text-outline">Frecuente</span>
+                  <span className="font-mono text-outline">{t('hud.floodFrequent')}</span>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="flex items-center gap-1.5">
                     <span className="w-2.5 h-2.5 rounded-sm bg-[#1d4ed8] border border-[#3b82f6]" />
-                    Media-Alta (T=50 años)
+                    {t('hud.floodT50')}
                   </span>
-                  <span className="font-mono text-outline">Intermedio</span>
+                  <span className="font-mono text-outline">{t('hud.floodIntermediate')}</span>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="flex items-center gap-1.5">
                     <span className="w-2.5 h-2.5 rounded-sm bg-[#0284c7] border border-[#38bdf8]" />
-                    Media Probabilidad (T=100 años)
+                    {t('hud.floodT100')}
                   </span>
-                  <span className="font-mono text-outline">Ordinario</span>
+                  <span className="font-mono text-outline">{t('hud.floodOrdinary')}</span>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="flex items-center gap-1.5">
                     <span className="w-2.5 h-2.5 rounded-sm bg-[#38bdf8] border border-[#7dd3fc]" />
-                    Baja Probabilidad (T=500 años)
+                    {t('hud.floodT500')}
                   </span>
-                  <span className="font-mono text-outline">Excepcional</span>
+                  <span className="font-mono text-outline">{t('hud.floodExceptional')}</span>
                 </div>
               </div>
             </div>
@@ -185,7 +187,7 @@ export function CartographicLegendsHud({
               <div className="flex items-center justify-between text-[11px] font-semibold text-on-surface">
                 <span className="flex items-center gap-1.5">
                   <Footprints className="w-3 h-3 text-primary" />
-                  Isocronas Peatonales
+                  {t('hud.isochronesTitle')}
                 </span>
                 <span className="text-[10px] font-mono text-outline">4.8 km/h</span>
               </div>
@@ -194,23 +196,23 @@ export function CartographicLegendsHud({
                 <div className="flex items-center justify-between">
                   <span className="flex items-center gap-1.5">
                     <span className="w-2.5 h-2.5 rounded-full bg-[#10b981]/30 border border-[#10b981]" />
-                    5 min a pie (400 m)
+                    {t('hud.isochrone5Min')}
                   </span>
-                  <span className="font-mono text-outline">Inmediato</span>
+                  <span className="font-mono text-outline">{t('hud.isochroneImmediate')}</span>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="flex items-center gap-1.5">
                     <span className="w-2.5 h-2.5 rounded-full bg-[#06b6d4]/25 border border-[#06b6d4]" />
-                    10 min a pie (800 m)
+                    {t('hud.isochrone10Min')}
                   </span>
-                  <span className="font-mono text-outline">Cercano</span>
+                  <span className="font-mono text-outline">{t('hud.isochroneClose')}</span>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="flex items-center gap-1.5">
                     <span className="w-2.5 h-2.5 rounded-full bg-[#6366f1]/20 border border-[#6366f1]" />
-                    15 min a pie (1.200 m)
+                    {t('hud.isochrone15Min')}
                   </span>
-                  <span className="font-mono text-outline">Límite cívico</span>
+                  <span className="font-mono text-outline">{t('hud.isochroneCivicLimit')}</span>
                 </div>
               </div>
             </div>

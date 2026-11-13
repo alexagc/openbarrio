@@ -5,14 +5,16 @@ import {
   PropertyAuditReport,
 } from '@openbarrio/core';
 import { apiClient, ExtendedAuditReport, ApiError } from '../services/api.client';
-import { parseUrlState, DossierTab } from '../hooks/useUrlSync';
+import { parseUrlState, DossierTab, ViewMode } from '../hooks/useUrlSync';
 import { AuditData } from '../components/landing';
 import { MobileNavDestination } from '../components/MobileBottomNav';
 import { SheetSnapPoint } from '../components/CadastralBottomSheet';
 
 export interface WorkspaceState {
   // Navigation & Views
-  viewMode: 'landing' | 'map' | 'transparency';
+  viewMode: ViewMode;
+  municipalitySlug?: string;
+  isEmbed?: boolean;
   activeTab: 'dossier' | 'map';
   dossierTab: DossierTab;
   mobileNavDestination: MobileNavDestination;
@@ -40,7 +42,9 @@ export interface WorkspaceState {
   isCertifiedPdfOpen: boolean;
 
   // Actions
-  setViewMode: (mode: 'landing' | 'map' | 'transparency') => void;
+  setViewMode: (mode: ViewMode) => void;
+  setMunicipalitySlug: (slug: string) => void;
+  setIsEmbed: (isEmbed: boolean) => void;
   setActiveTab: (tab: 'dossier' | 'map') => void;
   setDossierTab: (tab: DossierTab) => void;
   setMobileNavDestination: (dest: MobileNavDestination) => void;
@@ -83,6 +87,8 @@ const initialUrl = parseUrlState();
 
 export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
   viewMode: initialUrl.viewMode,
+  municipalitySlug: initialUrl.municipalitySlug,
+  isEmbed: initialUrl.isEmbed,
   activeTab: initialUrl.activeTab,
   dossierTab: initialUrl.dossierTab,
   mobileNavDestination: initialUrl.activeTab === 'dossier' ? 'report' : 'map',
@@ -108,6 +114,14 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
   setViewMode: (viewMode) => {
     set({ viewMode });
     get().syncUrl();
+  },
+
+  setMunicipalitySlug: (municipalitySlug) => {
+    set({ municipalitySlug });
+  },
+
+  setIsEmbed: (isEmbed) => {
+    set({ isEmbed });
   },
 
   setActiveTab: (activeTab) => {
@@ -303,6 +317,50 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
       return;
     }
 
+    if (viewMode === 'tool-surface') {
+      const target = get().isEmbed ? '/comprobar-metros-catastro?embed=true' : '/comprobar-metros-catastro';
+      if (window.location.pathname + window.location.search !== target) {
+        if (replace) window.history.replaceState({ openbarrio: true }, '', target);
+        else window.history.pushState({ openbarrio: true }, '', target);
+      }
+      return;
+    }
+
+    if (viewMode === 'tool-rent') {
+      const target = get().isEmbed ? '/calculadora-alquiler-legal?embed=true' : '/calculadora-alquiler-legal';
+      if (window.location.pathname + window.location.search !== target) {
+        if (replace) window.history.replaceState({ openbarrio: true }, '', target);
+        else window.history.pushState({ openbarrio: true }, '', target);
+      }
+      return;
+    }
+
+    if (viewMode === 'tool-itp') {
+      const target = get().isEmbed ? '/simulador-itp-ibi?embed=true' : '/simulador-itp-ibi';
+      if (window.location.pathname + window.location.search !== target) {
+        if (replace) window.history.replaceState({ openbarrio: true }, '', target);
+        else window.history.pushState({ openbarrio: true }, '', target);
+      }
+      return;
+    }
+
+    if (viewMode === 'municipios-directory') {
+      if (window.location.pathname !== '/municipios') {
+        if (replace) window.history.replaceState({ openbarrio: true }, '', '/municipios');
+        else window.history.pushState({ openbarrio: true }, '', '/municipios');
+      }
+      return;
+    }
+
+    if (viewMode === 'municipality') {
+      const target = `/municipio/${get().municipalitySlug || 'madrid'}`;
+      if (window.location.pathname !== target) {
+        if (replace) window.history.replaceState({ openbarrio: true }, '', target);
+        else window.history.pushState({ openbarrio: true }, '', target);
+      }
+      return;
+    }
+
     const params = new URLSearchParams();
     let targetPath = '/map';
 
@@ -338,6 +396,8 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
     const state = parseUrlState();
     set({
       viewMode: state.viewMode,
+      municipalitySlug: state.municipalitySlug,
+      isEmbed: state.isEmbed,
       activeTab: state.activeTab,
       dossierTab: state.dossierTab,
       sheetSnapPoint: state.activeTab === 'dossier' ? 'full' : 'peek',
@@ -376,3 +436,5 @@ export const useIsDuelOpen = () => useWorkspaceStore((state) => state.isDuelOpen
 export const useDuelCandidateB = () => useWorkspaceStore((state) => state.duelCandidateB);
 export const useIsLoadingDuelB = () => useWorkspaceStore((state) => state.isLoadingDuelB);
 export const useIsCertifiedPdfOpen = () => useWorkspaceStore((state) => state.isCertifiedPdfOpen);
+export const useMunicipalitySlug = () => useWorkspaceStore((state) => state.municipalitySlug);
+export const useIsEmbed = () => useWorkspaceStore((state) => state.isEmbed);

@@ -81,4 +81,28 @@ describe('useUrlSync & parseUrlState', () => {
     expect(state.dossierTab).toBe('building');
     expect(state.refcat).toBe('28001A001000120001AZ');
   });
+
+  it('parses English localized paths /check-cadastral-surface and /legal-rent-calculator', () => {
+    window.location.pathname = '/check-cadastral-surface';
+    window.location.search = '';
+
+    const state = parseUrlState();
+    expect(state.viewMode).toBe('tool-surface');
+
+    window.location.pathname = '/legal-rent-calculator';
+    const rentState = parseUrlState();
+    expect(rentState.viewMode).toBe('tool-rent');
+  });
+
+  it('parses Catalan localized paths /comprovar-metres-cadastre and /municipis', () => {
+    window.location.pathname = '/comprovar-metres-cadastre';
+    window.location.search = '';
+
+    const state = parseUrlState();
+    expect(state.viewMode).toBe('tool-surface');
+
+    window.location.pathname = '/municipis';
+    const dirState = parseUrlState();
+    expect(dirState.viewMode).toBe('municipios-directory');
+  });
 });

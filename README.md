@@ -1,7 +1,7 @@
 # OpenBarrio 🏘️🇪🇸
 
 [![CI Pipeline](https://github.com/alexcg1/openbarrio/actions/workflows/ci.yml/badge.svg)](https://github.com/alexcg1/openbarrio/actions/workflows/ci.yml)
-[![Version: v1.0.0](https://img.shields.io/badge/Version-v1.0.0-blue.svg)](CHANGELOG.md)
+[![Version: v1.1.0](https://img.shields.io/badge/Version-v1.1.0-blue.svg)](CHANGELOG.md)
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 [![Runtime: Node.js 22 LTS](https://img.shields.io/badge/Runtime-Node.js_22_LTS-green.svg)](https://nodejs.org/)
 [![Monorepo: pnpm](https://img.shields.io/badge/Monorepo-pnpm_workspaces-orange.svg)](https://pnpm.io/)
@@ -59,7 +59,22 @@ All national administrative, demographic, and environmental layers are compiled 
 
 Served via HTTP Range requests with sub-15ms tile latency and zero external ministerial dependency.
 
-### 2. MapLibre Thematic Lenses & Progressive Executive Disclosure (v1.0.0)
+### 2. Civic Micro-Tools & Programmatic SEO (v1.1.0)
+* **High-Intent Standalone & Embeddable Micro-Tools:**
+  * `/comprobar-metros-catastro`: Instant surface discrepancy check between listing m² and official Catastro OVC records with >15% legal alert threshold and overpayment estimate.
+  * `/calculadora-alquiler-legal`: Statutory rent cap calculator under Ley 12/2023 por el Derecho a la Vivienda, evaluating Zonas Tensionadas, Gran Tenedor rules, and SERPAVI benchmarks.
+  * `/simulador-itp-ibi`: Comprehensive regional ITP tax estimator across all 17 Autonomous Communities, reduced youth/family brackets, notary and registry fees (RD 1426/1989 and RD 1427/1989), and annual municipal IBI.
+  * `?embed=true` mode: Minimalist responsive widget mode for easy iframe embedding in civic media and real estate platforms.
+* **Programmatic Municipal & District SEO Engine:**
+  * Dynamic municipal exploration pages (`/municipio/:slug`) for ~8,000 Spanish territories with aggregated INE ADRH household revenue, SERPAVI rental status, CTE DB-HS 6 radon hazard zones, and municipal BarrioScore.
+  * National directory (`/municipios`) with real-time filtering and province search.
+  * Structured JSON-LD Schema.org metadata (`AdministrativeArea`, `BreadcrumbList`, `Dataset`, `SoftwareApplication`, `FinancialProduct`) and automated canonical XML sitemaps.
+* **Dynamic Edge OpenGraph Social Cards:**
+  * High-contrast Obsidian `#0B1326` SVG social cards generated dynamically at the edge (`/api/v1/og/municipio/:slug` and `/api/v1/og/tool/:tool`) with live metric badges and administration seals.
+* **Web-to-Extension Conversion CTA:**
+  * Contextual in-content banners and non-intrusive floating sticky notification bar with automatic Chromium detection.
+
+### 3. MapLibre Thematic Lenses & Progressive Executive Disclosure (v1.0.0)
 * **Thematic Lenses Selector:** 4 specialized cartographic views centered atop the map (`Vida Urbana`, `Silencio`, `Riesgos Naturales`, `Luz 3D`) with adaptive auto-activation based on property typology (e.g. rustic parcels automatically activate flood risk cartography).
 * **3-Second Executive Summary:** Instant executive dossier signal with overall score, critical alert banners (surface discrepancy >15%, active flood zones, expired energy certificates under RD 390/2021), and 3 instant verdict pills before progressive disclosure of in-depth technical analysis.
 * **Unified Sovereign Search:** Single unified search input with auto-detection of cadastral references and addresses, eliminating manual mode toggling.
@@ -102,7 +117,7 @@ docker compose up -d
 
 ### 3. Running Containerized Tests & Linting
 ```bash
-# Execute Vitest across all 5 workspace projects (372/372 passing):
+# Execute Vitest across all 5 workspace projects (435/435 passing):
 make docker-test
 
 # Run ESLint with zero warnings:

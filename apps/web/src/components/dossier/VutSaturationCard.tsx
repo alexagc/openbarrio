@@ -1,11 +1,13 @@
 import { VutEvaluationDTO } from '@openbarrio/core';
 import { Hotel, AlertTriangle, CheckCircle2, ShieldCheck, AlertCircle } from 'lucide-react';
+import { useTranslation } from '../../i18n';
 
 interface VutSaturationCardProps {
   vut?: VutEvaluationDTO;
 }
 
 export function VutSaturationCard({ vut }: VutSaturationCardProps) {
+  const { t } = useTranslation();
   if (!vut) return null;
 
   const isCritical = vut.saturationRisk === 'critical';
@@ -19,10 +21,10 @@ export function VutSaturationCard({ vut }: VutSaturationCardProps) {
     : 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40';
 
   const riskLabel = isCritical
-    ? 'Saturación Crítica'
+    ? t('vut.saturationCritical')
     : isModerate
-    ? 'Presión Moderada'
-    : 'Baja Saturación';
+    ? t('vut.saturationModerate')
+    : t('vut.saturationLow');
 
   return (
     <div
@@ -33,7 +35,7 @@ export function VutSaturationCard({ vut }: VutSaturationCardProps) {
         <div className="flex items-center gap-2">
           <Hotel className="w-4 h-4 text-primary shrink-0" />
           <span className="font-headline text-sm font-bold text-on-surface">
-            Pisos Turísticos & Convivencia (VUT)
+            {t('vut.title')}
           </span>
         </div>
         <div className="flex items-center gap-2">
@@ -44,7 +46,7 @@ export function VutSaturationCard({ vut }: VutSaturationCardProps) {
               title="Sección censal sin registro en el censo experimental del INE: estimación estadística territorial"
             >
               <AlertCircle className="w-3 h-3" />
-              <span>Estimación Territorial</span>
+              <span>{t('vut.estimatedBadge')}</span>
             </span>
           ) : (
             <span
@@ -53,7 +55,7 @@ export function VutSaturationCard({ vut }: VutSaturationCardProps) {
               title="Medición experimental oficial del INE"
             >
               <ShieldCheck className="w-3 h-3" />
-              <span>INE Oficial</span>
+              <span>{t('vut.officialBadge')}</span>
             </span>
           )}
           <span className="font-mono text-[11px] text-on-surface-variant font-medium">
@@ -81,7 +83,7 @@ export function VutSaturationCard({ vut }: VutSaturationCardProps) {
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
         <div>
-          <span className="text-on-surface-variant block">Ratio VUT / Residencial</span>
+          <span className="text-on-surface-variant block">{t('vut.saturationRatio')}</span>
           <span
             className={`font-mono text-base font-bold ${
               isCritical
@@ -95,11 +97,11 @@ export function VutSaturationCard({ vut }: VutSaturationCardProps) {
           </span>
         </div>
         <div>
-          <span className="text-on-surface-variant block">VUTs Registradas</span>
+          <span className="text-on-surface-variant block">{t('vut.touristDwellings')}</span>
           <span className="font-mono font-bold text-on-surface">{vut.vutCount} viviendas</span>
         </div>
         <div>
-          <span className="text-on-surface-variant block">Plazas Turísticas</span>
+          <span className="text-on-surface-variant block">{t('vut.touristBeds')}</span>
           <span className="font-mono font-bold text-on-surface">{vut.vutBeds} plazas</span>
         </div>
         <div>
