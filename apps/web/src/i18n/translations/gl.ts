@@ -22,7 +22,7 @@ export const gl: TranslationSchema = {
     extension: 'Extensión Portais',
     principles: 'Metodoloxía Cívica',
     github: 'GitHub',
-    version: 'v1.1.0',
+    version: 'v1.3.0',
     openMap: 'Ver Mapa Interactivo',
     tools: 'Ferramentas',
     toolsSurface: 'Comprobar Metros',

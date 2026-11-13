@@ -207,7 +207,7 @@ export function createOgRoutes(
 
   <!-- Footer -->
   <g transform="translate(80, 560)">
-    <text x="0" y="0" font-family="system-ui, -apple-system, sans-serif" font-size="14" font-weight="600" fill="#64748B">OpenBarrio v1.1.0 · Plataforma Cívica de Transparencia Territorial</text>
+    <text x="0" y="0" font-family="system-ui, -apple-system, sans-serif" font-size="14" font-weight="600" fill="#64748B">OpenBarrio v1.3.0 · Plataforma Cívica de Transparencia Territorial</text>
     <text x="1040" y="0" font-family="system-ui, -apple-system, sans-serif" font-size="14" font-weight="700" fill="${target.color}" text-anchor="end">openbarrio.org/${tool}</text>
   </g>
 </svg>

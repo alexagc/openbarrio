@@ -22,7 +22,7 @@ export const es: TranslationSchema = {
     extension: 'Extensión Portales',
     principles: 'Metodología Cívica',
     github: 'GitHub',
-    version: 'v1.1.0',
+    version: 'v1.3.0',
     openMap: 'Ver Mapa Interactivo',
     tools: 'Herramientas',
     toolsSurface: 'Comprobar Metros',
