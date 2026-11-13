@@ -150,7 +150,7 @@ export function evaluateSurfaceDiscrepancy(
     }
   }
 
-  let legalRemedySummary = '';
+  let legalRemedySummary: string;
   if (isSignificantDiscrepancy && divergenceM2 > 0) {
     legalRemedySummary =
       'La discrepancia supera el umbral del 15%. La jurisprudencia civil española (Tribunal Supremo, art. 1469 y ss. Código Civil) ampara la rescisión del contrato o la rebaja proporcional del precio de compraventa por defecto de cabida o vicios ocultos.';

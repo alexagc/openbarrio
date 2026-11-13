@@ -61,7 +61,7 @@ export class CatastroProvider implements ICatastroProvider {
 
     const url = `${this.coordenadasBaseUrl}/Consulta_RCCOOR?SRS=EPSG:4326&Coordenada_X=${longitude}&Coordenada_Y=${latitude}`;
 
-    let xmlText = '';
+    let xmlText: string;
     try {
       const controller = new AbortController();
       const timer = setTimeout(() => controller.abort(), this.timeoutMs);

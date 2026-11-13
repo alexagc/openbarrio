@@ -36,8 +36,8 @@ export function evaluateVutSaturation(
   const vutRatioPct = Number(ratio.toFixed(2));
 
   let saturationRisk: VutSaturationRisk;
-  let penaltyApplied = 0;
-  let description = '';
+  let penaltyApplied: number;
+  let description: string;
 
   if (vutRatioPct < 3.0) {
     saturationRisk = 'low';
