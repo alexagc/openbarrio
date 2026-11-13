@@ -57,9 +57,9 @@ export const ExtensionShowcaseSection: React.FC = () => {
                 href="https://github.com/alexagc/openbarrio/tree/main/apps/extension"
                 target="_blank"
                 rel="noreferrer"
-                className="w-full sm:w-auto px-5 py-2.5 rounded bg-primary text-on-primary font-body text-sm font-semibold hover:bg-primary-fixed transition-colors flex items-center justify-center gap-2 shadow-xs"
+                className="w-full sm:w-auto px-5 py-2.5 rounded bg-primary text-on-primary font-body text-sm font-semibold hover:bg-primary-fixed transition-colors flex items-center justify-center gap-2.5 shadow-xs"
               >
-                <Chrome className="w-4 h-4" />
+                <Chrome className="w-5 h-5 shrink-0" />
                 <span>{t('extension.ctaButton')}</span>
               </a>
               <span className="font-mono text-xs text-on-surface-variant flex items-center gap-1.5">

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Download, Sparkles, X, ShieldCheck } from 'lucide-react';
+import { Sparkles, X, ShieldCheck } from 'lucide-react';
+import { Chrome } from './BrandIcons';
 import { useTranslation } from '../../i18n';
 
 interface ChromeExtensionBannerProps {
@@ -74,9 +75,9 @@ export function ChromeExtensionBanner({
               href={ctaUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-primary text-on-primary text-xs font-bold rounded-xl shadow hover:bg-primary-hover transition-colors"
+              className="inline-flex items-center gap-2 px-3.5 py-2 bg-primary text-on-primary text-xs font-bold rounded-xl shadow hover:bg-primary-hover transition-colors"
             >
-              <Download className="w-3.5 h-3.5" />
+              <Chrome className="w-4 h-4 shrink-0" />
               <span>{t('extensionBanner.installCta')}</span>
             </a>
             <button
@@ -120,9 +121,9 @@ export function ChromeExtensionBanner({
             href={ctaUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-primary hover:bg-primary-hover text-on-primary font-bold text-sm shadow-md transition-all duration-200 hover:shadow-primary/25"
+            className="w-full sm:w-auto inline-flex items-center justify-center gap-2.5 px-5 py-3 rounded-xl bg-primary hover:bg-primary-hover text-on-primary font-bold text-sm shadow-md transition-all duration-200 hover:shadow-primary/25"
           >
-            <Download className="w-4 h-4" />
+            <Chrome className="w-5 h-5 shrink-0" />
             <span>{isChrome ? t('extensionBanner.installCta') : t('extension.ctaButton')}</span>
           </a>
         </div>
