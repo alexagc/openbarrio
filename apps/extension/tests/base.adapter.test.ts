@@ -7,7 +7,12 @@ class TestPortalAdapter extends BasePortalAdapter {
   readonly portal: PortalType = 'idealista';
 
   canExtract(url: string): boolean {
-    return url.includes('test-portal.com');
+    try {
+      const parsed = new URL(url);
+      return parsed.hostname === 'test-portal.com' || parsed.hostname.endsWith('.test-portal.com');
+    } catch {
+      return false;
+    }
   }
 
   extract(doc: Document, url: string): ExtractedPropertyData | null {

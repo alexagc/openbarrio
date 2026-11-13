@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Building2, Compass, Github, ChevronDown, Ruler, Scale, Coins } from 'lucide-react';
+import { Building2, Compass, ChevronDown, Ruler, Scale, Coins } from 'lucide-react';
+import { Github } from '../common/BrandIcons';
 import { useTranslation, SupportedLanguage } from '../../i18n';
 import { useWorkspaceStore } from '../../store/workspace.store';
 

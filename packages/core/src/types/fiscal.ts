@@ -147,7 +147,7 @@ export function calculateFiscalEstimate(options: CalculateFiscalOptions): Fiscal
   // - Rustic land: agricultural ground value (~0.50 - 2.50 €/m²)
   // - Vacant plot: urban ground without building (~150 - 300 €/m²)
   // - Residential/building: ~800 - 1200 €/m²
-  let estimatedCadastralValueEur = 0;
+  let estimatedCadastralValueEur: number;
   if (purchasePriceEur > 0) {
     estimatedCadastralValueEur = Math.round(purchasePriceEur * (isRustic ? 0.30 : 0.45));
   } else if (isRustic) {

@@ -228,7 +228,7 @@ const testCoords = [
 ];
 
 async function verifyLiveApi() {
-  let isApiOnline = false;
+  let isApiOnline;
   try {
     const probe = await fetch('http://localhost:3001/health', { signal: AbortSignal.timeout(1500) });
     isApiOnline = probe.ok;

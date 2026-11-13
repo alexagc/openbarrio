@@ -5,6 +5,9 @@ import { Protocol } from 'pmtiles';
 import { generate3dBuildingFootprints } from '../../../utils/solar';
 
 let pmtilesProtocolRegistered = false;
+export function _resetPMTilesProtocolForTesting() {
+  pmtilesProtocolRegistered = false;
+}
 function registerPMTilesProtocol() {
   if (!pmtilesProtocolRegistered && typeof (maplibregl as any).addProtocol === 'function') {
     const protocol = new Protocol();
@@ -74,7 +77,7 @@ function registerFacilityMapImages(map: MapLibreMap) {
 }
 
 export interface UseMapLibreProps {
-  containerRef: React.RefObject<HTMLDivElement>;
+  containerRef: React.RefObject<HTMLDivElement | null>;
   selectedCoords?: { lat: number; lon: number };
   onMapClick: (lat: number, lon: number) => void;
   activeBasemap: BasemapType;

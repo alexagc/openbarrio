@@ -217,7 +217,7 @@ export function evaluateSeismicVulnerability(
   const ncseStandardApplied = resolveNcseStandardApplied(constructionYear);
   const isVulnerableToSeismic = constructionYear > 0 && constructionYear < 1994 && ab >= 0.08;
 
-  let regulatoryContext = '';
+  let regulatoryContext: string;
   if (isVulnerableToSeismic) {
     regulatoryContext = `Edificación construida en ${constructionYear} previa a la norma sismorresistente NCSE-94 (RD 2493/1994) en zona con aceleración sísmica básica ab = ${ab}g (>= 0.08g). Presenta mayor vulnerabilidad estructural por ausencia de prescripciones modernas de ductilidad y armado transversal.`;
   } else if (ab >= 0.08) {

@@ -26,7 +26,6 @@ import json
 import os
 import re
 import sqlite3
-import sys
 
 DEFAULT_OUTPUT_SQL = os.path.join(
     os.path.dirname(__file__), "..", "dist", "openbarrio-etl-dist", "municipal_ite.sql"

@@ -50,7 +50,7 @@ export function calculateBuildingCapExRisk(property: CadastralProperty): Buildin
 
   const isMultiFamily = (property.building?.unitsCount ?? 1) > 2 || estimatedFloors > 2;
 
-  let hasElevator = false;
+  let hasElevator: boolean;
   if (!isMultiFamily) {
     // Single-family / low-rise chalet
     hasElevator = false;
@@ -66,7 +66,7 @@ export function calculateBuildingCapExRisk(property: CadastralProperty): Buildin
 
   // 3. Accessibility & Elevator Risk (RDL 1/2013 and LPH art. 10.1.b)
   let accessibilityRisk: BuildingCapExRisk['accessibilityRisk'];
-  let elevatorRisk = false;
+  let elevatorRisk: boolean;
 
   if (estimatedFloors > 3 && constructionYear < 1981 && !hasElevator) {
     accessibilityRisk = 'high';

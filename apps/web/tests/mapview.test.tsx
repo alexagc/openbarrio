@@ -1,6 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { MapView, wgs84ToUtm30n } from '../src/components/map/MapView';
+import { _resetPMTilesProtocolForTesting } from '../src/components/map/hooks/useMapLibre';
 
 // Mock MapLibre GL
 vi.mock('maplibre-gl', () => {
@@ -43,21 +44,29 @@ vi.mock('maplibre-gl', () => {
     isOpen = vi.fn().mockReturnValue(false);
   }
 
+  const MockMapConstructor = vi.fn(function () {
+    return mockMapInstance;
+  });
+
+  const mockAddProtocol = vi.fn();
+  const mockSetWorkerUrl = vi.fn();
+  const mockGetWorkerUrl = vi.fn();
+
   return {
     default: {
-      Map: vi.fn(() => mockMapInstance),
+      Map: MockMapConstructor,
       Marker: MockMarker,
       Popup: MockPopup,
-      setWorkerUrl: vi.fn(),
-      getWorkerUrl: vi.fn(),
-      addProtocol: vi.fn(),
+      setWorkerUrl: mockSetWorkerUrl,
+      getWorkerUrl: mockGetWorkerUrl,
+      addProtocol: mockAddProtocol,
     },
-    Map: vi.fn(() => mockMapInstance),
+    Map: MockMapConstructor,
     Marker: MockMarker,
     Popup: MockPopup,
-    setWorkerUrl: vi.fn(),
-    getWorkerUrl: vi.fn(),
-    addProtocol: vi.fn(),
+    setWorkerUrl: mockSetWorkerUrl,
+    getWorkerUrl: mockGetWorkerUrl,
+    addProtocol: mockAddProtocol,
   };
 });
 
@@ -196,6 +205,7 @@ describe('MapView Component (Stitch Civic Precision)', () => {
     });
 
     it('should configure PMTiles protocol and vector source for census tracts with interpolated color ramp', async () => {
+      _resetPMTilesProtocolForTesting();
       const maplibreMock = await import('maplibre-gl');
       render(
         <MapView
@@ -294,8 +304,8 @@ describe('MapView Component (Stitch Civic Precision)', () => {
         });
       });
 
-      const originalGeolocation = global.navigator.geolocation;
-      Object.defineProperty(global.navigator, 'geolocation', {
+      const originalGeolocation = globalThis.navigator.geolocation;
+      Object.defineProperty(globalThis.navigator, 'geolocation', {
         value: {
           getCurrentPosition: mockGetCurrentPosition,
         },
@@ -317,7 +327,7 @@ describe('MapView Component (Stitch Civic Precision)', () => {
       expect(mockOnMapClick).toHaveBeenCalledWith(40.415363, -3.707398);
 
       // Restore geolocation
-      Object.defineProperty(global.navigator, 'geolocation', {
+      Object.defineProperty(globalThis.navigator, 'geolocation', {
         value: originalGeolocation,
         writable: true,
         configurable: true,

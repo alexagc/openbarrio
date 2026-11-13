@@ -319,7 +319,7 @@ if (seismicDistSql && seismicCount < 50) {
 }
 
 // 4. Check & Load real INE ADRH data
-let ineCount = 0;
+let ineCount;
 try {
   const row = db.prepare('SELECT count(*) as total FROM census_tract_income').get();
   ineCount = Number(row?.total || 0);
@@ -348,7 +348,7 @@ if (ineCount > 1000) {
 }
 
 // 5. Check & Load real civic facilities data
-let facilitiesCount = 0;
+let facilitiesCount;
 try {
   facilitiesCount = Number(db.prepare('SELECT count(*) as total FROM civic_facilities').get()?.total || 0);
 } catch {
@@ -395,7 +395,7 @@ if (facilitiesCount >= 50000) {
 }
 
 // 6. Load Energy Performance Certificates (CEE) if empty or incomplete
-let ceeCount = 0;
+let ceeCount;
 try {
   ceeCount = Number(db.prepare('SELECT count(*) as total FROM building_energy_certificates').get()?.total || 0);
 } catch {

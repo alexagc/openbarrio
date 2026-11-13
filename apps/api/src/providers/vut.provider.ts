@@ -152,7 +152,7 @@ export class VutProvider implements IVutProvider {
     }
     const totalDwellings = 1000 + (hash % 600);
     const bucket = hash % 100;
-    let vutCount = 0;
+    let vutCount: number;
     if (bucket < 15) {
       vutCount = Math.round(totalDwellings * (0.085 + (hash % 60) / 1000));
     } else if (bucket < 40) {

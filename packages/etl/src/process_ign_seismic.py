@@ -19,7 +19,6 @@ Usage:
 import argparse
 import os
 import sqlite3
-import sys
 
 DEFAULT_OUTPUT_SQL = os.path.join(
     os.path.dirname(__file__), "..", "dist", "openbarrio-etl-dist", "ign_seismic.sql"
