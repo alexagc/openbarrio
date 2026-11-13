@@ -22,7 +22,7 @@ export const en: TranslationSchema = {
     extension: 'Portal Extension',
     principles: 'Civic Methodology',
     github: 'GitHub',
-    version: 'v1.3.0',
+    version: 'v1.3.1',
     openMap: 'Explore Interactive Map',
     tools: 'Tools',
     toolsSurface: 'Check Surface Area',
