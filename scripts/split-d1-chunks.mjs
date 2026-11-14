@@ -64,9 +64,9 @@ export function splitSqlFile(srcPath, outputDir, prefix, maxStatements = MAX_STA
     return 0;
   }
 
-  // Safety protection: if source file has fewer than 5,000 statements but we already have >= 5 versioned chunks
-  // (e.g. sample run with 204 facilities or 20k CEEs), preserve the full national versioned chunks!
-  if (statements.length < 5000 && existingChunks.length >= 5) {
+  // Safety protection: if source file has fewer than 5,000 statements but we already have >= 2 versioned chunks
+  // (e.g. sample run with 204 facilities, 99 seismic, or 20k CEEs), preserve the full national versioned chunks!
+  if (statements.length < 5000 && existingChunks.length >= 2) {
     console.warn(`⚠️ Source ${srcPath} only has ${statements.length} statements, while ${outputDir} contains ${existingChunks.length} full national chunks.`);
     console.log(`🛡️ Preserving full national chunks in ${outputDir} and assembling full SQL dump to ${srcPath}...`);
     assembleSqlFromChunks(outputDir, srcPath);
