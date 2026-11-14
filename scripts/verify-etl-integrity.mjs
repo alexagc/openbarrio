@@ -217,8 +217,25 @@ if (db) {
   }
 }
 
-// 8. Live API End-to-End Multi-Domain Resolution Across Spain
-console.log('\n🇪🇸 8. Live API End-to-End Multi-Domain Verification Across Spain:');
+// 8. IGN NCSE-02 Seismic Hazard Verification
+console.log('\n🌋 8. IGN NCSE-02 Seismic Hazard Catalog (ign_seismic_hazard):');
+if (db) {
+  try {
+    const seismicCount = db.prepare('SELECT count(*) as total FROM ign_seismic_hazard').get();
+    assert(seismicCount.total >= 8000, `ign_seismic_hazard contains ${seismicCount.total} municipalities (Threshold: >=8,000 for national coverage)`);
+
+    const granada = db.prepare('SELECT basic_acceleration_g, risk_level FROM ign_seismic_hazard WHERE municipality_code = ?').get('18087');
+    assert(granada && granada.risk_level === 'HIGH' && granada.basic_acceleration_g >= 0.20, `Granada correctly catalogued as HIGH seismic risk (${granada?.basic_acceleration_g}g)`);
+
+    const madrid = db.prepare('SELECT basic_acceleration_g, risk_level FROM ign_seismic_hazard WHERE municipality_code = ?').get('28079');
+    assert(madrid && madrid.risk_level === 'VERY_LOW' && madrid.basic_acceleration_g === 0.04, `Madrid correctly catalogued as VERY_LOW seismic risk (${madrid?.basic_acceleration_g}g)`);
+  } catch (err) {
+    assert(false, `Failed to query ign_seismic_hazard: ${err.message}`);
+  }
+}
+
+// 9. Live API End-to-End Multi-Domain Resolution Across Spain
+console.log('\n🇪🇸 9. Live API End-to-End Multi-Domain Verification Across Spain:');
 const testCoords = [
   { name: 'Madrid (Castellana)', lat: 40.4530, lon: -3.6883 },
   { name: 'Zaragoza (Ebro Basin)', lat: 41.6561, lon: -0.8773 },

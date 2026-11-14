@@ -171,6 +171,15 @@ export function runAllSplits() {
       altOutDir: 'packages/etl/dist/openbarrio-etl-dist/chunks_serpavi',
       prefix: 'serpavi_benchmarks',
     },
+    {
+      candidates: [
+        'packages/etl/dist/ign_seismic.sql',
+        'packages/etl/dist/openbarrio-etl-dist/ign_seismic.sql',
+      ],
+      outDir: 'packages/etl/chunks/ign_seismic',
+      altOutDir: 'packages/etl/dist/openbarrio-etl-dist/chunks_seismic',
+      prefix: 'ign_seismic',
+    },
   ];
 
   for (const t of targets) {

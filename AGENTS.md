@@ -109,6 +109,7 @@ To support concurrent work between humans and autonomous AI agents:
 
 ## 5. Specialized Rules
 Refer to `.agent/rules/` for in-depth guidelines:
+* [Data Sovereignty & Autonomous ETL Rules](file:///.agent/rules/data-sovereignty-and-etl.md)
 * [Backend Hono Rules](file:///.agent/rules/backend-hono.md)
 * [Frontend React Rules](file:///.agent/rules/frontend-react.md)
 * [i18n & Programmatic SEO Rules](file:///.agent/rules/i18n-and-seo.md)
