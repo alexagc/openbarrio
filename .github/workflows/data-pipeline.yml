@@ -434,18 +434,17 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: |
-          cd apps/api
           ITE_FILE="${{ github.workspace }}/packages/etl/dist/municipal_ite.sql"
           [ ! -f "$ITE_FILE" ] && ITE_FILE="${{ github.workspace }}/packages/etl/dist/openbarrio-etl-dist/municipal_ite.sql"
           SEISMIC_FILE="${{ github.workspace }}/packages/etl/dist/ign_seismic.sql"
           [ ! -f "$SEISMIC_FILE" ] && SEISMIC_FILE="${{ github.workspace }}/packages/etl/dist/openbarrio-etl-dist/ign_seismic.sql"
           if [ -f "$ITE_FILE" ]; then
-            npx wrangler d1 execute openbarrio-d1 --file="$ITE_FILE" --remote --yes
+            cd apps/api && npx wrangler d1 execute openbarrio-d1 --file="$ITE_FILE" --remote --yes && cd "${{ github.workspace }}"
           fi
           if [ -d "${{ github.workspace }}/packages/etl/chunks/ign_seismic" ]; then
             node "${{ github.workspace }}/scripts/apply-d1-chunks.mjs" "${{ github.workspace }}/packages/etl/chunks/ign_seismic" --remote
           elif [ -f "$SEISMIC_FILE" ]; then
-            npx wrangler d1 execute openbarrio-d1 --file="$SEISMIC_FILE" --remote --yes
+            cd apps/api && npx wrangler d1 execute openbarrio-d1 --file="$SEISMIC_FILE" --remote --yes
           fi
 
       - name: Sync Cloudflare D1 (MITECO SNCZI Flood Risk)

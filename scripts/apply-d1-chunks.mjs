@@ -53,11 +53,22 @@ for (let i = 0; i < chunkFiles.length; i++) {
       console.log(`⏳ ${progress} Executing ${fileName} (${sizeKb} KB) (Attempt ${attempt}/${maxRetries})...`);
 
       const remoteFlag = isRemote ? '--remote' : '--local';
+      // Safely determine apps/api directory whether called from root or inside apps/api
+      let apiDir = process.cwd();
+      if (fs.existsSync(path.resolve(process.cwd(), 'apps/api'))) {
+        apiDir = path.resolve(process.cwd(), 'apps/api');
+      } else if (
+        !fs.existsSync(path.resolve(apiDir, 'wrangler.jsonc')) &&
+        !fs.existsSync(path.resolve(apiDir, 'wrangler.toml'))
+      ) {
+        apiDir = path.resolve(path.dirname(filePath), '..', '..', '..', 'apps', 'api');
+      }
+
       // Execute via wrangler inside apps/api
       const cmd = `npx wrangler d1 execute ${databaseName} --file="${filePath}" ${remoteFlag} --yes`;
       
       execSync(cmd, {
-        cwd: path.resolve(process.cwd(), 'apps/api'),
+        cwd: apiDir,
         stdio: 'pipe',
         env: { ...process.env },
       });
