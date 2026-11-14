@@ -213,7 +213,6 @@ def generate_sql_statements(records: list) -> str:
     lines = [
         "-- OpenBarrio Municipal Technical Building Inspection (ITE/IEE) Records",
         "-- Sources: Madrid Open Data, BCN Gencat, Euskadi Open Data, Valencia Ajuntament",
-        "BEGIN TRANSACTION;",
     ]
 
     for rec in records:
@@ -233,7 +232,6 @@ def generate_sql_statements(records: list) -> str:
         )
         lines.append(sql)
 
-    lines.append("COMMIT;")
     return "\n".join(lines) + "\n"
 
 def sync_sqlite_database(db_path: str, records: list):

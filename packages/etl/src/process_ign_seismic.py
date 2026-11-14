@@ -150,7 +150,6 @@ def generate_sql_statements(records: list) -> str:
     lines = [
         "-- OpenBarrio IGN NCSE-02 Seismic Hazard Reference Data",
         "-- Source: Instituto Geográfico Nacional (IGN) / Real Decreto 997/2002",
-        "BEGIN TRANSACTION;",
     ]
 
     for muni_code, muni_name, prov_code, prov_name, ab, risk_level in records:
@@ -163,7 +162,6 @@ def generate_sql_statements(records: list) -> str:
         )
         lines.append(sql)
 
-    lines.append("COMMIT;")
     return "\n".join(lines) + "\n"
 
 def sync_sqlite_database(db_path: str, records: list):
