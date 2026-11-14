@@ -82,9 +82,9 @@ on:
         default: false
         type: boolean
       artifact_run_id:
-        description: 'Run ID of artifact to download (if apply_only is true, default: 41665387431)'
+        description: 'Run ID of artifact to download (if apply_only is true, default: 43583016013)'
         required: false
-        default: '41665387431'
+        default: '43583016013'
         type: string
 
 permissions:
@@ -361,9 +361,9 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          TARGET_RUN="${{ inputs.artifact_run_id || '41665387431' }}"
+          TARGET_RUN="${{ inputs.artifact_run_id || '43583016013' }}"
           echo "Downloading processed artifacts from workflow run $TARGET_RUN..."
-          gh run download "$TARGET_RUN" --dir packages/etl/dist
+          gh run download "$TARGET_RUN" --dir packages/etl/dist || echo "⚠️ Could not download artifacts from $TARGET_RUN, using local/committed data"
           if [ -d "packages/etl/dist/openbarrio-etl-dist" ]; then
             cp -r packages/etl/dist/openbarrio-etl-dist/* packages/etl/dist/
           fi
