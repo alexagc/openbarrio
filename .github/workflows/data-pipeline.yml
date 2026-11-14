@@ -426,10 +426,9 @@ jobs:
           node scripts/apply-d1-chunks.mjs packages/etl/chunks/vut_census_tracts --remote
           node scripts/apply-d1-chunks.mjs packages/etl/chunks/cte_radon --remote
           node scripts/apply-d1-chunks.mjs packages/etl/chunks/serpavi_benchmarks --remote
-          node scripts/apply-d1-chunks.mjs packages/etl/chunks/ign_seismic --remote
 
       - name: Sync Cloudflare D1 (Municipal ITE & IGN Seismic)
-        if: inputs.dry_run != true && env.HAS_CF_TOKEN == 'true' && (hashFiles('packages/etl/dist/municipal_ite.sql') != '' || hashFiles('packages/etl/dist/openbarrio-etl-dist/municipal_ite.sql') != '')
+        if: inputs.dry_run != true && env.HAS_CF_TOKEN == 'true' && (hashFiles('packages/etl/dist/municipal_ite.sql') != '' || hashFiles('packages/etl/dist/openbarrio-etl-dist/municipal_ite.sql') != '' || hashFiles('packages/etl/dist/ign_seismic.sql') != '' || hashFiles('packages/etl/dist/openbarrio-etl-dist/ign_seismic.sql') != '' || hashFiles('packages/etl/chunks/ign_seismic/*.sql') != '')
         continue-on-error: true
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
@@ -443,7 +442,9 @@ jobs:
           if [ -f "$ITE_FILE" ]; then
             npx wrangler d1 execute openbarrio-d1 --file="$ITE_FILE" --remote --yes
           fi
-          if [ -f "$SEISMIC_FILE" ]; then
+          if [ -d "${{ github.workspace }}/packages/etl/chunks/ign_seismic" ]; then
+            node "${{ github.workspace }}/scripts/apply-d1-chunks.mjs" "${{ github.workspace }}/packages/etl/chunks/ign_seismic" --remote
+          elif [ -f "$SEISMIC_FILE" ]; then
             npx wrangler d1 execute openbarrio-d1 --file="$SEISMIC_FILE" --remote --yes
           fi
 
