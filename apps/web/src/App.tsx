@@ -5,6 +5,7 @@ import { GisWorkspaceView } from './views/GisWorkspaceView';
 import { TransparencyView } from './views/TransparencyView';
 import { SourcesStatusView } from './views/SourcesStatusView';
 import { MethodologyView } from './views/MethodologyView';
+import { PrivacyView } from './views/PrivacyView';
 import { SurfaceCheckerToolView } from './views/tools/SurfaceCheckerToolView';
 import { RentLegalCalculatorToolView } from './views/tools/RentLegalCalculatorToolView';
 import { ItpIbiSimulatorToolView } from './views/tools/ItpIbiSimulatorToolView';
@@ -74,6 +75,8 @@ export function AppContent() {
         <SourcesStatusView />
       ) : viewMode === 'methodology' ? (
         <MethodologyView />
+      ) : viewMode === 'privacy' ? (
+        <PrivacyView />
       ) : viewMode === 'tool-surface' ? (
         <SurfaceCheckerToolView isEmbed={Boolean(isEmbed)} />
       ) : viewMode === 'tool-rent' ? (

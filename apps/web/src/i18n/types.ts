@@ -847,6 +847,7 @@ export interface TranslationSchema {
     linkMethodology: string;
     linkLicense: string;
     linkTransparency: string;
+    linkPrivacy: string;
   };
   uncertainty: {
     statusOk: string;
@@ -953,6 +954,52 @@ export interface TranslationSchema {
     acceptBtn: string;
     rejectBtn: string;
     learnMore: string;
+  };
+  privacy: {
+    navLabel: string;
+    seoTitle: string;
+    seoDescription: string;
+    title: string;
+    subtitle: string;
+    consentTitle: string;
+    consentDesc: string;
+    currentStatusLabel: string;
+    statusAccepted: string;
+    statusRejected: string;
+    statusUndecided: string;
+    acceptBtn: string;
+    withdrawBtn: string;
+    withdrawnNotice: string;
+    eventsTitle: string;
+    eventsSubtitle: string;
+    eventsTableAria: string;
+    colEventId: string;
+    colTrigger: string;
+    colProperties: string;
+    colPurpose: string;
+    eventDossierGeneratedTrigger: string;
+    eventDossierGeneratedDesc: string;
+    eventLensUsedTrigger: string;
+    eventLensUsedDesc: string;
+    eventChecklistExportedTrigger: string;
+    eventChecklistExportedDesc: string;
+    eventVisitModeEnabledTrigger: string;
+    eventVisitModeEnabledDesc: string;
+    eventPropsOptionalReturning: string;
+    limitsTitle: string;
+    retentionRule: string;
+    returningWindowRule: string;
+    payloadLimitRule: string;
+    localDossiersRule: string;
+    neverCollectedTitle: string;
+    neverCollected1: string;
+    neverCollected2: string;
+    neverCollected3: string;
+    neverCollected4: string;
+    legalAndBiasTitle: string;
+    legalBasisText: string;
+    biasDisclosureText: string;
+    extensionScopeText: string;
   };
 }
 

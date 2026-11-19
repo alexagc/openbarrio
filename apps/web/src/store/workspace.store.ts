@@ -329,7 +329,7 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
       return;
     }
 
-    if (viewMode === 'sources-status' || viewMode === 'methodology') {
+    if (viewMode === 'sources-status' || viewMode === 'methodology' || viewMode === 'privacy') {
       const curPath = window.location.pathname;
       const parsed = parseLocalizedRoute(curPath, window.location.search);
       if (parsed.viewMode !== viewMode) {

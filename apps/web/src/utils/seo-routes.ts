@@ -51,6 +51,15 @@ export const SEO_ROUTE_DEFINITIONS: RouteSlugMapping[] = [
     aliases: ['/barrioscore', '/scoring'],
   },
   {
+    viewMode: 'privacy',
+    es: '/privacidad',
+    en: '/privacy',
+    ca: '/privacitat',
+    gl: '/privacidade',
+    eu: '/pribatutasuna',
+    aliases: ['/politica-privacidad', '/privacy-policy', '/cookies', '/rgpd', '/gdpr'],
+  },
+  {
     viewMode: 'tool-surface',
     es: '/comprobar-metros-catastro',
     en: '/check-cadastral-surface',

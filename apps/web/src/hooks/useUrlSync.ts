@@ -10,6 +10,7 @@ export type ViewMode =
   | 'transparency'
   | 'sources-status'
   | 'methodology'
+  | 'privacy'
   | 'tool-surface'
   | 'tool-rent'
   | 'tool-itp'
@@ -155,6 +156,7 @@ export function useUrlSync(
         newState.viewMode === 'transparency' ||
         newState.viewMode === 'sources-status' ||
         newState.viewMode === 'methodology' ||
+        newState.viewMode === 'privacy' ||
         newState.viewMode === 'tool-surface' ||
         newState.viewMode === 'tool-rent' ||
         newState.viewMode === 'tool-itp' ||

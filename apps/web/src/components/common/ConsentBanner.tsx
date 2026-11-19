@@ -3,7 +3,6 @@ import { ShieldCheck } from 'lucide-react';
 import { useConsent } from '../../analytics';
 import { useTranslation } from '../../i18n';
 import { useWorkspaceStore, useIsEmbed } from '../../store/workspace.store';
-import type { ViewMode } from '../../hooks/useUrlSync';
 
 /**
  * Non-blocking GDPR / ePrivacy opt-in consent banner.
@@ -44,7 +43,7 @@ export const ConsentBanner: React.FC = () => {
             <button
               type="button"
               data-testid="consent-privacy-link"
-              onClick={() => setViewMode('privacy' as ViewMode)}
+              onClick={() => setViewMode('privacy')}
               className="font-mono text-xs text-primary hover:underline cursor-pointer"
             >
               {t('consent.learnMore')}

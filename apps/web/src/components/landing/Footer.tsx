@@ -226,6 +226,16 @@ export const Footer: React.FC<FooterProps> = ({ onOpenMap }) => {
                 </button>
               </li>
               <li>
+                <button
+                  type="button"
+                  data-testid="footer-privacy-link"
+                  onClick={() => setViewMode('privacy')}
+                  className="hover:text-primary transition-colors text-left cursor-pointer"
+                >
+                  {t('footer.linkPrivacy')}
+                </button>
+              </li>
+              <li>
                 <a
                   className="hover:text-primary transition-colors"
                   href="https://www.apache.org/licenses/LICENSE-2.0"
