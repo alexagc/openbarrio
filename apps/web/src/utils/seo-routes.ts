@@ -42,6 +42,15 @@ export const SEO_ROUTE_DEFINITIONS: RouteSlugMapping[] = [
     aliases: ['/status', '/fuentes/estado'],
   },
   {
+    viewMode: 'methodology',
+    es: '/metodologia',
+    en: '/methodology',
+    ca: '/metodologia',
+    gl: '/metodoloxia',
+    eu: '/metodologia',
+    aliases: ['/barrioscore', '/scoring'],
+  },
+  {
     viewMode: 'tool-surface',
     es: '/comprobar-metros-catastro',
     en: '/check-cadastral-surface',

@@ -217,9 +217,13 @@ export const Footer: React.FC<FooterProps> = ({ onOpenMap }) => {
                 </a>
               </li>
               <li>
-                <a className="hover:text-primary transition-colors" href="#fuentes">
+                <button
+                  type="button"
+                  onClick={() => setViewMode('methodology')}
+                  className="hover:text-primary transition-colors text-left cursor-pointer"
+                >
                   {t('footer.linkMethodology')}
-                </a>
+                </button>
               </li>
               <li>
                 <a

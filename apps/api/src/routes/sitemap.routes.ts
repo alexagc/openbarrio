@@ -63,6 +63,15 @@ export function createSitemapRoutes(
         changefreq: 'hourly',
       },
       {
+        es: `${baseUrl}/metodologia`,
+        en: `${baseUrl}/methodology`,
+        ca: `${baseUrl}/metodologia`,
+        gl: `${baseUrl}/metodoloxia`,
+        eu: `${baseUrl}/metodologia`,
+        priority: '0.8',
+        changefreq: 'monthly',
+      },
+      {
         es: `${baseUrl}/comprobar-metros-catastro`,
         en: `${baseUrl}/check-cadastral-surface`,
         ca: `${baseUrl}/comprovar-metres-cadastre`,

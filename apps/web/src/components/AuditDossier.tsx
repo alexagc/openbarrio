@@ -3,6 +3,7 @@ import {
   PropertyAuditReport,
   PropertyTypology,
   LandClassification,
+  METHODOLOGY_VERSION,
   detectPropertyTypology,
   detectCadastralJurisdiction,
   evaluateBuildingInspectionAlert,
@@ -42,6 +43,7 @@ import {
   ShieldCheck,
   AlertTriangle,
   AlertOctagon,
+  BookOpen,
 } from 'lucide-react';
 
 interface AuditDossierProps {
@@ -62,6 +64,7 @@ export function AuditDossier({
   const { t, language } = useTranslation();
   const storeDossierTab = useWorkspaceStore((s) => s.dossierTab);
   const setStoreDossierTab = useWorkspaceStore((s) => s.setDossierTab);
+  const setViewMode = useWorkspaceStore((s) => s.setViewMode);
 
   const [internalTab, setInternalTab] = useState<DossierTab>('summary');
   const [copied, setCopied] = useState(false);
@@ -821,13 +824,26 @@ export function AuditDossier({
       </div>
 
       {/* 4. METHODOLOGICAL & LEGAL DISCLAIMER */}
-      <div className="p-space-lg bg-surface text-[11px] text-outline font-mono leading-relaxed space-y-1 shrink-0">
+      <div className="p-space-lg bg-surface text-[11px] text-outline font-mono leading-relaxed space-y-2 shrink-0">
         <p className="font-semibold text-on-surface-variant">
           {t('dossier.methodologicalNote')}
         </p>
         <p>
           {t('dossier.methodologicalDesc')}
         </p>
+        <div>
+          <button
+            type="button"
+            data-testid="dossier-methodology-link"
+            onClick={() => setViewMode('methodology')}
+            className="inline-flex items-center gap-1.5 text-primary hover:underline font-mono text-[11px] font-semibold cursor-pointer"
+          >
+            <BookOpen className="w-3.5 h-3.5" />
+            <span>
+              {t('methodology.viewMethodologyCta')} (v{score.methodologyVersion ?? METHODOLOGY_VERSION})
+            </span>
+          </button>
+        </div>
       </div>
     </div>
   );

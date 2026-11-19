@@ -326,10 +326,10 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
       return;
     }
 
-    if (viewMode === 'sources-status') {
+    if (viewMode === 'sources-status' || viewMode === 'methodology') {
       const curPath = window.location.pathname;
       const parsed = parseLocalizedRoute(curPath, window.location.search);
-      if (parsed.viewMode !== 'sources-status') {
+      if (parsed.viewMode !== viewMode) {
         let lang: SupportedLanguage = 'es';
         try {
           const saved = localStorage.getItem('openbarrio_lang');
@@ -339,7 +339,7 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
         } catch {
           // Ignore storage error
         }
-        const target = getLocalizedPath('sources-status', lang);
+        const target = getLocalizedPath(viewMode, lang);
         if (replace) window.history.replaceState({ openbarrio: true }, '', target);
         else window.history.pushState({ openbarrio: true }, '', target);
       }

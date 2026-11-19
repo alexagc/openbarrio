@@ -117,6 +117,9 @@ describe('Phase 21: Programmatic SEO & OpenGraph Routes Integration', () => {
       expect(xml).toContain('https://openbarrio.org/estado-fuentes');
       expect(xml).toContain('https://openbarrio.org/sources-status');
       expect(xml).toContain('https://openbarrio.org/iturrien-egoera');
+      expect(xml).toContain('https://openbarrio.org/metodologia');
+      expect(xml).toContain('https://openbarrio.org/methodology');
+      expect(xml).toContain('https://openbarrio.org/metodoloxia');
       expect(xml).toContain('https://openbarrio.org/municipio/madrid');
       expect(xml).toContain('https://openbarrio.org/municipality/madrid');
       expect(xml).toContain('https://openbarrio.org/municipi/madrid');
