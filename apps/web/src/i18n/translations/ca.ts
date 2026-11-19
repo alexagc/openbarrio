@@ -959,4 +959,12 @@ export const ca: TranslationSchema = {
     errorRateLimit: 'Has assolit el límit temporal de consultes per URL. Utilitza la cerca cadastral manual o torna-ho a provar en un minut.',
     errorGeneric: 'No s’han pogut extreure pistes d’aquesta URL. Pots introduir l’adreça o referència manualment.',
   },
+  consent: {
+    bannerAria: 'Preferències de mesurament i privadesa',
+    title: 'Mesurament cívic sense galetes de tercers',
+    description: 'OpenBarrio no utilitza galetes de tercers ni recull dades personals ni referències cadastrals. Si ho acceptes, desem un identificador aleatori local per mesurar visites recurrents en 14 dies; si ho rebutges, no s’escriu res al dispositiu i només comptem esdeveniments diaris anònims.',
+    acceptBtn: 'Acceptar mesurament 14d',
+    rejectBtn: 'Rebutjar',
+    learnMore: 'Política de privadesa',
+  },
 };

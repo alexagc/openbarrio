@@ -5,6 +5,7 @@ import {
   PropertyAuditReport,
 } from '@openbarrio/core';
 import { apiClient, ExtendedAuditReport, ApiError } from '../services/api.client';
+import { trackAnalyticsEvent } from '../analytics';
 import { parseUrlState, DossierTab, ViewMode } from '../hooks/useUrlSync';
 import { getLocalizedPath, parseLocalizedRoute } from '../utils/seo-routes';
 import type { SupportedLanguage } from '../i18n/types';
@@ -198,6 +199,7 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
         isLoading: false,
       });
       get().syncUrl();
+      void trackAnalyticsEvent({ event: 'dossier_generated' });
       return liveReport;
     } catch (err: unknown) {
       const apiErr = err instanceof ApiError ? err : null;
@@ -235,6 +237,7 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
         isLoading: false,
       });
       get().syncUrl();
+      void trackAnalyticsEvent({ event: 'dossier_generated' });
       return liveReport;
     } catch (err: unknown) {
       const apiErr = err instanceof ApiError ? err : null;

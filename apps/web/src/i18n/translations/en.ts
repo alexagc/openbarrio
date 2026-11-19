@@ -959,4 +959,12 @@ export const en: TranslationSchema = {
     errorRateLimit: 'URL resolution rate limit reached. Use manual search or retry shortly.',
     errorGeneric: 'Could not extract hints from that URL. Please enter the address or cadastral reference manually.',
   },
+  consent: {
+    bannerAria: 'Measurement and privacy preferences',
+    title: 'Civic analytics without third-party cookies',
+    description: 'OpenBarrio uses zero third-party cookies, PII, or cadastral identifiers. If you accept, a random local ID stays on your device solely to measure 14-day returning visits; if you reject, nothing is written to your device and only unlinkable daily event counts are recorded.',
+    acceptBtn: 'Accept 14d measurement',
+    rejectBtn: 'Reject',
+    learnMore: 'Privacy policy',
+  },
 };

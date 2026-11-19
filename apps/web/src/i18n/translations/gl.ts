@@ -956,4 +956,12 @@ export const gl: TranslationSchema = {
     errorRateLimit: 'Acadaches o límite temporal de consultas por URL. Usa a busca catastral manual ou reinténtao nun minuto.',
     errorGeneric: 'Non se puideron extraer pistas desa URL. Podes introducir o enderezo ou referencia manualmente.',
   },
+  consent: {
+    bannerAria: 'Preferencias de medición e privacidade',
+    title: 'Medición cívica sen cookies de terceiros',
+    description: 'OpenBarrio non usa cookies de terceiros nin recolle datos persoais nin referencias catastrais. Se aceptas, gardamos un identificador aleatorio local para medir visitas recorrentes en 14 días; se rexeitas, non se escribe nada no teu dispositivo e só contamos eventos diarios anónimos.',
+    acceptBtn: 'Aceptar medición 14d',
+    rejectBtn: 'Rexeitar',
+    learnMore: 'Política de privacidade',
+  },
 };

@@ -946,6 +946,14 @@ export interface TranslationSchema {
     errorRateLimit: string;
     errorGeneric: string;
   };
+  consent: {
+    bannerAria: string;
+    title: string;
+    description: string;
+    acceptBtn: string;
+    rejectBtn: string;
+    learnMore: string;
+  };
 }
 
 export interface LanguageContextType {

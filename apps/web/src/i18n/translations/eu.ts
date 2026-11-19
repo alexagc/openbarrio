@@ -956,4 +956,12 @@ export const eu: TranslationSchema = {
     errorRateLimit: 'URL kontsulten aldi baterako muga gainditu duzu. Erabili bilaketa manuala edo saiatu minutu barru.',
     errorGeneric: 'Ezin izan dira pistak URL horretatik atera. Sartu helbidea edo erreferentzia eskuz.',
   },
+  consent: {
+    bannerAria: 'Neurketa eta pribatutasun hobespenak',
+    title: 'Hirugarrenen cookie-rik gabeko neurketa zibikoa',
+    description: 'OpenBarriok ez du hirugarrenen cookie-rik erabiltzen, ezta datu pertsonalik edo katastro-erreferentziarik jasotzen ere. Onartzen baduzu, ausazko identifikatzaile lokal bat gordetzen dugu 14 eguneko bisita errepikatuak neurtzeko; baztertzen baduzu, ez da ezer idazten gailuan eta eguneroko gertaera anonimoak soilik zenbatzen dira.',
+    acceptBtn: 'Onartu 14d neurketa',
+    rejectBtn: 'Baztertu',
+    learnMore: 'Pribatutasun politika',
+  },
 };

@@ -14,6 +14,8 @@ import { UnitPickerModal } from './components/UnitPickerModal';
 import { PropertyDuelModal } from './components/comparator/PropertyDuelModal';
 import { CertifiedPdfReport } from './components/CertifiedPdfReport';
 import { ChromeExtensionBanner } from './components/common/ChromeExtensionBanner';
+import { ConsentBanner } from './components/common/ConsentBanner';
+import { useConsentStore } from './analytics';
 import {
   useWorkspaceStore,
   useViewMode,
@@ -48,10 +50,12 @@ export function AppContent() {
   const setDuelCandidateB = useWorkspaceStore((s) => s.setDuelCandidateB);
   const loadAuditByRefcat = useWorkspaceStore((s) => s.loadAuditByRefcat);
   const initFromUrl = useWorkspaceStore((s) => s.initFromUrl);
+  const hydrateConsent = useConsentStore((s) => s.hydrateConsent);
 
   useEffect(() => {
     initFromUrl();
-  }, [initFromUrl]);
+    hydrateConsent();
+  }, [initFromUrl, hydrateConsent]);
 
   // Scroll to top on route / view transition
   useEffect(() => {
@@ -141,6 +145,8 @@ export function AppContent() {
       )}
 
       {report && <CertifiedPdfReport report={report} />}
+
+      {!isEmbed && <ConsentBanner />}
     </>
   );
 }
