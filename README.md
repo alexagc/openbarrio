@@ -1,7 +1,7 @@
 # OpenBarrio 🏘️🇪🇸
 
 [![CI Pipeline](https://github.com/alexcg1/openbarrio/actions/workflows/ci.yml/badge.svg)](https://github.com/alexcg1/openbarrio/actions/workflows/ci.yml)
-[![Version: v1.3.2](https://img.shields.io/badge/Version-v1.3.2-blue.svg)](CHANGELOG.md)
+[![Version: v1.4.0](https://img.shields.io/badge/Version-v1.4.0-blue.svg)](CHANGELOG.md)
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 [![Runtime: Node.js 22 LTS](https://img.shields.io/badge/Runtime-Node.js_22_LTS-green.svg)](https://nodejs.org/)
 [![Monorepo: pnpm](https://img.shields.io/badge/Monorepo-pnpm_workspaces-orange.svg)](https://pnpm.io/)
@@ -51,6 +51,12 @@ flowchart TD
 
 ## ✨ Key Platform Features
 
+### 0. Trust, Typed Uncertainty, Ministerial Resilience & Public Methodology (v1.4.0)
+* **Zero False Safety & Typed `LayerResult<T>`:** Official layers explicitly track `ok`, `stale`, `unavailable`, and `out_of_coverage`. Upstream failures or uncovered parcels never fabricate safe noise/flood defaults; missing critical `SICA`/`SNCZI` layers cap the global traffic light below green and flag unevaluated risks across Web, Certified PDF, Property Duel, and Extension.
+* **BarrioScore v2.0.0 & Public Methodology (`/metodologia`):** Declarative typology weight tables and normative modifiers (`packages/core/src/scoring/weights.ts`) synchronized automatically with [docs/methodology/barrioscore.md](docs/methodology/barrioscore.md), plus weight renormalization across verified pillars (`<3/5` pillars triggers gray `UNCERTAIN`).
+* **Ministerial Resilience & Live Source Status (`/estado-fuentes`):** Bounded retries/timeouts with per-isolate circuit breakers (`withResilience`), zero-write D1 `source_snapshots` (`0009_source_snapshots.sql`) serving verified snapshots up to 365 days, and public telemetry via `GET /api/v1/status/sources`.
+* **Zero-Fetch Listing URL Channel & MV3 Remote Selectors:** Paste-URL resolution (`POST /api/v1/listing/resolve`) restricted to allowlisted portals with zero server fetching or storage ([docs/LISTING_URL_CHANNEL.md](docs/LISTING_URL_CHANNEL.md)), paired with validated JSON-only remote extension selectors (`GET /api/v1/extension/selectors`, `<= 32 KB`, bundled fallback).
+
 ### 1. Building Structural Health (ITE/IEE), 15-Minute City WalkScore & Seismic Hazard (v1.3.0)
 * **Building Technical Inspection (ITE/IEE) Integration:** Municipal open data ingestion (Madrid, Barcelona, Euskadi, Valencia) cross-referenced with official Sede del Catastro construction years. Evaluates favorable/unfavorable outcomes, active structural defects, and statutory preventive alerts for buildings $\ge 50$ years in un-digitalized municipalities under RD-L 7/2015 art. 29.
 * **15-Minute City Pedestrian Isochrones:** Client-side parametric isochrones in MapLibre GL generating 5-minute (375m), 10-minute (750m), and 15-minute (1125m) walking catchment zones with 1.25x urban tortuosity and multi-category civic amenities density analysis.
@@ -90,7 +96,7 @@ Served via HTTP Range requests with sub-15ms tile latency and zero external mini
 * **Thematic Lenses Selector:** 4 specialized cartographic views centered atop the map (`Vida Urbana`, `Silencio`, `Riesgos Naturales`, `Luz 3D`) with adaptive auto-activation based on property typology (e.g. rustic parcels automatically activate flood risk cartography).
 * **3-Second Executive Summary:** Instant executive dossier signal with overall score, critical alert banners (surface discrepancy >15%, active flood zones, expired energy certificates under RD 390/2021), and 3 instant verdict pills before progressive disclosure of in-depth technical analysis.
 * **Unified Sovereign Search:** Single unified search input with auto-detection of cadastral references and addresses, eliminating manual mode toggling.
-* **Store-Ready Extension Bundle:** Zero-dependency packaging pipeline (`pnpm package:extension`) generating audited, verified `openbarrio-extension-v1.3.2.zip` ready for Chrome Web Store.
+* **Store-Ready Extension Bundle:** Zero-dependency packaging pipeline (`pnpm package:extension`) generating audited, verified `openbarrio-extension-v1.4.0.zip` ready for Chrome Web Store.
 * **Dedicated Data Transparency Portal:** Independent `/fuentes-oficiales` route detailing compliance with Directive INSPIRE 2007/2/EC and Law 19/2013.
 
 ### 6. Urban 3D Extrusion & Solar Simulation
@@ -129,7 +135,7 @@ docker compose up -d
 
 ### 3. Running Containerized Tests & Linting
 ```bash
-# Execute Vitest across all workspace projects (538/538 passing):
+# Execute Vitest across all workspace projects (652/652 passing across 84 files):
 make docker-test
 
 # Run ESLint with zero warnings:
@@ -147,8 +153,8 @@ openbarrio/
 │   └── etl/            # Autonomous DuckDB Spatial pipelines for INE, IGN, SNCZI & SICA
 ├── apps/
 │   ├── api/            # Hono Universal API (Cloudflare Workers & Node.js) with OpenAPI docs
-│   ├── web/            # React 18 + Vite web exploration dashboard and due diligence dossier
-│   └── extension/      # Chrome Manifest V3 companion widget (Idealista & Fotocasa)
+│   ├── web/            # React 19 + Vite web exploration dashboard and due diligence dossier
+│   └── extension/      # Chrome Manifest V3 companion widget (Idealista, Fotocasa, Habitaclia, Pisos.com, YaEncontre)
 ├── data/               # Seed datasets, SQLite persistence and etl_manifest.json
 ├── scripts/            # Database initialization and quality gatekeeper scripts
 ├── .github/workflows/  # Automated CI/CD, SAST CodeQL, and 4-job ETL pipelines
