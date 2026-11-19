@@ -19,4 +19,5 @@ export * from './types/audit.js';
 export * from './types/http.js';
 export * from './tokens/index.js';
 export * from './scoring/traffic-light.js';
+export * from './scoring/weights.js';
 export * from './scoring/barrio-score.js';

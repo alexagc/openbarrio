@@ -12,7 +12,6 @@ import { SeismicHazard } from '../types/seismic.js';
 import { LayerKey, LayerStatusInfo, isLayerUsable } from '../types/data-status.js';
 import {
   PillarAvailability,
-  PillarKey,
   PillarTrafficLights,
   computeAuditCoverage,
   computeScoreConfidence,
@@ -20,23 +19,18 @@ import {
   evaluatePillarTrafficLight,
 } from './traffic-light.js';
 
-export const BARRIO_SCORE_METHODOLOGY_VERSION = '2.0.0';
+import {
+  DEFAULT_SCORING_WEIGHTS,
+  ENVIRONMENTAL_SUBWEIGHTS,
+  METHODOLOGY_VERSION,
+  ScoringWeights,
+  getWeightsForTypology,
+  renormalizeWeights,
+} from './weights.js';
 
-export interface ScoringWeights {
-  connectivity: number;
-  building: number;
-  socioeconomic: number;
-  environmental: number;
-  urbanPlanning: number;
-}
-
-export const DEFAULT_SCORING_WEIGHTS: ScoringWeights = {
-  connectivity: 0.25,
-  building: 0.25,
-  socioeconomic: 0.20,
-  environmental: 0.15,
-  urbanPlanning: 0.15,
-};
+export const BARRIO_SCORE_METHODOLOGY_VERSION = METHODOLOGY_VERSION;
+export type { ScoringWeights };
+export { DEFAULT_SCORING_WEIGHTS };
 
 export interface BarrioScoreInput {
   property: CadastralProperty;
@@ -68,19 +62,7 @@ function resolveTypologyBaseWeights(
   typology: PropertyTypology,
   weights?: ScoringWeights
 ): ScoringWeights {
-  if (weights && weights !== DEFAULT_SCORING_WEIGHTS) {
-    return weights;
-  }
-  if (typology === 'VACANT_PLOT') {
-    return { connectivity: 0.25, building: 0.05, socioeconomic: 0.20, environmental: 0.25, urbanPlanning: 0.25 };
-  }
-  if (typology === 'RUSTIC') {
-    return { connectivity: 0.15, building: 0.05, socioeconomic: 0.20, environmental: 0.30, urbanPlanning: 0.30 };
-  }
-  if (typology === 'INDUSTRIAL') {
-    return { connectivity: 0.15, building: 0.35, socioeconomic: 0.10, environmental: 0.15, urbanPlanning: 0.25 };
-  }
-  return DEFAULT_SCORING_WEIGHTS;
+  return getWeightsForTypology(typology, weights);
 }
 
 /**
@@ -531,16 +513,23 @@ export function calculateBarrioScore(
   if (hasSica && hasSnczi && airQualityScore !== null) {
     environmentalAvailable = true;
     environmentalScore = Math.round(
-      acousticComfortScore * 0.50 + climateSafetyScore * 0.35 + airQualityScore * 0.15
+      acousticComfortScore * ENVIRONMENTAL_SUBWEIGHTS.withAqi.sica +
+        climateSafetyScore * ENVIRONMENTAL_SUBWEIGHTS.withAqi.snczi +
+        airQualityScore * ENVIRONMENTAL_SUBWEIGHTS.withAqi.airQuality
     );
   } else if (hasSica && hasSnczi) {
     environmentalAvailable = true;
-    environmentalScore = Math.round(acousticComfortScore * 0.55 + climateSafetyScore * 0.45);
+    environmentalScore = Math.round(
+      acousticComfortScore * ENVIRONMENTAL_SUBWEIGHTS.withoutAqi.sica +
+        climateSafetyScore * ENVIRONMENTAL_SUBWEIGHTS.withoutAqi.snczi
+    );
   } else {
     const subParts: Array<{ score: number; weight: number }> = [];
-    if (hasSica) subParts.push({ score: acousticComfortScore, weight: 0.50 });
-    if (hasSnczi) subParts.push({ score: climateSafetyScore, weight: 0.35 });
-    if (airQualityScore !== null) subParts.push({ score: airQualityScore, weight: 0.15 });
+    if (hasSica) subParts.push({ score: acousticComfortScore, weight: ENVIRONMENTAL_SUBWEIGHTS.withAqi.sica });
+    if (hasSnczi) subParts.push({ score: climateSafetyScore, weight: ENVIRONMENTAL_SUBWEIGHTS.withAqi.snczi });
+    if (airQualityScore !== null) {
+      subParts.push({ score: airQualityScore, weight: ENVIRONMENTAL_SUBWEIGHTS.withAqi.airQuality });
+    }
 
     const totalSubWeight = subParts.reduce((sum, p) => sum + p.weight, 0);
     if (totalSubWeight > 0) {
@@ -665,18 +654,7 @@ export function calculateBarrioScore(
   };
 
   const baseWeights = resolveTypologyBaseWeights(typology, weights);
-  const activeWeightSum = (Object.keys(pillarAvailability) as PillarKey[]).reduce(
-    (sum, key) => (pillarAvailability[key] ? sum + baseWeights[key] : sum),
-    0
-  );
-
-  const weightsUsed: ScoringWeights = {
-    connectivity: pillarAvailability.connectivity && activeWeightSum > 0 ? baseWeights.connectivity / activeWeightSum : 0,
-    building: pillarAvailability.building && activeWeightSum > 0 ? baseWeights.building / activeWeightSum : 0,
-    socioeconomic: pillarAvailability.socioeconomic && activeWeightSum > 0 ? baseWeights.socioeconomic / activeWeightSum : 0,
-    environmental: pillarAvailability.environmental && activeWeightSum > 0 ? baseWeights.environmental / activeWeightSum : 0,
-    urbanPlanning: pillarAvailability.urbanPlanning && activeWeightSum > 0 ? baseWeights.urbanPlanning / activeWeightSum : 0,
-  };
+  const { weightsUsed, activeWeightSum } = renormalizeWeights(baseWeights, pillarAvailability);
 
   const rawOverall =
     connectivityScore * weightsUsed.connectivity +
