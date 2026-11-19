@@ -16,6 +16,7 @@ import { PropertyDuelModal } from './components/comparator/PropertyDuelModal';
 import { CertifiedPdfReport } from './components/CertifiedPdfReport';
 import { ChromeExtensionBanner } from './components/common/ChromeExtensionBanner';
 import { ConsentBanner } from './components/common/ConsentBanner';
+import { SwUpdateToast } from './components/common/SwUpdateToast';
 import { useConsentStore } from './analytics';
 import {
   useWorkspaceStore,
@@ -150,6 +151,7 @@ export function AppContent() {
       {report && <CertifiedPdfReport report={report} />}
 
       {!isEmbed && <ConsentBanner />}
+      {!isEmbed && <SwUpdateToast />}
     </>
   );
 }

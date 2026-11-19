@@ -51,6 +51,34 @@ export default {
     }
 
     // 2. Serve static assets via Cloudflare Pages asset handler
+    // Enforce no-cache and explicit MIME/scope headers for Service Worker & Web Manifest
+    if (url.pathname === '/sw.js') {
+      const swResponse = await env.ASSETS.fetch(new Request(new URL('/sw.js', request.url), request));
+      const headers = new Headers(swResponse.headers);
+      headers.set('Cache-Control', 'no-cache, no-store, must-revalidate');
+      headers.set('Service-Worker-Allowed', '/');
+      headers.set('Content-Type', 'application/javascript; charset=utf-8');
+      return new Response(swResponse.body, {
+        status: swResponse.status,
+        statusText: swResponse.statusText,
+        headers,
+      });
+    }
+
+    if (url.pathname === '/manifest.webmanifest') {
+      const manifestResponse = await env.ASSETS.fetch(
+        new Request(new URL('/manifest.webmanifest', request.url), request)
+      );
+      const headers = new Headers(manifestResponse.headers);
+      headers.set('Cache-Control', 'no-cache, must-revalidate');
+      headers.set('Content-Type', 'application/manifest+json; charset=utf-8');
+      return new Response(manifestResponse.body, {
+        status: manifestResponse.status,
+        statusText: manifestResponse.statusText,
+        headers,
+      });
+    }
+
     // If worker or static script has cache-busting query params (e.g. ?v=6.16.0), normalize url for ASSETS fetch
     let assetRequest = request;
     if (url.search && (url.pathname.endsWith('.mjs') || url.pathname.endsWith('.js'))) {

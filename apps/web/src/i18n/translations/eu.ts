@@ -1011,4 +1011,12 @@ export const eu: TranslationSchema = {
     biasDisclosureText: 'Dokumentatutako neurketa-alborapena: opt-in zorrotza denez, baimena baztertzen duten gailuek ez dute 14 eguneko itzulerarik ematen eta eguneroko kontagailu anonimoetan soilik zenbatzen dira.',
     extensionScopeText: 'Chrome MV3 nabigatzaile-luzapenak ez du analitikarik bidaltzen v1.5.0 bertsioan baimen gehigarririk ez eskatzeko.',
   },
+  pwa: {
+    notificationsRegionAria: 'Aplikazioaren jakinarazpenak',
+    updateTitle: 'Bertsio berria eskuragarri',
+    updateDescription: 'OpenBarrioren eguneraketa bat prest dago aktibatzeko. Nahi duzunean aplika dezakezu.',
+    updateBtn: 'Eguneratu',
+    dismissBtn: 'Itxi',
+    actionsAvailable: 'Ekintzak eskuragarri',
+  },
 };

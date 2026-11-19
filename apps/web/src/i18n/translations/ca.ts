@@ -1014,4 +1014,12 @@ export const ca: TranslationSchema = {
     biasDisclosureText: 'Biaix de mesurament documentat: en ser opt-in estricte, els dispositius que rebutgen el consentiment no aporten recurrència a 14 dies i només sumen comptadors diaris anònims.',
     extensionScopeText: 'L’extensió de navegador Chrome MV3 no emet cap analítica a la v1.5.0 per evitar permisos addicionals.',
   },
+  pwa: {
+    notificationsRegionAria: 'Notificacions de l’aplicació',
+    updateTitle: 'Nova versió disponible',
+    updateDescription: 'Hi ha una actualització d’OpenBarrio llesta per activar-se. Pots aplicar-la quan acabis la consulta.',
+    updateBtn: 'Actualitzar',
+    dismissBtn: 'Tancar',
+    actionsAvailable: 'Accions disponibles',
+  },
 };

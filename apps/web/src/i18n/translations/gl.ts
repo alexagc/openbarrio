@@ -1011,4 +1011,12 @@ export const gl: TranslationSchema = {
     biasDisclosureText: 'Sesgo de medición documentado: ao ser opt-in estrito, os dispositivos que rexeitan o consentimento non achegan recorrencia a 14 días e só suman contadores diarios anónimos.',
     extensionScopeText: 'A extensión de navegador Chrome MV3 non emite analítica ningunha na v1.5.0 para evitar permisos adicionais.',
   },
+  pwa: {
+    notificationsRegionAria: 'Notificacións da aplicación',
+    updateTitle: 'Nova versión dispoñible',
+    updateDescription: 'Hai unha actualización de OpenBarrio lista para activarse. Podes aplicala cando remates a túa consulta.',
+    updateBtn: 'Actualizar',
+    dismissBtn: 'Pechar',
+    actionsAvailable: 'Accións dispoñibles',
+  },
 };

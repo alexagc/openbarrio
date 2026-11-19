@@ -1001,6 +1001,14 @@ export interface TranslationSchema {
     biasDisclosureText: string;
     extensionScopeText: string;
   };
+  pwa: {
+    notificationsRegionAria: string;
+    updateTitle: string;
+    updateDescription: string;
+    updateBtn: string;
+    dismissBtn: string;
+    actionsAvailable: string;
+  };
 }
 
 export interface LanguageContextType {

@@ -1014,4 +1014,12 @@ export const en: TranslationSchema = {
     biasDisclosureText: 'Measurement bias disclosure: strict opt-in consent means unconsented devices are never linked across visits, so 14-day returning figures reflect consenting users only.',
     extensionScopeText: 'The Chrome MV3 browser extension collects zero analytics in v1.5.0 to avoid extra permissions.',
   },
+  pwa: {
+    notificationsRegionAria: 'Application notifications',
+    updateTitle: 'New version available',
+    updateDescription: 'An OpenBarrio update is ready to activate. Apply it whenever you are ready.',
+    updateBtn: 'Update now',
+    dismissBtn: 'Dismiss',
+    actionsAvailable: 'Actions available',
+  },
 };
