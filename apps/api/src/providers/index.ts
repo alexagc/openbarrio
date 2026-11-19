@@ -16,6 +16,7 @@ import {
 } from './types.js';
 import { D1Database, CloudflareEnv } from '../types/env.js';
 import { CircuitBreakerRegistry, SourceSnapshotStore, defaultBreakerRegistry } from '../resilience/index.js';
+import { TelemetryStore } from '../telemetry/telemetry-store.js';
 import { CatastroProvider } from './catastro.provider.js';
 import { MockCatastroProvider } from './catastro.mock.js';
 import { NavarraCatastroProvider } from './navarra.provider.js';
@@ -99,6 +100,7 @@ export interface ProviderContainer {
   vut: IVutProvider;
   municipality: IMunicipalityProvider;
   snapshotStore?: SourceSnapshotStore;
+  telemetryStore?: TelemetryStore;
   breaker?: CircuitBreakerRegistry;
   db?: D1Database;
 }
@@ -146,6 +148,7 @@ export function createMockProviders(overrides?: Partial<ProviderContainer>): Pro
     vut: overrides?.vut || vut,
     municipality: overrides?.municipality || municipality,
     snapshotStore: overrides?.snapshotStore,
+    telemetryStore: overrides?.telemetryStore || new TelemetryStore({ db: overrides?.db }),
     breaker: overrides?.breaker || defaultBreakerRegistry,
     db: overrides?.db,
   };
@@ -177,6 +180,7 @@ export function createProviders(
 
   const breaker = overrides?.breaker || defaultBreakerRegistry;
   const snapshotStore = new SourceSnapshotStore({ db });
+  const telemetryStore = overrides?.telemetryStore || new TelemetryStore({ db });
   const defaultCatastro = new CadastralRouterProvider({
     dgc: new CatastroProvider({ db, breaker }),
     navarra: new NavarraCatastroProvider(),
@@ -224,6 +228,7 @@ export function createProviders(
     vut: overrides?.vut || defaultVut,
     municipality: overrides?.municipality || defaultMunicipality,
     snapshotStore: overrides?.snapshotStore || snapshotStore,
+    telemetryStore,
     breaker,
     db: overrides?.db || db,
   };
@@ -235,6 +240,11 @@ export function injectDatabase(providers: ProviderContainer, db: D1Database): vo
     providers.snapshotStore.setDatabase(db);
   } else {
     providers.snapshotStore = new SourceSnapshotStore({ db });
+  }
+  if (providers.telemetryStore) {
+    providers.telemetryStore.setDatabase(db);
+  } else {
+    providers.telemetryStore = new TelemetryStore({ db });
   }
   for (const provider of Object.values(providers)) {
     if (provider && typeof (provider as any).setDatabase === 'function') {

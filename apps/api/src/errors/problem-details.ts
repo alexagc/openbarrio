@@ -169,6 +169,18 @@ export class UnsupportedMediaTypeError extends ProblemDetailsException {
   }
 }
 
+export class TelemetryPayloadTooLargeError extends ProblemDetailsException {
+  constructor(maxBytes: number, instance?: string) {
+    super({
+      status: 413,
+      type: 'https://openbarrio.org/errors/telemetry-payload-too-large',
+      title: 'Telemetry Payload Too Large',
+      detail: `Telemetry event payload exceeds maximum allowed size of ${maxBytes} bytes.`,
+      instance,
+    });
+  }
+}
+
 /**
  * Hono error handler transforming exceptions and validation failures into RFC 7807 payloads.
  */

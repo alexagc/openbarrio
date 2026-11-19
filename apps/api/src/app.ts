@@ -47,6 +47,10 @@ export function buildOpenApiSpec(): Record<string, any> {
         name: 'System',
         description: 'System health and diagnostic probes',
       },
+      {
+        name: 'Telemetry',
+        description: 'Privacy-first aggregate event ingestion without cookies or PII',
+      },
     ],
     servers: [
       {
@@ -255,6 +259,49 @@ export function buildOpenApiSpec(): Record<string, any> {
               description: 'Valid RemoteSelectorsBundle JSON',
             },
             '500': { description: 'RFC 7807 Selector config validation failure' },
+          },
+        },
+      },
+      '/api/v1/telemetry': {
+        post: {
+          tags: ['Telemetry'],
+          summary: 'Ingest privacy-first aggregate telemetry event',
+          description:
+            'Accepts closed-schema aggregate usage events (<= 1 KB, zero PII, zero cookies, zero IP persistence) buffered into batched daily D1 counts with 13-month retention.',
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  required: ['event'],
+                  additionalProperties: false,
+                  properties: {
+                    event: {
+                      type: 'string',
+                      enum: [
+                        'dossier_generated',
+                        'lens_used',
+                        'checklist_exported',
+                        'visit_mode_enabled',
+                      ],
+                    },
+                    lens: {
+                      type: 'string',
+                      enum: ['profile', 'layer', 'checklist'],
+                    },
+                    returning14d: { type: 'boolean' },
+                  },
+                },
+              },
+            },
+          },
+          responses: {
+            '204': { description: 'Telemetry event accepted into isolate aggregate batch' },
+            '400': { description: 'RFC 7807 Strict closed schema validation failure' },
+            '413': { description: 'RFC 7807 Telemetry payload exceeds 1024 bytes' },
+            '415': { description: 'RFC 7807 Expected application/json' },
+            '429': { description: 'RFC 7807 Telemetry rate limit exceeded' },
           },
         },
       },
