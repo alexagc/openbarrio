@@ -5,6 +5,8 @@ import { BuildingCapExCard, deriveBuildingCapEx } from '../src/components/dossie
 import { ExecutiveSummaryCard } from '../src/components/dossier/ExecutiveSummaryCard';
 import { AuditDossier } from '../src/components/AuditDossier';
 import { HighlightsAndRisks } from '../src/components/HighlightsAndRisks';
+import { CertifiedPdfReport } from '../src/components/CertifiedPdfReport';
+import { LanguageProvider } from '../src/i18n';
 import { generateDeterministicAudit } from './mocks/offline-simulator';
 import { PropertyAuditReport } from '@openbarrio/core';
 
@@ -459,5 +461,64 @@ describe('Property Duel & Dual Radar Comparator (Phase 12C)', () => {
     );
     const directChips = screen.getAllByTestId('substandard-risk-chip');
     expect(directChips.length).toBeGreaterThanOrEqual(2);
+  });
+
+  it('propagates UNCERTAIN and missing data in Duel and CertifiedPdfReport without awarding fake winners or fabricated defaults', () => {
+    const uncertainB: PropertyAuditReport = {
+      ...reportB,
+      environment: {},
+      neighborhood: undefined,
+      energy: undefined,
+      marketTrends: undefined,
+      layers: {
+        sica: { status: 'unavailable', sourceName: 'MITECO SICA', reason: 'timeout' },
+        snczi: { status: 'out_of_coverage', sourceName: 'MITECO SNCZI', reason: 'no_coverage' },
+        ine: {
+          status: 'stale',
+          sourceName: 'INE ADRH',
+          verifiedAt: '2026-09-01T10:00:00.000Z',
+          staleDays: 79,
+        },
+      },
+      score: {
+        ...reportB.score,
+        overallScore: 55,
+        methodologyVersion: '2.0.0',
+        coverage: {
+          ok: 1,
+          total: 3,
+          pillarsWithData: 2,
+          pillarsTotal: 5,
+          level: 'low',
+          missingCriticalLayers: ['sica', 'snczi'],
+        },
+        trafficLight: 'UNCERTAIN',
+      },
+    };
+
+    render(
+      <LanguageProvider>
+        <PropertyDuelModal
+          reportA={reportA}
+          reportB={uncertainB}
+          isOpen={true}
+          onClose={vi.fn()}
+        />
+        <CertifiedPdfReport report={uncertainB} />
+      </LanguageProvider>
+    );
+
+    const cardB = screen.getByTestId('score-card-b');
+    expect(cardB.getAttribute('data-traffic-light')).toBe('UNCERTAIN');
+    expect(cardB.textContent).not.toContain('60 dBA');
+
+    const matrix = screen.getByTestId('differential-matrix-table');
+    expect(matrix.textContent).toContain('No comparable');
+
+    const pdf = screen.getByTestId('certified-pdf-report');
+    expect(pdf.getAttribute('data-traffic-light')).toBe('UNCERTAIN');
+    expect(screen.getByTestId('pdf-uncertain-badge')).toBeDefined();
+    expect(screen.getByTestId('pdf-uncertainty-notice')).toBeDefined();
+    expect(pdf.textContent).toContain('openbarrio.org/metodologia');
   });
 });

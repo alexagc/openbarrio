@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { PropertyAuditReport } from '@openbarrio/core';
+import { isLayerUsable, PropertyAuditReport } from '@openbarrio/core';
 import { DualRadarChart, DualRadarMode } from './DualRadarChart';
 import { DuelHeader } from './DuelHeader';
 import { DuelCandidateSelector, PresetCandidate, PRESET_CANDIDATES } from './DuelCandidateSelector';
@@ -205,27 +205,30 @@ export function PropertyDuelModal({
 
   if (!isOpen) return null;
 
-  // CapEx assessment derivations
+  // CapEx assessment derivations (only use recorded building values; never invent years)
   const capexA =
     candidateA.capex ||
     deriveBuildingCapEx(
-      candidateA.property.building.constructionYear || 1984,
-      candidateA.property.building.builtSurfaceM2 || 88
+      candidateA.property.building.constructionYear,
+      candidateA.property.building.builtSurfaceM2
     );
   const capexB =
     candidateB.capex ||
     deriveBuildingCapEx(
-      candidateB.property.building.constructionYear || 1968,
-      candidateB.property.building.builtSurfaceM2 || 112
+      candidateB.property.building.constructionYear,
+      candidateB.property.building.builtSurfaceM2
     );
 
   // Global Algorithmic Verdict computation
   const scoreA = candidateA.score.overallScore;
   const scoreB = candidateB.score.overallScore;
   const globalDelta = scoreA - scoreB;
+  const anyUncertain = candidates.some((c) => c.score.trafficLight === 'UNCERTAIN');
 
   let verdictBadgeText = t('duel.verdictParity');
-  if (candidates.length <= 2) {
+  if (anyUncertain) {
+    verdictBadgeText = `${t('uncertainty.uncertainBadge')} · ${t('uncertainty.uncertainTitle')}`;
+  } else if (candidates.length <= 2) {
     if (globalDelta > 0) {
       verdictBadgeText = t('duel.verdictAdvantageA', { delta: globalDelta });
     } else if (globalDelta < 0) {
@@ -325,22 +328,38 @@ export function PropertyDuelModal({
     }
   };
 
-  // Technical Arbitrage Synthesis
-  const noiseA = candidateA.environment.noise?.dayEveningNightDecibels || 58;
-  const noiseB = candidateB.environment.noise?.dayEveningNightDecibels || 67;
-  const noiseDiff = noiseB - noiseA;
+  // Technical Arbitrage Synthesis (no fabricated fallbacks when upstream layers are unavailable)
+  const isSicaUsableA = !candidateA.layers?.sica || isLayerUsable(candidateA.layers.sica.status);
+  const isSicaUsableB = !candidateB.layers?.sica || isLayerUsable(candidateB.layers.sica.status);
+  const noiseA = isSicaUsableA ? candidateA.environment.noise?.dayEveningNightDecibels : undefined;
+  const noiseB = isSicaUsableB ? candidateB.environment.noise?.dayEveningNightDecibels : undefined;
+  const noiseDiff =
+    noiseA !== undefined && noiseB !== undefined ? noiseB - noiseA : undefined;
 
-  const incomeA = candidateA.neighborhood?.averageNetHouseholdIncomeEur ?? 0;
-  const incomeB = candidateB.neighborhood?.averageNetHouseholdIncomeEur ?? 0;
-  const incomeDiff = incomeB - incomeA;
+  const isIneUsableA = !candidateA.layers?.ine || isLayerUsable(candidateA.layers.ine.status);
+  const isIneUsableB = !candidateB.layers?.ine || isLayerUsable(candidateB.layers.ine.status);
+  const incomeA = isIneUsableA ? candidateA.neighborhood?.averageNetHouseholdIncomeEur : undefined;
+  const incomeB = isIneUsableB ? candidateB.neighborhood?.averageNetHouseholdIncomeEur : undefined;
+  const incomeDiff =
+    incomeA !== undefined && incomeB !== undefined ? incomeB - incomeA : undefined;
 
-  const yearA = candidateA.property.building.constructionYear || 1984;
-  const yearB = candidateB.property.building.constructionYear || 1968;
-  const ageA = new Date().getFullYear() - yearA;
-  const ageB = new Date().getFullYear() - yearB;
+  const yearA =
+    candidateA.property.building.constructionYear > 0
+      ? candidateA.property.building.constructionYear
+      : undefined;
+  const yearB =
+    candidateB.property.building.constructionYear > 0
+      ? candidateB.property.building.constructionYear
+      : undefined;
+  const ageA = yearA !== undefined ? new Date().getFullYear() - yearA : undefined;
+  const ageB = yearB !== undefined ? new Date().getFullYear() - yearB : undefined;
 
-  const walkScoreA = candidateA.score.subscores.connectivity;
-  const walkScoreB = candidateB.score.subscores.connectivity;
+  const isConnUsableA =
+    !candidateA.layers?.connectivity || isLayerUsable(candidateA.layers.connectivity.status);
+  const isConnUsableB =
+    !candidateB.layers?.connectivity || isLayerUsable(candidateB.layers.connectivity.status);
+  const walkScoreA = isConnUsableA ? candidateA.score.subscores.connectivity : undefined;
+  const walkScoreB = isConnUsableB ? candidateB.score.subscores.connectivity : undefined;
 
   return (
     <div
@@ -414,25 +433,30 @@ export function PropertyDuelModal({
                 {candidates.map((cand, idx) => {
                   const meta = CANDIDATE_METAS[idx] || CANDIDATE_METAS[0];
                   const cScore = cand.score.overallScore;
+                  const cIsUncertain = cand.score.trafficLight === 'UNCERTAIN';
                   const cCapex =
                     cand.capex ||
                     deriveBuildingCapEx(
-                      cand.property.building.constructionYear || 1975,
-                      cand.property.building.builtSurfaceM2 || 90
+                      cand.property.building.constructionYear,
+                      cand.property.building.builtSurfaceM2
                     );
-                  const cNoise = cand.environment.noise?.dayEveningNightDecibels || 60;
+                  const cSicaUsable = !cand.layers?.sica || isLayerUsable(cand.layers.sica.status);
+                  const cNoise = cSicaUsable ? cand.environment.noise?.dayEveningNightDecibels : undefined;
                   const isSub = isSubstandardHousing(cand);
 
                   return (
                     <div
                       key={cand.property.cadastralReference || idx}
                       data-testid={`score-card-${meta.letter.toLowerCase()}`}
-                      className={`bg-surface-container border ${meta.borderClass} rounded-lg p-space-md relative overflow-hidden group ${meta.hoverBorderClass} transition-colors`}
+                      data-traffic-light={cand.score.trafficLight ?? 'DEFAULT'}
+                      className={`bg-surface-container border ${
+                        cIsUncertain ? 'border-slate-500/60' : meta.borderClass
+                      } rounded-lg p-space-md relative overflow-hidden group ${meta.hoverBorderClass} transition-colors`}
                     >
                       <div className="flex items-start justify-between">
                         <div>
                           <div className="flex items-center gap-2">
-                            <span className={`w-2.5 h-2.5 rounded-full ${meta.dotClass}`} />
+                            <span className={`w-2.5 h-2.5 rounded-full ${cIsUncertain ? 'bg-slate-400' : meta.dotClass}`} />
                             <span className={`font-mono text-xs font-semibold ${meta.textLightClass}`}>
                               INMUEBLE {meta.letter} · {cand.property.address.street} {cand.property.address.number}
                             </span>
@@ -442,12 +466,24 @@ export function PropertyDuelModal({
                           </div>
                         </div>
                         <div className="text-right">
-                          <div className={`text-2xl sm:text-3xl font-bold font-mono ${meta.textAccentClass} leading-none`}>
+                          <div className={`text-2xl sm:text-3xl font-bold font-mono ${cIsUncertain ? 'text-slate-300' : meta.textAccentClass} leading-none`}>
                             {cScore}
                             <span className="text-xs text-on-surface-variant font-normal">/100</span>
                           </div>
-                          <span className={`inline-block px-2 py-0.5 mt-1 rounded ${meta.bgBadgeClass}/60 border ${meta.borderBadgeClass}/30 ${meta.textLightClass} font-mono text-[10px]`}>
-                            {cScore >= 75 ? 'Calidad Muy Alta' : cScore >= 50 ? 'Calidad Media' : 'Atención Requerida'}
+                          <span
+                            className={`inline-block px-2 py-0.5 mt-1 rounded font-mono text-[10px] ${
+                              cIsUncertain
+                                ? 'bg-slate-700/70 border border-slate-500 text-slate-200'
+                                : `${meta.bgBadgeClass}/60 border ${meta.borderBadgeClass}/30 ${meta.textLightClass}`
+                            }`}
+                          >
+                            {cIsUncertain
+                              ? t('uncertainty.uncertainBadge')
+                              : cScore >= 75
+                              ? 'Calidad Muy Alta'
+                              : cScore >= 50
+                              ? 'Calidad Media'
+                              : 'Atención Requerida'}
                           </span>
                         </div>
                       </div>
@@ -466,7 +502,9 @@ export function PropertyDuelModal({
                       <div className="w-full bg-surface-container-highest h-2 rounded-full mt-3 overflow-hidden">
                         <div
                           className={`h-full rounded-full ${
-                            meta.letter === 'A'
+                            cIsUncertain
+                              ? 'bg-slate-400'
+                              : meta.letter === 'A'
                               ? 'bg-cyan-400'
                               : meta.letter === 'B'
                               ? 'bg-amber-400'
@@ -487,8 +525,10 @@ export function PropertyDuelModal({
                         </div>
                         <div>
                           <div className="text-on-surface-variant">Nivel Ruido</div>
-                          <div className={`font-semibold ${meta.textAccentClass}`}>
-                            {cNoise} dBA ({cNoise < 60 ? 'Óptimo' : cNoise <= 65 ? 'Moderado' : 'ZPAE'})
+                          <div className={`font-semibold ${cNoise === undefined ? 'text-slate-400' : meta.textAccentClass}`}>
+                            {cNoise !== undefined
+                              ? `${cNoise} dBA (${cNoise < 60 ? 'Óptimo' : cNoise <= 65 ? 'Moderado' : 'ZPAE'})`
+                              : t('uncertainty.notAvailableShort')}
                           </div>
                         </div>
                         <div>
@@ -514,15 +554,21 @@ export function PropertyDuelModal({
                     {t('duel.arbitrageSummaryTitle')}
                   </strong>
                   <span className="text-on-surface-variant">
-                    {scoreA >= scoreB
+                    {anyUncertain
+                      ? t('uncertainty.uncertainDesc')
+                      : scoreA >= scoreB
                       ? `El Inmueble A ofrece un rendimiento habitacional y de preservación de capital superior gracias a su menor exposición acústica (${
-                          noiseDiff > 0 ? `-${noiseDiff} dBA` : 'óptima'
-                        }) y menor riesgo en derramas a 10 años, a pesar de que el Inmueble B posee una renta censal superior (+${
-                          incomeDiff > 0 ? incomeDiff.toLocaleString('es-ES') : 0
-                        } €/año).`
-                      : `El Inmueble B ofrece ventajas socioeconómicas notables (+${
-                          incomeDiff > 0 ? incomeDiff.toLocaleString('es-ES') : 0
-                        } €/año) y mayor superficie, compensando el diferencial acústico y posibles derramas en ascensores o envolvente.`}
+                          noiseDiff !== undefined && noiseDiff > 0 ? `-${noiseDiff} dBA` : t('uncertainty.notAvailableShort')
+                        }) y menor riesgo en derramas a 10 años${
+                          incomeDiff !== undefined && incomeDiff > 0
+                            ? `, a pesar de que el Inmueble B posee una renta censal superior (+${incomeDiff.toLocaleString('es-ES')} €/año)`
+                            : ''
+                        }.`
+                      : `El Inmueble B ofrece ventajas socioeconómicas notables${
+                          incomeDiff !== undefined && incomeDiff > 0
+                            ? ` (+${incomeDiff.toLocaleString('es-ES')} €/año)`
+                            : ''
+                        } y mayor superficie, compensando el diferencial acústico y posibles derramas en ascensores o envolvente.`}
                   </span>
                 </div>
               </div>
