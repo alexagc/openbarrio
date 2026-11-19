@@ -18,6 +18,7 @@ import { ChromeExtensionBanner } from './components/common/ChromeExtensionBanner
 import { ConsentBanner } from './components/common/ConsentBanner';
 import { SwUpdateToast } from './components/common/SwUpdateToast';
 import { useConsentStore } from './analytics';
+import { usePwaStore } from './store/pwa.store';
 import {
   useWorkspaceStore,
   useViewMode,
@@ -53,11 +54,13 @@ export function AppContent() {
   const loadAuditByRefcat = useWorkspaceStore((s) => s.loadAuditByRefcat);
   const initFromUrl = useWorkspaceStore((s) => s.initFromUrl);
   const hydrateConsent = useConsentStore((s) => s.hydrateConsent);
+  const initPwaListeners = usePwaStore((s) => s.initPwaListeners);
 
   useEffect(() => {
     initFromUrl();
     hydrateConsent();
-  }, [initFromUrl, hydrateConsent]);
+    return initPwaListeners();
+  }, [initFromUrl, hydrateConsent, initPwaListeners]);
 
   // Scroll to top on route / view transition
   useEffect(() => {

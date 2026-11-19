@@ -1009,6 +1009,26 @@ export interface TranslationSchema {
     dismissBtn: string;
     actionsAvailable: string;
   };
+  visitMode: {
+    saveForVisitBtn: string;
+    savedForVisitBtn: string;
+    saveForVisitTooltip: string;
+    savedVisitsBtn: string;
+    savedPanelTitle: string;
+    savedPanelDesc: string;
+    savedPanelEmpty: string;
+    savedOnDate: string;
+    openSavedBtn: string;
+    removeSavedBtn: string;
+    offlineBanner: string;
+    offlineScopeNotice: string;
+    expiredWarning: string;
+    pdfDisabledOffline: string;
+    offlineNotSavedError: string;
+    offlineSearchUnavailable: string;
+    storageUnavailableError: string;
+    storageQuotaError: string;
+  };
 }
 
 export interface LanguageContextType {

@@ -4,10 +4,13 @@ import {
   PropertyTypology,
   LandClassification,
   METHODOLOGY_VERSION,
+  VISIT_MODE_STALE_WARN_DAYS,
   detectPropertyTypology,
   detectCadastralJurisdiction,
   evaluateBuildingInspectionAlert,
   evaluateSeismicVulnerability,
+  isSavedDossierExpired,
+  normalizeVisitDossierId,
 } from '@openbarrio/core';
 import { ScoreGauge } from './ScoreGauge';
 import { PillarCards, BuildingCadastralCard } from './PillarCard';
@@ -25,6 +28,7 @@ import { PedestrianIsochronesCard } from './dossier/PedestrianIsochronesCard';
 import { downloadCadastralGML } from '../utils/gml';
 import { DossierTab } from '../hooks/useUrlSync';
 import { useWorkspaceStore } from '../store/workspace.store';
+import { usePwaStore } from '../store/pwa.store';
 import { useTranslation } from '../i18n';
 import { isSubstandardHousing } from '../utils/substandard';
 import {
@@ -35,6 +39,8 @@ import {
   Calendar,
   Building,
   Bookmark,
+  BookmarkCheck,
+  WifiOff,
   MapPin,
   Download,
   Sparkles,
@@ -65,6 +71,11 @@ export function AuditDossier({
   const storeDossierTab = useWorkspaceStore((s) => s.dossierTab);
   const setStoreDossierTab = useWorkspaceStore((s) => s.setDossierTab);
   const setViewMode = useWorkspaceStore((s) => s.setViewMode);
+
+  const isOnline = usePwaStore((s) => s.isOnline);
+  const savedDossiers = usePwaStore((s) => s.savedDossiers);
+  const activeSavedDossierMeta = usePwaStore((s) => s.activeSavedDossierMeta);
+  const saveDossierForVisit = usePwaStore((s) => s.saveDossierForVisit);
 
   const [internalTab, setInternalTab] = useState<DossierTab>('summary');
   const [copied, setCopied] = useState(false);
@@ -269,8 +280,68 @@ export function AuditDossier({
   const typologyBadge = getTypologyBadge(typology, property.building.constructionYear, property.building.primaryUse);
   const districtLabel = `${property.address.municipality} · Sección ${neighborhood?.censusSectionCode ? neighborhood.censusSectionCode.slice(-3) : '—'}`;
 
+  const normalizedRefcat = normalizeVisitDossierId(property.cadastralReference);
+  const matchingSaved = savedDossiers.find((d) => d.id === normalizedRefcat);
+  const isSavedForVisit =
+    Boolean(matchingSaved) || activeSavedDossierMeta?.id === normalizedRefcat;
+  const effectiveSavedAt =
+    activeSavedDossierMeta?.id === normalizedRefcat
+      ? activeSavedDossierMeta.savedAt
+      : matchingSaved?.savedAt;
+  const isLoadedOffline =
+    !isOnline ||
+    Boolean(
+      activeSavedDossierMeta?.isLoadedOffline &&
+        activeSavedDossierMeta.id === normalizedRefcat
+    );
+  const isVisitExpired = Boolean(effectiveSavedAt && isSavedDossierExpired(effectiveSavedAt));
+  const formattedBannerDate = new Date(effectiveSavedAt || generatedAt).toLocaleDateString(
+    dateLocale,
+    {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+    }
+  );
+
   return (
     <div className="dossier-container w-full h-full bg-surface overflow-y-auto flex flex-col divide-y divide-outline-variant text-on-surface">
+      {isLoadedOffline && (
+        <div
+          role="status"
+          data-testid="visit-mode-offline-banner"
+          className="px-space-lg py-2.5 bg-amber-500/15 border-b border-amber-500/40 text-amber-200 text-xs flex flex-col gap-1 shrink-0 no-print"
+        >
+          <div className="flex items-center gap-2 font-mono font-semibold">
+            <WifiOff className="w-3.5 h-3.5 text-amber-300 shrink-0" />
+            <span>{t('visitMode.offlineBanner', { date: formattedBannerDate })}</span>
+          </div>
+          <p className="text-[11px] text-amber-200/85 leading-snug">
+            {t('visitMode.offlineScopeNotice')}
+          </p>
+          {isVisitExpired && (
+            <div
+              data-testid="visit-mode-expired-warning"
+              className="inline-flex items-center gap-1.5 text-[11px] font-mono text-rose-200 font-semibold pt-0.5"
+            >
+              <AlertTriangle className="w-3.5 h-3.5 text-rose-300 shrink-0" />
+              <span>{t('visitMode.expiredWarning', { days: VISIT_MODE_STALE_WARN_DAYS })}</span>
+            </div>
+          )}
+        </div>
+      )}
+
+      {!isLoadedOffline && activeSavedDossierMeta?.id === normalizedRefcat && isVisitExpired && (
+        <div
+          role="status"
+          data-testid="visit-mode-expired-warning"
+          className="px-space-lg py-2 bg-amber-500/15 border-b border-amber-500/40 text-amber-200 text-xs flex items-center gap-2 font-mono shrink-0 no-print"
+        >
+          <AlertTriangle className="w-3.5 h-3.5 text-amber-300 shrink-0" />
+          <span>{t('visitMode.expiredWarning', { days: VISIT_MODE_STALE_WARN_DAYS })}</span>
+        </div>
+      )}
+
       {/* 1. PROPERTY DOSSIER HEADER (Stitch Civic Precision) */}
       <div className="p-space-lg bg-surface-container-low shrink-0">
         <div className="flex items-start justify-between gap-2">
@@ -404,6 +475,23 @@ export function AuditDossier({
 
         {/* Action Toolbar */}
         <div className="mt-3 flex items-center gap-2 no-print flex-wrap">
+          <button
+            type="button"
+            data-testid="dossier-save-visit-btn"
+            onClick={() => void saveDossierForVisit(report)}
+            className={`text-xs font-mono px-3 py-1.5 rounded flex items-center gap-1.5 border transition-colors cursor-pointer ${
+              isSavedForVisit
+                ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
+                : 'bg-surface-container-high hover:bg-surface-variant text-on-surface border-outline-variant'
+            }`}
+            title={t('visitMode.saveForVisitTooltip')}
+          >
+            <BookmarkCheck className="w-3.5 h-3.5" />
+            <span>
+              {isSavedForVisit ? t('visitMode.savedForVisitBtn') : t('visitMode.saveForVisitBtn')}
+            </span>
+          </button>
+
           {onOpenDuel && (
             <button
               type="button"
@@ -428,9 +516,11 @@ export function AuditDossier({
 
           <button
             type="button"
+            data-testid="dossier-export-pdf-btn"
+            disabled={!isOnline}
             onClick={handlePrint}
-            className="bg-inverse-primary hover:bg-primary-container text-white text-xs font-semibold px-3 py-1.5 rounded flex items-center gap-1.5 transition-colors shadow-sm cursor-pointer"
-            title={t('dossier.exportPdfTooltip')}
+            className="bg-inverse-primary hover:bg-primary-container text-white text-xs font-semibold px-3 py-1.5 rounded flex items-center gap-1.5 transition-colors shadow-sm cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+            title={!isOnline ? t('visitMode.pdfDisabledOffline') : t('dossier.exportPdfTooltip')}
           >
             <Printer className="w-3.5 h-3.5" />
             <span>{t('dossier.exportPdf')}</span>

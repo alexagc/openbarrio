@@ -6,6 +6,8 @@ import {
 } from '@openbarrio/core';
 import { apiClient, ExtendedAuditReport, ApiError } from '../services/api.client';
 import { trackAnalyticsEvent } from '../analytics';
+import { defaultVisitDossierStorage } from '../pwa/visit-dossier-store';
+import { usePwaStore } from './pwa.store';
 import { parseUrlState, DossierTab, ViewMode } from '../hooks/useUrlSync';
 import { getLocalizedPath, parseLocalizedRoute } from '../utils/seo-routes';
 import type { SupportedLanguage } from '../i18n/types';
@@ -188,6 +190,14 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
       viewMode: 'map',
     });
 
+    if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+      set({
+        isLoading: false,
+        error: { message: 'OFFLINE_SEARCH_UNAVAILABLE' },
+      });
+      return null;
+    }
+
     try {
       const liveReport = await apiClient.auditByCoordinates(lat, lon);
       set({
@@ -198,6 +208,7 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
         },
         isLoading: false,
       });
+      usePwaStore.getState().clearActiveSavedDossierMeta();
       get().syncUrl();
       void trackAnalyticsEvent({ event: 'dossier_generated' });
       return liveReport;
@@ -226,6 +237,38 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
       viewMode: 'map',
     });
 
+    const loadSavedOffline = async (): Promise<ExtendedAuditReport | null> => {
+      try {
+        const saved = await defaultVisitDossierStorage.getSavedDossier(cleanRefcat);
+        if (!saved) return null;
+        const savedReport: ExtendedAuditReport = saved.report;
+        set({
+          report: savedReport,
+          selectedCoords: {
+            lat: savedReport.property.coordinates.latitude,
+            lon: savedReport.property.coordinates.longitude,
+          },
+          isLoading: false,
+          error: null,
+        });
+        usePwaStore.getState().markLoadedOffline(saved);
+        get().syncUrl();
+        return savedReport;
+      } catch {
+        return null;
+      }
+    };
+
+    if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+      const offlineHit = await loadSavedOffline();
+      if (offlineHit) return offlineHit;
+      set({
+        isLoading: false,
+        error: { message: 'OFFLINE_DOSSIER_NOT_SAVED' },
+      });
+      return null;
+    }
+
     try {
       const liveReport = await apiClient.auditByCadastralReference(cleanRefcat, fallbackCoords, portal);
       set({
@@ -236,11 +279,16 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
         },
         isLoading: false,
       });
+      usePwaStore.getState().clearActiveSavedDossierMeta();
       get().syncUrl();
       void trackAnalyticsEvent({ event: 'dossier_generated' });
       return liveReport;
     } catch (err: unknown) {
       const apiErr = err instanceof ApiError ? err : null;
+      if (!apiErr || apiErr.status === 0) {
+        const offlineHit = await loadSavedOffline();
+        if (offlineHit) return offlineHit;
+      }
       set({
         isLoading: false,
         error: {
