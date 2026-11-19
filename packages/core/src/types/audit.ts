@@ -14,6 +14,7 @@ import { BuildingSurroundingsSchema } from './surroundings.js';
 import { SubstandardHousingAlertSchema } from './substandard-housing.js';
 import { BuildingInspectionSchema } from './building-inspection.js';
 import { SeismicHazardSchema } from './seismic.js';
+import { LayerStatusInfoSchema } from './data-status.js';
 
 if (!FormatRegistry.Has('uuid')) {
   FormatRegistry.Set('uuid', (value) => typeof value === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value));
@@ -58,11 +59,12 @@ export const PropertyAuditReportSchema = Type.Object({
   generatedAt: Type.String({ format: 'date-time', description: 'ISO 8601 generation timestamp' }),
   property: CadastralPropertySchema,
   typology: Type.Optional(PropertyTypologySchema),
-  neighborhood: CensusTractIncomeSchema,
+  neighborhood: Type.Optional(CensusTractIncomeSchema),
   environment: EnvironmentalDataSchema,
   connectivity: Type.Optional(CivicConnectivityDataSchema),
   urbanPlanning: Type.Optional(UrbanPlanningDataSchema),
   score: AuditScoreBreakdownSchema,
+  layers: Type.Optional(Type.Record(Type.String(), LayerStatusInfoSchema)),
   rentalBenchmark: Type.Optional(RentalBenchmarkSchema),
   capex: Type.Optional(BuildingCapExRiskSchema),
   energy: Type.Optional(EnergyPerformanceCertificateSchema),

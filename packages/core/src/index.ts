@@ -14,6 +14,7 @@ export * from './types/fiscal.js';
 export * from './types/seo-tools.js';
 export * from './types/building-inspection.js';
 export * from './types/seismic.js';
+export * from './types/data-status.js';
 export * from './types/audit.js';
 export * from './types/http.js';
 export * from './tokens/index.js';
