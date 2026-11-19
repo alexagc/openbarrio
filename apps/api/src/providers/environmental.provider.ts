@@ -24,14 +24,15 @@ export async function aggregateEnvironmentalLayers(
   airQuality: IAirQualityProvider | undefined,
   latitude: number,
   longitude: number,
-  censusSectionCode?: string
+  censusSectionCode?: string,
+  waitUntil?: (promise: Promise<unknown>) => void
 ): Promise<EnvironmentalAggregateResult> {
   const [sicaResult, sncziResult, airQualityResult] = await Promise.all([
     sica
-      .getNoiseData(latitude, longitude, censusSectionCode)
+      .getNoiseData(latitude, longitude, censusSectionCode, waitUntil)
       .catch(() => layerUnavailable<NoiseData>(SICA_SOURCE_NAME, 'upstream_error')),
     snczi
-      .getFloodRiskData(latitude, longitude, censusSectionCode)
+      .getFloodRiskData(latitude, longitude, censusSectionCode, waitUntil)
       .catch(() => layerUnavailable<FloodRiskData>(SNCZI_SOURCE_NAME, 'upstream_error')),
     airQuality
       ? airQuality
@@ -83,7 +84,8 @@ export class EnvironmentalProvider implements IEnvironmentalProvider {
   async getEnvironmentalData(
     latitude: number,
     longitude: number,
-    censusSectionCode?: string
+    censusSectionCode?: string,
+    waitUntil?: (promise: Promise<unknown>) => void
   ): Promise<EnvironmentalAggregateResult> {
     return aggregateEnvironmentalLayers(
       this.sica,
@@ -91,7 +93,8 @@ export class EnvironmentalProvider implements IEnvironmentalProvider {
       this.airQuality,
       latitude,
       longitude,
-      censusSectionCode
+      censusSectionCode,
+      waitUntil
     );
   }
 }

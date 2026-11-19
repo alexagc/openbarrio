@@ -13,9 +13,12 @@ import {
   CircuitBreakerRegistry,
   InvalidPayloadError,
   NonTransientUpstreamError,
+  SourceSnapshotStore,
   TransientUpstreamError,
+  WaitUntilFn,
   defaultBreakerRegistry,
   mapErrorToLayerReason,
+  resolveWithStaleWhileRevalidate,
   withResilience,
 } from '../resilience/index.js';
 
@@ -27,6 +30,7 @@ export interface SICAProviderOptions {
   db?: D1Database;
   breaker?: CircuitBreakerRegistry;
   maxRetries?: number;
+  snapshotStore?: SourceSnapshotStore;
 }
 
 /**
@@ -39,6 +43,7 @@ export class SICAProvider implements ISICAProvider {
   private readonly timeoutMs?: number;
   private readonly breaker: CircuitBreakerRegistry;
   private readonly maxRetries?: number;
+  private snapshotStore?: SourceSnapshotStore;
   private db?: D1Database;
 
   constructor(options: SICAProviderOptions = {}) {
@@ -48,16 +53,24 @@ export class SICAProvider implements ISICAProvider {
     this.breaker = options.breaker || defaultBreakerRegistry;
     this.maxRetries = options.maxRetries;
     this.db = options.db;
+    this.snapshotStore =
+      options.snapshotStore ?? (options.db ? new SourceSnapshotStore({ db: options.db }) : undefined);
   }
 
   setDatabase(db: D1Database): void {
     this.db = db;
+    if (this.snapshotStore) {
+      this.snapshotStore.setDatabase(db);
+    } else {
+      this.snapshotStore = new SourceSnapshotStore({ db });
+    }
   }
 
   async getNoiseData(
     latitude: number,
     longitude: number,
-    censusSectionCode?: string
+    censusSectionCode?: string,
+    waitUntil?: WaitUntilFn
   ): Promise<LayerResult<NoiseData>> {
     // 1. Hierarchical Resolution via Cloudflare D1 (sub-5ms Edge execution)
     if (this.db && censusSectionCode) {
@@ -128,40 +141,51 @@ export class SICAProvider implements ISICAProvider {
     });
 
     const url = `${this.wmsBaseUrl}?${params.toString()}`;
+    const cacheKey = `${latitude.toFixed(4)}:${longitude.toFixed(4)}`;
 
-    try {
-      return await withResilience(
-        'sica',
-        async (signal) => {
-          const res = await fetch(url, {
-            signal,
-            headers: { Accept: 'application/json', 'User-Agent': 'OpenBarrio-DueDiligence/1.4' },
-            ...({ cf: { cacheTtl: 7776000, cacheEverything: true } } as Record<string, unknown>),
-          });
+    return resolveWithStaleWhileRevalidate({
+      providerKey: 'sica',
+      sourceName: SICA_SOURCE_NAME,
+      cacheKey,
+      snapshotStore: this.snapshotStore,
+      breaker: this.breaker,
+      waitUntil,
+      fetcher: async () => {
+        try {
+          return await withResilience(
+            'sica',
+            async (signal) => {
+              const res = await fetch(url, {
+                signal,
+                headers: { Accept: 'application/json', 'User-Agent': 'OpenBarrio-DueDiligence/1.4' },
+                ...({ cf: { cacheTtl: 7776000, cacheEverything: true } } as Record<string, unknown>),
+              });
 
-          if (!res.ok) {
-            if (res.status >= 500 || res.status === 429) {
-              throw new TransientUpstreamError(`MITECO SICA WMS HTTP ${res.status}`, res.status);
+              if (!res.ok) {
+                if (res.status >= 500 || res.status === 429) {
+                  throw new TransientUpstreamError(`MITECO SICA WMS HTTP ${res.status}`, res.status);
+                }
+                throw new NonTransientUpstreamError(`MITECO SICA WMS HTTP ${res.status}`, res.status);
+              }
+
+              const text = await res.text();
+              const parsed = this.parseSicaResponse(text);
+              if (parsed.status === 'unavailable' && parsed.reason === 'invalid_payload') {
+                throw new InvalidPayloadError('Invalid MITECO SICA WMS payload');
+              }
+              return parsed;
+            },
+            {
+              breaker: this.breaker,
+              timeoutMs: this.timeoutMs,
+              maxRetries: this.maxRetries,
             }
-            throw new NonTransientUpstreamError(`MITECO SICA WMS HTTP ${res.status}`, res.status);
-          }
-
-          const text = await res.text();
-          const parsed = this.parseSicaResponse(text);
-          if (parsed.status === 'unavailable' && parsed.reason === 'invalid_payload') {
-            throw new InvalidPayloadError('Invalid MITECO SICA WMS payload');
-          }
-          return parsed;
-        },
-        {
-          breaker: this.breaker,
-          timeoutMs: this.timeoutMs,
-          maxRetries: this.maxRetries,
+          );
+        } catch (err: unknown) {
+          return layerUnavailable(SICA_SOURCE_NAME, mapErrorToLayerReason(err));
         }
-      );
-    } catch (err: unknown) {
-      return layerUnavailable(SICA_SOURCE_NAME, mapErrorToLayerReason(err));
-    }
+      },
+    });
   }
 
   /**

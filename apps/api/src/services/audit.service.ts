@@ -40,11 +40,15 @@ export class AuditService {
   /**
    * Generates a full due diligence audit report by WGS84 geographic coordinates.
    */
-  async auditByCoordinates(latitude: number, longitude: number): Promise<PropertyAuditReport> {
+  async auditByCoordinates(
+    latitude: number,
+    longitude: number,
+    waitUntil?: (promise: Promise<unknown>) => void
+  ): Promise<PropertyAuditReport> {
     // 1. Fetch cadastral property data from Catastro (primary anchor)
     const property = await this.providers.catastro.getByCoordinates(latitude, longitude);
 
-    return this.generateReportForProperty(property);
+    return this.generateReportForProperty(property, waitUntil);
   }
 
   /**
@@ -53,12 +57,13 @@ export class AuditService {
   async auditByCadastralReference(
     refcat: string,
     fallbackCoords?: CadastralCoordinates,
-    preferredPortal?: string
+    preferredPortal?: string,
+    waitUntil?: (promise: Promise<unknown>) => void
   ): Promise<PropertyAuditReport> {
     // 1. Fetch cadastral property data from Catastro (primary anchor)
     const property = await this.providers.catastro.getByCadastralReference(refcat, fallbackCoords, preferredPortal);
 
-    return this.generateReportForProperty(property);
+    return this.generateReportForProperty(property, waitUntil);
   }
 
   /**
@@ -89,7 +94,8 @@ export class AuditService {
   }
 
   private async generateReportForProperty(
-    property: CadastralProperty
+    property: CadastralProperty,
+    waitUntil?: (promise: Promise<unknown>) => void
   ): Promise<PropertyAuditReport> {
     const lat = property.coordinates.latitude;
     const lon = property.coordinates.longitude;
@@ -111,7 +117,7 @@ export class AuditService {
 
     // 3. Fetch parallel provider metrics using census tract context
     const [envAggregate, connectivityRes, urbanPlanningRes, energyRes] = await Promise.all([
-      this.resolveEnvironment(property, censusSectionCode),
+      this.resolveEnvironment(property, censusSectionCode, waitUntil),
       this.resolveConnectivity(lat, lon, {
         municipality: property.address.municipality,
         street: property.address.street,
@@ -436,14 +442,16 @@ export class AuditService {
 
   private async resolveEnvironment(
     property: CadastralProperty,
-    censusSectionCode?: string
+    censusSectionCode?: string,
+    waitUntil?: (promise: Promise<unknown>) => void
   ): Promise<EnvironmentalAggregateResult> {
     let aggregate: EnvironmentalAggregateResult;
     try {
       aggregate = await this.providers.environmental.getEnvironmentalData(
         property.coordinates.latitude,
         property.coordinates.longitude,
-        censusSectionCode
+        censusSectionCode,
+        waitUntil
       );
     } catch {
       aggregate = {

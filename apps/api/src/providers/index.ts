@@ -15,6 +15,7 @@ import {
   IMunicipalityProvider,
 } from './types.js';
 import { D1Database, CloudflareEnv } from '../types/env.js';
+import { SourceSnapshotStore } from '../resilience/source-snapshot-store.js';
 import { CatastroProvider } from './catastro.provider.js';
 import { MockCatastroProvider } from './catastro.mock.js';
 import { NavarraCatastroProvider } from './navarra.provider.js';
@@ -97,6 +98,7 @@ export interface ProviderContainer {
   radon: IRadonProvider;
   vut: IVutProvider;
   municipality: IMunicipalityProvider;
+  snapshotStore?: SourceSnapshotStore;
   db?: D1Database;
 }
 
@@ -169,6 +171,7 @@ export function createProviders(
     return createMockProviders(overrides);
   }
 
+  const snapshotStore = new SourceSnapshotStore({ db });
   const defaultCatastro = new CadastralRouterProvider({
     dgc: new CatastroProvider({ db }),
     navarra: new NavarraCatastroProvider(),
@@ -176,8 +179,8 @@ export function createProviders(
     db,
   });
   const defaultINE = new INEProvider({ db });
-  const defaultSICA = new SICAProvider({ db });
-  const defaultSNCZI = new SNCZIProvider({ db });
+  const defaultSICA = new SICAProvider({ db, snapshotStore });
+  const defaultSNCZI = new SNCZIProvider({ db, snapshotStore });
   const defaultSERPAVI = new SERPAVIProvider({ db });
   const defaultAirQuality = new AirQualityProvider();
   const defaultConnectivity = new D1CivicConnectivityProvider({ db });
@@ -215,12 +218,18 @@ export function createProviders(
     radon: overrides?.radon || defaultRadon,
     vut: overrides?.vut || defaultVut,
     municipality: overrides?.municipality || defaultMunicipality,
+    snapshotStore: overrides?.snapshotStore || snapshotStore,
     db: overrides?.db || db,
   };
 }
 
 export function injectDatabase(providers: ProviderContainer, db: D1Database): void {
   providers.db = db;
+  if (providers.snapshotStore) {
+    providers.snapshotStore.setDatabase(db);
+  } else {
+    providers.snapshotStore = new SourceSnapshotStore({ db });
+  }
   for (const provider of Object.values(providers)) {
     if (provider && typeof (provider as any).setDatabase === 'function') {
       (provider as any).setDatabase(db);
