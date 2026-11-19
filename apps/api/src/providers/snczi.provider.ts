@@ -287,6 +287,10 @@ export class SNCZIProvider implements ISNCZIProvider {
           minReturnPeriod = minReturnPeriod ? Math.min(minReturnPeriod, 500) : 500;
         }
       }
+
+      if (json.features.length > 0 && !isInPreferentialFlowZone && minReturnPeriod === null) {
+        return layerUnavailable(SNCZI_SOURCE_NAME, 'invalid_payload');
+      }
     } catch {
       const hasValidGml =
         trimmed.includes('<wfs:FeatureCollection') ||
