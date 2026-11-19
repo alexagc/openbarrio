@@ -15,7 +15,7 @@ import {
   IMunicipalityProvider,
 } from './types.js';
 import { D1Database, CloudflareEnv } from '../types/env.js';
-import { SourceSnapshotStore } from '../resilience/source-snapshot-store.js';
+import { CircuitBreakerRegistry, SourceSnapshotStore, defaultBreakerRegistry } from '../resilience/index.js';
 import { CatastroProvider } from './catastro.provider.js';
 import { MockCatastroProvider } from './catastro.mock.js';
 import { NavarraCatastroProvider } from './navarra.provider.js';
@@ -99,6 +99,7 @@ export interface ProviderContainer {
   vut: IVutProvider;
   municipality: IMunicipalityProvider;
   snapshotStore?: SourceSnapshotStore;
+  breaker?: CircuitBreakerRegistry;
   db?: D1Database;
 }
 
@@ -144,6 +145,9 @@ export function createMockProviders(overrides?: Partial<ProviderContainer>): Pro
     radon: overrides?.radon || radon,
     vut: overrides?.vut || vut,
     municipality: overrides?.municipality || municipality,
+    snapshotStore: overrides?.snapshotStore,
+    breaker: overrides?.breaker || defaultBreakerRegistry,
+    db: overrides?.db,
   };
 }
 
@@ -171,16 +175,17 @@ export function createProviders(
     return createMockProviders(overrides);
   }
 
+  const breaker = overrides?.breaker || defaultBreakerRegistry;
   const snapshotStore = new SourceSnapshotStore({ db });
   const defaultCatastro = new CadastralRouterProvider({
-    dgc: new CatastroProvider({ db }),
+    dgc: new CatastroProvider({ db, breaker }),
     navarra: new NavarraCatastroProvider(),
     euskadi: new EuskadiCatastroProvider(),
     db,
   });
-  const defaultINE = new INEProvider({ db });
-  const defaultSICA = new SICAProvider({ db, snapshotStore });
-  const defaultSNCZI = new SNCZIProvider({ db, snapshotStore });
+  const defaultINE = new INEProvider({ db, breaker });
+  const defaultSICA = new SICAProvider({ db, breaker, snapshotStore });
+  const defaultSNCZI = new SNCZIProvider({ db, breaker, snapshotStore });
   const defaultSERPAVI = new SERPAVIProvider({ db });
   const defaultAirQuality = new AirQualityProvider();
   const defaultConnectivity = new D1CivicConnectivityProvider({ db });
@@ -188,7 +193,7 @@ export function createProviders(
   const defaultCEE = new CEEProvider({ db });
   const defaultMarket = new LongitudinalMarketProvider({ db });
   const defaultRadon = new RadonProvider(db);
-  const defaultVut = new VutProvider(db);
+  const defaultVut = new VutProvider(db, { breaker });
   const defaultMunicipality = new MunicipalityProvider({ db });
 
   const effectiveSica = overrides?.sica || defaultSICA;
@@ -219,6 +224,7 @@ export function createProviders(
     vut: overrides?.vut || defaultVut,
     municipality: overrides?.municipality || defaultMunicipality,
     snapshotStore: overrides?.snapshotStore || snapshotStore,
+    breaker,
     db: overrides?.db || db,
   };
 }

@@ -65,7 +65,7 @@ describe('Ministerial Outage, Timeout, Garbage & Stale Drills (Zero Network)', (
     const snczi = new SNCZIProvider({ breaker, maxRetries: 0 });
     const ine = new INEProvider({ breaker, maxRetries: 0 });
     const vut = new VutProvider(undefined, { enableLiveLookup: true, breaker, maxRetries: 0 });
-    const airQuality = new AirQualityProvider({ breaker, maxRetries: 0 });
+    const airQuality = new AirQualityProvider();
 
     const sicaRes = await sica.getNoiseData(40.4203, -3.7038);
     expect(sicaRes.status).toBe('unavailable');
