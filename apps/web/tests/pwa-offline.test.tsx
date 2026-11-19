@@ -1,3 +1,4 @@
+/// <reference types="node" />
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -295,16 +296,15 @@ describe('Offline Visit Mode UI & Controlled SW Update Toast', () => {
     fetchSpy.mockClear();
     Object.defineProperty(navigator, 'onLine', { configurable: true, value: false });
 
-    let offlineReport: Awaited<
-      ReturnType<ReturnType<typeof useWorkspaceStore.getState>['loadAuditByRefcat']>
-    > = null;
     await act(async () => {
       usePwaStore.getState().setOnline(false);
       useWorkspaceStore.setState({ report: null });
-      offlineReport = await useWorkspaceStore
+      await useWorkspaceStore
         .getState()
         .loadAuditByRefcat(report.property.cadastralReference);
     });
+
+    const offlineReport = useWorkspaceStore.getState().report;
 
     // Load saved dossier offline -> ZERO fetch calls
     expect(fetchSpy).not.toHaveBeenCalled();
@@ -325,15 +325,13 @@ describe('Offline Visit Mode UI & Controlled SW Update Toast', () => {
     );
 
     // Unsaved refcat while offline must return explicit error and ZERO synthetic fallback
-    let missingOffline: Awaited<
-      ReturnType<ReturnType<typeof useWorkspaceStore.getState>['loadAuditByRefcat']>
-    > = null;
     await act(async () => {
-      missingOffline = await useWorkspaceStore
+      useWorkspaceStore.setState({ report: null });
+      await useWorkspaceStore
         .getState()
         .loadAuditByRefcat('9999999AA9999A0001ZZ');
     });
-    expect(missingOffline).toBeNull();
+    expect(useWorkspaceStore.getState().report).toBeNull();
     expect(useWorkspaceStore.getState().error?.message).toBe('OFFLINE_DOSSIER_NOT_SAVED');
     expect(fetchSpy).not.toHaveBeenCalled();
   });
