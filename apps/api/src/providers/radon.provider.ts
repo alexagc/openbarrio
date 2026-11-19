@@ -1,6 +1,15 @@
-import { RadonEvaluationDTO, evaluateRadonRisk, RadonMunicipalZone } from '@openbarrio/core';
+import {
+  LayerResult,
+  RadonEvaluationDTO,
+  RadonMunicipalZone,
+  evaluateRadonRisk,
+  layerOk,
+  layerUnavailable,
+} from '@openbarrio/core';
 import type { D1Database } from '../types/env.js';
 import type { IRadonProvider } from './types.js';
+
+export const RADON_SOURCE_NAME = 'CTE DB-HS 6 Radón';
 
 export class RadonProvider implements IRadonProvider {
   private db?: D1Database;
@@ -15,42 +24,27 @@ export class RadonProvider implements IRadonProvider {
 
   async getRadonEvaluation(
     municipalityCode: string,
-    provinceCode?: string,
+    _provinceCode?: string,
     floorLevel?: number,
     unitsCount?: number
-  ): Promise<RadonEvaluationDTO> {
-    let zone: RadonMunicipalZone;
-
-    if (this.db) {
-      try {
-        const row = await this.db
-          .prepare('SELECT zone FROM cte_radon_municipalities WHERE municipality_code = ?')
-          .bind(municipalityCode)
-          .first<{ zone: string }>();
-
-        if (row?.zone) {
-          zone = row.zone as RadonMunicipalZone;
-        } else {
-          zone = this.resolveFallbackProvinceZone(provinceCode);
-        }
-      } catch {
-        zone = this.resolveFallbackProvinceZone(provinceCode);
-      }
-    } else {
-      zone = this.resolveFallbackProvinceZone(provinceCode);
+  ): Promise<LayerResult<RadonEvaluationDTO>> {
+    if (!this.db) {
+      return layerUnavailable(RADON_SOURCE_NAME, 'upstream_error');
     }
 
-    return evaluateRadonRisk(zone, floorLevel, unitsCount);
-  }
+    try {
+      const row = await this.db
+        .prepare('SELECT zone FROM cte_radon_municipalities WHERE municipality_code = ?')
+        .bind(municipalityCode)
+        .first<{ zone: string }>();
 
-  private resolveFallbackProvinceZone(provinceCode?: string): RadonMunicipalZone {
-    if (!provinceCode) return 'Zona 0';
-    const prov = provinceCode.padStart(2, '0');
-    // Galicia and high granitic bedrock areas
-    if (['32', '36', '15', '10'].includes(prov)) return 'Zona II';
-    // Central system / granitic transition areas
-    if (['28', '37', '05', '40', '45', '27'].includes(prov)) return 'Zona I';
-    return 'Zona 0';
+      // Per CTE DB-HS 6 Appendix B, municipalities absent from the official Zona I/II table are Zona 0.
+      const zone: RadonMunicipalZone = row?.zone ? (row.zone as RadonMunicipalZone) : 'Zona 0';
+      return layerOk(RADON_SOURCE_NAME, evaluateRadonRisk(zone, floorLevel, unitsCount));
+    } catch (err) {
+      console.warn('[RadonProvider] D1 query failed:', (err as Error)?.message);
+      return layerUnavailable(RADON_SOURCE_NAME, 'upstream_error');
+    }
   }
 }
 
@@ -60,7 +54,7 @@ export class MockRadonProvider implements IRadonProvider {
     provinceCode?: string,
     floorLevel?: number,
     unitsCount?: number
-  ): Promise<RadonEvaluationDTO> {
+  ): Promise<LayerResult<RadonEvaluationDTO>> {
     let zone: RadonMunicipalZone;
     if (municipalityCode === '28079' || provinceCode === '28') {
       zone = 'Zona I';
@@ -69,6 +63,6 @@ export class MockRadonProvider implements IRadonProvider {
     } else {
       zone = 'Zona 0';
     }
-    return evaluateRadonRisk(zone, floorLevel, unitsCount);
+    return layerOk(RADON_SOURCE_NAME, evaluateRadonRisk(zone, floorLevel, unitsCount));
   }
 }

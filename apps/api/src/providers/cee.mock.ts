@@ -1,9 +1,12 @@
 import {
   CadastralProperty,
   EnergyPerformanceCertificate,
+  LayerResult,
+  layerOk,
+  layerOutOfCoverage,
 } from '@openbarrio/core';
 import { ICEEProvider } from './types.js';
-import { CEEProvider } from './cee.provider.js';
+import { CEEProvider, CEE_SOURCE_NAME } from './cee.provider.js';
 
 export class MockCEEProvider implements ICEEProvider {
   private readonly fallbackProvider = new CEEProvider();
@@ -92,15 +95,24 @@ export class MockCEEProvider implements ICEEProvider {
 
   async getEnergyCertificate(
     property: CadastralProperty
-  ): Promise<EnergyPerformanceCertificate> {
+  ): Promise<LayerResult<EnergyPerformanceCertificate>> {
     const refcat = property.cadastralReference;
     const registered = this.registeredCertificates.get(refcat)
       || (refcat.length === 20 ? this.registeredCertificates.get(refcat.substring(0, 14)) : undefined);
     if (registered) {
-      return registered;
+      return layerOk(CEE_SOURCE_NAME, registered);
+    }
+
+    if (
+      property.typology === 'VACANT_PLOT' ||
+      property.typology === 'RUSTIC' ||
+      !property.building.constructionYear ||
+      property.building.constructionYear <= 0
+    ) {
+      return layerOutOfCoverage(CEE_SOURCE_NAME, { reason: 'not_applicable' });
     }
 
     // Default to the normative estimation engine
-    return this.fallbackProvider.inferNormativeCertificate(property);
+    return layerOk(CEE_SOURCE_NAME, this.fallbackProvider.inferNormativeCertificate(property));
   }
 }

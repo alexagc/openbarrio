@@ -66,29 +66,33 @@ describe('Urban Planning Provider', () => {
   describe('UrbanPlanningProvider', () => {
     const provider = new UrbanPlanningProvider();
 
-    it('classifies urban property as URBAN_CONSOLIDATED and non-stressed in Madrid', async () => {
-      const data = await provider.getUrbanPlanning(urbanMadrid);
+    it('classifies urban property as URBAN_CONSOLIDATED and non-stressed in Madrid without inventing renovations', async () => {
+      const res = await provider.getUrbanPlanning(urbanMadrid);
 
+      expect(res.status).toBe('ok');
+      const data = res.data!;
       expect(data.landClassification).toBe('URBAN_CONSOLIDATED');
       expect(data.isProtectedLand).toBe(false);
       expect(data.isStressedHousingZone).toBe(false);
-      expect(data.declaredRenovationsCount).toBe(1);
-      expect(data.lastRenovationYear).toBeGreaterThanOrEqual(1964);
+      expect(data.declaredRenovationsCount).toBe(0);
+      expect(data.lastRenovationYear).toBeNull();
     });
 
     it('identifies Barcelona property as declared Stressed Housing Zone (Ley 12/2023)', async () => {
-      const data = await provider.getUrbanPlanning(bcnProperty);
+      const res = await provider.getUrbanPlanning(bcnProperty);
 
-      expect(data.landClassification).toBe('URBAN_CONSOLIDATED');
-      expect(data.isStressedHousingZone).toBe(true);
+      expect(res.status).toBe('ok');
+      expect(res.data?.landClassification).toBe('URBAN_CONSOLIDATED');
+      expect(res.data?.isStressedHousingZone).toBe(true);
     });
 
     it('classifies agricultural land as RUSTIC_PROTECTED with environmental protection', async () => {
-      const data = await provider.getUrbanPlanning(rusticProperty);
+      const res = await provider.getUrbanPlanning(rusticProperty);
 
-      expect(data.landClassification).toBe('RUSTIC_PROTECTED');
-      expect(data.isProtectedLand).toBe(true);
-      expect(data.zoningCode).toBe('SNU-P');
+      expect(res.status).toBe('ok');
+      expect(res.data?.landClassification).toBe('RUSTIC_PROTECTED');
+      expect(res.data?.isProtectedLand).toBe(true);
+      expect(res.data?.zoningCode).toBe('SNU-P');
     });
   });
 
@@ -110,10 +114,11 @@ describe('Urban Planning Provider', () => {
         cadastralReference: 'CUSTOM_TEST_RC_01',
       };
 
-      const data = await mock.getUrbanPlanning(prop);
-      expect(data.landClassification).toBe('DEVELOPABLE');
-      expect(data.lastRenovationYear).toBe(2021);
-      expect(data.declaredRenovationsCount).toBe(3);
+      const res = await mock.getUrbanPlanning(prop);
+      expect(res.status).toBe('ok');
+      expect(res.data?.landClassification).toBe('DEVELOPABLE');
+      expect(res.data?.lastRenovationYear).toBe(2021);
+      expect(res.data?.declaredRenovationsCount).toBe(3);
     });
   });
 });

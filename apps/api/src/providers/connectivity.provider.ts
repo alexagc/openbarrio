@@ -2,9 +2,15 @@ import {
   CivicConnectivityData,
   CivicFacility,
   CivicFacilityType,
+  LayerResult,
+  layerOk,
+  layerOutOfCoverage,
+  layerUnavailable,
 } from '@openbarrio/core';
 import { ICivicConnectivityProvider } from './types.js';
 import { D1Database } from '../types/env.js';
+
+export const CONNECTIVITY_SOURCE_NAME = 'IGN / CNIG Equipamientos';
 
 export interface RawCivicFacilityRow {
   id: string;
@@ -115,7 +121,7 @@ export class D1CivicConnectivityProvider implements ICivicConnectivityProvider {
     latitude: number,
     longitude: number,
     context?: { municipality?: string; street?: string }
-  ): Promise<CivicConnectivityData> {
+  ): Promise<LayerResult<CivicConnectivityData>> {
     return this.getConnectivityByCoordinates(latitude, longitude, context);
   }
 
@@ -123,12 +129,13 @@ export class D1CivicConnectivityProvider implements ICivicConnectivityProvider {
     latitude: number,
     longitude: number,
     _context?: { municipality?: string; street?: string }
-  ): Promise<CivicConnectivityData> {
+  ): Promise<LayerResult<CivicConnectivityData>> {
+    if (!Number.isFinite(latitude) || !Number.isFinite(longitude) || (latitude === 0 && longitude === 0)) {
+      return layerOutOfCoverage(CONNECTIVITY_SOURCE_NAME);
+    }
+
     if (!this.db) {
-      return {
-        walkScore15Min: 0,
-        facilitiesWithin15MinCount: 0,
-      };
+      return layerUnavailable(CONNECTIVITY_SOURCE_NAME, 'upstream_error');
     }
 
     // Geographic bounding box approximation (~111,132 meters per degree latitude)
@@ -171,21 +178,13 @@ export class D1CivicConnectivityProvider implements ICivicConnectivityProvider {
       }
 
       if (rows.length === 0) {
-        return {
-          walkScore15Min: 0,
-          facilitiesWithin15MinCount: 0,
-          nearbyFacilities: [],
-        };
+        return layerOutOfCoverage(CONNECTIVITY_SOURCE_NAME);
       }
 
-      return this.aggregateFacilities(latitude, longitude, rows);
+      return layerOk(CONNECTIVITY_SOURCE_NAME, this.aggregateFacilities(latitude, longitude, rows));
     } catch (err: any) {
       console.warn(`[D1CivicConnectivityProvider] Spatial query failed:`, err?.message);
-      return {
-        walkScore15Min: 0,
-        facilitiesWithin15MinCount: 0,
-        nearbyFacilities: [],
-      };
+      return layerUnavailable(CONNECTIVITY_SOURCE_NAME, 'upstream_error');
     }
   }
 
@@ -607,19 +606,16 @@ export class MockCivicConnectivityProvider implements ICivicConnectivityProvider
   async getConnectivityData(
     latitude: number,
     longitude: number
-  ): Promise<CivicConnectivityData> {
+  ): Promise<LayerResult<CivicConnectivityData>> {
     return this.getConnectivityByCoordinates(latitude, longitude);
   }
 
   async getConnectivityByCoordinates(
     latitude: number,
     longitude: number
-  ): Promise<CivicConnectivityData> {
-    if (latitude === 0 && longitude === 0) {
-      return {
-        walkScore15Min: 0,
-        facilitiesWithin15MinCount: 0,
-      };
+  ): Promise<LayerResult<CivicConnectivityData>> {
+    if (!Number.isFinite(latitude) || !Number.isFinite(longitude) || (latitude === 0 && longitude === 0)) {
+      return layerOutOfCoverage(CONNECTIVITY_SOURCE_NAME);
     }
 
     const calculated: CivicFacility[] = this.facilities.map((f) => {
@@ -647,76 +643,10 @@ export class MockCivicConnectivityProvider implements ICivicConnectivityProvider
     const nearby = calculated.filter((f) => f.distanceMeters <= 2500);
 
     if (nearby.length > 0) {
-      return this.aggregateFromList(nearby);
+      return layerOk(CONNECTIVITY_SOURCE_NAME, this.aggregateFromList(nearby));
     }
 
-    // Dynamic deterministic fallback for arbitrary Spanish coordinates
-    const hash = Math.abs(Math.round(latitude * 1000 + longitude * 1000));
-    const transitDist = 120 + (hash % 300);
-    const healthDist = 250 + (hash % 450);
-    const eduDist = 280 + (hash % 400);
-    const parkDist = 320 + (hash % 500);
-
-    const toCoord = (distMeters: number, bearingDeg: number) => {
-      const rad = (bearingDeg * Math.PI) / 180;
-      const dKm = distMeters / 1000;
-      const dLat = (dKm / 110.574) * Math.cos(rad);
-      const dLon = (dKm / (111.32 * Math.cos((latitude * Math.PI) / 180))) * Math.sin(rad);
-      return {
-        latitude: Number((latitude + dLat).toFixed(6)),
-        longitude: Number((longitude + dLon).toFixed(6)),
-      };
-    };
-
-    const cTransit = toCoord(transitDist, 45);
-    const cHealth = toCoord(healthDist, 315);
-    const cEdu = toCoord(eduDist, 225);
-    const cPark = toCoord(parkDist, 135);
-
-    const syntheticFacilities: CivicFacility[] = [
-      {
-        id: `syn-trans-${hash}`,
-        type: 'transit',
-        subtype: 'bus',
-        name: 'Parada de Transporte Público',
-        distanceMeters: transitDist,
-        walkTimeMinutes: calculateWalkTimeMinutes(transitDist),
-        latitude: cTransit.latitude,
-        longitude: cTransit.longitude,
-      },
-      {
-        id: `syn-health-${hash}`,
-        type: 'healthcare',
-        subtype: 'primary_care',
-        name: 'Centro de Salud Municipal',
-        distanceMeters: healthDist,
-        walkTimeMinutes: calculateWalkTimeMinutes(healthDist),
-        latitude: cHealth.latitude,
-        longitude: cHealth.longitude,
-      },
-      {
-        id: `syn-edu-${hash}`,
-        type: 'education',
-        subtype: 'school',
-        name: 'Colegio Público de Educación Infantil y Primaria',
-        distanceMeters: eduDist,
-        walkTimeMinutes: calculateWalkTimeMinutes(eduDist),
-        latitude: cEdu.latitude,
-        longitude: cEdu.longitude,
-      },
-      {
-        id: `syn-park-${hash}`,
-        type: 'park',
-        subtype: 'urban_park',
-        name: 'Parque Público Municipal',
-        distanceMeters: parkDist,
-        walkTimeMinutes: calculateWalkTimeMinutes(parkDist),
-        latitude: cPark.latitude,
-        longitude: cPark.longitude,
-      },
-    ];
-
-    return this.aggregateFromList(syntheticFacilities);
+    return layerOutOfCoverage(CONNECTIVITY_SOURCE_NAME);
   }
 
   private aggregateFromList(facilities: CivicFacility[]): CivicConnectivityData {

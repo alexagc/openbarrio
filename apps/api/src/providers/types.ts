@@ -57,7 +57,7 @@ export interface IINEProvider {
   /**
    * Retrieve income distribution (ADRH) for a given 10-character census tract code.
    */
-  getIncomeByCensusSection(censusSectionCode: string): Promise<CensusTractIncome>;
+  getIncomeByCensusSection(censusSectionCode: string): Promise<LayerResult<CensusTractIncome>>;
 
   /**
    * Resolve coordinates and municipality to a 10-character census tract code.
@@ -67,7 +67,7 @@ export interface IINEProvider {
     longitude: number,
     provinceCode?: string,
     municipalityCode?: string
-  ): Promise<string>;
+  ): Promise<LayerResult<string>>;
 }
 
 export interface ISICAProvider {
@@ -92,7 +92,7 @@ export interface ISERPAVIProvider {
   getRentalBenchmark(
     property: CadastralProperty,
     censusSectionCode?: string
-  ): Promise<RentalBenchmark>;
+  ): Promise<LayerResult<RentalBenchmark>>;
 }
 
 export interface ICivicConnectivityProvider {
@@ -103,20 +103,20 @@ export interface ICivicConnectivityProvider {
     latitude: number,
     longitude: number,
     context?: { municipality?: string; street?: string }
-  ): Promise<CivicConnectivityData>;
+  ): Promise<LayerResult<CivicConnectivityData>>;
   getConnectivityByCoordinates?(
     latitude: number,
     longitude: number,
     context?: { municipality?: string; street?: string }
-  ): Promise<CivicConnectivityData>;
+  ): Promise<LayerResult<CivicConnectivityData>>;
 }
 
 export interface IUrbanPlanningProvider {
   /**
    * Retrieve official SIU land classification and planning ordinances for a property.
    */
-  getUrbanPlanningData(property: CadastralProperty): Promise<UrbanPlanningData>;
-  getUrbanPlanning?(property: CadastralProperty): Promise<UrbanPlanningData>;
+  getUrbanPlanningData(property: CadastralProperty): Promise<LayerResult<UrbanPlanningData>>;
+  getUrbanPlanning?(property: CadastralProperty): Promise<LayerResult<UrbanPlanningData>>;
 }
 
 export interface IAirQualityProvider {
@@ -156,7 +156,7 @@ export interface ICEEProvider {
   /**
    * Look up official Energy Performance Certificate (CEE) or compute normative thermal CTE fallback.
    */
-  getEnergyCertificate(property: CadastralProperty): Promise<EnergyPerformanceCertificate>;
+  getEnergyCertificate(property: CadastralProperty): Promise<LayerResult<EnergyPerformanceCertificate>>;
 }
 
 export interface ILongitudinalMarketProvider {
@@ -179,7 +179,7 @@ export interface IRadonProvider {
     provinceCode?: string,
     floorLevel?: number,
     unitsCount?: number
-  ): Promise<RadonEvaluationDTO>;
+  ): Promise<LayerResult<RadonEvaluationDTO>>;
 }
 
 export interface IVutProvider {
@@ -189,7 +189,7 @@ export interface IVutProvider {
   getVutEvaluation(
     censusSectionId: string,
     coords?: { latitude: number; longitude: number }
-  ): Promise<VutEvaluationDTO>;
+  ): Promise<LayerResult<VutEvaluationDTO>>;
 }
 
 export interface IMunicipalityProvider {
