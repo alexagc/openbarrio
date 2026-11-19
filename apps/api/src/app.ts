@@ -226,6 +226,24 @@ export function buildOpenApiSpec(): Record<string, any> {
           },
         },
       },
+      '/api/v1/listing/resolve': {
+        post: {
+          tags: ['Listing'],
+          summary: 'Resolve metadata from a user-supplied real-estate portal URL without server-side fetching',
+          description:
+            'Validates host against the 5-portal allowlist and extracts listing ID, location hints, or optional user-pasted cadastral references in memory with zero storage and strict per-IP rate limits (10/min, 100/day).',
+          responses: {
+            '200': {
+              description: 'Sanitized listing URL and minimal extracted metadata',
+            },
+            '400': { description: 'RFC 7807 Invalid Listing URL or parameters' },
+            '413': { description: 'RFC 7807 Pasted snippet exceeds 200 KB' },
+            '415': { description: 'RFC 7807 Expected application/json' },
+            '422': { description: 'RFC 7807 Unsupported host or insufficient metadata' },
+            '429': { description: 'RFC 7807 Rate limit exceeded' },
+          },
+        },
+      },
     },
   };
 }
