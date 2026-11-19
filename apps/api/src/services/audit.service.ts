@@ -7,7 +7,6 @@ import {
   CadastralCoordinates,
   CadastralUnitsResponse,
   CensusTractIncome,
-  EnvironmentalData,
   RentalBenchmark,
   CivicConnectivityData,
   UrbanPlanningData,
@@ -25,8 +24,14 @@ import {
   evaluateBuildingInspectionAlert,
   evaluateSeismicVulnerability,
   calculatePedestrianIsochrones,
+  LayerKey,
+  LayerStatusInfo,
+  toLayerStatusInfo,
+  layerUnavailable,
+  layerOutOfCoverage,
+  isLayerUsable,
 } from '@openbarrio/core';
-import { ProviderContainer, calculateBuildingCapExRisk } from '../providers/index.js';
+import { ProviderContainer, EnvironmentalAggregateResult, calculateBuildingCapExRisk } from '../providers/index.js';
 
 export class AuditService {
   constructor(private readonly providers: ProviderContainer) {}
@@ -102,7 +107,7 @@ export class AuditService {
     const neighborhood = await this.resolveNeighborhood(property);
 
     // 3. Fetch parallel provider metrics using census tract context
-    const [environment, connectivity, urbanPlanning, energy] = await Promise.all([
+    const [envAggregate, connectivity, urbanPlanning, energy] = await Promise.all([
       this.resolveEnvironment(property, neighborhood.censusSectionCode),
       this.resolveConnectivity(lat, lon, {
         municipality: property.address.municipality,
@@ -111,6 +116,7 @@ export class AuditService {
       this.resolveUrbanPlanning(property),
       this.resolveEnergy(property),
     ]);
+    const environment = envAggregate.data;
 
     // 4. Calculate MIVAU SERPAVI rental benchmark & check stressed market status (Residential only)
     let rentalBenchmark: RentalBenchmark | undefined;
@@ -219,20 +225,26 @@ export class AuditService {
     );
 
     // 12. Calculate Barrio Due Diligence Score (5 calibrated pillars + VUT, ITE & Seismic recalibration)
-    const score = calculateBarrioScore(
+    const envLayerInfos: Partial<Record<LayerKey, LayerStatusInfo>> = {
+      sica: toLayerStatusInfo(envAggregate.layers.sica),
+      snczi: toLayerStatusInfo(envAggregate.layers.snczi),
+      airQuality: toLayerStatusInfo(envAggregate.layers.airQuality),
+    };
+
+    const score = calculateBarrioScore({
       property,
       neighborhood,
       environment,
       rentalBenchmark,
       connectivity,
       urbanPlanning,
-      undefined,
       energy,
       vut,
       buildingInspection,
       seismicHazard,
-      pedestrianIsochrones
-    );
+      pedestrianIsochrones,
+      layers: envLayerInfos,
+    });
 
     // 13. Calculate Building CapEx & Community Risk Intelligence (omit for unbuilt plots and rustic land)
     const capex = (typology === 'VACANT_PLOT' || typology === 'RUSTIC')
@@ -257,6 +269,8 @@ export class AuditService {
       connectivity,
       urbanPlanning,
       score,
+      layers: envLayerInfos,
+      coverage: score.coverage,
       rentalBenchmark,
       capex,
       energy,
@@ -380,51 +394,44 @@ export class AuditService {
   private async resolveEnvironment(
     property: CadastralProperty,
     censusSectionCode?: string
-  ): Promise<EnvironmentalData> {
-    let envData: EnvironmentalData;
+  ): Promise<EnvironmentalAggregateResult> {
+    let aggregate: EnvironmentalAggregateResult;
     try {
-      envData = await this.providers.environmental.getEnvironmentalData(
+      aggregate = await this.providers.environmental.getEnvironmentalData(
         property.coordinates.latitude,
         property.coordinates.longitude,
         censusSectionCode
       );
     } catch {
-      // Dynamic baseline: quieter in residential coordinates, moderate on main thoroughfares
-      const coordHash = Math.abs(
-        Math.round(property.coordinates.latitude * 1000 + property.coordinates.longitude * 1000)
-      );
-      const isMajorRoad = coordHash % 4 === 0;
-      const decibels = isMajorRoad ? 63 + (coordHash % 5) : 48 + (coordHash % 5);
-      envData = {
-        noise: {
-          dayEveningNightDecibels: decibels,
-          category: decibels >= 65 ? 'NOISY' : decibels >= 55 ? 'MODERATE' : 'QUIET',
-          predominantSource: decibels >= 55 ? 'ROAD_TRAFFIC' : 'NONE',
-        },
-        floodRisk: {
-          level: 'NONE',
-          returnPeriodYears: null,
-          isInPreferentialFlowZone: false,
+      aggregate = {
+        data: {},
+        layers: {
+          sica: layerUnavailable('MITECO SICA', 'upstream_error'),
+          snczi: layerUnavailable('MITECO SNCZI', 'upstream_error'),
+          airQuality: layerUnavailable('MITECO ICA', 'upstream_error'),
         },
       };
     }
 
-    // Attach air quality if not already present
-    if (!envData.airQuality && this.providers.airQuality) {
+    // Attach air quality if provider was configured separately and sub-layer has not resolved yet
+    if (!aggregate.data.airQuality && this.providers.airQuality) {
       try {
-        const airQuality = await (this.providers.airQuality as any).getAirQualityData(
+        const airQualityRes = await this.providers.airQuality.getAirQualityData(
           property.coordinates.latitude,
           property.coordinates.longitude
         );
-        if (airQuality) {
-          envData.airQuality = airQuality;
+        aggregate.layers.airQuality = airQualityRes;
+        if (isLayerUsable(airQualityRes.status) && airQualityRes.data) {
+          aggregate.data.airQuality = airQualityRes.data;
         }
-      } catch (err: any) {
-        console.warn(`[AuditService] Air quality query failed:`, err?.message);
+      } catch {
+        aggregate.layers.airQuality = layerUnavailable('MITECO ICA', 'upstream_error');
       }
+    } else if (!this.providers.airQuality && aggregate.layers.airQuality.status === 'out_of_coverage') {
+      aggregate.layers.airQuality = layerOutOfCoverage('MITECO ICA');
     }
 
-    return envData;
+    return aggregate;
   }
 
   private async resolveConnectivity(

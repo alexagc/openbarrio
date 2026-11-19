@@ -1,11 +1,69 @@
-import { EnvironmentalData } from '@openbarrio/core';
-import { IEnvironmentalProvider, ISICAProvider, ISNCZIProvider, IAirQualityProvider } from './types.js';
-import { SICAProvider } from './sica.provider.js';
-import { SNCZIProvider } from './snczi.provider.js';
+import {
+  AirQualityData,
+  EnvironmentalData,
+  FloodRiskData,
+  NoiseData,
+  isLayerUsable,
+  layerOutOfCoverage,
+  layerUnavailable,
+} from '@openbarrio/core';
+import {
+  EnvironmentalAggregateResult,
+  IAirQualityProvider,
+  IEnvironmentalProvider,
+  ISICAProvider,
+  ISNCZIProvider,
+} from './types.js';
+import { SICAProvider, SICA_SOURCE_NAME } from './sica.provider.js';
+import { SNCZIProvider, SNCZI_SOURCE_NAME } from './snczi.provider.js';
+import { AIR_QUALITY_SOURCE_NAME } from './air-quality.provider.js';
+
+export async function aggregateEnvironmentalLayers(
+  sica: ISICAProvider,
+  snczi: ISNCZIProvider,
+  airQuality: IAirQualityProvider | undefined,
+  latitude: number,
+  longitude: number,
+  censusSectionCode?: string
+): Promise<EnvironmentalAggregateResult> {
+  const [sicaResult, sncziResult, airQualityResult] = await Promise.all([
+    sica
+      .getNoiseData(latitude, longitude, censusSectionCode)
+      .catch(() => layerUnavailable<NoiseData>(SICA_SOURCE_NAME, 'upstream_error')),
+    snczi
+      .getFloodRiskData(latitude, longitude, censusSectionCode)
+      .catch(() => layerUnavailable<FloodRiskData>(SNCZI_SOURCE_NAME, 'upstream_error')),
+    airQuality
+      ? airQuality
+          .getAirQualityData(latitude, longitude)
+          .catch(() => layerUnavailable<AirQualityData>(AIR_QUALITY_SOURCE_NAME, 'upstream_error'))
+      : Promise.resolve(layerOutOfCoverage<AirQualityData>(AIR_QUALITY_SOURCE_NAME)),
+  ]);
+
+  const data: EnvironmentalData = {};
+  if (isLayerUsable(sicaResult.status) && sicaResult.data) {
+    data.noise = sicaResult.data;
+  }
+  if (isLayerUsable(sncziResult.status) && sncziResult.data) {
+    data.floodRisk = sncziResult.data;
+  }
+  if (isLayerUsable(airQualityResult.status) && airQualityResult.data) {
+    data.airQuality = airQualityResult.data;
+  }
+
+  return {
+    data,
+    layers: {
+      sica: sicaResult,
+      snczi: sncziResult,
+      airQuality: airQualityResult,
+    },
+  };
+}
 
 /**
  * Composite Environmental Provider aggregating MITECO SICA (noise), MITECO SNCZI (flood hazard),
- * and MITECO ICA (air quality).
+ * and MITECO ICA (air quality) with explicit per-layer status metadata.
  */
 export class EnvironmentalProvider implements IEnvironmentalProvider {
   readonly sica: ISICAProvider;
@@ -26,19 +84,14 @@ export class EnvironmentalProvider implements IEnvironmentalProvider {
     latitude: number,
     longitude: number,
     censusSectionCode?: string
-  ): Promise<EnvironmentalData> {
-    const [noise, floodRisk, airQuality] = await Promise.all([
-      this.sica.getNoiseData(latitude, longitude, censusSectionCode),
-      this.snczi.getFloodRiskData(latitude, longitude, censusSectionCode),
-      this.airQuality
-        ? this.airQuality.getAirQualityData(latitude, longitude).catch(() => undefined)
-        : Promise.resolve(undefined),
-    ]);
-
-    return {
-      noise,
-      floodRisk,
-      ...(airQuality ? { airQuality } : {}),
-    };
+  ): Promise<EnvironmentalAggregateResult> {
+    return aggregateEnvironmentalLayers(
+      this.sica,
+      this.snczi,
+      this.airQuality,
+      latitude,
+      longitude,
+      censusSectionCode
+    );
   }
 }

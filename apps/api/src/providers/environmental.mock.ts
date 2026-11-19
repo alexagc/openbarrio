@@ -1,7 +1,13 @@
-import { EnvironmentalData } from '@openbarrio/core';
-import { IEnvironmentalProvider, ISICAProvider, ISNCZIProvider, IAirQualityProvider } from './types.js';
+import {
+  EnvironmentalAggregateResult,
+  IAirQualityProvider,
+  IEnvironmentalProvider,
+  ISICAProvider,
+  ISNCZIProvider,
+} from './types.js';
 import { MockSICAProvider } from './sica.mock.js';
 import { MockSNCZIProvider } from './snczi.mock.js';
+import { aggregateEnvironmentalLayers } from './environmental.provider.js';
 
 export class MockEnvironmentalProvider implements IEnvironmentalProvider {
   readonly sica: ISICAProvider;
@@ -22,19 +28,14 @@ export class MockEnvironmentalProvider implements IEnvironmentalProvider {
     latitude: number,
     longitude: number,
     censusSectionCode?: string
-  ): Promise<EnvironmentalData> {
-    const [noise, floodRisk, airQuality] = await Promise.all([
-      this.sica.getNoiseData(latitude, longitude, censusSectionCode),
-      this.snczi.getFloodRiskData(latitude, longitude, censusSectionCode),
-      this.airQuality
-        ? this.airQuality.getAirQualityData(latitude, longitude).catch(() => undefined)
-        : Promise.resolve(undefined),
-    ]);
-
-    return {
-      noise,
-      floodRisk,
-      ...(airQuality ? { airQuality } : {}),
-    };
+  ): Promise<EnvironmentalAggregateResult> {
+    return aggregateEnvironmentalLayers(
+      this.sica,
+      this.snczi,
+      this.airQuality,
+      latitude,
+      longitude,
+      censusSectionCode
+    );
   }
 }

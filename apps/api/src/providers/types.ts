@@ -18,6 +18,7 @@ import {
   VutEvaluationDTO,
   MunicipalitySummaryDTO,
   MunicipalityDetailDTO,
+  LayerResult,
 } from '@openbarrio/core';
 
 export interface ICatastroProvider {
@@ -73,14 +74,14 @@ export interface ISICAProvider {
   /**
    * Retrieve strategic acoustic noise map data (Lden) for geographic coordinates or pre-calculated census tract.
    */
-  getNoiseData(latitude: number, longitude: number, censusSectionCode?: string): Promise<NoiseData>;
+  getNoiseData(latitude: number, longitude: number, censusSectionCode?: string): Promise<LayerResult<NoiseData>>;
 }
 
 export interface ISNCZIProvider {
   /**
    * Retrieve flood hazard cartography and return period risk for geographic coordinates or pre-calculated census tract.
    */
-  getFloodRiskData(latitude: number, longitude: number, censusSectionCode?: string): Promise<FloodRiskData>;
+  getFloodRiskData(latitude: number, longitude: number, censusSectionCode?: string): Promise<LayerResult<FloodRiskData>>;
 }
 
 export interface ISERPAVIProvider {
@@ -122,8 +123,17 @@ export interface IAirQualityProvider {
   /**
    * Retrieve official MITECO European Air Quality Index (AQI) and pollutants for coordinates.
    */
-  getAirQualityData(latitude: number, longitude: number): Promise<AirQualityData | undefined>;
-  getAirQuality?(latitude: number, longitude: number): Promise<AirQualityData | undefined>;
+  getAirQualityData(latitude: number, longitude: number): Promise<LayerResult<AirQualityData>>;
+  getAirQuality?(latitude: number, longitude: number): Promise<LayerResult<AirQualityData>>;
+}
+
+export interface EnvironmentalAggregateResult {
+  data: EnvironmentalData;
+  layers: {
+    sica: LayerResult<NoiseData>;
+    snczi: LayerResult<FloodRiskData>;
+    airQuality: LayerResult<AirQualityData>;
+  };
 }
 
 export interface IEnvironmentalProvider {
@@ -132,9 +142,14 @@ export interface IEnvironmentalProvider {
   readonly airQuality?: IAirQualityProvider;
 
   /**
-   * Aggregates environmental indicators (acoustic noise, fluvial flood risk, air quality).
+   * Aggregates environmental indicators (acoustic noise, fluvial flood risk, air quality)
+   * alongside typed per-layer status metadata.
    */
-  getEnvironmentalData(latitude: number, longitude: number, censusSectionCode?: string): Promise<EnvironmentalData>;
+  getEnvironmentalData(
+    latitude: number,
+    longitude: number,
+    censusSectionCode?: string
+  ): Promise<EnvironmentalAggregateResult>;
 }
 
 export interface ICEEProvider {
