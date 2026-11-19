@@ -264,7 +264,7 @@ export function AuditDossier({
   };
 
   const typologyBadge = getTypologyBadge(typology, property.building.constructionYear, property.building.primaryUse);
-  const districtLabel = `${property.address.municipality} · Sección ${neighborhood.censusSectionCode ? neighborhood.censusSectionCode.slice(-3) : '—'}`;
+  const districtLabel = `${property.address.municipality} · Sección ${neighborhood?.censusSectionCode ? neighborhood.censusSectionCode.slice(-3) : '—'}`;
 
   return (
     <div className="dossier-container w-full h-full bg-surface overflow-y-auto flex flex-col divide-y divide-outline-variant text-on-surface">
@@ -520,12 +520,14 @@ export function AuditDossier({
                   r.toLowerCase().includes('m²')
               )
             );
-            const hasFloodAlert =
+            const hasFloodAlert = Boolean(
+              environment.floodRisk &&
               environment.floodRisk.level !== 'NONE' &&
               (environment.floodRisk.level === 'HIGH' ||
                 environment.floodRisk.level === 'MEDIUM' ||
                 (environment.floodRisk.returnPeriodYears !== null &&
-                  environment.floodRisk.returnPeriodYears <= 500));
+                  environment.floodRisk.returnPeriodYears <= 500))
+            );
             const hasExpiredCee = Boolean(energy?.isExpired);
             const hasSubstandard = isSubstandardHousing(report);
             const activeInspection = buildingInspection || evaluateBuildingInspectionAlert(property);
@@ -552,7 +554,7 @@ export function AuditDossier({
             if (hasDiscrepancyAlert) {
               criticalAlerts.push(t('dossier.discrepancyAlert'));
             }
-            if (hasFloodAlert) {
+            if (hasFloodAlert && environment.floodRisk) {
               criticalAlerts.push(t('dossier.floodAlert', { level: environment.floodRisk.level }));
             }
             if (hasExpiredCee) {
@@ -615,8 +617,9 @@ export function AuditDossier({
               <ScoreGauge
                 score={score}
                 cityOrProvince={property.address.province}
-                percentile={neighborhood.percentileInMunicipality}
+                percentile={neighborhood?.percentileInMunicipality}
                 typology={typology}
+                layers={report.layers}
               />
             </div>
 
@@ -782,6 +785,8 @@ export function AuditDossier({
               connectivity={connectivity}
               urbanPlanning={urbanPlanning}
               rentalBenchmark={rentalBenchmark}
+              layers={report.layers}
+              pillarTrafficLights={score.pillarTrafficLights}
               hideConnectivityPillar={true}
               hideBuildingPillar={true}
             />

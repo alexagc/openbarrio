@@ -113,39 +113,48 @@ export function auditDataToReport(audit: RawAuditDataInput): ExtendedAuditReport
       .reduce((acc, char) => acc + char.charCodeAt(0), 0)
   );
 
-  const neighborhood: CensusTractIncome = {
-    censusSectionCode: `${postalCode.slice(0, 2)}001${String(1 + (refHash % 20)).padStart(2, '0')}${String(1 + (refHash % 50)).padStart(3, '0')}`,
-    averageNetHouseholdIncomeEur: audit.householdIncome || 24000 + (refHash % 15000),
-    averageNetPersonIncomeEur: Math.round((audit.householdIncome || 24000 + (refHash % 15000)) / 2.25),
-    percentileInMunicipality: audit.incomePercentile || 25 + (refHash % 65),
-    rankingInCity: { rank: Math.max(1, Math.round((100 - (audit.incomePercentile || 50)) * 1.5)), totalSections: 150 },
-    demographics: {
-      medianAge: 38 + (refHash % 16),
-      singlePersonHouseholdPercentage: 20 + (refHash % 24),
-    },
-  };
+  const neighborhood: CensusTractIncome | undefined =
+    audit.householdIncome != null && audit.incomePercentile != null
+      ? {
+          censusSectionCode: `${postalCode.slice(0, 2)}001${String(1 + (refHash % 20)).padStart(2, '0')}${String(1 + (refHash % 50)).padStart(3, '0')}`,
+          averageNetHouseholdIncomeEur: audit.householdIncome,
+          averageNetPersonIncomeEur: Math.round(audit.householdIncome / 2.25),
+          percentileInMunicipality: audit.incomePercentile,
+          rankingInCity: {
+            rank: Math.max(1, Math.round((100 - audit.incomePercentile) * 1.5)),
+            totalSections: 150,
+          },
+          demographics: {
+            medianAge: 42,
+            singlePersonHouseholdPercentage: 28,
+          },
+        }
+      : undefined;
 
-  const isNoisyRoad = refHash % 3 === 0;
-  const dba = audit.noiseLden || (isNoisyRoad ? 64 + (refHash % 7) : 49 + (refHash % 6));
+  const dba = audit.noiseLden;
   const environment: EnvironmentalData = {
-    noise: {
-      dayEveningNightDecibels: dba,
-      category: dba >= 65 ? 'NOISY' : dba >= 55 ? 'MODERATE' : 'QUIET',
-      predominantSource: dba >= 55 ? 'ROAD_TRAFFIC' : 'NONE',
-    },
-    floodRisk: {
-      level: audit.floodRisk?.includes('Alto') ? 'HIGH' : audit.floodRisk?.includes('Medio') ? 'MEDIUM' : 'NONE',
-      returnPeriodYears: null,
-      isInPreferentialFlowZone: false,
-    },
-    airQuality: {
-      aqiIndex: 30 + (refHash % 15),
-      category: 'GOOD',
-      stationName: `${municipality} Centro`,
-      no2MicrogramsM3: 20,
-      pm25MicrogramsM3: 8,
-      pm10MicrogramsM3: 15,
-    },
+    ...(dba != null
+      ? {
+          noise: {
+            dayEveningNightDecibels: dba,
+            category: dba >= 65 ? 'NOISY' : dba >= 55 ? 'MODERATE' : 'QUIET',
+            predominantSource: dba >= 55 ? 'ROAD_TRAFFIC' : 'NONE',
+          },
+        }
+      : {}),
+    ...(audit.floodRisk
+      ? {
+          floodRisk: {
+            level: audit.floodRisk.includes('Alto')
+              ? 'HIGH'
+              : audit.floodRisk.includes('Medio')
+              ? 'MEDIUM'
+              : 'NONE',
+            returnPeriodYears: null,
+            isInPreferentialFlowZone: false,
+          },
+        }
+      : {}),
   };
 
   const offsetModalCoord = (distMeters: number, bearingDeg: number) => {

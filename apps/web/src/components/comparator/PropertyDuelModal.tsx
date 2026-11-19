@@ -330,8 +330,8 @@ export function PropertyDuelModal({
   const noiseB = candidateB.environment.noise?.dayEveningNightDecibels || 67;
   const noiseDiff = noiseB - noiseA;
 
-  const incomeA = candidateA.neighborhood.averageNetHouseholdIncomeEur || 34200;
-  const incomeB = candidateB.neighborhood.averageNetHouseholdIncomeEur || 40400;
+  const incomeA = candidateA.neighborhood?.averageNetHouseholdIncomeEur ?? 0;
+  const incomeB = candidateB.neighborhood?.averageNetHouseholdIncomeEur ?? 0;
   const incomeDiff = incomeB - incomeA;
 
   const yearA = candidateA.property.building.constructionYear || 1984;

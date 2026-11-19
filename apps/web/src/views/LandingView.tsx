@@ -119,24 +119,27 @@ export function LandingView() {
               liveReport.property.address.postalCode ? `${liveReport.property.address.postalCode} ` : ''
             }${liveReport.property.address.municipality}`,
             score: liveReport.score.overallScore,
+            trafficLight: liveReport.score.trafficLight,
             yearBuilt: liveReport.property.building.constructionYear,
             surfaceM2: liveReport.property.building.builtSurfaceM2,
             cadastralUsage: liveReport.property.building.primaryUse,
-            householdIncome: liveReport.neighborhood.averageNetHouseholdIncomeEur,
-            incomePercentile: liveReport.neighborhood.percentileInMunicipality,
-            noiseLden: liveReport.environment.noise.dayEveningNightDecibels,
-            noiseLevel:
-              liveReport.environment.noise.category === 'NOISY'
+            householdIncome: liveReport.neighborhood?.averageNetHouseholdIncomeEur,
+            incomePercentile: liveReport.neighborhood?.percentileInMunicipality,
+            noiseLden: liveReport.environment.noise?.dayEveningNightDecibels,
+            noiseLevel: liveReport.environment.noise
+              ? liveReport.environment.noise.category === 'NOISY'
                 ? 'Tráfico alto'
                 : liveReport.environment.noise.category === 'QUIET'
                 ? 'Silencioso'
-                : 'Moderado',
-            floodRisk:
-              liveReport.environment.floodRisk.level === 'NONE'
+                : 'Moderado'
+              : undefined,
+            floodRisk: liveReport.environment.floodRisk
+              ? liveReport.environment.floodRisk.level === 'NONE'
                 ? 'Nulo (T>500a)'
-                : liveReport.environment.floodRisk.level,
-            rentMinM2: liveReport.rentalBenchmark?.officialRangeLowerEurM2 ?? 12.0,
-            rentMaxM2: liveReport.rentalBenchmark?.officialRangeUpperEurM2 ?? 16.0,
+                : liveReport.environment.floodRisk.level
+              : undefined,
+            rentMinM2: liveReport.rentalBenchmark?.officialRangeLowerEurM2,
+            rentMaxM2: liveReport.rentalBenchmark?.officialRangeUpperEurM2,
             isStressedZone: liveReport.rentalBenchmark?.isStressedHousingZone ?? false,
             coordinates: {
               lat: liveReport.property.coordinates.latitude,

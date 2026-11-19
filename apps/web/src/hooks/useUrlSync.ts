@@ -142,7 +142,7 @@ export function useUrlSync(
       let currentLang: SupportedLanguage = 'es';
       try {
         const saved = localStorage.getItem('openbarrio_lang');
-        if (saved === 'es' || saved === 'en' || saved === 'ca') {
+        if (saved === 'es' || saved === 'en' || saved === 'ca' || saved === 'gl' || saved === 'eu') {
           currentLang = saved;
         }
       } catch {

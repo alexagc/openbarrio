@@ -58,7 +58,7 @@ export function downloadCadastralGML(report: PropertyAuditReport): void {
   <cp:label>${street} ${num}, ${postal} ${muni}</cp:label>
   <cp:constructionYear>${year}</cp:constructionYear>
   <cp:administrativeUnit>ES.${report.property.address.province}</cp:administrativeUnit>
-  <cp:censusTract>${report.neighborhood.censusSectionCode}</cp:censusTract>
+  <cp:censusTract>${report.neighborhood?.censusSectionCode ?? ''}</cp:censusTract>
 </cp:CadastralParcel>`;
 
   const blob = new Blob([gmlContent], { type: 'application/gml+xml;charset=utf-8' });

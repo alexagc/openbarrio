@@ -21,7 +21,7 @@ export async function computeAuditSha256(report: PropertyAuditReport): Promise<s
     coordinates: report.property.coordinates,
     building: report.property.building,
     unit: report.property.unit,
-    censusSection: report.neighborhood.censusSectionCode,
+    censusSection: report.neighborhood?.censusSectionCode ?? null,
     overallScore: report.score.overallScore,
     subscores: report.score.subscores,
     generatedAt: report.generatedAt,

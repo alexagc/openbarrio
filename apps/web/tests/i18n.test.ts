@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { es, en, ca, SUPPORTED_LANGUAGES } from '../src/i18n';
+import { es, en, ca, gl, eu, SUPPORTED_LANGUAGES } from '../src/i18n';
 
 describe('i18n Architecture & Dictionaries', () => {
   it('should define supported languages with labels and short codes', () => {
@@ -22,18 +22,12 @@ describe('i18n Architecture & Dictionaries', () => {
     return keys;
   }
 
-  it('should have 100% key parity between Spanish and English dictionaries', () => {
+  it('should have 100% key parity across all 5 languages (es, en, ca, gl, eu)', () => {
     const esKeys = getKeys(es).sort();
-    const enKeys = getKeys(en).sort();
-
-    expect(enKeys).toEqual(esKeys);
-  });
-
-  it('should have 100% key parity between Spanish and Catalan dictionaries', () => {
-    const esKeys = getKeys(es).sort();
-    const caKeys = getKeys(ca).sort();
-
-    expect(caKeys).toEqual(esKeys);
+    expect(getKeys(en).sort()).toEqual(esKeys);
+    expect(getKeys(ca).sort()).toEqual(esKeys);
+    expect(getKeys(gl).sort()).toEqual(esKeys);
+    expect(getKeys(eu).sort()).toEqual(esKeys);
   });
 
   it('should not contain empty translation values in any dictionary', () => {
@@ -50,6 +44,8 @@ describe('i18n Architecture & Dictionaries', () => {
     checkNoEmpty(es, 'es');
     checkNoEmpty(en, 'en');
     checkNoEmpty(ca, 'ca');
+    checkNoEmpty(gl, 'gl');
+    checkNoEmpty(eu, 'eu');
   });
 
   it('should correctly contain expected official public data agencies in all languages', () => {

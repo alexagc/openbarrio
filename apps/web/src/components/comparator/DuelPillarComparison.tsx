@@ -171,7 +171,7 @@ export function DuelPillarComparison({
   const getCandidateIncome = (cand: PropertyAuditReport, idx: number) => {
     if (idx === 0) return incomeA;
     if (idx === 1) return incomeB;
-    return cand.neighborhood.averageNetHouseholdIncomeEur || 35000;
+    return cand.neighborhood?.averageNetHouseholdIncomeEur ?? 0;
   };
 
   const getCandidateWalkScore = (cand: PropertyAuditReport, idx: number) => {
@@ -224,7 +224,7 @@ export function DuelPillarComparison({
                     </h2>
                     <div className="font-mono text-xs text-on-surface-variant">
                       {cand.property.address.postalCode} {cand.property.address.municipality} · Sección Censal{' '}
-                      {cand.neighborhood.censusSectionCode}
+                      {cand.neighborhood?.censusSectionCode ?? '—'}
                     </div>
                   </div>
 
@@ -508,7 +508,7 @@ export function DuelPillarComparison({
                     <td key={meta.letter} className="py-3 px-space-md font-mono">
                       <div className="font-bold text-on-surface">{inc.toLocaleString('es-ES')} € / hogar</div>
                       <div className="text-on-surface-variant text-[11px]">
-                        Decil censal {cand.neighborhood.percentileInMunicipality ? Math.ceil(cand.neighborhood.percentileInMunicipality / 10) : 8}
+                        Decil censal {cand.neighborhood?.percentileInMunicipality ? Math.ceil(cand.neighborhood.percentileInMunicipality / 10) : '—'}
                       </div>
                     </td>
                   );
