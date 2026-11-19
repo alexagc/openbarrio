@@ -148,13 +148,67 @@ function extractFromPortalPath(portal: PortalId, pathname: string): ListingExtra
   return extracted;
 }
 
+function findClosingTagEnd(lower: string, tagName: 'script' | 'style', fromIndex: number): number {
+  const needle = `</${tagName}`;
+  let searchFrom = fromIndex;
+  while (searchFrom < lower.length) {
+    const idx = lower.indexOf(needle, searchFrom);
+    if (idx === -1) return lower.length;
+    const after = lower[idx + needle.length];
+    if (after === undefined || after === '>' || /\s/.test(after)) {
+      const closeGt = lower.indexOf('>', idx + needle.length);
+      return closeGt === -1 ? lower.length : closeGt + 1;
+    }
+    searchFrom = idx + needle.length;
+  }
+  return lower.length;
+}
+
+/**
+ * Strips HTML tags and script/style blocks in linear time without HTML-filtering regexes.
+ */
+function stripHtmlToPlainText(rawText: string): string {
+  const lower = rawText.toLowerCase();
+  const chunks: string[] = [];
+  let i = 0;
+
+  while (i < rawText.length) {
+    const lt = rawText.indexOf('<', i);
+    if (lt === -1) {
+      chunks.push(rawText.slice(i));
+      break;
+    }
+    if (lt > i) {
+      chunks.push(rawText.slice(i, lt));
+    }
+
+    const isScript =
+      lower.startsWith('<script', lt) &&
+      (lower[lt + 7] === '>' || /\s/.test(lower[lt + 7] ?? ''));
+    const isStyle =
+      lower.startsWith('<style', lt) &&
+      (lower[lt + 6] === '>' || /\s/.test(lower[lt + 6] ?? ''));
+
+    const gt = rawText.indexOf('>', lt + 1);
+    if (gt === -1) {
+      break;
+    }
+
+    if (isScript) {
+      i = findClosingTagEnd(lower, 'script', gt + 1);
+    } else if (isStyle) {
+      i = findClosingTagEnd(lower, 'style', gt + 1);
+    } else {
+      i = gt + 1;
+    }
+    chunks.push(' ');
+  }
+
+  return chunks.join('').replace(/\s+/g, ' ').trim();
+}
+
 function extractFromPastedText(rawText: string): ListingExtractedFields {
-  const plainText = rawText
-    .replace(/<script[\s\S]*?<\/script>/gi, ' ')
-    .replace(/<style[\s\S]*?<\/style>/gi, ' ')
-    .replace(/<[^>]+>/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim();
+  const plainText = stripHtmlToPlainText(rawText);
 
   const out: ListingExtractedFields = {};
 
