@@ -19,6 +19,8 @@ export * from './types/listing.js';
 export * from './types/selectors.js';
 export * from './types/audit.js';
 export * from './types/http.js';
+export * from './types/analytics.js';
+export * from './types/visit-mode.js';
 export * from './tokens/index.js';
 export * from './scoring/traffic-light.js';
 export * from './scoring/weights.js';
