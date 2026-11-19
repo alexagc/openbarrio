@@ -2,9 +2,15 @@ import {
   CadastralProperty,
   EnergyPerformanceCertificate,
   EnergyRating,
+  LayerResult,
+  layerOk,
+  layerOutOfCoverage,
+  layerUnavailable,
 } from '@openbarrio/core';
 import { ICEEProvider } from './types.js';
 import { D1Database } from '../types/env.js';
+
+export const CEE_SOURCE_NAME = 'Registros Autonómicos CEE';
 
 export interface CEEProviderOptions {
   db?: D1Database;
@@ -23,7 +29,7 @@ export class CEEProvider implements ICEEProvider {
 
   async getEnergyCertificate(
     property: CadastralProperty
-  ): Promise<EnergyPerformanceCertificate> {
+  ): Promise<LayerResult<EnergyPerformanceCertificate>> {
     const refcat = property.cadastralReference;
 
     // 1. Check official regional registry in Cloudflare D1
@@ -99,7 +105,7 @@ export class CEEProvider implements ICEEProvider {
           const matchedRefcat = row.cadastral_reference || refcat;
           const scope = row.scope === 'unit' || matchedRefcat.length === 20 ? 'unit' : 'building';
 
-          return {
+          return layerOk(CEE_SOURCE_NAME, {
             ratingEmissions,
             ratingConsumption,
             co2Emissions: row.co2_emissions,
@@ -111,15 +117,25 @@ export class CEEProvider implements ICEEProvider {
             isExpired,
             dataSource,
             annualEstimatedCostEur: annualCost,
-          };
+          });
         }
-      } catch {
-        // Fallback silently to normative estimation engine
+      } catch (err) {
+        console.warn('[CEEProvider] D1 query failed:', (err as Error)?.message);
+        return layerUnavailable(CEE_SOURCE_NAME, 'upstream_error');
       }
     }
 
-    // 2. Normative Estimation Engine (CTE / NBE-CT-79 based on construction antiquity)
-    return this.inferNormativeCertificate(property);
+    if (
+      property.typology === 'VACANT_PLOT' ||
+      property.typology === 'RUSTIC' ||
+      !property.building.constructionYear ||
+      property.building.constructionYear <= 0
+    ) {
+      return layerOutOfCoverage(CEE_SOURCE_NAME, { reason: 'not_applicable' });
+    }
+
+    // 2. Normative Estimation Engine (CTE / NBE-CT-79 based on official construction antiquity)
+    return layerOk(CEE_SOURCE_NAME, this.inferNormativeCertificate(property));
   }
 
   /**

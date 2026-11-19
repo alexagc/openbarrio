@@ -19,16 +19,17 @@ export interface AuditData {
   refcat: string;
   address: string;
   score: number;
+  trafficLight?: 'GREEN' | 'AMBER' | 'RED' | 'UNCERTAIN';
   yearBuilt: number;
   surfaceM2: number;
   cadastralUsage: string;
-  householdIncome: number;
-  incomePercentile: number;
-  noiseLden: number;
-  noiseLevel: string;
-  floodRisk: string;
-  rentMinM2: number;
-  rentMaxM2: number;
+  householdIncome?: number;
+  incomePercentile?: number;
+  noiseLden?: number;
+  noiseLevel?: string;
+  floodRisk?: string;
+  rentMinM2?: number;
+  rentMaxM2?: number;
   isStressedZone: boolean;
   coordinates?: { lat: number; lon: number };
   isLive?: boolean;
@@ -53,7 +54,10 @@ export const AuditModal: React.FC<AuditModalProps> = ({
 
   if (!data) return null;
 
-  const getScoreColor = (score: number) => {
+  const getScoreColor = (score: number, trafficLight?: AuditData['trafficLight']) => {
+    if (trafficLight === 'UNCERTAIN') {
+      return 'text-on-surface-variant bg-surface-container-high border-outline';
+    }
     if (score >= 75) return 'text-primary bg-primary/10 border-primary/40';
     if (score >= 50) return 'text-secondary bg-secondary-container/20 border-secondary/40';
     return 'text-error bg-error-container/20 border-error/40';
@@ -67,7 +71,8 @@ export const AuditModal: React.FC<AuditModalProps> = ({
     return url.toString();
   };
 
-  const getScoreRatingText = (score: number) => {
+  const getScoreRatingText = (score: number, trafficLight?: AuditData['trafficLight']) => {
+    if (trafficLight === 'UNCERTAIN') return t('uncertainty.uncertainBadge');
     if (score >= 75) return t('auditPreview.scoreRatingHigh');
     if (score >= 50) return t('auditPreview.scoreRatingMedium');
     return t('auditPreview.scoreRatingLow');
@@ -157,12 +162,13 @@ export const AuditModal: React.FC<AuditModalProps> = ({
                   {t('auditPreview.civicIndex')}
                 </span>
                 <p className="font-body text-xs text-on-surface-variant mt-1">
-                  {getScoreRatingText(data.score)}
+                  {getScoreRatingText(data.score, data.trafficLight)}
                 </p>
               </div>
               <div
                 className={`px-3 py-1.5 rounded-lg border font-headline text-2xl font-bold ${getScoreColor(
-                  data.score
+                  data.score,
+                  data.trafficLight
                 )}`}
               >
                 {data.score}/100
@@ -236,12 +242,14 @@ export const AuditModal: React.FC<AuditModalProps> = ({
                   <div className="flex justify-between">
                     <span>{t('auditPreview.householdIncome')}:</span>
                     <strong className="text-on-surface font-mono">
-                      {data.householdIncome.toLocaleString('es-ES')} €
+                      {data.householdIncome != null ? `${data.householdIncome.toLocaleString('es-ES')} €` : t('uncertainty.notAvailableShort')}
                     </strong>
                   </div>
                   <div className="flex justify-between">
                     <span>{t('auditPreview.incomePercentile')}:</span>
-                    <strong className="text-tertiary font-mono">{data.incomePercentile}%</strong>
+                    <strong className="text-tertiary font-mono">
+                      {data.incomePercentile != null ? `${data.incomePercentile}%` : t('uncertainty.notAvailableShort')}
+                    </strong>
                   </div>
                 </div>
               </div>
@@ -257,11 +265,13 @@ export const AuditModal: React.FC<AuditModalProps> = ({
                 <div className="space-y-1 font-body text-xs text-on-surface-variant">
                   <div className="flex justify-between">
                     <span>{t('auditPreview.noiseLevel')}:</span>
-                    <strong className="text-secondary font-mono">{data.noiseLden} dB(A) ({data.noiseLevel})</strong>
+                    <strong className="text-secondary font-mono">
+                      {data.noiseLden != null ? `${data.noiseLden} dB(A) (${data.noiseLevel ?? ''})` : t('uncertainty.notAvailableShort')}
+                    </strong>
                   </div>
                   <div className="flex justify-between">
                     <span>{t('auditPreview.floodRisk')}:</span>
-                    <strong className="text-primary">{data.floodRisk}</strong>
+                    <strong className="text-primary">{data.floodRisk ?? t('uncertainty.notAvailableShort')}</strong>
                   </div>
                 </div>
               </div>
@@ -298,7 +308,9 @@ export const AuditModal: React.FC<AuditModalProps> = ({
                   <div className="flex justify-between">
                     <span>{t('auditPreview.rentalIndex')}:</span>
                     <strong className="text-on-surface font-mono">
-                      {data.rentMinM2} - {data.rentMaxM2} €/m²
+                      {data.rentMinM2 != null && data.rentMaxM2 != null
+                        ? `${data.rentMinM2} - ${data.rentMaxM2} €/m²`
+                        : t('uncertainty.notAvailableShort')}
                     </strong>
                   </div>
                 </div>

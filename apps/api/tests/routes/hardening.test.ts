@@ -218,8 +218,10 @@ describe('Phase 6: Cloudflare Edge Hardening & Deployment Tests', () => {
       };
 
       const ineProvider = new INEProvider({ db: mockDb });
-      const income = await ineProvider.getIncomeByCensusSection('2807901001');
+      const res = await ineProvider.getIncomeByCensusSection('2807901001');
 
+      expect(res.status).toBe('ok');
+      const income = res.data!;
       expect(income.censusSectionCode).toBe('2807901001');
       expect(income.averageNetHouseholdIncomeEur).toBe(48500.5);
       expect(income.percentileInMunicipality).toBe(85.0);

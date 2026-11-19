@@ -102,7 +102,10 @@ export class OpenBarrioWidget {
 
     if (this.isCollapsed) {
       this.updateContent(
-        renderCollapsedPill(this.currentReport.score.overallScore)
+        renderCollapsedPill(
+          this.currentReport.score.overallScore,
+          this.currentReport.score.trafficLight
+        )
       );
       this.bindCollapsedEvents();
     } else {

@@ -7,7 +7,6 @@ import {
   CadastralCoordinates,
   CadastralUnitsResponse,
   CensusTractIncome,
-  EnvironmentalData,
   RentalBenchmark,
   CivicConnectivityData,
   UrbanPlanningData,
@@ -25,8 +24,15 @@ import {
   evaluateBuildingInspectionAlert,
   evaluateSeismicVulnerability,
   calculatePedestrianIsochrones,
+  LayerKey,
+  LayerStatusInfo,
+  toLayerStatusInfo,
+  layerOk,
+  layerUnavailable,
+  layerOutOfCoverage,
+  isLayerUsable,
 } from '@openbarrio/core';
-import { ProviderContainer, calculateBuildingCapExRisk } from '../providers/index.js';
+import { ProviderContainer, EnvironmentalAggregateResult, calculateBuildingCapExRisk } from '../providers/index.js';
 
 export class AuditService {
   constructor(private readonly providers: ProviderContainer) {}
@@ -34,11 +40,24 @@ export class AuditService {
   /**
    * Generates a full due diligence audit report by WGS84 geographic coordinates.
    */
-  async auditByCoordinates(latitude: number, longitude: number): Promise<PropertyAuditReport> {
+  async auditByCoordinates(
+    latitude: number,
+    longitude: number,
+    waitUntil?: (promise: Promise<unknown>) => void
+  ): Promise<PropertyAuditReport> {
     // 1. Fetch cadastral property data from Catastro (primary anchor)
-    const property = await this.providers.catastro.getByCoordinates(latitude, longitude);
+    const catastroRes = this.providers.catastro.getByCoordinatesWithStatus
+      ? await this.providers.catastro.getByCoordinatesWithStatus(latitude, longitude)
+      : layerOk(
+          'Sede Electrónica del Catastro (OVC)',
+          await this.providers.catastro.getByCoordinates(latitude, longitude)
+        );
 
-    return this.generateReportForProperty(property);
+    return this.generateReportForProperty(
+      catastroRes.data!,
+      waitUntil,
+      toLayerStatusInfo(catastroRes)
+    );
   }
 
   /**
@@ -47,12 +66,26 @@ export class AuditService {
   async auditByCadastralReference(
     refcat: string,
     fallbackCoords?: CadastralCoordinates,
-    preferredPortal?: string
+    preferredPortal?: string,
+    waitUntil?: (promise: Promise<unknown>) => void
   ): Promise<PropertyAuditReport> {
     // 1. Fetch cadastral property data from Catastro (primary anchor)
-    const property = await this.providers.catastro.getByCadastralReference(refcat, fallbackCoords, preferredPortal);
+    const catastroRes = this.providers.catastro.getByCadastralReferenceWithStatus
+      ? await this.providers.catastro.getByCadastralReferenceWithStatus(
+          refcat,
+          fallbackCoords,
+          preferredPortal
+        )
+      : layerOk(
+          'Sede Electrónica del Catastro (OVC)',
+          await this.providers.catastro.getByCadastralReference(refcat, fallbackCoords, preferredPortal)
+        );
 
-    return this.generateReportForProperty(property);
+    return this.generateReportForProperty(
+      catastroRes.data!,
+      waitUntil,
+      toLayerStatusInfo(catastroRes)
+    );
   }
 
   /**
@@ -83,7 +116,9 @@ export class AuditService {
   }
 
   private async generateReportForProperty(
-    property: CadastralProperty
+    property: CadastralProperty,
+    waitUntil?: (promise: Promise<unknown>) => void,
+    resolvedCatastroLayer?: LayerStatusInfo
   ): Promise<PropertyAuditReport> {
     const lat = property.coordinates.latitude;
     const lon = property.coordinates.longitude;
@@ -99,11 +134,13 @@ export class AuditService {
     property.typology = typology;
 
     // 2. Resolve socioeconomic neighborhood first to obtain authoritative censusSectionCode
-    const neighborhood = await this.resolveNeighborhood(property);
+    const neighborhoodRes = await this.resolveNeighborhood(property);
+    const neighborhood = neighborhoodRes.data;
+    const censusSectionCode = neighborhood?.censusSectionCode;
 
     // 3. Fetch parallel provider metrics using census tract context
-    const [environment, connectivity, urbanPlanning, energy] = await Promise.all([
-      this.resolveEnvironment(property, neighborhood.censusSectionCode),
+    const [envAggregate, connectivityRes, urbanPlanningRes, energyRes] = await Promise.all([
+      this.resolveEnvironment(property, censusSectionCode, waitUntil),
       this.resolveConnectivity(lat, lon, {
         municipality: property.address.municipality,
         street: property.address.street,
@@ -111,70 +148,85 @@ export class AuditService {
       this.resolveUrbanPlanning(property),
       this.resolveEnergy(property),
     ]);
+    const environment = envAggregate.data;
+    const connectivity = connectivityRes.data;
+    const urbanPlanning = urbanPlanningRes.data;
+    const energy = energyRes.data;
 
     // 4. Calculate MIVAU SERPAVI rental benchmark & check stressed market status (Residential only)
     let rentalBenchmark: RentalBenchmark | undefined;
+    let mivauLayer: LayerStatusInfo;
     if (typology === 'RESIDENTIAL') {
-      try {
-        rentalBenchmark = await this.providers.serpavi.getRentalBenchmark(
-          property,
-          neighborhood.censusSectionCode
-        );
-      } catch {
-        rentalBenchmark = undefined;
-      }
+      const mivauRes = await this.providers.serpavi.getRentalBenchmark(property, censusSectionCode);
+      mivauLayer = toLayerStatusInfo(mivauRes);
+      rentalBenchmark = isLayerUsable(mivauRes.status) ? mivauRes.data : undefined;
+    } else {
+      mivauLayer = toLayerStatusInfo(
+        layerOutOfCoverage('MIVAU SERPAVI', { reason: 'not_applicable' })
+      );
     }
 
-    // 5. Longitudinal Market Trends (INE IPV + ADRH income history)
+    // 5. Longitudinal Market Trends (INE IPV + ADRH income history, anchored on verified INE section)
     let marketTrends: NeighborhoodTrends | undefined;
-    try {
-      marketTrends = await this.providers.marketTrends.getMarketTrends(
-        property,
-        neighborhood.censusSectionCode,
-        neighborhood.averageNetHouseholdIncomeEur
-      );
-    } catch {
-      marketTrends = undefined;
+    if (neighborhood) {
+      try {
+        marketTrends = await this.providers.marketTrends.getMarketTrends(
+          property,
+          neighborhood.censusSectionCode,
+          neighborhood.averageNetHouseholdIncomeEur
+        );
+      } catch (err) {
+        console.warn('[AuditService] Market trends resolution failed:', (err as Error)?.message);
+        marketTrends = undefined;
+      }
     }
 
     // 6. INE Experimental VUT Tourist Housing Evaluation (Residential only)
     let vut: VutEvaluationDTO | undefined;
+    let vutLayer: LayerStatusInfo;
     if (typology === 'RESIDENTIAL') {
-      try {
-        vut = await this.providers.vut.getVutEvaluation(neighborhood.censusSectionCode, {
-          latitude: lat,
-          longitude: lon,
-        });
-      } catch {
-        vut = undefined;
-      }
+      const vutRes = await this.providers.vut.getVutEvaluation(censusSectionCode || '', {
+        latitude: lat,
+        longitude: lon,
+      });
+      vutLayer = toLayerStatusInfo(vutRes);
+      vut = isLayerUsable(vutRes.status) ? vutRes.data : undefined;
+    } else {
+      vutLayer = toLayerStatusInfo(
+        layerOutOfCoverage('INE VUT Experimental', { reason: 'not_applicable' })
+      );
     }
 
     // 7. CTE DB-HS 6 Radon Geological Hazard Evaluation
-    let radon: RadonEvaluationDTO | undefined;
-    try {
-      const muniCode = property.address.municipalityCode || '001';
-      const provCode = property.address.provinceCode || property.address.postalCode.slice(0, 2) || '28';
-      let floorLevel: number | undefined;
-      if (property.unit?.floor) {
-        const parsedFloor = parseInt(property.unit.floor, 10);
-        if (!isNaN(parsedFloor)) {
-          floorLevel = parsedFloor;
-        } else if (/^(bj|b|pb|baja)$/i.test(property.unit.floor)) {
-          floorLevel = 0;
-        } else if (/^(ss|sótano|semisótano)$/i.test(property.unit.floor)) {
-          floorLevel = -1;
-        }
+    let floorLevel: number | undefined;
+    if (property.unit?.floor) {
+      const parsedFloor = parseInt(property.unit.floor, 10);
+      if (!isNaN(parsedFloor)) {
+        floorLevel = parsedFloor;
+      } else if (/^(bj|b|pb|baja)$/i.test(property.unit.floor)) {
+        floorLevel = 0;
+      } else if (/^(ss|sótano|semisótano)$/i.test(property.unit.floor)) {
+        floorLevel = -1;
       }
-      radon = await this.providers.radon.getRadonEvaluation(
-        muniCode,
-        provCode,
-        floorLevel,
-        property.building.unitsCount
-      );
-    } catch {
-      radon = undefined;
     }
+    const provCode = property.address.provinceCode || property.address.postalCode.slice(0, 2) || '28';
+    const rawMuniCode = property.address.municipalityCode || '';
+    const radonMuniCode =
+      rawMuniCode.length >= 5
+        ? rawMuniCode
+        : rawMuniCode.length > 0
+        ? `${provCode}${rawMuniCode.padStart(3, '0')}`
+        : censusSectionCode && censusSectionCode.length >= 5
+        ? censusSectionCode.slice(0, 5)
+        : `${provCode}001`;
+    const radonRes = await this.providers.radon.getRadonEvaluation(
+      radonMuniCode,
+      provCode,
+      floorLevel,
+      property.building.unitsCount
+    );
+    const radonLayer = toLayerStatusInfo(radonRes);
+    const radon: RadonEvaluationDTO | undefined = isLayerUsable(radonRes.status) ? radonRes.data : undefined;
 
     // 8. Municipal IBI & Regional ITP Fiscal Estimation
     const isUnbuilt = typology === 'VACANT_PLOT' || typology === 'RUSTIC' || property.building.builtSurfaceM2 === 0;
@@ -193,15 +245,16 @@ export class AuditService {
     });
 
     // 9. Technical Building Inspection (ITE/IEE) & Preventive Alert (RD-L 7/2015)
-    const buildingInspection: BuildingInspection = await this.resolveBuildingInspection(property);
+    const iteResolution = await this.resolveBuildingInspection(property);
+    const buildingInspection: BuildingInspection = iteResolution.inspection;
 
     // 10. IGN NCSE-02 Seismic Hazard & Structural Vulnerability
     let muniCodeForSeismic = property.address.municipalityCode;
     if (muniCodeForSeismic && muniCodeForSeismic.length === 3 && property.address.provinceCode) {
       muniCodeForSeismic = `${property.address.provinceCode}${muniCodeForSeismic}`;
     } else if (!muniCodeForSeismic || muniCodeForSeismic.length < 5) {
-      muniCodeForSeismic = neighborhood.censusSectionCode
-        ? neighborhood.censusSectionCode.slice(0, 5)
+      muniCodeForSeismic = censusSectionCode
+        ? censusSectionCode.slice(0, 5)
         : (property.address.provinceCode ? `${property.address.provinceCode}001` : '28079');
     }
     const seismicHazard: SeismicHazard = evaluateSeismicVulnerability(
@@ -211,6 +264,9 @@ export class AuditService {
       property.address.municipality,
       property.address.provinceCode
     );
+    const seismicLayer = toLayerStatusInfo(
+      layerOk('IGN NCSE-02 Sismicidad', seismicHazard)
+    );
 
     // 11. 15-Minute City Pedestrian Isochrones & Catchment Breakdown
     const pedestrianIsochrones: PedestrianIsochrones = calculatePedestrianIsochrones(
@@ -218,21 +274,40 @@ export class AuditService {
       connectivity?.nearbyFacilities || []
     );
 
-    // 12. Calculate Barrio Due Diligence Score (5 calibrated pillars + VUT, ITE & Seismic recalibration)
-    const score = calculateBarrioScore(
+    // 12. Assemble all 13 typed layer statuses and compute honest BarrioScore
+    const catastroLayer =
+      resolvedCatastroLayer ??
+      toLayerStatusInfo(layerOk('Sede Electrónica del Catastro (OVC)', property));
+    const allLayers: Record<LayerKey, LayerStatusInfo> = {
+      catastro: catastroLayer,
+      ine: neighborhoodRes.layer,
+      sica: toLayerStatusInfo(envAggregate.layers.sica),
+      snczi: toLayerStatusInfo(envAggregate.layers.snczi),
+      mivau: mivauLayer,
+      cee: energyRes.layer,
+      radon: radonLayer,
+      seismic: seismicLayer,
+      ite: iteResolution.layer,
+      vut: vutLayer,
+      airQuality: toLayerStatusInfo(envAggregate.layers.airQuality),
+      urbanPlanning: urbanPlanningRes.layer,
+      connectivity: connectivityRes.layer,
+    };
+
+    const score = calculateBarrioScore({
       property,
       neighborhood,
       environment,
       rentalBenchmark,
       connectivity,
       urbanPlanning,
-      undefined,
       energy,
       vut,
       buildingInspection,
       seismicHazard,
-      pedestrianIsochrones
-    );
+      pedestrianIsochrones,
+      layers: allLayers,
+    });
 
     // 13. Calculate Building CapEx & Community Risk Intelligence (omit for unbuilt plots and rustic land)
     const capex = (typology === 'VACANT_PLOT' || typology === 'RUSTIC')
@@ -243,7 +318,8 @@ export class AuditService {
     let surroundings: BuildingSurroundingsDTO | undefined;
     try {
       surroundings = await this.getCadastralSurroundings(property.cadastralReference);
-    } catch {
+    } catch (err) {
+      console.warn('[AuditService] Cadastral surroundings query failed:', (err as Error)?.message);
       surroundings = undefined;
     }
 
@@ -257,6 +333,8 @@ export class AuditService {
       connectivity,
       urbanPlanning,
       score,
+      layers: allLayers,
+      coverage: score.coverage,
       rentalBenchmark,
       capex,
       energy,
@@ -271,9 +349,12 @@ export class AuditService {
     };
   }
 
-  private async resolveBuildingInspection(property: CadastralProperty): Promise<BuildingInspection> {
+  private async resolveBuildingInspection(
+    property: CadastralProperty
+  ): Promise<{ inspection: BuildingInspection; layer: LayerStatusInfo }> {
     const refcat = property.cadastralReference;
     let officialRecord: Partial<BuildingInspection> | undefined;
+    let d1Error = false;
 
     const db = this.providers.db;
     if (db) {
@@ -315,141 +396,149 @@ export class AuditService {
             municipalRegistry: row.municipal_registry,
           };
         }
-      } catch {
-        // Fallback silently to statutory evaluation
+      } catch (err) {
+        d1Error = true;
+        console.warn('[AuditService] Municipal ITE lookup failed:', (err as Error)?.message);
       }
     }
 
-    return evaluateBuildingInspectionAlert(property, officialRecord);
+    const inspection = evaluateBuildingInspectionAlert(property, officialRecord);
+    if (d1Error) {
+      return {
+        inspection,
+        layer: toLayerStatusInfo(layerUnavailable('Registros Municipales ITE/IEE', 'upstream_error')),
+      };
+    }
+
+    if (
+      property.typology === 'VACANT_PLOT' ||
+      property.typology === 'RUSTIC' ||
+      !property.building.constructionYear ||
+      property.building.constructionYear <= 0
+    ) {
+      return {
+        inspection,
+        layer: toLayerStatusInfo(
+          layerOutOfCoverage('Registros Municipales ITE/IEE', { reason: 'not_applicable' })
+        ),
+      };
+    }
+
+    return {
+      inspection,
+      layer: toLayerStatusInfo(layerOk('Registros Municipales ITE/IEE', inspection)),
+    };
   }
 
   private async resolveEnergy(
     property: CadastralProperty
-  ): Promise<EnergyPerformanceCertificate | undefined> {
-    try {
-      return await this.providers.cee.getEnergyCertificate(property);
-    } catch {
-      return undefined;
-    }
+  ): Promise<{ data?: EnergyPerformanceCertificate; layer: LayerStatusInfo }> {
+    const res = await this.providers.cee.getEnergyCertificate(property);
+    return {
+      data: isLayerUsable(res.status) ? res.data : undefined,
+      layer: toLayerStatusInfo(res),
+    };
   }
 
-  private async resolveNeighborhood(property: CadastralProperty): Promise<CensusTractIncome> {
-    try {
-      const censusCode = await this.providers.ine.resolveCensusSection(
-        property.coordinates.latitude,
-        property.coordinates.longitude,
-        property.address.provinceCode || property.address.postalCode.slice(0, 2),
-        property.address.municipalityCode
-      );
-      return await this.providers.ine.getIncomeByCensusSection(censusCode);
-    } catch {
-      // Dynamic deterministic calculation if INE upstream is temporarily unreachable
-      const provCode =
-        property.address.provinceCode || property.address.postalCode.slice(0, 2) || '28';
-      const muniCode = property.address.municipalityCode || '001';
-      const coordHash = Math.abs(
-        Math.round(property.coordinates.latitude * 1000 + property.coordinates.longitude * 1000)
-      );
-      const isHighIncome = ['28', '08', '48', '31', '20'].includes(provCode);
-      const baseHousehold = isHighIncome ? 34000 : 25000;
-      const variation = (coordHash % 35) * 600;
-      const avgHousehold = baseHousehold + variation;
-      const percentile = Math.min(96, Math.max(8, Math.round((avgHousehold / 56000) * 80)));
-      const medianAge = 37 + (coordHash % 17);
-      const singlePct = 20 + (coordHash % 25);
-
+  private async resolveNeighborhood(
+    property: CadastralProperty
+  ): Promise<{ data?: CensusTractIncome; layer: LayerStatusInfo }> {
+    const sectionRes = await this.providers.ine.resolveCensusSection(
+      property.coordinates.latitude,
+      property.coordinates.longitude,
+      property.address.provinceCode || property.address.postalCode.slice(0, 2),
+      property.address.municipalityCode
+    );
+    if (!isLayerUsable(sectionRes.status) || !sectionRes.data) {
       return {
-        censusSectionCode: `${provCode}${muniCode.padStart(3, '0')}${String(
-          1 + (coordHash % 15)
-        ).padStart(2, '0')}${String(1 + (coordHash % 40)).padStart(3, '0')}`,
-        averageNetHouseholdIncomeEur: avgHousehold,
-        averageNetPersonIncomeEur: Math.round(avgHousehold / 2.25),
-        percentileInMunicipality: percentile,
-        rankingInCity: {
-          rank: Math.max(1, Math.round(((100 - percentile) / 100) * 600)),
-          totalSections: 600,
-        },
-        demographics: {
-          medianAge,
-          singlePersonHouseholdPercentage: singlePct,
-        },
+        data: undefined,
+        layer: toLayerStatusInfo(sectionRes),
       };
     }
+
+    const incomeRes = await this.providers.ine.getIncomeByCensusSection(sectionRes.data);
+    return {
+      data: isLayerUsable(incomeRes.status) ? incomeRes.data : undefined,
+      layer: toLayerStatusInfo(incomeRes),
+    };
   }
 
   private async resolveEnvironment(
     property: CadastralProperty,
-    censusSectionCode?: string
-  ): Promise<EnvironmentalData> {
-    let envData: EnvironmentalData;
+    censusSectionCode?: string,
+    waitUntil?: (promise: Promise<unknown>) => void
+  ): Promise<EnvironmentalAggregateResult> {
+    let aggregate: EnvironmentalAggregateResult;
     try {
-      envData = await this.providers.environmental.getEnvironmentalData(
+      aggregate = await this.providers.environmental.getEnvironmentalData(
         property.coordinates.latitude,
         property.coordinates.longitude,
-        censusSectionCode
+        censusSectionCode,
+        waitUntil
       );
     } catch {
-      // Dynamic baseline: quieter in residential coordinates, moderate on main thoroughfares
-      const coordHash = Math.abs(
-        Math.round(property.coordinates.latitude * 1000 + property.coordinates.longitude * 1000)
-      );
-      const isMajorRoad = coordHash % 4 === 0;
-      const decibels = isMajorRoad ? 63 + (coordHash % 5) : 48 + (coordHash % 5);
-      envData = {
-        noise: {
-          dayEveningNightDecibels: decibels,
-          category: decibels >= 65 ? 'NOISY' : decibels >= 55 ? 'MODERATE' : 'QUIET',
-          predominantSource: decibels >= 55 ? 'ROAD_TRAFFIC' : 'NONE',
-        },
-        floodRisk: {
-          level: 'NONE',
-          returnPeriodYears: null,
-          isInPreferentialFlowZone: false,
+      aggregate = {
+        data: {},
+        layers: {
+          sica: layerUnavailable('MITECO SICA', 'upstream_error'),
+          snczi: layerUnavailable('MITECO SNCZI', 'upstream_error'),
+          airQuality: layerUnavailable('MITECO ICA', 'upstream_error'),
         },
       };
     }
 
-    // Attach air quality if not already present
-    if (!envData.airQuality && this.providers.airQuality) {
+    // Attach air quality if provider was configured separately and sub-layer has not resolved yet
+    if (!aggregate.data.airQuality && this.providers.airQuality) {
       try {
-        const airQuality = await (this.providers.airQuality as any).getAirQualityData(
+        const airQualityRes = await this.providers.airQuality.getAirQualityData(
           property.coordinates.latitude,
           property.coordinates.longitude
         );
-        if (airQuality) {
-          envData.airQuality = airQuality;
+        aggregate.layers.airQuality = airQualityRes;
+        if (isLayerUsable(airQualityRes.status) && airQualityRes.data) {
+          aggregate.data.airQuality = airQualityRes.data;
         }
-      } catch (err: any) {
-        console.warn(`[AuditService] Air quality query failed:`, err?.message);
+      } catch {
+        aggregate.layers.airQuality = layerUnavailable('MITECO ICA', 'upstream_error');
       }
+    } else if (!this.providers.airQuality && aggregate.layers.airQuality.status === 'out_of_coverage') {
+      aggregate.layers.airQuality = layerOutOfCoverage('MITECO ICA');
     }
 
-    return envData;
+    return aggregate;
   }
 
   private async resolveConnectivity(
     latitude: number,
     longitude: number,
     context?: { municipality?: string; street?: string }
-  ): Promise<CivicConnectivityData | undefined> {
-    if (!this.providers.connectivity) return undefined;
-    try {
-      return await this.providers.connectivity.getConnectivityData(latitude, longitude, context);
-    } catch (err: any) {
-      console.warn(`[AuditService] Civic connectivity query failed:`, err?.message);
-      return undefined;
+  ): Promise<{ data?: CivicConnectivityData; layer: LayerStatusInfo }> {
+    if (!this.providers.connectivity) {
+      return {
+        data: undefined,
+        layer: toLayerStatusInfo(layerUnavailable('IGN / CNIG Equipamientos', 'upstream_error')),
+      };
     }
+    const res = await this.providers.connectivity.getConnectivityData(latitude, longitude, context);
+    return {
+      data: isLayerUsable(res.status) ? res.data : undefined,
+      layer: toLayerStatusInfo(res),
+    };
   }
 
   private async resolveUrbanPlanning(
     property: CadastralProperty
-  ): Promise<UrbanPlanningData | undefined> {
-    if (!this.providers.urbanPlanning) return undefined;
-    try {
-      return await this.providers.urbanPlanning.getUrbanPlanningData(property);
-    } catch (err: any) {
-      console.warn(`[AuditService] Urban planning query failed:`, err?.message);
-      return undefined;
+  ): Promise<{ data?: UrbanPlanningData; layer: LayerStatusInfo }> {
+    if (!this.providers.urbanPlanning) {
+      return {
+        data: undefined,
+        layer: toLayerStatusInfo(layerUnavailable('MIVAU SIU Urbanismo', 'upstream_error')),
+      };
     }
+    const res = await this.providers.urbanPlanning.getUrbanPlanningData(property);
+    return {
+      data: isLayerUsable(res.status) ? res.data : undefined,
+      layer: toLayerStatusInfo(res),
+    };
   }
 }

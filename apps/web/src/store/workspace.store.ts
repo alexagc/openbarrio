@@ -6,6 +6,8 @@ import {
 } from '@openbarrio/core';
 import { apiClient, ExtendedAuditReport, ApiError } from '../services/api.client';
 import { parseUrlState, DossierTab, ViewMode } from '../hooks/useUrlSync';
+import { getLocalizedPath, parseLocalizedRoute } from '../utils/seo-routes';
+import type { SupportedLanguage } from '../i18n/types';
 import { AuditData } from '../components/landing';
 import { MobileNavDestination } from '../components/MobileBottomNav';
 import { SheetSnapPoint } from '../components/CadastralBottomSheet';
@@ -320,6 +322,26 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
       if (!isAlreadyTransparency) {
         if (replace) window.history.replaceState({ openbarrio: true }, '', '/fuentes-oficiales');
         else window.history.pushState({ openbarrio: true }, '', '/fuentes-oficiales');
+      }
+      return;
+    }
+
+    if (viewMode === 'sources-status' || viewMode === 'methodology') {
+      const curPath = window.location.pathname;
+      const parsed = parseLocalizedRoute(curPath, window.location.search);
+      if (parsed.viewMode !== viewMode) {
+        let lang: SupportedLanguage = 'es';
+        try {
+          const saved = localStorage.getItem('openbarrio_lang');
+          if (saved === 'es' || saved === 'en' || saved === 'ca' || saved === 'gl' || saved === 'eu') {
+            lang = saved;
+          }
+        } catch {
+          // Ignore storage error
+        }
+        const target = getLocalizedPath(viewMode, lang);
+        if (replace) window.history.replaceState({ openbarrio: true }, '', target);
+        else window.history.pushState({ openbarrio: true }, '', target);
       }
       return;
     }

@@ -13,6 +13,7 @@ import { Chrome } from '../common/BrandIcons';
 import { isCadastralReference } from '@openbarrio/core';
 import { useTranslation } from '../../i18n';
 import { apiClient } from '../../services/api.client';
+import { ListingUrlResolver } from './ListingUrlResolver';
 
 interface HeroSectionProps {
   onAudit: (query: string, mode: 'address' | 'refcat', coords?: { lat: number; lon: number }) => void;
@@ -21,6 +22,7 @@ interface HeroSectionProps {
 
 export const HeroSection: React.FC<HeroSectionProps> = ({ onAudit, onOpenMap }) => {
   const { t } = useTranslation();
+  const [inputMode, setInputMode] = useState<'search' | 'url'>('search');
   const [searchValue, setSearchValue] = useState<string>('');
   const [suggestions, setSuggestions] = useState<
     Array<{ label: string; lat: number; lon: number; refcat?: string }>
@@ -135,110 +137,150 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onAudit, onOpenMap }) 
           {t('hero.subtitle')}
         </p>
 
-        {/* Universal Cadastral Search Box (Buscador Soberano Unificado) */}
-        <form
-          onSubmit={handleSubmit}
-          className="w-full max-w-3xl bg-surface-container/95 border border-primary/40 p-3 sm:p-4 rounded-xl shadow-2xl mb-4 text-left backdrop-blur-md"
-        >
-          {/* Unified Sovereign Bar Header */}
-          <div className="flex items-center justify-between border-b border-outline-variant pb-2 mb-2.5 px-1 font-mono text-xs text-on-surface-variant">
-            <div className="flex items-center gap-1.5">
-              <ShieldCheck className="w-4 h-4 text-primary" />
-              <span className="font-semibold text-on-surface">{t('hero.searchTitle')}</span>
-              {isCadastralReference(searchValue.trim()) && (
-                <span className="px-1.5 py-0.5 rounded bg-primary/20 text-primary text-[10px] font-bold border border-primary/40 animate-pulse">
-                  {t('hero.refcatDetected')}
-                </span>
-              )}
-            </div>
-            <div className="hidden sm:flex items-center gap-1.5 text-on-surface-variant font-mono text-xs">
-              <span>{t('hero.searchSources')}</span>
-            </div>
-          </div>
-
-          {/* Input Bar Row */}
-          <div className="flex flex-col sm:flex-row items-center gap-2">
-            <div className="relative flex-1 w-full" ref={dropdownRef}>
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-primary">
-                <Search className="w-4 h-4" />
-              </div>
-              <input
-                id="cadastral-search-input"
-                type="text"
-                value={searchValue}
-                onChange={(e) => setSearchValue(e.target.value)}
-                onFocus={() => {
-                  isFocusedRef.current = true;
-                  if (suggestions.length > 0) setShowDropdown(true);
-                }}
-                onBlur={() => {
-                  setTimeout(() => {
-                    isFocusedRef.current = false;
-                  }, 200);
-                }}
-                placeholder={t('hero.placeholderUnified')}
-                className="w-full pl-10 pr-4 py-2.5 rounded bg-surface-container-lowest border border-outline-variant focus:border-primary focus:ring-1 focus:ring-primary text-on-surface font-body text-sm placeholder:text-outline outline-hidden transition-colors"
-              />
-
-              {/* Autocomplete Dropdown */}
-              {showDropdown && suggestions.length > 0 && (
-                <div className="absolute left-0 right-0 top-full mt-1.5 bg-surface-container-low border border-outline-variant rounded-lg shadow-2xl overflow-hidden z-50 max-h-60 overflow-y-auto">
-                  <div className="p-2 border-b border-outline-variant bg-surface-container text-[11px] font-semibold text-on-surface-variant uppercase tracking-wider flex items-center justify-between">
-                    <span>{t('hero.searchSuggestions')} ({suggestions.length})</span>
-                    {isSearching ? (
-                      <span className="text-primary text-[10px]">{t('hero.searching')}</span>
-                    ) : (
-                      <span className="text-primary text-[10px] font-mono">WFS Online</span>
-                    )}
-                  </div>
-                  {suggestions.map((item, idx) => (
-                    <button
-                      key={idx}
-                      type="button"
-                      onMouseDown={(e) => e.preventDefault()}
-                      onClick={() => {
-                        setSearchValue(item.label);
-                        setShowDropdown(false);
-                        const coords =
-                          typeof item.lat === 'number' && typeof item.lon === 'number'
-                            ? { lat: item.lat, lon: item.lon }
-                            : undefined;
-                        if (item.refcat) {
-                          onAudit(item.refcat, 'refcat', coords);
-                        } else {
-                          onAudit(item.label, 'address', coords);
-                        }
-                      }}
-                      className="w-full text-left px-3.5 py-2.5 text-xs text-on-surface hover:bg-surface-container-high border-b border-outline-variant/40 last:border-0 flex items-center justify-between space-x-2 transition cursor-pointer"
-                    >
-                      <div className="flex items-start space-x-2 min-w-0">
-                        <MapPin className="w-4 h-4 text-primary shrink-0 mt-0.5" />
-                        <span className="truncate">{item.label}</span>
-                      </div>
-                      {item.refcat && (
-                        <span className="shrink-0 px-1.5 py-0.5 rounded bg-primary/20 text-primary font-mono text-[10px] font-semibold border border-primary/30">
-                          {t('searchBar.rcOfficial')}
-                        </span>
-                      )}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
+        {/* Universal Cadastral Search Box / Paste-Listing-URL Mode */}
+        <div className="w-full max-w-3xl bg-surface-container/95 border border-primary/40 p-3 sm:p-4 rounded-xl shadow-2xl mb-4 text-left backdrop-blur-md">
+          {/* Mode Tabs */}
+          <div
+            role="tablist"
+            aria-label={t('hero.searchTitle')}
+            className="flex flex-wrap items-center gap-2 border-b border-outline-variant pb-2.5 mb-3"
+          >
             <button
-              type="submit"
-              className="w-full sm:w-auto px-5 py-2.5 rounded bg-primary-container text-on-primary-container font-body text-sm font-semibold hover:bg-primary transition-colors flex items-center justify-center gap-2 shadow-sm shrink-0 cursor-pointer"
+              type="button"
+              role="tab"
+              aria-selected={inputMode === 'search'}
+              onClick={() => setInputMode('search')}
+              className={`px-3 py-1 rounded-lg font-mono text-xs font-semibold transition-colors cursor-pointer ${
+                inputMode === 'search'
+                  ? 'bg-primary/15 text-primary border border-primary/40'
+                  : 'text-on-surface-variant hover:text-on-surface border border-transparent'
+              }`}
             >
-              <span>{t('hero.auditButton')}</span>
-              <ArrowRight className="w-4 h-4" />
+              {t('listingUrl.searchTabLabel')}
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={inputMode === 'url'}
+              onClick={() => setInputMode('url')}
+              className={`px-3 py-1 rounded-lg font-mono text-xs font-semibold transition-colors cursor-pointer ${
+                inputMode === 'url'
+                  ? 'bg-primary/15 text-primary border border-primary/40'
+                  : 'text-on-surface-variant hover:text-on-surface border border-transparent'
+              }`}
+            >
+              {t('listingUrl.tabLabel')}
             </button>
           </div>
 
-          {/* Guarantee Subtext */}
-          <p className="mt-2 text-center sm:text-left font-mono text-[11px] text-on-surface-variant">
-            {t('hero.searchGuarantee')}
-          </p>
-        </form>
+          {inputMode === 'url' ? (
+            <ListingUrlResolver
+              onAudit={onAudit}
+              onSwitchToManual={() => setInputMode('search')}
+            />
+          ) : (
+            <form onSubmit={handleSubmit}>
+              {/* Unified Sovereign Bar Header */}
+              <div className="flex items-center justify-between border-b border-outline-variant pb-2 mb-2.5 px-1 font-mono text-xs text-on-surface-variant">
+                <div className="flex items-center gap-1.5">
+                  <ShieldCheck className="w-4 h-4 text-primary" />
+                  <span className="font-semibold text-on-surface">{t('hero.searchTitle')}</span>
+                  {isCadastralReference(searchValue.trim()) && (
+                    <span className="px-1.5 py-0.5 rounded bg-primary/20 text-primary text-[10px] font-bold border border-primary/40 animate-pulse">
+                      {t('hero.refcatDetected')}
+                    </span>
+                  )}
+                </div>
+                <div className="hidden sm:flex items-center gap-1.5 text-on-surface-variant font-mono text-xs">
+                  <span>{t('hero.searchSources')}</span>
+                </div>
+              </div>
+
+              {/* Input Bar Row */}
+              <div className="flex flex-col sm:flex-row items-center gap-2">
+                <div className="relative flex-1 w-full" ref={dropdownRef}>
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-primary">
+                    <Search className="w-4 h-4" />
+                  </div>
+                  <input
+                    id="cadastral-search-input"
+                    type="text"
+                    value={searchValue}
+                    onChange={(e) => setSearchValue(e.target.value)}
+                    onFocus={() => {
+                      isFocusedRef.current = true;
+                      if (suggestions.length > 0) setShowDropdown(true);
+                    }}
+                    onBlur={() => {
+                      setTimeout(() => {
+                        isFocusedRef.current = false;
+                      }, 200);
+                    }}
+                    placeholder={t('hero.placeholderUnified')}
+                    className="w-full pl-10 pr-4 py-2.5 rounded bg-surface-container-lowest border border-outline-variant focus:border-primary focus:ring-1 focus:ring-primary text-on-surface font-body text-sm placeholder:text-outline outline-hidden transition-colors"
+                  />
+
+                  {/* Autocomplete Dropdown */}
+                  {showDropdown && suggestions.length > 0 && (
+                    <div className="absolute left-0 right-0 top-full mt-1.5 bg-surface-container-low border border-outline-variant rounded-lg shadow-2xl overflow-hidden z-50 max-h-60 overflow-y-auto">
+                      <div className="p-2 border-b border-outline-variant bg-surface-container text-[11px] font-semibold text-on-surface-variant uppercase tracking-wider flex items-center justify-between">
+                        <span>{t('hero.searchSuggestions')} ({suggestions.length})</span>
+                        {isSearching ? (
+                          <span className="text-primary text-[10px]">{t('hero.searching')}</span>
+                        ) : (
+                          <span className="text-primary text-[10px] font-mono">WFS Online</span>
+                        )}
+                      </div>
+                      {suggestions.map((item, idx) => (
+                        <button
+                          key={idx}
+                          type="button"
+                          onMouseDown={(e) => e.preventDefault()}
+                          onClick={() => {
+                            setSearchValue(item.label);
+                            setShowDropdown(false);
+                            const coords =
+                              typeof item.lat === 'number' && typeof item.lon === 'number'
+                                ? { lat: item.lat, lon: item.lon }
+                                : undefined;
+                            if (item.refcat) {
+                              onAudit(item.refcat, 'refcat', coords);
+                            } else {
+                              onAudit(item.label, 'address', coords);
+                            }
+                          }}
+                          className="w-full text-left px-3.5 py-2.5 text-xs text-on-surface hover:bg-surface-container-high border-b border-outline-variant/40 last:border-0 flex items-center justify-between space-x-2 transition cursor-pointer"
+                        >
+                          <div className="flex items-start space-x-2 min-w-0">
+                            <MapPin className="w-4 h-4 text-primary shrink-0 mt-0.5" />
+                            <span className="truncate">{item.label}</span>
+                          </div>
+                          {item.refcat && (
+                            <span className="shrink-0 px-1.5 py-0.5 rounded bg-primary/20 text-primary font-mono text-[10px] font-semibold border border-primary/30">
+                              {t('searchBar.rcOfficial')}
+                            </span>
+                          )}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                <button
+                  type="submit"
+                  className="w-full sm:w-auto px-5 py-2.5 rounded bg-primary-container text-on-primary-container font-body text-sm font-semibold hover:bg-primary transition-colors flex items-center justify-center gap-2 shadow-sm shrink-0 cursor-pointer"
+                >
+                  <span>{t('hero.auditButton')}</span>
+                  <ArrowRight className="w-4 h-4" />
+                </button>
+              </div>
+
+              {/* Guarantee Subtext */}
+              <p className="mt-2 text-center sm:text-left font-mono text-[11px] text-on-surface-variant">
+                {t('hero.searchGuarantee')}
+              </p>
+            </form>
+          )}
+        </div>
 
         {/* 3 Iconic Emblematic Presets Grid (Decision A1) */}
         <div className="w-full max-w-3xl mb-4 text-left">

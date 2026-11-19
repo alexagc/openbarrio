@@ -20,16 +20,23 @@ import {
   CivicConnectivityData,
   UrbanPlanningData,
   RentalBenchmark,
+  LayerKey,
+  LayerStatusInfo,
+  PillarTrafficLights,
 } from '@openbarrio/core';
 import { useTranslation } from '../i18n';
+import { LayerStatusBadge } from './common/LayerStatusBadge';
+import { DataUnavailableState } from './common/DataUnavailableState';
 
 export interface PillarCardsProps {
   property: CadastralProperty;
-  neighborhood: CensusTractIncome;
+  neighborhood?: CensusTractIncome;
   environment: EnvironmentalData;
   connectivity?: CivicConnectivityData;
   urbanPlanning?: UrbanPlanningData;
   rentalBenchmark?: RentalBenchmark;
+  layers?: Partial<Record<LayerKey, LayerStatusInfo>>;
+  pillarTrafficLights?: PillarTrafficLights;
   hideConnectivityPillar?: boolean;
   hideBuildingPillar?: boolean;
 }
@@ -41,6 +48,8 @@ export function PillarCards({
   connectivity,
   urbanPlanning,
   rentalBenchmark,
+  layers,
+  pillarTrafficLights,
   hideConnectivityPillar = false,
   hideBuildingPillar = false,
 }: PillarCardsProps) {
@@ -64,17 +73,19 @@ export function PillarCards({
     eraTag = 'Edificio Moderno';
   }
 
-  // 2. Noise category helper
-  const noise = environment.noise;
+  // 2. Noise category helper (only computed when SICA data exists)
+  const noise = environment?.noise;
   let noiseLevelTag = 'Silencioso (< 55 dBA)';
   let noiseTextClass = 'text-primary';
 
-  if (noise.dayEveningNightDecibels >= 70) {
-    noiseLevelTag = 'Corredor acústico crítico (> 70 dBA)';
-    noiseTextClass = 'text-error';
-  } else if (noise.dayEveningNightDecibels >= 60) {
-    noiseLevelTag = 'Tráfico urbano moderado';
-    noiseTextClass = 'text-secondary';
+  if (noise) {
+    if (noise.dayEveningNightDecibels >= 70) {
+      noiseLevelTag = 'Corredor acústico crítico (> 70 dBA)';
+      noiseTextClass = 'text-error';
+    } else if (noise.dayEveningNightDecibels >= 60) {
+      noiseLevelTag = 'Tráfico urbano moderado';
+      noiseTextClass = 'text-secondary';
+    }
   }
 
   const noiseSourceTranslation: Record<string, string> = {
@@ -85,78 +96,43 @@ export function PillarCards({
     NONE: 'Zona Residencial Peatonal',
   };
 
-  // 3. Flood risk helper
-  const flood = environment.floodRisk;
+  // 3. Flood risk helper (only computed when SNCZI data exists)
+  const flood = environment?.floodRisk;
   let floodLabel = 'Riesgo Nulo';
   let FloodIcon = CheckCircle2;
   let floodClass = 'text-primary';
   let returnPeriodText = 'Zona Segura T > 500 años';
 
-  if (flood.level === 'HIGH') {
+  if (flood?.level === 'HIGH') {
     floodLabel = 'Riesgo Alto (T=10a)';
     FloodIcon = AlertTriangle;
     floodClass = 'text-error';
     returnPeriodText = 'Lámina de agua T=10 años';
-  } else if (flood.level === 'MEDIUM') {
+  } else if (flood?.level === 'MEDIUM') {
     floodLabel = 'Riesgo Medio (T=100a)';
     FloodIcon = AlertTriangle;
     floodClass = 'text-secondary';
     returnPeriodText = 'Lámina de agua T=100 años';
-  } else if (flood.level === 'LOW') {
+  } else if (flood?.level === 'LOW') {
     floodLabel = 'Riesgo Bajo (T=500a)';
     FloodIcon = ShieldCheck;
     floodClass = 'text-tertiary';
     returnPeriodText = 'Zona de flujo T=500 años';
   }
 
-  // 4. Civic Connectivity resolution with resilient fallback
-  const conn: CivicConnectivityData = connectivity ?? {
-    walkScore15Min: 85,
-    facilitiesWithin15MinCount: 28,
-    nearestHealthcare: {
-      id: 'cap-default',
-      type: 'healthcare',
-      subtype: 'primary_care',
-      name: 'Centro de Salud (CAP)',
-      distanceMeters: 380,
-      walkTimeMinutes: 4.8,
-    },
-    nearestEducation: {
-      id: 'esc-default',
-      type: 'education',
-      subtype: 'school',
-      name: 'Colegio Público / IES',
-      distanceMeters: 410,
-      walkTimeMinutes: 5.2,
-    },
-    nearestTransit: {
-      id: 'transit-default',
-      type: 'transit',
-      subtype: 'metro',
-      name: 'Estación Metro / Cercanías',
-      distanceMeters: 180,
-      walkTimeMinutes: 2.3,
-    },
-    nearestPark: {
-      id: 'park-default',
-      type: 'park',
-      subtype: 'urban_park',
-      name: 'Parque Público / Zona Verde',
-      distanceMeters: 460,
-      walkTimeMinutes: 5.9,
-    },
-  };
+  // 4. Civic Connectivity (never synthesize fake amenities)
+  const conn = connectivity;
 
-  // 5. Urban Planning resolution with resilient fallback
+  // 5. Urban Planning (never invent undeclared renovations)
   const isStressedFromBenchmark = rentalBenchmark?.isStressedHousingZone ?? false;
-  const urbanPlan: UrbanPlanningData = urbanPlanning ?? {
+  const urbanPlan: UrbanPlanningData | undefined = urbanPlanning ?? (rentalBenchmark ? {
     landClassification: 'URBAN_CONSOLIDATED',
-    zoningCode: 'NZ-Residencial Consolidado',
+    zoningCode: '—',
     isProtectedLand: false,
-    declaredRenovationsCount: year > 0 && year < 1980 ? 2 : 0,
-    lastRenovationYear: year > 0 && year < 1980 ? 2016 : null,
+    declaredRenovationsCount: 0,
+    lastRenovationYear: null,
     isStressedHousingZone: isStressedFromBenchmark,
-  };
+  } : undefined);
 
   const landClassificationLabels: Record<string, string> = {
     URBAN_CONSOLIDATED: 'Suelo Urbano Consolidado (SUC)',
@@ -170,7 +146,7 @@ export function PillarCards({
   const surface = property.building.builtSurfaceM2;
   const units = property.building.unitsCount;
   const primaryUse = property.building.primaryUse;
-  const aqi = environment.airQuality;
+  const aqi = environment?.airQuality;
 
   const isRustic =
     property.typology === 'RUSTIC' ||
@@ -188,97 +164,106 @@ export function PillarCards({
         {/* PILLAR 1: CIVIC CONNECTIVITY (15-MIN CITY) */}
         {!hideConnectivityPillar && (
           <div className="p-space-lg bg-surface border border-outline-variant/70 rounded-xl space-y-3 shadow-sm hover:border-outline-variant transition-colors">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between gap-2 flex-wrap">
               <div className="flex items-center gap-1.5 min-w-0">
                 <Compass className="text-tertiary w-4 h-4 shrink-0" />
                 <h3 className="font-title-md text-title-md text-on-surface font-semibold truncate">
                   Conectividad Cívica & 15-Min
                 </h3>
               </div>
-              <span className="text-[10px] font-mono text-outline shrink-0 ml-2">CNIG & Red Peatonal</span>
-            </div>
-
-            <div className="p-3 bg-surface-container-low border border-outline-variant rounded-lg flex items-center justify-between">
-              <div>
-                <span className="text-[10px] font-mono text-outline uppercase block">WalkScore 15-Minutos</span>
-                <div className="font-mono text-xl font-bold text-tertiary mt-0.5">
-                  {conn.walkScore15Min}/100
-                </div>
-                <span className="text-[11px] text-on-surface-variant block mt-0.5">
-                  {conn.walkScore15Min >= 80
-                    ? 'Excelente accesibilidad peatonal a servicios diarios'
-                    : conn.walkScore15Min >= 60
-                    ? 'Buena conectividad urbana a pie'
-                    : 'Dependencia moderada de transporte motorizado'}
-                </span>
-              </div>
-              <div className="text-right">
-                <span className="text-[10px] font-mono text-outline uppercase block">Equipamientos</span>
-                <div className="font-mono text-base font-semibold text-primary mt-0.5">
-                  {conn.facilitiesWithin15MinCount}
-                </div>
-                <span className="text-[9px] font-mono text-outline block">&lt; 15 min a pie</span>
+              <div className="flex items-center gap-1.5 shrink-0">
+                <LayerStatusBadge info={layers?.connectivity} />
+                <span className="text-[10px] font-mono text-outline">CNIG & Red Peatonal</span>
               </div>
             </div>
 
-            {/* 4 Connectivity amenity cards */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
-              {/* CAP Healthcare */}
-              <div className="p-2.5 bg-surface-container-low border border-outline-variant rounded-lg">
-                <div className="flex items-center gap-1 text-[10px] font-mono text-outline uppercase">
-                  <HeartPulse className="w-3.5 h-3.5 text-primary" />
-                  <span>{t('bento.facilityHealthcare')}</span>
+            {!conn ? (
+              <DataUnavailableState info={layers?.connectivity} fallbackSource="IGN / CNIG Equipamientos" />
+            ) : (
+              <>
+                <div className="p-3 bg-surface-container-low border border-outline-variant rounded-lg flex items-center justify-between">
+                  <div>
+                    <span className="text-[10px] font-mono text-outline uppercase block">WalkScore 15-Minutos</span>
+                    <div className="font-mono text-xl font-bold text-tertiary mt-0.5">
+                      {conn.walkScore15Min}/100
+                    </div>
+                    <span className="text-[11px] text-on-surface-variant block mt-0.5">
+                      {conn.walkScore15Min >= 80
+                        ? 'Excelente accesibilidad peatonal a servicios diarios'
+                        : conn.walkScore15Min >= 60
+                        ? 'Buena conectividad urbana a pie'
+                        : 'Dependencia moderada de transporte motorizado'}
+                    </span>
+                  </div>
+                  <div className="text-right">
+                    <span className="text-[10px] font-mono text-outline uppercase block">Equipamientos</span>
+                    <div className="font-mono text-base font-semibold text-primary mt-0.5">
+                      {conn.facilitiesWithin15MinCount}
+                    </div>
+                    <span className="text-[9px] font-mono text-outline block">&lt; 15 min a pie</span>
+                  </div>
                 </div>
-                <span className="font-sans text-xs font-semibold text-on-surface block mt-1 truncate" title={conn.nearestHealthcare?.name || 'No detectado en radio próximo'}>
-                  {conn.nearestHealthcare?.name || 'No detectado en radio próximo'}
-                </span>
-                <span className="text-[10px] font-mono text-primary font-medium block mt-0.5">
-                  {conn.nearestHealthcare ? `${Math.round(conn.nearestHealthcare.distanceMeters)}m · ~${Math.round(conn.nearestHealthcare.walkTimeMinutes)} min` : 'Sin centro próximo (<10 km)'}
-                </span>
-              </div>
 
-              {/* Education */}
-              <div className="p-2.5 bg-surface-container-low border border-outline-variant rounded-lg">
-                <div className="flex items-center gap-1 text-[10px] font-mono text-outline uppercase">
-                  <GraduationCap className="w-3.5 h-3.5 text-secondary" />
-                  <span>{t('bento.facilityEducation')}</span>
-                </div>
-                <span className="font-sans text-xs font-semibold text-on-surface block mt-1 truncate" title={conn.nearestEducation?.name || 'No detectado en radio próximo'}>
-                  {conn.nearestEducation?.name || 'No detectado en radio próximo'}
-                </span>
-                <span className="text-[10px] font-mono text-secondary font-medium block mt-0.5">
-                  {conn.nearestEducation ? `${Math.round(conn.nearestEducation.distanceMeters)}m · ~${Math.round(conn.nearestEducation.walkTimeMinutes)} min` : 'Sin centro próximo (<10 km)'}
-                </span>
-              </div>
+                {/* 4 Connectivity amenity cards */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                  {/* CAP Healthcare */}
+                  <div className="p-2.5 bg-surface-container-low border border-outline-variant rounded-lg">
+                    <div className="flex items-center gap-1 text-[10px] font-mono text-outline uppercase">
+                      <HeartPulse className="w-3.5 h-3.5 text-primary" />
+                      <span>{t('bento.facilityHealthcare')}</span>
+                    </div>
+                    <span className="font-sans text-xs font-semibold text-on-surface block mt-1 truncate" title={conn.nearestHealthcare?.name || 'No detectado en radio próximo'}>
+                      {conn.nearestHealthcare?.name || 'No detectado en radio próximo'}
+                    </span>
+                    <span className="text-[10px] font-mono text-primary font-medium block mt-0.5">
+                      {conn.nearestHealthcare ? `${Math.round(conn.nearestHealthcare.distanceMeters)}m · ~${Math.round(conn.nearestHealthcare.walkTimeMinutes)} min` : 'Sin centro próximo (<10 km)'}
+                    </span>
+                  </div>
 
-              {/* Transit */}
-              <div className="p-2.5 bg-surface-container-low border border-outline-variant rounded-lg">
-                <div className="flex items-center gap-1 text-[10px] font-mono text-outline uppercase">
-                  <Train className="w-3.5 h-3.5 text-tertiary" />
-                  <span>{t('bento.facilityTransit')}</span>
-                </div>
-                <span className="font-sans text-xs font-semibold text-on-surface block mt-1 truncate" title={conn.nearestTransit?.name || 'No detectado en radio próximo'}>
-                  {conn.nearestTransit?.name || 'No detectado en radio próximo'}
-                </span>
-                <span className="text-[10px] font-mono text-tertiary font-medium block mt-0.5">
-                  {conn.nearestTransit ? `${Math.round(conn.nearestTransit.distanceMeters)}m · ~${Math.round(conn.nearestTransit.walkTimeMinutes)} min` : 'Sin estación próxima (<10 km)'}
-                </span>
-              </div>
+                  {/* Education */}
+                  <div className="p-2.5 bg-surface-container-low border border-outline-variant rounded-lg">
+                    <div className="flex items-center gap-1 text-[10px] font-mono text-outline uppercase">
+                      <GraduationCap className="w-3.5 h-3.5 text-secondary" />
+                      <span>{t('bento.facilityEducation')}</span>
+                    </div>
+                    <span className="font-sans text-xs font-semibold text-on-surface block mt-1 truncate" title={conn.nearestEducation?.name || 'No detectado en radio próximo'}>
+                      {conn.nearestEducation?.name || 'No detectado en radio próximo'}
+                    </span>
+                    <span className="text-[10px] font-mono text-secondary font-medium block mt-0.5">
+                      {conn.nearestEducation ? `${Math.round(conn.nearestEducation.distanceMeters)}m · ~${Math.round(conn.nearestEducation.walkTimeMinutes)} min` : 'Sin centro próximo (<10 km)'}
+                    </span>
+                  </div>
 
-              {/* Park */}
-              <div className="p-2.5 bg-surface-container-low border border-outline-variant rounded-lg">
-                <div className="flex items-center gap-1 text-[10px] font-mono text-outline uppercase">
-                  <Trees className="w-3.5 h-3.5 text-emerald-400" />
-                  <span>{t('bento.facilityPark')}</span>
+                  {/* Transit */}
+                  <div className="p-2.5 bg-surface-container-low border border-outline-variant rounded-lg">
+                    <div className="flex items-center gap-1 text-[10px] font-mono text-outline uppercase">
+                      <Train className="w-3.5 h-3.5 text-tertiary" />
+                      <span>{t('bento.facilityTransit')}</span>
+                    </div>
+                    <span className="font-sans text-xs font-semibold text-on-surface block mt-1 truncate" title={conn.nearestTransit?.name || 'No detectado en radio próximo'}>
+                      {conn.nearestTransit?.name || 'No detectado en radio próximo'}
+                    </span>
+                    <span className="text-[10px] font-mono text-tertiary font-medium block mt-0.5">
+                      {conn.nearestTransit ? `${Math.round(conn.nearestTransit.distanceMeters)}m · ~${Math.round(conn.nearestTransit.walkTimeMinutes)} min` : 'Sin estación próxima (<10 km)'}
+                    </span>
+                  </div>
+
+                  {/* Park */}
+                  <div className="p-2.5 bg-surface-container-low border border-outline-variant rounded-lg">
+                    <div className="flex items-center gap-1 text-[10px] font-mono text-outline uppercase">
+                      <Trees className="w-3.5 h-3.5 text-emerald-400" />
+                      <span>{t('bento.facilityPark')}</span>
+                    </div>
+                    <span className="font-sans text-xs font-semibold text-on-surface block mt-1 truncate" title={conn.nearestPark?.name || 'No detectado en radio próximo'}>
+                      {conn.nearestPark?.name || 'No detectado en radio próximo'}
+                    </span>
+                    <span className="text-[10px] font-mono text-emerald-400 font-medium block mt-0.5">
+                      {conn.nearestPark ? `${Math.round(conn.nearestPark.distanceMeters)}m · ~${Math.round(conn.nearestPark.walkTimeMinutes)} min` : 'Sin parque próximo (<10 km)'}
+                    </span>
+                  </div>
                 </div>
-                <span className="font-sans text-xs font-semibold text-on-surface block mt-1 truncate" title={conn.nearestPark?.name || 'No detectado en radio próximo'}>
-                  {conn.nearestPark?.name || 'No detectado en radio próximo'}
-                </span>
-                <span className="text-[10px] font-mono text-emerald-400 font-medium block mt-0.5">
-                  {conn.nearestPark ? `${Math.round(conn.nearestPark.distanceMeters)}m · ~${Math.round(conn.nearestPark.walkTimeMinutes)} min` : 'Sin parque próximo (<10 km)'}
-                </span>
-              </div>
-            </div>
+              </>
+            )}
           </div>
         )}
 
@@ -349,7 +334,7 @@ export function PillarCards({
                   <tr className="hover:bg-surface-container/50 transition-colors">
                     <td className="p-2 text-outline">{t('bento.renovationsCount').replace(':', '')}</td>
                     <td className="p-2 text-on-surface font-sans">
-                      {urbanPlan.declaredRenovationsCount > 0
+                      {urbanPlan && urbanPlan.declaredRenovationsCount > 0
                         ? `${urbanPlan.declaredRenovationsCount} registradas ${urbanPlan.lastRenovationYear ? `(última en ${urbanPlan.lastRenovationYear})` : ''}`
                         : 'Sin reformas estructurales declaradas'}
                     </td>
@@ -361,168 +346,209 @@ export function PillarCards({
         )}
 
         {/* PILLAR 3: SOCIOECONOMIC PROFILE (INE ADRH) */}
-        <div className="p-space-lg bg-surface border border-outline-variant/70 rounded-xl space-y-3 shadow-sm hover:border-outline-variant transition-colors">
-          <div className="flex items-center justify-between">
+        <div className="p-space-lg bg-surface border border-outline-variant/70 rounded-xl space-y-3 shadow-sm hover:border-outline-variant transition-colors" data-testid="pillar-card-socioeconomic">
+          <div className="flex items-center justify-between gap-2 flex-wrap">
             <div className="flex items-center gap-1.5 min-w-0">
               <TrendingUp className="text-tertiary w-4 h-4 shrink-0" />
               <h3 className="font-title-md text-title-md text-on-surface font-semibold truncate">
                 {t('bento.pillarSocioeconomicTitle')}
               </h3>
             </div>
-            <span className="text-[10px] font-mono text-outline shrink-0 ml-2">{t('bento.pillarSocioeconomicBadge')}</span>
-          </div>
-
-          <div className="p-3 bg-surface-container-low border border-outline-variant rounded-lg">
-            <div className="flex items-baseline justify-between mb-1">
-              <span className="text-[11px] font-mono text-outline">{t('bento.householdIncome').replace(':', '')}</span>
-              <span className="font-mono text-lg font-bold text-tertiary">
-                €{neighborhood.averageNetHouseholdIncomeEur.toLocaleString('es-ES')}
-                <span className="text-xs text-outline font-normal"> / año</span>
-              </span>
-            </div>
-            <div className="flex items-center justify-between text-[10px] font-mono text-on-surface-variant">
-              <span>
-                {t('bento.incomePercentile')} {neighborhood.percentileInMunicipality}º {property.address.province}
-              </span>
-              <span className="text-primary font-semibold flex items-center gap-1">
-                <TrendingUp className="w-3 h-3" /> Ranking #{neighborhood.rankingInCity?.rank ?? 1} / {neighborhood.rankingInCity?.totalSections ?? 100}
-              </span>
+            <div className="flex items-center gap-1.5 shrink-0">
+              <LayerStatusBadge info={layers?.ine} />
+              <span className="text-[10px] font-mono text-outline">{t('bento.pillarSocioeconomicBadge')}</span>
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-2 text-xs">
-            <div className="p-2.5 bg-surface-container-low border border-outline-variant rounded-lg">
-              <span className="text-[10px] font-mono text-outline uppercase block">{t('bento.medianAge').replace(':', '')}</span>
-              <span className="font-mono text-sm font-semibold text-on-surface">
-                {neighborhood.demographics?.medianAge != null ? `${neighborhood.demographics.medianAge} años` : '42 años'}
-              </span>
-              <span className="text-[10px] text-outline block mt-0.5">Pirámide demográfica</span>
-            </div>
-            <div className="p-2.5 bg-surface-container-low border border-outline-variant rounded-lg">
-              <span className="text-[10px] font-mono text-outline uppercase block">{t('bento.singlePerson').replace(':', '')}</span>
-              <span className="font-mono text-sm font-semibold text-on-surface">
-                {neighborhood.demographics?.singlePersonHouseholdPercentage != null
-                  ? `${neighborhood.demographics.singlePersonHouseholdPercentage}%`
-                  : '28%'}
-              </span>
-              <span className="text-[10px] text-outline block mt-0.5">Sección {neighborhood.censusSectionCode}</span>
-            </div>
-          </div>
+          {!neighborhood ? (
+            <DataUnavailableState info={layers?.ine} fallbackSource="INE ADRH" />
+          ) : (
+            <>
+              <div className="p-3 bg-surface-container-low border border-outline-variant rounded-lg">
+                <div className="flex items-baseline justify-between mb-1">
+                  <span className="text-[11px] font-mono text-outline">{t('bento.householdIncome').replace(':', '')}</span>
+                  <span className="font-mono text-lg font-bold text-tertiary">
+                    €{neighborhood.averageNetHouseholdIncomeEur.toLocaleString('es-ES')}
+                    <span className="text-xs text-outline font-normal"> / año</span>
+                  </span>
+                </div>
+                <div className="flex items-center justify-between text-[10px] font-mono text-on-surface-variant">
+                  <span>
+                    {t('bento.incomePercentile')} {neighborhood.percentileInMunicipality}º {property.address.province}
+                  </span>
+                  <span className="text-primary font-semibold flex items-center gap-1">
+                    <TrendingUp className="w-3 h-3" /> Ranking #{neighborhood.rankingInCity?.rank ?? '—'} / {neighborhood.rankingInCity?.totalSections ?? '—'}
+                  </span>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2 text-xs">
+                <div className="p-2.5 bg-surface-container-low border border-outline-variant rounded-lg">
+                  <span className="text-[10px] font-mono text-outline uppercase block">{t('bento.medianAge').replace(':', '')}</span>
+                  <span className="font-mono text-sm font-semibold text-on-surface">
+                    {neighborhood.demographics?.medianAge != null ? `${neighborhood.demographics.medianAge} años` : '—'}
+                  </span>
+                  <span className="text-[10px] text-outline block mt-0.5">Pirámide demográfica</span>
+                </div>
+                <div className="p-2.5 bg-surface-container-low border border-outline-variant rounded-lg">
+                  <span className="text-[10px] font-mono text-outline uppercase block">{t('bento.singlePerson').replace(':', '')}</span>
+                  <span className="font-mono text-sm font-semibold text-on-surface">
+                    {neighborhood.demographics?.singlePersonHouseholdPercentage != null
+                      ? `${neighborhood.demographics.singlePersonHouseholdPercentage}%`
+                      : '—'}
+                  </span>
+                  <span className="text-[10px] text-outline block mt-0.5">Sección {neighborhood.censusSectionCode}</span>
+                </div>
+              </div>
+            </>
+          )}
         </div>
 
         {/* PILLAR 4: ENVIRONMENTAL COMFORT (MITECO SICA & SNCZI & AQI) */}
-        <div className="p-space-lg bg-surface border border-outline-variant/70 rounded-xl space-y-3 shadow-sm hover:border-outline-variant transition-colors">
-          <div className="flex items-center justify-between">
+        <div
+          data-testid="pillar-card-environmental"
+          data-traffic-light={pillarTrafficLights?.environmental ?? 'LEGACY'}
+          className="p-space-lg bg-surface border border-outline-variant/70 rounded-xl space-y-3 shadow-sm hover:border-outline-variant transition-colors"
+        >
+          <div className="flex items-center justify-between gap-2 flex-wrap">
             <div className="flex items-center gap-1.5 min-w-0">
-              <Volume2 className="text-secondary w-4 h-4 shrink-0" />
+              <Volume2 className={`w-4 h-4 shrink-0 ${pillarTrafficLights?.environmental === 'UNCERTAIN' ? 'text-outline' : 'text-secondary'}`} />
               <h3 className="font-title-md text-title-md text-on-surface font-semibold truncate">
                 {t('bento.pillarEnvironmentalTitle')}
               </h3>
             </div>
-            <span className="text-[10px] font-mono text-outline shrink-0 ml-2">{t('bento.pillarEnvironmentalBadge')}</span>
+            <div className="flex items-center gap-1.5 shrink-0 flex-wrap">
+              {pillarTrafficLights?.environmental === 'UNCERTAIN' && (
+                <span className="px-2 py-0.5 rounded text-[10px] font-mono border bg-surface-container text-outline border-outline-variant">
+                  {t('uncertainty.uncertainBadge')}
+                </span>
+              )}
+              <LayerStatusBadge info={layers?.sica} />
+              <LayerStatusBadge info={layers?.snczi} />
+              <span className="text-[10px] font-mono text-outline">{t('bento.pillarEnvironmentalBadge')}</span>
+            </div>
           </div>
 
-          <div className="p-3 bg-surface-container-low border border-outline-variant rounded-lg flex items-center justify-between">
-            <div>
-              <div className="text-[10px] font-mono text-outline uppercase">{t('bento.noiseLden').replace(':', '')}</div>
-              <div className={`font-mono text-lg font-bold ${noiseTextClass} mt-0.5`}>
-                {noise.dayEveningNightDecibels} dBA Lden
+          {noise ? (
+            <div className="p-3 bg-surface-container-low border border-outline-variant rounded-lg flex items-center justify-between">
+              <div>
+                <div className="text-[10px] font-mono text-outline uppercase">{t('bento.noiseLden').replace(':', '')}</div>
+                <div className={`font-mono text-lg font-bold ${noiseTextClass} mt-0.5`}>
+                  {noise.dayEveningNightDecibels} dBA Lden
+                </div>
+                <div className="text-[11px] text-on-surface-variant font-sans">
+                  {noiseSourceTranslation[noise.predominantSource] || noiseLevelTag}
+                </div>
               </div>
-              <div className="text-[11px] text-on-surface-variant font-sans">
-                {noiseSourceTranslation[noise.predominantSource] || noiseLevelTag}
+              <div className="text-right">
+                <div className="text-[10px] font-mono text-outline uppercase">{t('bento.insulationRequired').replace(':', '')}</div>
+                <div className="font-mono text-sm font-semibold text-primary mt-0.5">
+                  {noise.dayEveningNightDecibels >= 65 ? '38 dBA' : '32 dBA'}
+                </div>
+                <span className="text-[9px] font-mono px-1.5 py-0.5 bg-primary/10 text-primary border border-primary/30 rounded inline-block mt-1">
+                  CTE-DB-HR Conforme
+                </span>
               </div>
             </div>
-            <div className="text-right">
-              <div className="text-[10px] font-mono text-outline uppercase">{t('bento.insulationRequired').replace(':', '')}</div>
-              <div className="font-mono text-sm font-semibold text-primary mt-0.5">
-                {noise.dayEveningNightDecibels >= 65 ? '38 dBA' : '32 dBA'}
-              </div>
-              <span className="text-[9px] font-mono px-1.5 py-0.5 bg-primary/10 text-primary border border-primary/30 rounded inline-block mt-1">
-                CTE-DB-HR Conforme
-              </span>
-            </div>
-          </div>
+          ) : (
+            <DataUnavailableState info={layers?.sica} fallbackSource="MITECO SICA" />
+          )}
 
           {/* Hydrological safety & Air Quality */}
           <div className="grid grid-cols-2 gap-2 text-xs">
-            <div className="p-2.5 bg-surface-container-low border border-outline-variant rounded-lg">
-              <div className="flex items-center gap-1 text-[10px] font-mono text-outline uppercase">
-                <ShieldCheck className="w-3.5 h-3.5 text-primary" />
-                <span>{t('bento.floodRiskLevel').replace(':', '')}</span>
+            {flood ? (
+              <div className="p-2.5 bg-surface-container-low border border-outline-variant rounded-lg">
+                <div className="flex items-center gap-1 text-[10px] font-mono text-outline uppercase">
+                  <ShieldCheck className="w-3.5 h-3.5 text-primary" />
+                  <span>{t('bento.floodRiskLevel').replace(':', '')}</span>
+                </div>
+                <span className={`font-mono text-xs font-bold ${floodClass} flex items-center gap-1 mt-1`}>
+                  <FloodIcon className="w-3 h-3" />
+                  {floodLabel}
+                </span>
+                <span className="text-[10px] text-outline block mt-0.5">{returnPeriodText}</span>
               </div>
-              <span className={`font-mono text-xs font-bold ${floodClass} flex items-center gap-1 mt-1`}>
-                <FloodIcon className="w-3 h-3" />
-                {floodLabel}
-              </span>
-              <span className="text-[10px] text-outline block mt-0.5">{returnPeriodText}</span>
-            </div>
+            ) : (
+              <DataUnavailableState info={layers?.snczi} fallbackSource="MITECO SNCZI" compact />
+            )}
 
-            <div className="p-2.5 bg-surface-container-low border border-outline-variant rounded-lg">
-              <div className="flex items-center gap-1 text-[10px] font-mono text-outline uppercase">
-                <Wind className="w-3.5 h-3.5 text-primary" />
-                <span>{t('bento.airQualityIndex').replace(':', '')}</span>
+            {aqi ? (
+              <div className="p-2.5 bg-surface-container-low border border-outline-variant rounded-lg">
+                <div className="flex items-center gap-1 text-[10px] font-mono text-outline uppercase">
+                  <Wind className="w-3.5 h-3.5 text-primary" />
+                  <span>{t('bento.airQualityIndex').replace(':', '')}</span>
+                </div>
+                <span className="font-mono text-xs font-bold text-primary block mt-1">
+                  {`${aqi.aqiIndex} AQI · ${aqi.category === 'GOOD' ? 'Buena' : aqi.category === 'FAIR' ? 'Razonable' : 'Moderada'}`}
+                </span>
+                <span className="text-[10px] text-outline block mt-0.5 truncate" title={aqi.stationName}>
+                  {aqi.stationName ? `Estación ${aqi.stationName}` : 'MITECO ICA'}
+                </span>
               </div>
-              <span className="font-mono text-xs font-bold text-primary block mt-1">
-                {aqi ? `${aqi.aqiIndex} AQI · ${aqi.category === 'GOOD' ? 'Buena' : aqi.category === 'FAIR' ? 'Razonable' : 'Moderada'}` : '32 AQI · Buena'}
-              </span>
-              <span className="text-[10px] text-outline block mt-0.5 truncate" title={aqi?.stationName}>
-                {aqi?.stationName ? `Estación ${aqi.stationName}` : 'Fondo Urbano Conforme'}
-              </span>
-            </div>
+            ) : (
+              <DataUnavailableState info={layers?.airQuality} fallbackSource="MITECO ICA" compact />
+            )}
           </div>
         </div>
 
         {/* PILLAR 5: URBAN PLANNING & LEGAL FRAMEWORK (SIU / LEY 12/2023) */}
         <div className="p-space-lg bg-surface border border-outline-variant/70 rounded-xl space-y-3 shadow-sm hover:border-outline-variant transition-colors">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between gap-2 flex-wrap">
             <div className="flex items-center gap-1.5 min-w-0">
               <Scale className="text-primary w-4 h-4 shrink-0" />
               <h3 className="font-title-md text-title-md text-on-surface font-semibold truncate">
                 {t('bento.pillarUrbanPlanningTitle')}
               </h3>
             </div>
-            <span className="text-[10px] font-mono text-outline shrink-0 ml-2">{t('bento.pillarUrbanPlanningBadge')}</span>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
-            <div className="p-3 bg-surface-container-low border border-outline-variant rounded-lg">
-              <span className="text-[10px] font-mono text-outline uppercase block">{t('bento.landClassification').replace(':', '')}</span>
-              <div className="font-sans text-xs font-bold text-on-surface mt-1">
-                {landClassificationLabels[urbanPlan.landClassification] || 'Suelo Urbano Consolidado (SUC)'}
-              </div>
-              <span className="text-[10px] font-mono text-primary block mt-0.5">
-                Código: {urbanPlan.zoningCode || 'NZ-3 Residencial'}
-              </span>
-            </div>
-
-            <div className="p-3 bg-surface-container-low border border-outline-variant rounded-lg">
-              <span className="text-[10px] font-mono text-outline uppercase block">{t('bento.stressedZone').replace(':', '')}</span>
-              <div className="font-sans text-xs font-bold mt-1">
-                {urbanPlan.isStressedHousingZone ? (
-                  <span className="text-secondary flex items-center gap-1">
-                    <AlertTriangle className="w-3.5 h-3.5" /> Declarada Tensionada
-                  </span>
-                ) : (
-                  <span className="text-primary flex items-center gap-1">
-                    <CheckCircle2 className="w-3.5 h-3.5" /> Mercado Libre
-                  </span>
-                )}
-              </div>
-              <span className="text-[10px] text-outline block mt-0.5">
-                {urbanPlan.isStressedHousingZone ? 'Topes legales de precio activos' : 'Sin restricción estatutaria'}
-              </span>
-            </div>
-
-            <div className="p-3 bg-surface-container-low border border-outline-variant rounded-lg">
-              <span className="text-[10px] font-mono text-outline uppercase block">Protección & Cargas</span>
-              <div className="font-sans text-xs font-bold text-on-surface mt-1">
-                {urbanPlan.isProtectedLand ? 'Afección Patrimonial / Ambiental' : 'Sin Afecciones Restrictivas'}
-              </div>
-              <span className="text-[10px] font-mono text-outline block mt-0.5">
-                {urbanPlan.isProtectedLand ? 'Sujeto a catálogo histórico' : 'Régimen común edificatorio'}
-              </span>
+            <div className="flex items-center gap-1.5 shrink-0">
+              <LayerStatusBadge info={layers?.urbanPlanning} />
+              <span className="text-[10px] font-mono text-outline">{t('bento.pillarUrbanPlanningBadge')}</span>
             </div>
           </div>
+
+          {!urbanPlan ? (
+            <DataUnavailableState info={layers?.urbanPlanning} fallbackSource="MIVAU SIU Urbanismo" />
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+              <div className="p-3 bg-surface-container-low border border-outline-variant rounded-lg">
+                <span className="text-[10px] font-mono text-outline uppercase block">{t('bento.landClassification').replace(':', '')}</span>
+                <div className="font-sans text-xs font-bold text-on-surface mt-1">
+                  {landClassificationLabels[urbanPlan.landClassification] || 'Suelo Urbano Consolidado (SUC)'}
+                </div>
+                <span className="text-[10px] font-mono text-primary block mt-0.5">
+                  Código: {urbanPlan.zoningCode || '—'}
+                </span>
+              </div>
+
+              <div className="p-3 bg-surface-container-low border border-outline-variant rounded-lg">
+                <span className="text-[10px] font-mono text-outline uppercase block">{t('bento.stressedZone').replace(':', '')}</span>
+                <div className="font-sans text-xs font-bold mt-1">
+                  {urbanPlan.isStressedHousingZone ? (
+                    <span className="text-secondary flex items-center gap-1">
+                      <AlertTriangle className="w-3.5 h-3.5" /> Declarada Tensionada
+                    </span>
+                  ) : (
+                    <span className="text-primary flex items-center gap-1">
+                      <CheckCircle2 className="w-3.5 h-3.5" /> Mercado Libre
+                    </span>
+                  )}
+                </div>
+                <span className="text-[10px] text-outline block mt-0.5">
+                  {urbanPlan.isStressedHousingZone ? 'Topes legales de precio activos' : 'Sin restricción estatutaria'}
+                </span>
+              </div>
+
+              <div className="p-3 bg-surface-container-low border border-outline-variant rounded-lg">
+                <span className="text-[10px] font-mono text-outline uppercase block">Protección & Cargas</span>
+                <div className="font-sans text-xs font-bold text-on-surface mt-1">
+                  {urbanPlan.isProtectedLand ? 'Afección Patrimonial / Ambiental' : 'Sin Afecciones Restrictivas'}
+                </div>
+                <span className="text-[10px] font-mono text-outline block mt-0.5">
+                  {urbanPlan.isProtectedLand ? 'Sujeto a catálogo histórico' : 'Régimen común edificatorio'}
+                </span>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>
@@ -566,8 +592,8 @@ export function BuildingCadastralCard({ property, urbanPlanning }: BuildingCadas
   const isUnbuilt = isRustic || isVacantPlot || (surface === 0 && year === 0);
   const plotArea = property.plotSurfaceM2 || property.building.plotSurfaceM2 || 0;
 
-  const renovationsCount = urbanPlanning?.declaredRenovationsCount ?? (year > 0 && year < 1980 ? 2 : 0);
-  const lastRenovation = urbanPlanning?.lastRenovationYear ?? (year > 0 && year < 1980 ? 2016 : null);
+  const renovationsCount = urbanPlanning?.declaredRenovationsCount ?? 0;
+  const lastRenovation = urbanPlanning?.lastRenovationYear ?? null;
 
   return (
     <div className="p-space-lg bg-surface border border-outline-variant/70 rounded-xl space-y-3 shadow-sm hover:border-outline-variant transition-colors">

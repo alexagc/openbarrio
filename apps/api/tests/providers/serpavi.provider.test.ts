@@ -52,26 +52,30 @@ describe('MIVAU SERPAVI Provider', () => {
     },
   };
 
-  describe('SERPAVIProvider Algorithm (Territorial Heuristic Fallback)', () => {
+  describe('SERPAVIProvider Zero-Fabrication Behavior', () => {
     const provider = new SERPAVIProvider();
 
-    it('correctly identifies Barcelona as a declared Stressed Housing Market Zone', async () => {
-      const benchmark = await provider.getRentalBenchmark(mockBarcelonaProperty, '0801901001');
-
-      expect(benchmark.isStressedHousingZone).toBe(true);
-      expect(benchmark.officialRangeLowerEurM2).toBeGreaterThan(15.0);
-      expect(benchmark.officialRangeUpperEurM2).toBeGreaterThan(benchmark.officialRangeLowerEurM2);
-      expect(benchmark.estimatedMonthlyRentLowerEur).toBeGreaterThan(1200);
+    it('returns unavailable instead of fabricating rates when D1 database is not bound', async () => {
+      const madridRes = await provider.getRentalBenchmark(mockMadridProperty, '2807901001');
+      expect(madridRes.status).toBe('unavailable');
+      expect(madridRes.data).toBeUndefined();
+      expect(madridRes.reason).toBe('upstream_error');
     });
 
-    it('identifies Madrid property as non-declared stressed zone and calculates rates', async () => {
-      const benchmark = await provider.getRentalBenchmark(mockMadridProperty, '2807901001');
+    it('returns out_of_coverage with not_applicable reason for non-residential property', async () => {
+      const industrialProp: CadastralProperty = {
+        ...mockMadridProperty,
+        typology: 'INDUSTRIAL',
+      };
+      const res = await provider.getRentalBenchmark(industrialProp, '2807901001');
+      expect(res.status).toBe('out_of_coverage');
+      expect(res.reason).toBe('not_applicable');
+      expect(res.data).toBeUndefined();
+    });
 
-      expect(benchmark.isStressedHousingZone).toBe(false);
-      expect(benchmark.officialRangeLowerEurM2).toBeGreaterThan(12.0);
-      expect(benchmark.officialRangeUpperEurM2).toBeGreaterThan(benchmark.officialRangeLowerEurM2);
-      expect(benchmark.estimatedMonthlyRentLowerEur).toBeGreaterThan(1000);
-      expect(benchmark.estimatedMonthlyRentUpperEur).toBeGreaterThan(benchmark.estimatedMonthlyRentLowerEur);
+    it('correctly identifies Catalonia declared stressed municipalities catalog', () => {
+      expect(provider.isStressedZone('08019', '08')).toBe(true);
+      expect(provider.isStressedZone('28079', '28')).toBe(false);
     });
   });
 
@@ -95,11 +99,11 @@ describe('MIVAU SERPAVI Provider', () => {
       };
 
       const provider = new SERPAVIProvider({ db: mockDb });
-      const benchmark = await provider.getRentalBenchmark(mockBarcelonaProperty, '0801901001');
+      const res = await provider.getRentalBenchmark(mockBarcelonaProperty, '0801901001');
 
+      expect(res.status).toBe('ok');
+      const benchmark = res.data!;
       expect(benchmark.isStressedHousingZone).toBe(true);
-      // Property 2012 year (1.12), surface 90 (1.0), commercial (1.03) -> total ~1.1536
-      // Base: 17.5 - 22.4 -> Adjusted: ~20.19 - ~25.84
       expect(benchmark.officialRangeLowerEurM2).toBeGreaterThanOrEqual(17.5);
       expect(benchmark.officialRangeUpperEurM2).toBeGreaterThanOrEqual(22.4);
     });
@@ -109,11 +113,9 @@ describe('MIVAU SERPAVI Provider', () => {
         prepare: (query: string) => ({
           bind: (param: string) => ({
             first: async () => {
-              // cusec query returns null
               if (query.includes('WHERE cusec = ?')) {
                 return null;
               }
-              // municipal fallback returns data
               if (query.includes('WHERE municipality_code = ? AND cusec IS NULL') && param === '28079') {
                 return {
                   is_stressed_market: 0,
@@ -128,14 +130,32 @@ describe('MIVAU SERPAVI Provider', () => {
       };
 
       const provider = new SERPAVIProvider({ db: mockDb });
-      const benchmark = await provider.getRentalBenchmark(mockMadridProperty, '2807999999');
+      const res = await provider.getRentalBenchmark(mockMadridProperty, '2807999999');
 
+      expect(res.status).toBe('ok');
+      const benchmark = res.data!;
       expect(benchmark.isStressedHousingZone).toBe(false);
       expect(benchmark.officialRangeLowerEurM2).toBeGreaterThan(13.0);
       expect(benchmark.officialRangeUpperEurM2).toBeGreaterThan(benchmark.officialRangeLowerEurM2);
     });
 
-    it('falls back to algorithmic heuristic when D1 throws an error', async () => {
+    it('returns out_of_coverage when D1 returns neither section nor municipal rows', async () => {
+      const mockDb: any = {
+        prepare: () => ({
+          bind: () => ({
+            first: async () => null,
+          }),
+        }),
+      };
+
+      const provider = new SERPAVIProvider({ db: mockDb });
+      const res = await provider.getRentalBenchmark(mockMadridProperty, '2807999999');
+
+      expect(res.status).toBe('out_of_coverage');
+      expect(res.data).toBeUndefined();
+    });
+
+    it('returns unavailable when D1 throws an error', async () => {
       const mockDb: any = {
         prepare: () => {
           throw new Error('D1 Connection Timeout');
@@ -143,10 +163,10 @@ describe('MIVAU SERPAVI Provider', () => {
       };
 
       const provider = new SERPAVIProvider({ db: mockDb });
-      const benchmark = await provider.getRentalBenchmark(mockBarcelonaProperty, '0801901001');
+      const res = await provider.getRentalBenchmark(mockBarcelonaProperty, '0801901001');
 
-      expect(benchmark.isStressedHousingZone).toBe(true);
-      expect(benchmark.officialRangeLowerEurM2).toBeGreaterThan(15.0);
+      expect(res.status).toBe('unavailable');
+      expect(res.data).toBeUndefined();
     });
   });
 
@@ -154,8 +174,10 @@ describe('MIVAU SERPAVI Provider', () => {
     const mock = new MockSERPAVIProvider();
 
     it('returns deterministic benchmark for Madrid property', async () => {
-      const benchmark = await mock.getRentalBenchmark(mockMadridProperty);
+      const res = await mock.getRentalBenchmark(mockMadridProperty);
 
+      expect(res.status).toBe('ok');
+      const benchmark = res.data!;
       expect(benchmark.isStressedHousingZone).toBe(false);
       expect(benchmark.officialRangeLowerEurM2).toBe(14.5);
       expect(benchmark.officialRangeUpperEurM2).toBe(18.2);
@@ -164,10 +186,11 @@ describe('MIVAU SERPAVI Provider', () => {
     });
 
     it('returns stressed zone true for Barcelona property', async () => {
-      const benchmark = await mock.getRentalBenchmark(mockBarcelonaProperty);
+      const res = await mock.getRentalBenchmark(mockBarcelonaProperty);
 
-      expect(benchmark.isStressedHousingZone).toBe(true);
-      expect(benchmark.officialRangeLowerEurM2).toBe(15.2);
+      expect(res.status).toBe('ok');
+      expect(res.data?.isStressedHousingZone).toBe(true);
+      expect(res.data?.officialRangeLowerEurM2).toBe(15.2);
     });
   });
 });

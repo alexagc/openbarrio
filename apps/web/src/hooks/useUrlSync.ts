@@ -8,6 +8,8 @@ export type ViewMode =
   | 'landing'
   | 'map'
   | 'transparency'
+  | 'sources-status'
+  | 'methodology'
   | 'tool-surface'
   | 'tool-rent'
   | 'tool-itp'
@@ -142,7 +144,7 @@ export function useUrlSync(
       let currentLang: SupportedLanguage = 'es';
       try {
         const saved = localStorage.getItem('openbarrio_lang');
-        if (saved === 'es' || saved === 'en' || saved === 'ca') {
+        if (saved === 'es' || saved === 'en' || saved === 'ca' || saved === 'gl' || saved === 'eu') {
           currentLang = saved;
         }
       } catch {
@@ -151,6 +153,8 @@ export function useUrlSync(
 
       if (
         newState.viewMode === 'transparency' ||
+        newState.viewMode === 'sources-status' ||
+        newState.viewMode === 'methodology' ||
         newState.viewMode === 'tool-surface' ||
         newState.viewMode === 'tool-rent' ||
         newState.viewMode === 'tool-itp' ||

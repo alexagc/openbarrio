@@ -28,7 +28,7 @@ export function buildOpenApiSpec(): Record<string, any> {
       title: 'OpenBarrio Public Due Diligence API',
       description:
         'Open-source civic-tech and real estate due diligence platform aggregating official Spanish public open data (Catastro, INE, MITECO, MIVAU) with sub-5ms Cloudflare Edge execution',
-      version: '1.3.2',
+      version: '1.4.0',
       contact: {
         name: 'OpenBarrio Project',
         url: 'https://github.com/alexagc/openbarrio',
@@ -207,6 +207,54 @@ export function buildOpenApiSpec(): Record<string, any> {
             '502': {
               description: 'RFC 7807 Upstream Public Provider Failure',
             },
+          },
+        },
+      },
+      '/api/v1/status/sources': {
+        get: {
+          tags: ['Status'],
+          summary: 'Inspect real-time health, circuit breaker states, and latest verified D1 snapshots for all 13 public data layers',
+          description:
+            'Read-only operational status endpoint aggregating in-memory isolate circuit breakers and latest snapshot timestamps from D1 without performing write queries',
+          responses: {
+            '200': {
+              description: 'Operational status summary and per-source health telemetry',
+            },
+            '500': {
+              description: 'RFC 7807 Internal Status Aggregation Failure',
+            },
+          },
+        },
+      },
+      '/api/v1/listing/resolve': {
+        post: {
+          tags: ['Listing'],
+          summary: 'Resolve metadata from a user-supplied real-estate portal URL without server-side fetching',
+          description:
+            'Validates host against the 5-portal allowlist and extracts listing ID, location hints, or optional user-pasted cadastral references in memory with zero storage and strict per-IP rate limits (10/min, 100/day).',
+          responses: {
+            '200': {
+              description: 'Sanitized listing URL and minimal extracted metadata',
+            },
+            '400': { description: 'RFC 7807 Invalid Listing URL or parameters' },
+            '413': { description: 'RFC 7807 Pasted snippet exceeds 200 KB' },
+            '415': { description: 'RFC 7807 Expected application/json' },
+            '422': { description: 'RFC 7807 Unsupported host or insufficient metadata' },
+            '429': { description: 'RFC 7807 Rate limit exceeded' },
+          },
+        },
+      },
+      '/api/v1/extension/selectors': {
+        get: {
+          tags: ['Extension'],
+          summary: 'Fetch versioned JSON-only CSS selector configuration for portal adapters',
+          description:
+            'Returns schema-validated CSS selector configuration (<32 KB, JSON only, no executable code) for the 5 supported Spanish real-estate portals.',
+          responses: {
+            '200': {
+              description: 'Valid RemoteSelectorsBundle JSON',
+            },
+            '500': { description: 'RFC 7807 Selector config validation failure' },
           },
         },
       },

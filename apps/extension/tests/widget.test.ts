@@ -397,4 +397,57 @@ describe('OpenBarrioWidget', () => {
     expect(shadow?.querySelector('.ob-substandard-alert')).toBeNull();
     expect(widget.isSubstandardWarningActive()).toBe(false);
   });
+
+  it('renders gray UNCERTAIN banner, unavailable/out_of_coverage labels, stale verified date, and English UI via document lang', () => {
+    const uncertainReport: PropertyAuditReport = {
+      ...mockReport,
+      environment: {},
+      neighborhood: undefined,
+      connectivity: undefined,
+      energy: undefined,
+      layers: {
+        sica: { status: 'unavailable', sourceName: 'MITECO SICA', reason: 'timeout' },
+        snczi: { status: 'out_of_coverage', sourceName: 'MITECO SNCZI', reason: 'no_coverage' },
+        ine: {
+          status: 'stale',
+          sourceName: 'INE ADRH',
+          verifiedAt: '2026-10-01T12:00:00.000Z',
+          staleDays: 49,
+        },
+      },
+      score: {
+        ...mockReport.score,
+        overallScore: 62,
+        coverage: {
+          ok: 1,
+          total: 3,
+          pillarsWithData: 2,
+          pillarsTotal: 5,
+          level: 'low',
+          missingCriticalLayers: ['sica', 'snczi'],
+        },
+        trafficLight: 'UNCERTAIN',
+      },
+    };
+
+    dom.window.document.documentElement.lang = 'en';
+
+    const widget = new OpenBarrioWidget();
+    widget.showReport(uncertainReport, 'http://localhost:3000');
+
+    const shadow = widget.getShadowRoot();
+    const card = shadow?.querySelector('#ob-card-main');
+    expect(card?.getAttribute('data-status')).toBe('uncertain');
+    expect(shadow?.innerHTML).toContain('Barrio Score · Uncertain');
+    expect(shadow?.innerHTML).toContain('Critical environmental risk not evaluated');
+    expect(shadow?.innerHTML).toContain('Outside official strategic map coverage');
+    expect(shadow?.innerHTML).toContain('Verified on');
+    expect(shadow?.innerHTML).not.toContain('Sin riesgo');
+    expect(shadow?.innerHTML).not.toContain('CAP (~4m)');
+
+    widget.collapse();
+    const pill = shadow?.querySelector('#ob-pill-expand');
+    expect(pill?.getAttribute('data-status')).toBe('uncertain');
+    expect(pill?.innerHTML).toContain('Uncertain');
+  });
 });

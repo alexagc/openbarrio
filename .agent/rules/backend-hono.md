@@ -11,9 +11,10 @@
 * **OpenAPI Documentation:** Endpoints and schemas are automatically exposed at `/docs` using `@hono/swagger-ui` and `/docs/json`.
 
 ## 2. Hexagonal Provider Architecture
-* External providers (Catastro, INE, MITECO, MIVAU) must be defined through interfaces in `apps/api/src/providers/types.ts`.
-* Provider implementations must reside in `apps/api/src/providers/<name>.provider.ts`.
-* Provide an in-memory mock provider for each external service to enable isolated, deterministic unit and integration testing without hitting public rate limits.
+* External providers (Catastro, INE, MITECO, MIVAU, CEE, Radon, VUT, ITE, Connectivity, Urban Planning) must be defined through interfaces in `apps/api/src/providers/types.ts` and return typed `LayerResult<T>` (`ok`, `stale`, `unavailable`, `out_of_coverage`) rather than `null`/`undefined` or synthetic coordinate-hash fallbacks.
+* Provider implementations must reside in `apps/api/src/providers/<name>.provider.ts` and wrap external ministerial HTTP calls with `withResilience()` (timeout, bounded retries, per-isolate `CircuitBreakerRegistry`).
+* Provide an in-memory mock provider returning valid `LayerResult<T>` values for isolated, deterministic unit and integration testing without hitting public rate limits.
+* Edge telemetry (`/api/v1/status/sources`), listing resolution (`/api/v1/listing/resolve`), and remote extension selectors (`/api/v1/extension/selectors`) must bypass 90-day edge caching and preserve strict zero-write D1 read guarantees.
 
 ## 3. Error Handling
 * All API errors must conform to **RFC 7807 (Problem Details for HTTP APIs)** with content-type `application/problem+json`:

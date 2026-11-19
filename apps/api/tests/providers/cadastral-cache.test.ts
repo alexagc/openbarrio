@@ -91,7 +91,7 @@ describe('Subphase 17D: Cadastral Write-Through LRU Cache (90-day TTL)', () => {
       expect(retrieved?.address.street).toBe('Gran Vía');
     });
 
-    it('returns null and purges expired entries when TTL has elapsed', async () => {
+    it('returns null when expired without issuing DELETE on read (zero-write read policy)', async () => {
       const memoryStore = new Map<string, any>();
       const deletedKeys: string[] = [];
       const expiredIso = new Date(Date.now() - 100000).toISOString();
@@ -125,7 +125,39 @@ describe('Subphase 17D: Cadastral Write-Through LRU Cache (90-day TTL)', () => {
       const result = await cache.get<CadastralProperty>('prop:EXPIRED');
 
       expect(result).toBeNull();
-      expect(deletedKeys).toContain('prop:EXPIRED');
+      expect(deletedKeys).toHaveLength(0);
+    });
+
+    it('exposes usable stale metadata within 365 days and refuses entries older than 365 days', async () => {
+      const baseNow = new Date('2026-11-19T12:00:00.000Z');
+      const age120 = new Date(baseNow.getTime() - 120 * 86_400_000).toISOString();
+      const age400 = new Date(baseNow.getTime() - 400 * 86_400_000).toISOString();
+      const pastExpires = new Date(baseNow.getTime() - 10 * 86_400_000).toISOString();
+
+      const memoryStore = new Map<string, any>([
+        ['prop:STALE_OK', { data_json: JSON.stringify(mockProperty), updated_at: age120, expires_at: pastExpires }],
+        ['prop:TOO_OLD', { data_json: JSON.stringify(mockProperty), updated_at: age400, expires_at: pastExpires }],
+      ]);
+
+      const mockDb: any = {
+        prepare: vi.fn(() => ({
+          bind: vi.fn((key: string) => ({
+            first: vi.fn(async () => memoryStore.get(key) || null),
+          })),
+        })),
+      };
+
+      const cache = new CadastralCache({ db: mockDb, now: () => baseNow });
+
+      const staleMeta = await cache.getWithMeta<CadastralProperty>('prop:STALE_OK');
+      expect(staleMeta?.isFresh).toBe(false);
+      expect(staleMeta?.ageDays).toBe(120);
+      expect(staleMeta?.isUsableStale).toBe(true);
+
+      const expiredMeta = await cache.getWithMeta<CadastralProperty>('prop:TOO_OLD');
+      expect(expiredMeta?.isFresh).toBe(false);
+      expect(expiredMeta?.ageDays).toBe(400);
+      expect(expiredMeta?.isUsableStale).toBe(false);
     });
   });
 
@@ -230,6 +262,51 @@ describe('Subphase 17D: Cadastral Write-Through LRU Cache (90-day TTL)', () => {
       expect(prop2.cadastralReference).toBe('9872023VH5797S0001WX');
       expect(downstreamSpy).toHaveBeenCalledTimes(1); // Still 1, served from cache!
     });
+
+    it('serves stale cadastral snapshot when upstream fails and expired record is <=365d, refusing >365d', async () => {
+      const baseNow = new Date('2026-11-19T12:00:00.000Z');
+      const age120 = new Date(baseNow.getTime() - 120 * 86_400_000).toISOString();
+      const age400 = new Date(baseNow.getTime() - 400 * 86_400_000).toISOString();
+      const pastExpires = new Date(baseNow.getTime() - 5 * 86_400_000).toISOString();
+
+      const memoryStore = new Map<string, any>([
+        ['prop:9872023VH5797S0001WX', { data_json: JSON.stringify(mockProperty), updated_at: age120, expires_at: pastExpires }],
+        ['prop:9872023VH5797S0002WX', { data_json: JSON.stringify(mockProperty), updated_at: age400, expires_at: pastExpires }],
+      ]);
+
+      const mockDb: any = {
+        prepare: vi.fn(() => ({
+          bind: vi.fn((key: string) => ({
+            first: vi.fn(async () => memoryStore.get(key) || null),
+            run: vi.fn(async () => ({ success: true })),
+          })),
+        })),
+      };
+
+      const failingDownstream: any = {
+        getByCadastralReference: vi.fn(async () => {
+          throw new Error('Upstream OVC 503 Service Unavailable');
+        }),
+        getByCoordinates: vi.fn(async () => {
+          throw new Error('Upstream OVC 503 Service Unavailable');
+        }),
+      };
+
+      const router = new CadastralRouterProvider({
+        dgc: failingDownstream,
+        db: mockDb,
+        now: () => baseNow,
+      });
+
+      const staleRes = await router.getByCadastralReferenceWithStatus('9872023VH5797S0001WX');
+      expect(staleRes.status).toBe('stale');
+      expect(staleRes.staleDays).toBe(120);
+      expect(staleRes.data?.cadastralReference).toBe('9872023VH5797S0001WX');
+
+      await expect(router.getByCadastralReferenceWithStatus('9872023VH5797S0002WX')).rejects.toThrow(
+        'Upstream OVC 503 Service Unavailable'
+      );
+    });
   });
 
   describe('FinOps Zero-Write Caching & Batch Maintenance (v1.3.2)', () => {
@@ -256,9 +333,9 @@ describe('Subphase 17D: Cadastral Write-Through LRU Cache (90-day TTL)', () => {
       expect(result).not.toBeNull();
       expect(result?.cadastralReference).toBe('9872023VH5797S0001WX');
 
-      // Verify that no UPDATE statements were executed during the cache hit
-      const updateCalls = executedSqls.filter((sql) => sql.toUpperCase().includes('UPDATE'));
-      expect(updateCalls.length).toBe(0);
+      // Verify that no write statements (UPDATE, INSERT, DELETE) were executed during the cache hit
+      const writeCalls = executedSqls.filter((sql) => /^\s*(UPDATE|INSERT|DELETE)\b/i.test(sql));
+      expect(writeCalls.length).toBe(0);
     });
 
     it('prunes expired entries in batch with pruneExpired()', async () => {

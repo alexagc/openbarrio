@@ -9,26 +9,31 @@ describe('Air Quality Provider (MITECO ICA)', () => {
     const provider = new AirQualityProvider();
 
     it('resolves nearest monitoring station for Madrid Gran Vía', async () => {
-      const aqi = await provider.getAirQuality(40.42028, -3.70379);
+      const res = await provider.getAirQuality(40.42028, -3.70379);
 
-      expect(aqi).toBeDefined();
-      expect(aqi?.stationName).toContain('Madrid');
-      expect(aqi?.aqiIndex).toBeGreaterThan(0);
-      expect(aqi?.category).toBe('GOOD');
-      expect(aqi?.no2MicrogramsM3).toBeGreaterThan(0);
+      expect(res.status).toBe('ok');
+      expect(res.data?.stationName).toContain('Madrid');
+      expect(res.data?.aqiIndex).toBeGreaterThan(0);
+      expect(res.data?.category).toBe('GOOD');
+      expect(res.data?.no2MicrogramsM3).toBeGreaterThan(0);
     });
 
     it('resolves nearest station for Barcelona Eixample', async () => {
-      const aqi = await provider.getAirQuality(41.39167, 2.16472);
+      const res = await provider.getAirQuality(41.39167, 2.16472);
 
-      expect(aqi).toBeDefined();
-      expect(aqi?.stationName).toContain('Barcelona');
-      expect(aqi?.category).toBe('FAIR');
+      expect(res.status).toBe('ok');
+      expect(res.data?.stationName).toContain('Barcelona');
+      expect(res.data?.category).toBe('FAIR');
     });
 
-    it('returns undefined for invalid null coordinates (0, 0)', async () => {
-      const aqi = await provider.getAirQuality(0, 0);
-      expect(aqi).toBeUndefined();
+    it('returns out_of_coverage (NEVER fabricated regional hash sensor) when outside station range or (0, 0)', async () => {
+      const zero = await provider.getAirQuality(0, 0);
+      expect(zero.status).toBe('out_of_coverage');
+      expect(zero.data).toBeUndefined();
+
+      const farAway = await provider.getAirQuality(28.12, -15.43);
+      expect(farAway.status).toBe('out_of_coverage');
+      expect(farAway.data).toBeUndefined();
     });
   });
 
@@ -36,10 +41,10 @@ describe('Air Quality Provider (MITECO ICA)', () => {
     const mock = new MockAirQualityProvider();
 
     it('returns deterministic air quality data', async () => {
-      const aqi = await mock.getAirQuality(39.4699, -0.3735); // Valencia
-      expect(aqi).toBeDefined();
-      expect(aqi?.stationName).toContain('València');
-      expect(aqi?.category).toBe('GOOD');
+      const res = await mock.getAirQuality(39.4699, -0.3735);
+      expect(res.status).toBe('ok');
+      expect(res.data?.stationName).toContain('València');
+      expect(res.data?.category).toBe('GOOD');
     });
 
     it('supports custom override by coordinate key', async () => {
@@ -52,9 +57,10 @@ describe('Air Quality Provider (MITECO ICA)', () => {
         pm10MicrogramsM3: 75,
       });
 
-      const aqi = await mock.getAirQuality(40.0, -3.0);
-      expect(aqi?.category).toBe('POOR');
-      expect(aqi?.stationName).toBe('Custom Alert Station');
+      const res = await mock.getAirQuality(40.0, -3.0);
+      expect(res.status).toBe('ok');
+      expect(res.data?.category).toBe('POOR');
+      expect(res.data?.stationName).toBe('Custom Alert Station');
     });
   });
 });

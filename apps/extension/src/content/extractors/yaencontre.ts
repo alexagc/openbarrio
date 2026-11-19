@@ -20,9 +20,7 @@ export class YaEncontreAdapter extends BasePortalAdapter {
   }
 
   getMountTarget(doc: Document): Element | null {
-    return doc.querySelector(
-      '.details-header, .property-details, .detail-header, #details, main, body'
-    );
+    return doc.querySelector(this.getJoinedSelectors('mountTarget'));
   }
 
   extract(doc: Document, url: string): ExtractedPropertyData | null {
@@ -49,7 +47,7 @@ export class YaEncontreAdapter extends BasePortalAdapter {
     // 4. Cadastral reference fallback
     if (!data.cadastralReference) {
       data.cadastralReference = this.extractCadastralReference(doc, [
-        doc.querySelector('.property-description, .description, #description, .details-description'),
+        doc.querySelector(this.getJoinedSelectors('description')),
       ]);
     }
 
@@ -110,9 +108,7 @@ export class YaEncontreAdapter extends BasePortalAdapter {
   private extractFromDom(doc: Document, data: ExtractedPropertyData): void {
     // Title
     if (!data.title) {
-      const titleEl = doc.querySelector(
-        'h1.title, .details-header h1, .property-title, h1'
-      );
+      const titleEl = doc.querySelector(this.getJoinedSelectors('title'));
       if (titleEl && titleEl.textContent) {
         data.title = titleEl.textContent.trim();
       }
@@ -120,9 +116,7 @@ export class YaEncontreAdapter extends BasePortalAdapter {
 
     // Location / Address
     if (!data.address || !data.zone) {
-      const locationEl = doc.querySelector(
-        '.location, .details-header .address, .ubication, .property-location'
-      );
+      const locationEl = doc.querySelector(this.getJoinedSelectors('zone'));
       if (locationEl && locationEl.textContent) {
         const text = locationEl.textContent.trim();
         if (!data.address) data.address = text;
@@ -132,9 +126,7 @@ export class YaEncontreAdapter extends BasePortalAdapter {
 
     // Price
     if (!data.priceEur) {
-      const priceEl = doc.querySelector(
-        '.details-header-price, .price, .details-header .price, [data-testid="price"], .property-price'
-      );
+      const priceEl = doc.querySelector(this.getJoinedSelectors('price'));
       if (priceEl && priceEl.textContent) {
         const price = this.parsePrice(priceEl.textContent);
         if (price) data.priceEur = price;
@@ -142,9 +134,7 @@ export class YaEncontreAdapter extends BasePortalAdapter {
     }
 
     // Features: Surface m² & construction year
-    const featureNodes = doc.querySelectorAll(
-      '.details-parameters li, .features-item, .item-detail, .icon-dimensions + span, .characteristics li, .features li, .property-features span'
-    );
+    const featureNodes = doc.querySelectorAll(this.getJoinedSelectors('features'));
     for (const node of Array.from(featureNodes)) {
       const text = node.textContent?.trim() || '';
 

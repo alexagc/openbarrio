@@ -99,13 +99,21 @@ describe('Barrio Scoring Engine v0.3.0', () => {
   };
 
   it('calculates top-tier score for modern building in prime area with safe environment', () => {
-    const score = calculateBarrioScore(mockModernProperty, mockWealthyNeighborhood, mockSafeEnvironment);
+    const score = calculateBarrioScore({
+      property: mockModernProperty,
+      neighborhood: mockWealthyNeighborhood,
+      environment: mockSafeEnvironment,
+      connectivity: mockCivicConnectivity,
+      urbanPlanning: mockUrbanPlanning,
+    });
 
     expect(score.overallScore).toBeGreaterThanOrEqual(85);
     expect(score.buildingHealthScore).toBeGreaterThanOrEqual(95);
     expect(score.socioeconomicScore).toBeGreaterThanOrEqual(80);
     expect(score.acousticComfortScore).toBeGreaterThanOrEqual(85);
     expect(score.climateSafetyScore).toBe(100);
+    expect(score.trafficLight).toBe('GREEN');
+    expect(score.methodologyVersion).toBe('2.0.0');
 
     // Verify subscores existence in v0.3.0
     expect(score.subscores).toBeDefined();
@@ -165,13 +173,24 @@ describe('Barrio Scoring Engine v0.3.0', () => {
     expect(score.keyRisks.some((r) => r.includes('preferential water flow zone'))).toBe(true);
   });
 
-  it('handles absent optional environmental data gracefully with defaults', () => {
-    const score = calculateBarrioScore(mockModernProperty, mockWealthyNeighborhood);
+  it('marks absent environmental data as unavailable without fabricated defaults and blocks GREEN traffic light', () => {
+    const score = calculateBarrioScore({
+      property: mockModernProperty,
+      neighborhood: mockWealthyNeighborhood,
+      connectivity: mockCivicConnectivity,
+      urbanPlanning: mockUrbanPlanning,
+    });
 
-    expect(score.overallScore).toBeGreaterThanOrEqual(80);
-    expect(score.acousticComfortScore).toBe(80);
-    expect(score.climateSafetyScore).toBe(98);
-    expect(score.subscores.environmental).toBeGreaterThanOrEqual(80);
+    expect(score.acousticComfortScore).toBe(0);
+    expect(score.climateSafetyScore).toBe(0);
+    expect(score.subscores.environmental).toBe(0);
+    expect(score.pillarAvailability?.environmental).toBe(false);
+    expect(score.pillarTrafficLights?.environmental).toBe('UNCERTAIN');
+    expect(score.trafficLight).not.toBe('GREEN');
+    expect(score.coverage?.missingCriticalLayers).toEqual(expect.arrayContaining(['sica', 'snczi']));
+    expect(score.weightsUsed?.environmental).toBe(0);
+    expect(score.keyRisks.some((r) => r.includes('Acoustic risk not evaluated'))).toBe(true);
+    expect(score.keyRisks.some((r) => r.includes('Flood risk not evaluated'))).toBe(true);
   });
 
   it('adds due diligence alert when property is in a declared stressed housing zone', () => {

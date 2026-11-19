@@ -215,12 +215,16 @@ export function CadastralBottomSheet({
   const refcat = property.cadastralReference;
   const overallScore = score?.overallScore ?? 82;
 
-  // Score badge determination
+  // Score badge determination (supports UNCERTAIN gray state)
   let scoreBadgeText = t('bottomSheet.scoreFavorable');
   let scoreBadgeColor = 'text-primary bg-primary/10 border-primary/30';
   let ScoreIcon = ShieldCheck;
 
-  if (overallScore < 50) {
+  if (score?.trafficLight === 'UNCERTAIN') {
+    scoreBadgeText = t('uncertainty.uncertainBadge');
+    scoreBadgeColor = 'text-on-surface-variant bg-surface-container-high border-outline';
+    ScoreIcon = AlertTriangle;
+  } else if (overallScore < 50) {
     scoreBadgeText = t('bottomSheet.scoreAlert');
     scoreBadgeColor = 'text-error bg-error/10 border-error/30';
     ScoreIcon = ShieldAlert;
@@ -230,22 +234,27 @@ export function CadastralBottomSheet({
     ScoreIcon = AlertTriangle;
   }
 
-  // Micro-pills Telemetry computations
-  const constYear = property.building.constructionYear || 1954;
-  const iteHighlight = score?.keyHighlights?.some((h) => h.toLowerCase().includes('ite')) ?? true;
-  const yearAndIte = `${t('bottomSheet.yearPrefix')} ${constYear} (${iteHighlight ? t('bottomSheet.iteFavorable') : t('bottomSheet.iteCompliant')})`;
+  // Micro-pills Telemetry computations (zero fabricated defaults)
+  const constYear = property.building.constructionYear;
+  const iteHighlight = score?.keyHighlights?.some((h) => h.toLowerCase().includes('ite')) ?? false;
+  const yearAndIte = constYear
+    ? `${t('bottomSheet.yearPrefix')} ${constYear} (${iteHighlight ? t('bottomSheet.iteFavorable') : t('bottomSheet.iteCompliant')})`
+    : t('uncertainty.notAvailableShort');
 
-  const builtM2 = property.building.builtSurfaceM2 || 102;
+  const builtM2 = property.building.builtSurfaceM2;
   const usefulM2 = Math.round(builtM2 * 0.84);
   const surfacesText = `${usefulM2} ${t('bottomSheet.usefulM2')} (${builtM2.toLocaleString('es-ES')} ${t('bottomSheet.builtM2')})`;
 
   const incomeEur = neighborhood?.averageNetHouseholdIncomeEur;
-  const incomeFormatted = incomeEur ? Math.round(incomeEur).toLocaleString('es-ES') + '€' : '38.500€';
-  const percentile = neighborhood?.percentileInMunicipality ?? 82;
-  const incomeText = `${t('bottomSheet.incomePrefix')} ${incomeFormatted} (ADRH P${percentile})`;
+  const percentile = neighborhood?.percentileInMunicipality;
+  const incomeText = incomeEur != null && percentile != null
+    ? `${t('bottomSheet.incomePrefix')} ${Math.round(incomeEur).toLocaleString('es-ES')}€ (ADRH P${percentile})`
+    : `${t('bottomSheet.incomePrefix')} ${t('uncertainty.notAvailableShort')}`;
 
-  const noiseDba = environment?.noise?.dayEveningNightDecibels ?? 56;
-  const noiseText = `Lden ${noiseDba} dBA (SICA)`;
+  const noiseDba = environment?.noise?.dayEveningNightDecibels;
+  const noiseText = noiseDba != null
+    ? `Lden ${noiseDba} dBA (SICA)`
+    : `SICA: ${t('uncertainty.notAvailableShort')}`;
 
   const floodLvl = environment?.floodRisk?.level;
   const floodText =
@@ -253,20 +262,30 @@ export function CadastralBottomSheet({
       ? 'SNCZI: T10a-50a (Alto)'
       : floodLvl === 'MEDIUM'
       ? 'SNCZI: T100a (Medio)'
-      : 'SNCZI: T>500a (Bajo)';
+      : floodLvl === 'LOW' || floodLvl === 'NONE'
+      ? 'SNCZI: T>500a (Bajo)'
+      : `SNCZI: ${t('uncertainty.notAvailableShort')}`;
 
-  // 5 Pillars Data
-  const waterScore = score?.climateSafetyScore ?? score?.subscores?.environmental ?? 100;
-  const waterLabel = waterScore >= 80 ? 'Riesgo Nulo' : 'Riesgo Moderado';
+  // 5 Pillars Data (only show evaluated metrics)
+  const waterScore = environment?.floodRisk ? (score?.climateSafetyScore ?? score?.subscores?.environmental ?? 0) : 0;
+  const waterLabel = !environment?.floodRisk
+    ? t('uncertainty.notAvailableShort')
+    : waterScore >= 80
+    ? 'Riesgo Nulo'
+    : 'Riesgo Moderado';
 
-  const ineScore = score?.socioeconomicScore ?? score?.subscores?.socioeconomic ?? 84;
-  const decil = Math.min(10, Math.max(1, Math.ceil(percentile / 10)));
+  const ineScore = neighborhood ? (score?.socioeconomicScore ?? score?.subscores?.socioeconomic ?? 0) : 0;
+  const decil = percentile != null ? Math.min(10, Math.max(1, Math.ceil(percentile / 10))) : 0;
 
-  const iteScore = score?.buildingHealthScore ?? score?.subscores?.building ?? 78;
+  const iteScore = score?.buildingHealthScore ?? score?.subscores?.building ?? 0;
   const iteLabel = iteScore >= 80 ? 'Favorable' : 'Subsanada';
 
-  const acousticScore = score?.acousticComfortScore ?? 72;
-  const acousticLabel = noiseDba > 65 ? 'ZPAE Activa' : 'ZPAE Mod.';
+  const acousticScore = noiseDba != null ? (score?.acousticComfortScore ?? 0) : 0;
+  const acousticLabel = noiseDba == null
+    ? t('uncertainty.notAvailableShort')
+    : noiseDba > 65
+    ? 'ZPAE Activa'
+    : 'ZPAE Mod.';
 
   const walkScore = connectivity?.walkScore15Min ?? score?.subscores?.connectivity ?? 95;
   const walkLabel = walkScore >= 85 ? 'Excelente' : walkScore >= 60 ? 'Notable' : walkScore >= 40 ? 'Medio' : 'Rural / Aislado';

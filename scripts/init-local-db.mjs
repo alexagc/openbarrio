@@ -18,7 +18,7 @@ db.exec('PRAGMA journal_mode = WAL;');
 db.exec('PRAGMA synchronous = NORMAL;');
 
 // 1. Always apply all migrations idempotently
-console.log('📦 Applying D1 schemas (0001 - 0008)...');
+console.log('📦 Applying D1 schemas (0001 - 0009)...');
 const migrationFiles = [
   'apps/api/migrations/0001_initial_schema.sql',
   'apps/api/migrations/0002_civic_facilities.sql',
@@ -28,6 +28,7 @@ const migrationFiles = [
   'apps/api/migrations/0006_environmental_risk_precalc.sql',
   'apps/api/migrations/0007_cadastral_cache.sql',
   'apps/api/migrations/0008_building_inspection_and_seismic.sql',
+  'apps/api/migrations/0009_source_snapshots.sql',
 ];
 
 for (const mig of migrationFiles) {

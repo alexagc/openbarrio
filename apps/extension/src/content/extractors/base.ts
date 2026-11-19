@@ -1,4 +1,9 @@
 import {
+  BUNDLED_PORTAL_SELECTORS,
+  type PortalId,
+  type PortalSelectorConfig,
+} from '@openbarrio/core';
+import {
   PortalType,
   PropertyExtractor,
   ExtractedPropertyData,
@@ -10,6 +15,26 @@ export type AdapterValidationResult = ExtractionValidationResult;
 
 export abstract class BasePortalAdapter implements PropertyExtractor {
   abstract readonly portal: PortalType;
+  protected selectorOverride?: PortalSelectorConfig;
+
+  setSelectorConfig(config?: PortalSelectorConfig): void {
+    this.selectorOverride = config;
+  }
+
+  protected getSelectorConfig(): PortalSelectorConfig {
+    return (
+      this.selectorOverride ??
+      BUNDLED_PORTAL_SELECTORS.portals[this.portal as PortalId]
+    );
+  }
+
+  protected getJoinedSelectors(field: keyof PortalSelectorConfig): string {
+    const cfg = this.getSelectorConfig();
+    const fallback =
+      BUNDLED_PORTAL_SELECTORS.portals[this.portal as PortalId][field];
+    const list = cfg[field] && cfg[field].length > 0 ? cfg[field] : fallback;
+    return list.join(', ');
+  }
 
   /**
    * Evaluates whether this adapter can extract property data from the given URL.

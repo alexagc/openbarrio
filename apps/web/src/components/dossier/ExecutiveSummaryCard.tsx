@@ -51,8 +51,9 @@ export function ExecutiveSummaryCard({ report, className = '' }: ExecutiveSummar
       <ScoreGauge
         score={score}
         cityOrProvince={property.address.province}
-        percentile={report.neighborhood.percentileInMunicipality}
+        percentile={report.neighborhood?.percentileInMunicipality}
         typology={report.typology}
+        layers={report.layers}
       />
 
       {/* Highlights & Risks */}

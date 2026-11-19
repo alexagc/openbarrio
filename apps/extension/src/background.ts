@@ -6,6 +6,7 @@ import {
   ExtensionConfig,
 } from './shared/messages.js';
 import { getStoredConfig, setStoredConfig } from './shared/config.js';
+import { loadRemoteSelectors } from './shared/selectors.js';
 
 interface CacheEntry {
   timestamp: number;
@@ -184,6 +185,15 @@ export async function handleExtensionMessage(
 
     case 'CHECK_HEALTH':
       return await checkApiHealth(config.apiUrl);
+
+    case 'GET_SELECTORS': {
+      const resolved = await loadRemoteSelectors(config.apiUrl);
+      return {
+        success: true,
+        data: resolved.bundle,
+        cached: resolved.source === 'cache',
+      };
+    }
 
     default:
       return { success: false, error: 'Unknown extension request type' };

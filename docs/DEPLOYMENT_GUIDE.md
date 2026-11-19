@@ -258,3 +258,26 @@ MapLibre GL fetches vector tiles via RFC 7233 byte-range queries (HTTP 206 Parti
 * **Reads:** Cached records are read with an indexed `SELECT` consuming only 1 row read. Stale entries (`expires_at <= now`) are discarded passively without hot-path write amplification.
 * **Writes:** D1 writes are strictly reserved for new cadastral ingestions, safeguarding the 100,000 writes/day free quota.
 * **Batch Maintenance:** Expired cache rows can be pruned periodically using `cache.pruneExpired(limit)` without incurring hot-path user latency.
+
+---
+
+## 9. Trust, Ministerial Resilience & Remote Selectors (v1.4.0)
+
+### 9.1. D1 Migration `0009_source_snapshots.sql`
+Before deploying Worker v1.4.0, apply the source snapshot persistence table to remote Cloudflare D1:
+```bash
+npx wrangler d1 execute openbarrio-d1 --file=./apps/api/migrations/0009_source_snapshots.sql --remote
+```
+* **Zero-Write Read Guarantee:** `SourceSnapshotStore` compares SHA-256 hashes (`payload_hash`) before updating cached snapshots and throttles `verified_at` refreshes to at most once every 24 hours (`SNAPSHOT_VERIFY_THROTTLE_MS`), ensuring steady-state cache hits perform **0 D1 writes**.
+* **CadastralCache No Delete-on-Read:** Expired entries are retained in SQLite for `stale` fallback up to `STALE_MAX_DAYS` (`365` days) and pruned only during scheduled Worker cron maintenance (`0 3 1 * *`).
+
+### 9.2. Resilience Parameters & Per-Isolate Circuit Breakers
+Configured centrally in `apps/api/src/resilience/config.ts`:
+* **Default timeout:** `8,000 ms` (`AbortSignal` enforced per upstream fetch).
+* **Retries:** Up to `2` retries (`300 ms`, `900 ms` exponential backoff + jitter) exclusively on transient HTTP 5xx, timeouts, or network errors (never on 4xx).
+* **Circuit Breaker:** Opens after `5` consecutive failures inside a `60,000 ms` failure window and probes `half_open` after `60,000 ms`.
+* **Operational Caveat (Cloudflare Workers):** Circuit breaker state is stored in volatile Worker isolate memory without KV writes; `GET /api/v1/status/sources` reports isolate breaker state alongside persistent last-verified timestamps read cleanly from D1.
+
+### 9.3. Listing URL Channel & Remote Extension Selectors
+* **`POST /api/v1/listing/resolve`:** Zero outbound fetch by design (allowlist + in-memory parsing only). Protected by dedicated in-memory per-isolate rate limits (`10` req/min/IP, `100` req/day/IP). Edge cache middleware bypasses `/api/v1/status`, `/api/v1/extension/`, and non-GET routes.
+* **`GET /api/v1/extension/selectors`:** Serves validated `BUNDLED_PORTAL_SELECTORS` JSON (`<= 32 KB`, `Cache-Control: public, max-age=3600`) for Chrome Extension MV3 clients to update DOM selectors cleanly without extension store resubmission or additional permissions.

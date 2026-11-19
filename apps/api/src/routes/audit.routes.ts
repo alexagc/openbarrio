@@ -1,4 +1,4 @@
-import { Hono } from 'hono';
+import { Hono, Context } from 'hono';
 import { Value } from '@sinclair/typebox/value';
 import {
   AuditCoordsQuery,
@@ -10,6 +10,18 @@ import {
 import { AuditService } from '../services/audit.service.js';
 import { ProviderContainer } from '../providers/index.js';
 import { InvalidParametersError } from '../errors/problem-details.js';
+
+function getExecutionWaitUntil(c: Context): ((promise: Promise<unknown>) => void) | undefined {
+  try {
+    const ctx = c.executionCtx;
+    if (ctx && typeof ctx.waitUntil === 'function') {
+      return ctx.waitUntil.bind(ctx);
+    }
+  } catch {
+    // Non-Workers runtime (Node/Vitest without ExecutionContext)
+  }
+  return undefined;
+}
 
 export function createAuditRoutes(providers: ProviderContainer): Hono {
   const router = new Hono();
@@ -42,7 +54,8 @@ export function createAuditRoutes(providers: ProviderContainer): Hono {
 
     const report: PropertyAuditReport = await auditService.auditByCoordinates(
       query.lat,
-      query.lon
+      query.lon,
+      getExecutionWaitUntil(c)
     );
     return c.json(report, 200);
   });
@@ -197,7 +210,8 @@ export function createAuditRoutes(providers: ProviderContainer): Hono {
     const report: PropertyAuditReport = await auditService.auditByCadastralReference(
       cleanRefcat,
       fallbackCoords,
-      portalParam
+      portalParam,
+      getExecutionWaitUntil(c)
     );
     return c.json(report, 200);
   });

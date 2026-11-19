@@ -5,6 +5,43 @@ All notable changes to the **OpenBarrio** platform are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.0] - 2026-11-19 ("Confianza")
+
+### Added
+- **Typed Uncertainty Contract & BarrioScore v2.0.0 (`@openbarrio/core`)**:
+  - Added typed `LayerResult<T>`, `LayerStatus` (`ok`, `stale`, `unavailable`, `out_of_coverage`), `LayerStatusInfo`, and `STALE_FRESH_DAYS` (`30`), `STALE_AMBER_DAYS` (`90`), `STALE_MAX_DAYS` (`365`) in `packages/core/src/types/data-status.ts`.
+  - Added `UNCERTAIN` (neutral gray) global and per-pillar traffic-light state, `AuditCoverage` tracking (`pillarsWithData`, `pillarsTotal = 5`, `missingCriticalLayers`), and `scoreConfidence` in `packages/core/src/scoring/traffic-light.ts`.
+  - Extracted declarative typology weights (`SCORING_WEIGHTS_BY_TYPOLOGY`), modifier table (`SCORING_MODIFIERS`), and `METHODOLOGY_VERSION = '2.0.0'` in `packages/core/src/scoring/weights.ts` with automated documentation synchronization test `methodology-doc-sync.test.ts`.
+- **Ministerial Resilience & Stale-While-Revalidate (`apps/api`)**:
+  - Implemented `withResilience()` and per-isolate `CircuitBreakerRegistry` in `apps/api/src/resilience/` (8s timeout, 2 exponential-backoff jitter retries on 5xx/timeout/network errors, circuit open on 5 failures/60s, half-open recovery at 60s).
+  - Added Cloudflare D1 migration `apps/api/migrations/0009_source_snapshots.sql` and `SourceSnapshotStore` with zero-write reads, SHA-256 content-hash deduplication, 24h verified-timestamp write throttling, background `ctx.waitUntil` revalidation, and scheduled cron pruning in `apps/api/src/worker.ts`.
+  - Exposed read-only `GET /api/v1/status/sources` endpoint bypassing edge caching, returning per-provider operational state, isolate circuit state, recent failures, last verified date, and dataset `sourceDate`.
+  - Added zero-network ministerial outage, timeout, malformed HTML/XML/JSON, out-of-coverage, and snapshot aging drill suite in `apps/api/tests/resilience/outage-drills.test.ts`.
+- **Uncertainty UI, Public Status & Methodology Views (`apps/web`, `apps/extension`)**:
+  - Exported all 5 languages (`es`, `en`, `ca`, `gl`, `eu`) in `apps/web/src/i18n/index.ts` and enforced 5-language key parity across all new namespaces (`uncertainty`, `sourcesStatus`, `methodology`, `listingUrl`).
+  - Added `LayerStatusBadge` and `DataUnavailableState`, propagated `UNCERTAIN` (gray state), stale `"Verified on <date>"` notices, and unevaluated critical-risk warnings across `ScoreGauge`, `ExecutiveSummaryCard`, `PillarCard`, `AuditDossier`, `CadastralBottomSheet`, `CertifiedPdfReport`, `PropertyDuelModal`, `DuelPillarComparison`, and the Chrome Extension Shadow DOM widget (`apps/extension/src/shared/i18n.ts`).
+  - Published interactive 5-language views `/estado-fuentes` (`SourcesStatusView.tsx`) and `/metodologia` (`MethodologyView.tsx`) linked directly from `AuditDossier`, `CertifiedPdfReport`, `Header`, `Footer`, and dynamic `sitemap.xml`.
+- **Zero-Fetch Listing URL Channel & Validated Remote Extension Selectors (`@openbarrio/core`, `apps/api`, `apps/web`, `apps/extension`)**:
+  - Added `POST /api/v1/listing/resolve` (`apps/api/src/routes/listing.routes.ts`) enforcing strict HTTPS, 5-portal host allowlist (`PORTAL_HOST_ALLOWLIST`), anti-SSRF hostname guards, query/fragment stripping, optional in-memory snippet extraction (`<= 200 KB`), zero storage/zero outbound fetch, RFC 7807 errors, and dedicated `10/min` & `100/day` per-IP isolate rate limiting.
+  - Added accessible paste-listing-URL flow with editable confirmation and manual fallback in `HeroSection` / `ListingUrlResolver.tsx`.
+  - Exposed `GET /api/v1/extension/selectors` and added client-side `loadRemoteSelectors()` (`apps/extension/src/shared/selectors.ts`) validating JSON-only CSS selectors (`<= 32 KB`, TypeBox schema, safe CSS characters, non-downgrading semver, 24h local cache) with deterministic fallback to `BUNDLED_PORTAL_SELECTORS` and zero new manifest permissions.
+- **Public Documentation**:
+  - Published `docs/methodology/barrioscore.md` and `docs/LISTING_URL_CHANNEL.md`; updated `docs/DEPLOYMENT_GUIDE.md` Section 9.
+
+### Changed
+- **BarrioScore Calculation Impact (v2.0.0 vs v1.3.2)**: Properties with unavailable, timed-out, or out-of-coverage official layers (`SICA`, `SNCZI`, `INE ADRH`, `CEE`, `ITE`) no longer receive silent favorable baseline scores (`52 dB QUIET`, `NONE` flood risk, or neutral/synthetic neighborhood fallbacks). Missing pillars receive zero weight with proportional renormalization across verified pillars, `<3/5` pillar coverage forces `UNCERTAIN` gray state, and missing critical `SICA`/`SNCZI` layers cap the global traffic light below `GREEN`.
+- **Refactored Scoring API**: `calculateBarrioScore()` now accepts a clean object parameter (`BarrioScoreInput`) with legacy positional overload retained for compatibility.
+- **Monorepo Release Elevation**: Elevated all workspace manifests, OpenAPI metadata, UI version labels, Chrome Extension MV3 `manifest.json`, and store bundle `apps/extension/openbarrio-extension-v1.4.0.zip` (`74.15 KB`) to `1.4.0`. Verification suite passes with **652/652 tests** across **84 test files** and **0 ESLint warnings** inside Docker Desktop.
+
+### Fixed
+- Eliminated delete-on-read cache invalidation in `CadastralCache.get()` so expired cadastral snapshots remain available for `stale` fallback up to `365` days.
+- Hardened `SNCZIProvider` (`apps/api/src/providers/snczi.provider.ts`) to classify non-empty WMS features lacking recognized flood hazard attributes as `invalid_payload` rather than defaulting to `NONE`.
+- Removed hash-synthesized facility/income fallbacks in `AuditService`, `DuelPillarComparison`, `PropertyDuelModal`, and extension UI templates when upstream layers fail.
+
+### Security
+- Prevented SSRF, open-redirect crawling, query-token logging, and oversized pastes on `POST /api/v1/listing/resolve` by eliminating outbound server `fetch` completely and enforcing exact allowlist host matching, strict `application/json`, and `200 KB` byte bounds.
+- Enforced JSON-only, size-bounded (`<= 32 KB`), non-downgrading semver validation and CSS injection filtering on remote extension selectors, preserving Manifest V3 permissions (`activeTab`, `storage` only).
+
 ## [1.3.2] - 2026-11-13
 
 ### FinOps & DevOps Architecture Hardening

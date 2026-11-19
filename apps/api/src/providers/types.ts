@@ -18,6 +18,7 @@ import {
   VutEvaluationDTO,
   MunicipalitySummaryDTO,
   MunicipalityDetailDTO,
+  LayerResult,
 } from '@openbarrio/core';
 
 export interface ICatastroProvider {
@@ -27,6 +28,14 @@ export interface ICatastroProvider {
   getByCoordinates(latitude: number, longitude: number): Promise<CadastralProperty>;
 
   /**
+   * Optional status-aware coordinate lookup carrying stale snapshot metadata when upstream fails.
+   */
+  getByCoordinatesWithStatus?(
+    latitude: number,
+    longitude: number
+  ): Promise<LayerResult<CadastralProperty>>;
+
+  /**
    * Look up cadastral property details by 14- or 20-character cadastral reference (RC).
    */
   getByCadastralReference(
@@ -34,6 +43,15 @@ export interface ICatastroProvider {
     fallbackCoords?: CadastralCoordinates,
     preferredPortal?: string
   ): Promise<CadastralProperty>;
+
+  /**
+   * Optional status-aware reference lookup carrying stale snapshot metadata when upstream fails.
+   */
+  getByCadastralReferenceWithStatus?(
+    refcat: string,
+    fallbackCoords?: CadastralCoordinates,
+    preferredPortal?: string
+  ): Promise<LayerResult<CadastralProperty>>;
 
   /**
    * Look up horizontal division units for a given 14- or 20-character cadastral reference.
@@ -56,7 +74,7 @@ export interface IINEProvider {
   /**
    * Retrieve income distribution (ADRH) for a given 10-character census tract code.
    */
-  getIncomeByCensusSection(censusSectionCode: string): Promise<CensusTractIncome>;
+  getIncomeByCensusSection(censusSectionCode: string): Promise<LayerResult<CensusTractIncome>>;
 
   /**
    * Resolve coordinates and municipality to a 10-character census tract code.
@@ -66,21 +84,31 @@ export interface IINEProvider {
     longitude: number,
     provinceCode?: string,
     municipalityCode?: string
-  ): Promise<string>;
+  ): Promise<LayerResult<string>>;
 }
 
 export interface ISICAProvider {
   /**
    * Retrieve strategic acoustic noise map data (Lden) for geographic coordinates or pre-calculated census tract.
    */
-  getNoiseData(latitude: number, longitude: number, censusSectionCode?: string): Promise<NoiseData>;
+  getNoiseData(
+    latitude: number,
+    longitude: number,
+    censusSectionCode?: string,
+    waitUntil?: (promise: Promise<unknown>) => void
+  ): Promise<LayerResult<NoiseData>>;
 }
 
 export interface ISNCZIProvider {
   /**
    * Retrieve flood hazard cartography and return period risk for geographic coordinates or pre-calculated census tract.
    */
-  getFloodRiskData(latitude: number, longitude: number, censusSectionCode?: string): Promise<FloodRiskData>;
+  getFloodRiskData(
+    latitude: number,
+    longitude: number,
+    censusSectionCode?: string,
+    waitUntil?: (promise: Promise<unknown>) => void
+  ): Promise<LayerResult<FloodRiskData>>;
 }
 
 export interface ISERPAVIProvider {
@@ -91,7 +119,7 @@ export interface ISERPAVIProvider {
   getRentalBenchmark(
     property: CadastralProperty,
     censusSectionCode?: string
-  ): Promise<RentalBenchmark>;
+  ): Promise<LayerResult<RentalBenchmark>>;
 }
 
 export interface ICivicConnectivityProvider {
@@ -102,28 +130,37 @@ export interface ICivicConnectivityProvider {
     latitude: number,
     longitude: number,
     context?: { municipality?: string; street?: string }
-  ): Promise<CivicConnectivityData>;
+  ): Promise<LayerResult<CivicConnectivityData>>;
   getConnectivityByCoordinates?(
     latitude: number,
     longitude: number,
     context?: { municipality?: string; street?: string }
-  ): Promise<CivicConnectivityData>;
+  ): Promise<LayerResult<CivicConnectivityData>>;
 }
 
 export interface IUrbanPlanningProvider {
   /**
    * Retrieve official SIU land classification and planning ordinances for a property.
    */
-  getUrbanPlanningData(property: CadastralProperty): Promise<UrbanPlanningData>;
-  getUrbanPlanning?(property: CadastralProperty): Promise<UrbanPlanningData>;
+  getUrbanPlanningData(property: CadastralProperty): Promise<LayerResult<UrbanPlanningData>>;
+  getUrbanPlanning?(property: CadastralProperty): Promise<LayerResult<UrbanPlanningData>>;
 }
 
 export interface IAirQualityProvider {
   /**
    * Retrieve official MITECO European Air Quality Index (AQI) and pollutants for coordinates.
    */
-  getAirQualityData(latitude: number, longitude: number): Promise<AirQualityData | undefined>;
-  getAirQuality?(latitude: number, longitude: number): Promise<AirQualityData | undefined>;
+  getAirQualityData(latitude: number, longitude: number): Promise<LayerResult<AirQualityData>>;
+  getAirQuality?(latitude: number, longitude: number): Promise<LayerResult<AirQualityData>>;
+}
+
+export interface EnvironmentalAggregateResult {
+  data: EnvironmentalData;
+  layers: {
+    sica: LayerResult<NoiseData>;
+    snczi: LayerResult<FloodRiskData>;
+    airQuality: LayerResult<AirQualityData>;
+  };
 }
 
 export interface IEnvironmentalProvider {
@@ -132,16 +169,22 @@ export interface IEnvironmentalProvider {
   readonly airQuality?: IAirQualityProvider;
 
   /**
-   * Aggregates environmental indicators (acoustic noise, fluvial flood risk, air quality).
+   * Aggregates environmental indicators (acoustic noise, fluvial flood risk, air quality)
+   * alongside typed per-layer status metadata.
    */
-  getEnvironmentalData(latitude: number, longitude: number, censusSectionCode?: string): Promise<EnvironmentalData>;
+  getEnvironmentalData(
+    latitude: number,
+    longitude: number,
+    censusSectionCode?: string,
+    waitUntil?: (promise: Promise<unknown>) => void
+  ): Promise<EnvironmentalAggregateResult>;
 }
 
 export interface ICEEProvider {
   /**
    * Look up official Energy Performance Certificate (CEE) or compute normative thermal CTE fallback.
    */
-  getEnergyCertificate(property: CadastralProperty): Promise<EnergyPerformanceCertificate>;
+  getEnergyCertificate(property: CadastralProperty): Promise<LayerResult<EnergyPerformanceCertificate>>;
 }
 
 export interface ILongitudinalMarketProvider {
@@ -164,7 +207,7 @@ export interface IRadonProvider {
     provinceCode?: string,
     floorLevel?: number,
     unitsCount?: number
-  ): Promise<RadonEvaluationDTO>;
+  ): Promise<LayerResult<RadonEvaluationDTO>>;
 }
 
 export interface IVutProvider {
@@ -174,7 +217,7 @@ export interface IVutProvider {
   getVutEvaluation(
     censusSectionId: string,
     coords?: { latitude: number; longitude: number }
-  ): Promise<VutEvaluationDTO>;
+  ): Promise<LayerResult<VutEvaluationDTO>>;
 }
 
 export interface IMunicipalityProvider {

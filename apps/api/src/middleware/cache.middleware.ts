@@ -38,8 +38,13 @@ export function edgeCacheMiddleware(options: EdgeCacheOptions = {}): MiddlewareH
     }
 
     const path = c.req.path;
-    // Only cache versioned data endpoints, bypass health and swagger docs
-    if (path === '/health' || path.startsWith('/docs')) {
+    // Bypass health, docs, and live status/config endpoints so telemetry is never cached for 90 days
+    if (
+      path === '/health' ||
+      path.startsWith('/docs') ||
+      path.startsWith('/api/v1/status') ||
+      path.startsWith('/api/v1/extension/')
+    ) {
       return next();
     }
 
@@ -84,10 +89,15 @@ export function edgeCacheMiddleware(options: EdgeCacheOptions = {}): MiddlewareH
     // Cache MISS: Proceed with upstream execution
     await next();
 
-    // Cache only successful responses
-    if (c.res.status === 200) {
-      const cacheControlHeader = `public, max-age=${ttlSeconds}, s-maxage=${ttlSeconds}, stale-while-revalidate=86400`;
-      c.header('Cache-Control', cacheControlHeader);
+    // Cache only successful cacheable responses
+    const existingCacheControl = c.res.headers.get('cache-control');
+    if (c.res.status === 200 && !existingCacheControl?.includes('no-store')) {
+      const cacheControlHeader =
+        existingCacheControl ||
+        `public, max-age=${ttlSeconds}, s-maxage=${ttlSeconds}, stale-while-revalidate=86400`;
+      if (!existingCacheControl) {
+        c.header('Cache-Control', cacheControlHeader);
+      }
       c.header('X-OpenBarrio-Cache', 'MISS');
 
       if (cfCache) {

@@ -1,5 +1,12 @@
-import { CadastralProperty, RentalBenchmark } from '@openbarrio/core';
+import {
+  CadastralProperty,
+  LayerResult,
+  RentalBenchmark,
+  layerOk,
+  layerOutOfCoverage,
+} from '@openbarrio/core';
 import { ISERPAVIProvider } from './types.js';
+import { SERPAVI_SOURCE_NAME } from './serpavi.provider.js';
 
 export class MockSERPAVIProvider implements ISERPAVIProvider {
   private customOverrides: Map<string, RentalBenchmark> = new Map();
@@ -7,10 +14,14 @@ export class MockSERPAVIProvider implements ISERPAVIProvider {
   async getRentalBenchmark(
     cadastralProperty: CadastralProperty,
     censusSectionCode?: string
-  ): Promise<RentalBenchmark> {
+  ): Promise<LayerResult<RentalBenchmark>> {
+    if (cadastralProperty.typology && cadastralProperty.typology !== 'RESIDENTIAL') {
+      return layerOutOfCoverage(SERPAVI_SOURCE_NAME, { reason: 'not_applicable' });
+    }
+
     const refcat = cadastralProperty.cadastralReference;
     if (this.customOverrides.has(refcat)) {
-      return this.customOverrides.get(refcat)!;
+      return layerOk(SERPAVI_SOURCE_NAME, this.customOverrides.get(refcat)!);
     }
 
     const surface =
@@ -31,13 +42,13 @@ export class MockSERPAVIProvider implements ISERPAVIProvider {
     const monthlyLower = Math.round(baseLower * surface);
     const monthlyUpper = Math.round(baseUpper * surface);
 
-    return {
+    return layerOk(SERPAVI_SOURCE_NAME, {
       officialRangeLowerEurM2: baseLower,
       officialRangeUpperEurM2: baseUpper,
       estimatedMonthlyRentLowerEur: monthlyLower,
       estimatedMonthlyRentUpperEur: monthlyUpper,
       isStressedHousingZone: isStressed,
-    };
+    });
   }
 
   setBenchmarkOverride(refcat: string, benchmark: RentalBenchmark): void {

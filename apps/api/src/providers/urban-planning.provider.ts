@@ -1,9 +1,13 @@
 import {
   CadastralProperty,
   LandClassification,
+  LayerResult,
   UrbanPlanningData,
+  layerOk,
 } from '@openbarrio/core';
 import { IUrbanPlanningProvider } from './types.js';
+
+export const URBAN_PLANNING_SOURCE_NAME = 'MIVAU SIU Urbanismo';
 
 export interface UrbanPlanningProviderOptions {
   siuApiUrl?: string;
@@ -12,7 +16,7 @@ export interface UrbanPlanningProviderOptions {
 
 /**
  * Urban Planning Provider integrating Spanish municipal zoning, Sistema de Información Urbana (SIU / MIVAU),
- * historical Cadastral renovation records, and statutory rent control market declarations.
+ * and statutory rent control market declarations.
  */
 export class UrbanPlanningProvider implements IUrbanPlanningProvider {
   private readonly siuApiUrl: string;
@@ -23,14 +27,13 @@ export class UrbanPlanningProvider implements IUrbanPlanningProvider {
     this.timeoutMs = options.timeoutMs || 5000;
   }
 
-  async getUrbanPlanningData(property: CadastralProperty): Promise<UrbanPlanningData> {
+  async getUrbanPlanningData(property: CadastralProperty): Promise<LayerResult<UrbanPlanningData>> {
     return this.getUrbanPlanning(property);
   }
 
-  async getUrbanPlanning(property: CadastralProperty): Promise<UrbanPlanningData> {
+  async getUrbanPlanning(property: CadastralProperty): Promise<LayerResult<UrbanPlanningData>> {
     const refcat = property.cadastralReference.toUpperCase();
     const primaryUse = (property.building.primaryUse || '').toLowerCase();
-    const constrYear = property.building.constructionYear;
 
     // 1. Land classification evaluation
     let landClassification: LandClassification;
@@ -77,18 +80,9 @@ export class UrbanPlanningProvider implements IUrbanPlanningProvider {
       zoningCode = property.building.unitsCount > 10 ? 'NZ-3' : 'NZ-1';
     }
 
-    // 2. Renovation history recorded in Catastro DNPHP
-    let declaredRenovationsCount = 0;
-    let lastRenovationYear: number | null = null;
-
-    if (constrYear > 0 && constrYear < 1960) {
-      declaredRenovationsCount = 1;
-      // Realistic major renovation in recent decades for historic buildings
-      lastRenovationYear = Math.max(constrYear + 40, 2005);
-    } else if (constrYear >= 1960 && constrYear < 1990 && constrYear % 2 === 0) {
-      declaredRenovationsCount = 1;
-      lastRenovationYear = 2012;
-    }
+    // 2. Do not fabricate undeclared renovation history
+    const declaredRenovationsCount = 0;
+    const lastRenovationYear: number | null = null;
 
     // 3. Stressed housing market status (Zona de Mercado Residencial Tensionado)
     // Cataluña / Barcelona declared statutory rent caps under Ley 12/2023
@@ -105,14 +99,14 @@ export class UrbanPlanningProvider implements IUrbanPlanningProvider {
       property.typology !== 'RUSTIC' &&
       property.typology !== 'VACANT_PLOT';
 
-    return {
+    return layerOk(URBAN_PLANNING_SOURCE_NAME, {
       landClassification,
       zoningCode,
       isProtectedLand,
       declaredRenovationsCount,
       lastRenovationYear,
       isStressedHousingZone,
-    };
+    });
   }
 }
 
@@ -127,18 +121,17 @@ export class MockUrbanPlanningProvider implements IUrbanPlanningProvider {
     this.overrides.set(refcat.toUpperCase(), data);
   }
 
-  async getUrbanPlanningData(property: CadastralProperty): Promise<UrbanPlanningData> {
+  async getUrbanPlanningData(property: CadastralProperty): Promise<LayerResult<UrbanPlanningData>> {
     return this.getUrbanPlanning(property);
   }
 
-  async getUrbanPlanning(property: CadastralProperty): Promise<UrbanPlanningData> {
+  async getUrbanPlanning(property: CadastralProperty): Promise<LayerResult<UrbanPlanningData>> {
     const refcat = property.cadastralReference.toUpperCase();
 
     if (this.overrides.has(refcat)) {
-      return this.overrides.get(refcat)!;
+      return layerOk(URBAN_PLANNING_SOURCE_NAME, this.overrides.get(refcat)!);
     }
 
-    const constrYear = property.building.constructionYear;
     const primaryUse = (property.building.primaryUse || '').toLowerCase();
 
     let landClassification: LandClassification;
@@ -168,25 +161,17 @@ export class MockUrbanPlanningProvider implements IUrbanPlanningProvider {
       zoningCode = 'NZ-3';
     }
 
-    let declaredRenovationsCount = 0;
-    let lastRenovationYear: number | null = null;
-
-    if (constrYear > 0 && constrYear < 1960) {
-      declaredRenovationsCount = 1;
-      lastRenovationYear = 2005;
-    }
-
     const isBarcelona =
       property.address.municipality.toLowerCase() === 'barcelona' ||
       property.address.postalCode?.startsWith('08');
 
-    return {
+    return layerOk(URBAN_PLANNING_SOURCE_NAME, {
       landClassification,
       zoningCode,
       isProtectedLand,
-      declaredRenovationsCount,
-      lastRenovationYear,
+      declaredRenovationsCount: 0,
+      lastRenovationYear: null,
       isStressedHousingZone: Boolean(isBarcelona),
-    };
+    });
   }
 }

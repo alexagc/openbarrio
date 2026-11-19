@@ -1,6 +1,15 @@
-import { CadastralProperty, RentalBenchmark } from '@openbarrio/core';
+import {
+  CadastralProperty,
+  LayerResult,
+  RentalBenchmark,
+  layerOk,
+  layerOutOfCoverage,
+  layerUnavailable,
+} from '@openbarrio/core';
 import type { D1Database } from '../types/env.js';
 import { ISERPAVIProvider } from './types.js';
+
+export const SERPAVI_SOURCE_NAME = 'MIVAU SERPAVI';
 
 export interface SERPAVIProviderOptions {
   db?: D1Database;
@@ -65,7 +74,15 @@ export class SERPAVIProvider implements ISERPAVIProvider {
   async getRentalBenchmark(
     cadastralProperty: CadastralProperty,
     censusSectionCode?: string
-  ): Promise<RentalBenchmark> {
+  ): Promise<LayerResult<RentalBenchmark>> {
+    if (cadastralProperty.typology && cadastralProperty.typology !== 'RESIDENTIAL') {
+      return layerOutOfCoverage(SERPAVI_SOURCE_NAME, { reason: 'not_applicable' });
+    }
+
+    if (!this.db) {
+      return layerUnavailable(SERPAVI_SOURCE_NAME, 'upstream_error');
+    }
+
     const provinceCode =
       cadastralProperty.address.provinceCode ||
       cadastralProperty.address.postalCode?.slice(0, 2) ||
@@ -85,56 +102,46 @@ export class SERPAVIProvider implements ISERPAVIProvider {
     let baseLowerEurM2: number | undefined;
     let baseUpperEurM2: number | undefined;
 
-    // 1. Hierarchical Resolution via Cloudflare D1 (sub-5ms)
-    if (this.db) {
-      try {
-        // Step 1A: Primary fine-grained query by census section (cusec)
-        if (censusSectionCode) {
-          const sectionRow = await this.db
-            .prepare(
-              'SELECT is_stressed_market, lower_bound_eur_m2, upper_bound_eur_m2 FROM mivau_serpavi_benchmarks WHERE cusec = ?'
-            )
-            .bind(censusSectionCode)
-            .first<{ is_stressed_market: number; lower_bound_eur_m2: number; upper_bound_eur_m2: number }>();
+    // Hierarchical Resolution via Cloudflare D1 (sub-5ms)
+    try {
+      // Step 1A: Primary fine-grained query by census section (cusec)
+      if (censusSectionCode) {
+        const sectionRow = await this.db
+          .prepare(
+            'SELECT is_stressed_market, lower_bound_eur_m2, upper_bound_eur_m2 FROM mivau_serpavi_benchmarks WHERE cusec = ?'
+          )
+          .bind(censusSectionCode)
+          .first<{ is_stressed_market: number; lower_bound_eur_m2: number; upper_bound_eur_m2: number }>();
 
-          if (sectionRow && sectionRow.lower_bound_eur_m2 > 0) {
-            baseLowerEurM2 = sectionRow.lower_bound_eur_m2;
-            baseUpperEurM2 = sectionRow.upper_bound_eur_m2;
-            isStressed = sectionRow.is_stressed_market === 1 || isStressed;
-          }
+        if (sectionRow && sectionRow.lower_bound_eur_m2 > 0) {
+          baseLowerEurM2 = sectionRow.lower_bound_eur_m2;
+          baseUpperEurM2 = sectionRow.upper_bound_eur_m2;
+          isStressed = sectionRow.is_stressed_market === 1 || isStressed;
         }
-
-        // Step 1B: Fallback municipal aggregate query if section record has no data
-        if (baseLowerEurM2 === undefined && muniCode) {
-          const muniRow = await this.db
-            .prepare(
-              'SELECT is_stressed_market, lower_bound_eur_m2, upper_bound_eur_m2 FROM mivau_serpavi_benchmarks WHERE municipality_code = ? AND cusec IS NULL'
-            )
-            .bind(muniCode)
-            .first<{ is_stressed_market: number; lower_bound_eur_m2: number; upper_bound_eur_m2: number }>();
-
-          if (muniRow && muniRow.lower_bound_eur_m2 > 0) {
-            baseLowerEurM2 = muniRow.lower_bound_eur_m2;
-            baseUpperEurM2 = muniRow.upper_bound_eur_m2;
-            isStressed = muniRow.is_stressed_market === 1 || isStressed;
-          }
-        }
-      } catch {
-        // Fallback to territorial heuristic
-        baseLowerEurM2 = undefined;
-        baseUpperEurM2 = undefined;
       }
+
+      // Step 1B: Fallback municipal aggregate query if section record has no data
+      if (baseLowerEurM2 === undefined && muniCode) {
+        const muniRow = await this.db
+          .prepare(
+            'SELECT is_stressed_market, lower_bound_eur_m2, upper_bound_eur_m2 FROM mivau_serpavi_benchmarks WHERE municipality_code = ? AND cusec IS NULL'
+          )
+          .bind(muniCode)
+          .first<{ is_stressed_market: number; lower_bound_eur_m2: number; upper_bound_eur_m2: number }>();
+
+        if (muniRow && muniRow.lower_bound_eur_m2 > 0) {
+          baseLowerEurM2 = muniRow.lower_bound_eur_m2;
+          baseUpperEurM2 = muniRow.upper_bound_eur_m2;
+          isStressed = muniRow.is_stressed_market === 1 || isStressed;
+        }
+      }
+    } catch (err) {
+      console.warn('[SERPAVIProvider] D1 query failed:', (err as Error)?.message);
+      return layerUnavailable(SERPAVI_SOURCE_NAME, 'upstream_error');
     }
 
-    // 2. Fallback to territorial heuristic if not in D1
     if (baseLowerEurM2 === undefined || baseUpperEurM2 === undefined) {
-      const rates = this.getBaseRatesByTerritory(
-        muniCode,
-        provinceCode,
-        cadastralProperty.address.municipality
-      );
-      baseLowerEurM2 = rates[0];
-      baseUpperEurM2 = rates[1];
+      return layerOutOfCoverage(SERPAVI_SOURCE_NAME);
     }
 
     // Adjustment factors based on building/unit parameters from Catastro
@@ -173,13 +180,13 @@ export class SERPAVIProvider implements ISERPAVIProvider {
     const monthlyLower = Math.round(lowerEurM2 * surface);
     const monthlyUpper = Math.round(upperEurM2 * surface);
 
-    return {
+    return layerOk(SERPAVI_SOURCE_NAME, {
       officialRangeLowerEurM2: lowerEurM2,
       officialRangeUpperEurM2: upperEurM2,
       estimatedMonthlyRentLowerEur: monthlyLower,
       estimatedMonthlyRentUpperEur: monthlyUpper,
       isStressedHousingZone: isStressed,
-    };
+    });
   }
 
   /**
@@ -194,41 +201,5 @@ export class SERPAVIProvider implements ISERPAVIProvider {
       return true;
     }
     return false;
-  }
-
-  private getBaseRatesByTerritory(
-    municipalityCode: string,
-    provinceCode: string,
-    municipalityName: string
-  ): [number, number] {
-    const muniLower = municipalityName.toLowerCase();
-
-    // Tier 1: Barcelona and Madrid
-    if (municipalityCode === '08019' || muniLower === 'barcelona') {
-      return [14.8, 19.2];
-    }
-    if (municipalityCode === '28079' || muniLower === 'madrid') {
-      return [14.2, 18.5];
-    }
-
-    // Tier 2: San Sebastián, Palma de Mallorca, Valencia, Málaga, Bilbao, Sevilla
-    if (
-      provinceCode === '20' || // Guipúzcoa
-      provinceCode === '07' || // Baleares
-      muniLower.includes('valencia') ||
-      muniLower.includes('málaga') ||
-      muniLower.includes('bilbao') ||
-      muniLower.includes('sevilla')
-    ) {
-      return [10.5, 14.5];
-    }
-
-    // Tier 3: Other provincial capitals and metropolitan crowns
-    if (['08', '28', '46', '41', '29', '50'].includes(provinceCode)) {
-      return [8.5, 12.0];
-    }
-
-    // Tier 4: Rest of Spain
-    return [6.0, 8.5];
   }
 }

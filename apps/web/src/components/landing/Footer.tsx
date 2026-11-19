@@ -95,13 +95,21 @@ export const Footer: React.FC<FooterProps> = ({ onOpenMap }) => {
                   {t('footer.linkMivau')}
                 </a>
               </li>
-              <li className="pt-2 border-t border-outline-variant/60">
+              <li className="pt-2 border-t border-outline-variant/60 space-y-1.5">
                 <button
                   type="button"
                   onClick={() => setViewMode('transparency')}
                   className="text-primary hover:underline font-mono text-[11px] font-semibold text-left cursor-pointer flex items-center gap-1"
                 >
                   <span>{t('footer.linkSourcesMatrix')}</span>
+                  <ArrowRight className="w-3 h-3" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setViewMode('sources-status')}
+                  className="text-on-surface-variant hover:text-primary font-mono text-[11px] font-semibold text-left cursor-pointer flex items-center gap-1"
+                >
+                  <span>{t('sourcesStatus.navLabel')}</span>
                   <ArrowRight className="w-3 h-3" />
                 </button>
               </li>
@@ -209,9 +217,13 @@ export const Footer: React.FC<FooterProps> = ({ onOpenMap }) => {
                 </a>
               </li>
               <li>
-                <a className="hover:text-primary transition-colors" href="#fuentes">
+                <button
+                  type="button"
+                  onClick={() => setViewMode('methodology')}
+                  className="hover:text-primary transition-colors text-left cursor-pointer"
+                >
                   {t('footer.linkMethodology')}
-                </a>
+                </button>
               </li>
               <li>
                 <a

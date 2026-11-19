@@ -1,6 +1,11 @@
-import { CensusTractIncome } from '@openbarrio/core';
+import {
+  CensusTractIncome,
+  LayerResult,
+  layerOk,
+  layerOutOfCoverage,
+} from '@openbarrio/core';
 import { IINEProvider } from './types.js';
-import { CensusTractNotFoundError } from '../errors/problem-details.js';
+import { INE_SOURCE_NAME } from './ine.provider.js';
 
 export class MockINEProvider implements IINEProvider {
   private readonly tracts: Map<string, CensusTractIncome> = new Map();
@@ -58,19 +63,19 @@ export class MockINEProvider implements IINEProvider {
     }
   }
 
-  async getIncomeByCensusSection(censusSectionCode: string): Promise<CensusTractIncome> {
+  async getIncomeByCensusSection(censusSectionCode: string): Promise<LayerResult<CensusTractIncome>> {
     const code = censusSectionCode.trim();
 
-    if (code.startsWith('00000') || code.includes('NOTFOUND')) {
-      throw new CensusTractNotFoundError(code);
+    if (code.length < 10 || code.startsWith('00000') || code.includes('NOTFOUND')) {
+      return layerOutOfCoverage(INE_SOURCE_NAME);
     }
 
     const existing = this.tracts.get(code);
     if (existing) {
-      return existing;
+      return layerOk(INE_SOURCE_NAME, existing);
     }
 
-    // Deterministic simulation based on 10-digit section code
+    // Deterministic mock fixture based on 10-digit section code
     let hash = 0;
     for (let i = 0; i < code.length; i++) {
       hash = (hash * 31 + code.charCodeAt(i)) & 0xffffff;
@@ -80,7 +85,7 @@ export class MockINEProvider implements IINEProvider {
     const householdIncome = 18000 + Math.round((percentile / 100) * 45000);
     const personIncome = Math.round(householdIncome / 2.3);
 
-    return {
+    return layerOk(INE_SOURCE_NAME, {
       censusSectionCode: code,
       averageNetHouseholdIncomeEur: householdIncome,
       averageNetPersonIncomeEur: personIncome,
@@ -93,7 +98,7 @@ export class MockINEProvider implements IINEProvider {
         medianAge: 38 + (hash % 16),
         singlePersonHouseholdPercentage: 20 + (hash % 25),
       },
-    };
+    });
   }
 
   async resolveCensusSection(
@@ -101,30 +106,34 @@ export class MockINEProvider implements IINEProvider {
     longitude: number,
     provinceCode = '28',
     municipalityCode = '079'
-  ): Promise<string> {
+  ): Promise<LayerResult<string>> {
+    if (!Number.isFinite(latitude) || !Number.isFinite(longitude) || (latitude === 0 && longitude === 0)) {
+      return layerOutOfCoverage(INE_SOURCE_NAME);
+    }
+
     // Madrid Gran Vía / Sol landmark
     if (Math.abs(latitude - 40.420) < 0.005 && Math.abs(longitude - -3.703) < 0.005) {
-      return '2807901001';
+      return layerOk(INE_SOURCE_NAME, '2807901001');
     }
 
     // Madrid Salamanca landmark
     if (Math.abs(latitude - 40.425) < 0.008 && Math.abs(longitude - -3.685) < 0.008) {
-      return '2807904001';
+      return layerOk(INE_SOURCE_NAME, '2807904001');
     }
 
     // Madrid Vallecas landmark
     if (Math.abs(latitude - 40.392) < 0.008 && Math.abs(longitude - -3.665) < 0.008) {
-      return '2807913010';
+      return layerOk(INE_SOURCE_NAME, '2807913010');
     }
 
     // Barcelona Eixample landmark
     if (Math.abs(latitude - 41.391) < 0.005 && Math.abs(longitude - 2.164) < 0.005) {
-      return '0801902005';
+      return layerOk(INE_SOURCE_NAME, '0801902005');
     }
 
     // Valencia Ciutat Vella landmark
     if (Math.abs(latitude - 39.4699) < 0.005 && Math.abs(longitude - -0.3735) < 0.005) {
-      return '4625001002';
+      return layerOk(INE_SOURCE_NAME, '4625001002');
     }
 
     const prov = provinceCode.padStart(2, '0').slice(0, 2);
@@ -134,6 +143,6 @@ export class MockINEProvider implements IINEProvider {
     const dist = String(latHash).padStart(2, '0');
     const sec = String(lonHash).padStart(3, '0');
 
-    return `${prov}${mun}${dist}${sec}`;
+    return layerOk(INE_SOURCE_NAME, `${prov}${mun}${dist}${sec}`);
   }
 }

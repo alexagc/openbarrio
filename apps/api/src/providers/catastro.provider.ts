@@ -5,10 +5,21 @@ import {
   CadastralGeometry,
   CadastralUnit,
   BuildingSurroundingsDTO,
+  LayerResult,
+  layerOk,
+  layerStale,
 } from '@openbarrio/core';
 import type { D1Database } from '../types/env.js';
 import { ICatastroProvider } from './types.js';
 import { CadastralCache } from './cadastral-cache.js';
+import {
+  CircuitBreakerRegistry,
+  NonTransientUpstreamError,
+  TransientUpstreamError,
+  defaultBreakerRegistry,
+  mapErrorToLayerReason,
+  withResilience,
+} from '../resilience/index.js';
 import {
   parseCatastroCoordinatesXml,
   parseCatastroDnprcXml,
@@ -21,6 +32,8 @@ import {
 } from './catastro.parser.js';
 import { UpstreamProviderError } from '../errors/problem-details.js';
 
+export const CATASTRO_SOURCE_NAME = 'Sede Electrónica del Catastro (OVC)';
+
 export interface CatastroProviderOptions {
   baseUrl?: string;
   coordenadasBaseUrl?: string;
@@ -28,12 +41,16 @@ export interface CatastroProviderOptions {
   timeoutMs?: number;
   db?: D1Database;
   ttlSeconds?: number;
+  breaker?: CircuitBreakerRegistry;
+  maxRetries?: number;
 }
 
 export class CatastroProvider implements ICatastroProvider {
   private readonly coordenadasBaseUrl: string;
   private readonly callejeroBaseUrl: string;
-  private readonly timeoutMs: number;
+  private readonly timeoutMs?: number;
+  private readonly breaker: CircuitBreakerRegistry;
+  private readonly maxRetries?: number;
   private readonly cache: CadastralCache;
 
   constructor(options: CatastroProviderOptions = {}) {
@@ -44,7 +61,9 @@ export class CatastroProvider implements ICatastroProvider {
     this.callejeroBaseUrl =
       options.callejeroBaseUrl ||
       'https://ovc.catastro.meh.es/ovcservweb/ovcswlocalizacionrc/ovccallejero.asmx';
-    this.timeoutMs = options.timeoutMs || 15000;
+    this.timeoutMs = options.timeoutMs;
+    this.breaker = options.breaker || defaultBreakerRegistry;
+    this.maxRetries = options.maxRetries;
     this.cache = new CadastralCache({ db: options.db, ttlSeconds: options.ttlSeconds });
   }
 
@@ -52,105 +71,149 @@ export class CatastroProvider implements ICatastroProvider {
     this.cache.setDatabase(db);
   }
 
-  async getByCoordinates(latitude: number, longitude: number): Promise<CadastralProperty> {
-    const cacheKey = `coords:${latitude.toFixed(5)},${longitude.toFixed(5)}`;
-    const cached = await this.cache.get<CadastralProperty>(cacheKey);
-    if (cached) {
-      return cached;
-    }
-
-    const url = `${this.coordenadasBaseUrl}/Consulta_RCCOOR?SRS=EPSG:4326&Coordenada_X=${longitude}&Coordenada_Y=${latitude}`;
-
-    let xmlText: string;
+  private async fetchCatastroText(url: string): Promise<string> {
     try {
-      const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), this.timeoutMs);
-      const res = await fetch(url, {
-        signal: controller.signal,
-        headers: { 'User-Agent': 'OpenBarrio-DueDiligence/0.1' },
-        ...({ cf: { cacheTtl: 7776000, cacheEverything: true } } as any),
-      });
-      clearTimeout(timer);
-
-      if (!res.ok) {
-        throw new UpstreamProviderError('Catastro OVC', `HTTP status ${res.status}`);
-      }
-      xmlText = await res.text();
-    } catch (err: any) {
+      return await withResilience(
+        'catastro',
+        async (signal) => {
+          const res = await fetch(url, {
+            signal,
+            headers: { 'User-Agent': 'OpenBarrio-DueDiligence/1.4' },
+            ...({ cf: { cacheTtl: 7776000, cacheEverything: true } } as Record<string, unknown>),
+          });
+          if (!res.ok) {
+            if (res.status >= 500 || res.status === 429) {
+              throw new TransientUpstreamError(`HTTP status ${res.status}`, res.status);
+            }
+            throw new NonTransientUpstreamError(`HTTP status ${res.status}`, res.status);
+          }
+          return res.text();
+        },
+        {
+          breaker: this.breaker,
+          timeoutMs: this.timeoutMs,
+          maxRetries: this.maxRetries,
+        }
+      );
+    } catch (err: unknown) {
       if (err instanceof UpstreamProviderError) throw err;
-      throw new UpstreamProviderError('Catastro OVC', err.message || 'Network request failed');
+      const msg = err instanceof Error ? err.message : 'Network request failed';
+      throw new UpstreamProviderError('Catastro OVC', msg);
+    }
+  }
+
+  async getByCoordinates(latitude: number, longitude: number): Promise<CadastralProperty> {
+    const res = await this.getByCoordinatesWithStatus(latitude, longitude);
+    return res.data!;
+  }
+
+  async getByCoordinatesWithStatus(
+    latitude: number,
+    longitude: number
+  ): Promise<LayerResult<CadastralProperty>> {
+    const cacheKey = `coords:${latitude.toFixed(5)},${longitude.toFixed(5)}`;
+    const meta = await this.cache.getWithMeta<CadastralProperty>(cacheKey);
+    if (meta?.isFresh) {
+      return layerOk(
+        CATASTRO_SOURCE_NAME,
+        meta.data,
+        meta.fetchedAt ? { verifiedAt: meta.fetchedAt } : {}
+      );
     }
 
-    let cadastralReference: string | undefined;
-    let resLat = latitude;
-    let resLon = longitude;
-
     try {
-      const parsed = parseCatastroCoordinatesXml(xmlText);
-      cadastralReference = parsed.cadastralReference;
-      resLat = parsed.latitude || latitude;
-      resLon = parsed.longitude || longitude;
-    } catch (parseErr) {
-      // If Catastro has no exact parcel on coordinate (e.g. street), snap to nearest portal via CartoCiudad
+      const url = `${this.coordenadasBaseUrl}/Consulta_RCCOOR?SRS=EPSG:4326&Coordenada_X=${longitude}&Coordenada_Y=${latitude}`;
+      const xmlText = await this.fetchCatastroText(url);
+
+      let cadastralReference: string | undefined;
+      let resLat = latitude;
+      let resLon = longitude;
+
+      try {
+        const parsed = parseCatastroCoordinatesXml(xmlText);
+        cadastralReference = parsed.cadastralReference;
+        resLat = parsed.latitude || latitude;
+        resLon = parsed.longitude || longitude;
+      } catch (parseErr) {
+        // If Catastro has no exact parcel on coordinate (e.g. street), snap to nearest portal via CartoCiudad
+        try {
+          const cartoUrl = `https://www.cartociudad.es/geocoder/api/geocoder/reverseGeocode?lat=${latitude}&lon=${longitude}`;
+          const cartoRes = await fetch(cartoUrl);
+          if (cartoRes.ok) {
+            const cartoData = (await cartoRes.json()) as any;
+            if (cartoData && cartoData.refCatastral) {
+              cadastralReference = cartoData.refCatastral;
+              resLat = typeof cartoData.lat === 'number' ? cartoData.lat : latitude;
+              resLon = typeof cartoData.lng === 'number' ? cartoData.lng : longitude;
+            }
+          }
+        } catch {
+          // Fall through
+        }
+
+        if (!cadastralReference) {
+          throw parseErr;
+        }
+      }
+
+      // Snap to the exact portal number & letter via CartoCiudad IGN geocoder (e.g. 2 F vs 2 I)
+      let targetPortal: string | undefined;
       try {
         const cartoUrl = `https://www.cartociudad.es/geocoder/api/geocoder/reverseGeocode?lat=${latitude}&lon=${longitude}`;
         const cartoRes = await fetch(cartoUrl);
         if (cartoRes.ok) {
           const cartoData = (await cartoRes.json()) as any;
-          if (cartoData && cartoData.refCatastral) {
-            cadastralReference = cartoData.refCatastral;
-            resLat = typeof cartoData.lat === 'number' ? cartoData.lat : latitude;
-            resLon = typeof cartoData.lng === 'number' ? cartoData.lng : longitude;
+          if (cartoData?.extension) {
+            targetPortal = String(cartoData.extension).trim().toUpperCase();
+          }
+          if (typeof cartoData?.lat === 'number' && typeof cartoData?.lng === 'number') {
+            resLat = cartoData.lat;
+            resLon = cartoData.lng;
           }
         }
       } catch {
-        // Fall through
+        // Non-critical: continue
       }
 
-      if (!cadastralReference) {
-        throw parseErr;
+      // Fetch detailed property attributes using the cadastral reference obtained
+      const propRes = await this.getByCadastralReferenceWithStatus(
+        cadastralReference,
+        {
+          latitude: resLat || latitude,
+          longitude: resLon || longitude,
+          srs: 'EPSG:4326',
+        },
+        targetPortal
+      );
+
+      await this.cache.set(cacheKey, 'coordinates', propRes.data!.cadastralReference, propRes.data!);
+      return propRes;
+    } catch (err) {
+      if (meta?.isUsableStale) {
+        return layerStale(CATASTRO_SOURCE_NAME, meta.data, {
+          verifiedAt: meta.fetchedAt ?? meta.expiresAt,
+          reason: mapErrorToLayerReason(err),
+          staleDays: meta.ageDays,
+        });
       }
+      throw err;
     }
-
-        // Snap to the exact portal number & letter via CartoCiudad IGN geocoder (e.g. 2 F vs 2 I)
-    let targetPortal: string | undefined;
-    try {
-      const cartoUrl = `https://www.cartociudad.es/geocoder/api/geocoder/reverseGeocode?lat=${latitude}&lon=${longitude}`;
-      const cartoRes = await fetch(cartoUrl);
-      if (cartoRes.ok) {
-        const cartoData = (await cartoRes.json()) as any;
-        if (cartoData?.extension) {
-          targetPortal = String(cartoData.extension).trim().toUpperCase();
-        }
-        if (typeof cartoData?.lat === 'number' && typeof cartoData?.lng === 'number') {
-          resLat = cartoData.lat;
-          resLon = cartoData.lng;
-        }
-      }
-    } catch {
-      // Non-critical: continue
-    }
-
-    // Fetch detailed property attributes using the cadastral reference obtained
-    const propertyResult = await this.getByCadastralReference(
-      cadastralReference,
-      {
-        latitude: resLat || latitude,
-        longitude: resLon || longitude,
-        srs: 'EPSG:4326',
-      },
-      targetPortal
-    );
-
-    await this.cache.set(cacheKey, 'coordinates', propertyResult.cadastralReference, propertyResult);
-    return propertyResult;
   }
 
-    async getByCadastralReference(
+  async getByCadastralReference(
     refcat: string,
     fallbackCoords?: CadastralCoordinates,
     preferredPortal?: string
   ): Promise<CadastralProperty> {
+    const res = await this.getByCadastralReferenceWithStatus(refcat, fallbackCoords, preferredPortal);
+    return res.data!;
+  }
+
+  async getByCadastralReferenceWithStatus(
+    refcat: string,
+    fallbackCoords?: CadastralCoordinates,
+    preferredPortal?: string
+  ): Promise<LayerResult<CadastralProperty>> {
     let activePortal = preferredPortal;
     if (!activePortal && fallbackCoords) {
       try {
@@ -168,77 +231,43 @@ export class CatastroProvider implements ICatastroProvider {
     }
     const cleanRef = refcat.replace(/[\s\-_.]/g, '').toUpperCase();
     const cacheKey = `prop:${cleanRef}${activePortal ? `:${activePortal}` : ''}`;
-    const cached = await this.cache.get<CadastralProperty>(cacheKey);
-    if (cached) {
-      return cached;
+    const meta = await this.cache.getWithMeta<CadastralProperty>(cacheKey);
+    if (meta?.isFresh) {
+      return layerOk(
+        CATASTRO_SOURCE_NAME,
+        meta.data,
+        meta.fetchedAt ? { verifiedAt: meta.fetchedAt } : {}
+      );
     }
 
-    const dnprcUrl = `${this.callejeroBaseUrl}/Consulta_DNPRC?Provincia=&Municipio=&RC=${encodeURIComponent(cleanRef)}`;
+    try {
+      const dnprcUrl = `${this.callejeroBaseUrl}/Consulta_DNPRC?Provincia=&Municipio=&RC=${encodeURIComponent(cleanRef)}`;
 
-    // If coordinates are not passed, query Consulta_CPMRC to get the exact parcel centroid coordinates
-    let resolvedCoords: CadastralCoordinates | undefined = fallbackCoords;
-    if (!resolvedCoords) {
-      try {
-        const parcelRef = cleanRef.slice(0, 14);
-        const cpmrcUrl = `${this.coordenadasBaseUrl}/Consulta_CPMRC?Provincia=&Municipio=&SRS=EPSG:4326&RC=${encodeURIComponent(parcelRef)}`;
-        const controller = new AbortController();
-        const timer = setTimeout(() => controller.abort(), this.timeoutMs);
-        const cpmrcRes = await fetch(cpmrcUrl, {
-          signal: controller.signal,
-          headers: { 'User-Agent': 'OpenBarrio-DueDiligence/0.1' },
-          ...({ cf: { cacheTtl: 7776000, cacheEverything: true } } as any),
-        });
-        clearTimeout(timer);
-
-        if (cpmrcRes.ok) {
-          const cpmrcXml = await cpmrcRes.text();
+      // If coordinates are not passed, query Consulta_CPMRC to get the exact parcel centroid coordinates
+      let resolvedCoords: CadastralCoordinates | undefined = fallbackCoords;
+      if (!resolvedCoords) {
+        try {
+          const parcelRef = cleanRef.slice(0, 14);
+          const cpmrcUrl = `${this.coordenadasBaseUrl}/Consulta_CPMRC?Provincia=&Municipio=&SRS=EPSG:4326&RC=${encodeURIComponent(parcelRef)}`;
+          const cpmrcXml = await this.fetchCatastroText(cpmrcUrl);
           const parsed = parseCatastroCpmrcXml(cpmrcXml);
           if (parsed) {
             resolvedCoords = { latitude: parsed.latitude, longitude: parsed.longitude, srs: 'EPSG:4326' };
           }
+        } catch {
+          // Non-critical: continue with fallback coordinates if CPMRC fails
         }
-      } catch {
-        // Non-critical: continue with fallback coordinates if CPMRC fails
       }
-    }
 
-    let xmlText: string;
-    try {
-      const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), this.timeoutMs);
-      const res = await fetch(dnprcUrl, {
-        signal: controller.signal,
-        headers: { 'User-Agent': 'OpenBarrio-DueDiligence/0.1' },
-        ...({ cf: { cacheTtl: 7776000, cacheEverything: true } } as any),
-      });
-      clearTimeout(timer);
+      const xmlText = await this.fetchCatastroText(dnprcUrl);
 
-      if (!res.ok) {
-        throw new UpstreamProviderError('Catastro OVC', `HTTP status ${res.status}`);
-      }
-      xmlText = await res.text();
-    } catch (err: any) {
-      if (err instanceof UpstreamProviderError) throw err;
-      throw new UpstreamProviderError('Catastro OVC', err.message || 'Network request failed');
-    }
-
-    // If parcel has horizontal division (<lrcdnp>), fetch primary unit to extract official building year and specs
-    if (isMultiUnitParcelXml(xmlText)) {
-      const summary = parseMultiUnitParcelSummary(xmlText, activePortal);
-      if (summary.primaryUnitRef) {
-        try {
-          const unitUrl = `${this.callejeroBaseUrl}/Consulta_DNPRC?Provincia=&Municipio=&RC=${encodeURIComponent(summary.primaryUnitRef)}`;
-          const unitController = new AbortController();
-          const unitTimer = setTimeout(() => unitController.abort(), this.timeoutMs);
-          const unitRes = await fetch(unitUrl, {
-            signal: unitController.signal,
-            headers: { 'User-Agent': 'OpenBarrio-DueDiligence/0.1' },
-            ...({ cf: { cacheTtl: 7776000, cacheEverything: true } } as any),
-          });
-          clearTimeout(unitTimer);
-
-          if (unitRes.ok) {
-            const unitXml = await unitRes.text();
+      // If parcel has horizontal division (<lrcdnp>), fetch primary unit to extract official building year and specs
+      if (isMultiUnitParcelXml(xmlText)) {
+        const summary = parseMultiUnitParcelSummary(xmlText, activePortal);
+        if (summary.primaryUnitRef) {
+          try {
+            const unitUrl = `${this.callejeroBaseUrl}/Consulta_DNPRC?Provincia=&Municipio=&RC=${encodeURIComponent(summary.primaryUnitRef)}`;
+            const unitXml = await this.fetchCatastroText(unitUrl);
             let totalBuildingSurface: number | undefined;
 
             // When queried as a 14-char building, calculate total building constructed surface across all units
@@ -271,28 +300,37 @@ export class CatastroProvider implements ICatastroProvider {
               }
             }
             await this.cache.set(cacheKey, 'property', cleanRef, result);
-            return result;
+            return layerOk(CATASTRO_SOURCE_NAME, result);
+          } catch {
+            // Fall through to parsing parent XML on unit lookup timeout/error
+          }
+        }
+      }
+
+      const result = parseCatastroDnprcXml(xmlText, cleanRef, resolvedCoords);
+      if (result.building.builtSurfaceM2 === 0 || result.typology === 'RUSTIC' || result.typology === 'VACANT_PLOT') {
+        try {
+          const geom = await this.getGeometryByCadastralReference(cleanRef);
+          if (geom?.properties?.areaM2 && geom.properties.areaM2 > 0) {
+            result.building.plotSurfaceM2 = geom.properties.areaM2;
+            result.plotSurfaceM2 = geom.properties.areaM2;
           }
         } catch {
-          // Fall through to parsing parent XML on unit lookup timeout/error
+          // Non-critical: continue
         }
       }
-    }
-
-    const result = parseCatastroDnprcXml(xmlText, cleanRef, resolvedCoords);
-    if (result.building.builtSurfaceM2 === 0 || result.typology === 'RUSTIC' || result.typology === 'VACANT_PLOT') {
-      try {
-        const geom = await this.getGeometryByCadastralReference(cleanRef);
-        if (geom?.properties?.areaM2 && geom.properties.areaM2 > 0) {
-          result.building.plotSurfaceM2 = geom.properties.areaM2;
-          result.plotSurfaceM2 = geom.properties.areaM2;
-        }
-      } catch {
-        // Non-critical: continue
+      await this.cache.set(cacheKey, 'property', cleanRef, result);
+      return layerOk(CATASTRO_SOURCE_NAME, result);
+    } catch (err) {
+      if (meta?.isUsableStale) {
+        return layerStale(CATASTRO_SOURCE_NAME, meta.data, {
+          verifiedAt: meta.fetchedAt ?? meta.expiresAt,
+          reason: mapErrorToLayerReason(err),
+          staleDays: meta.ageDays,
+        });
       }
+      throw err;
     }
-    await this.cache.set(cacheKey, 'property', cleanRef, result);
-    return result;
   }
 
   async getUnitsByCadastralReference(refcat: string): Promise<CadastralUnitsResponse> {

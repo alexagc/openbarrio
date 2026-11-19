@@ -14,6 +14,14 @@ import { BuildingSurroundingsSchema } from './surroundings.js';
 import { SubstandardHousingAlertSchema } from './substandard-housing.js';
 import { BuildingInspectionSchema } from './building-inspection.js';
 import { SeismicHazardSchema } from './seismic.js';
+import { LayerStatusInfoSchema } from './data-status.js';
+import {
+  AuditCoverageSchema,
+  PillarAvailabilitySchema,
+  PillarTrafficLightsSchema,
+  ScoreConfidenceSchema,
+  TrafficLightStateSchema,
+} from '../scoring/traffic-light.js';
 
 if (!FormatRegistry.Has('uuid')) {
   FormatRegistry.Set('uuid', (value) => typeof value === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value));
@@ -21,6 +29,14 @@ if (!FormatRegistry.Has('uuid')) {
 if (!FormatRegistry.Has('date-time')) {
   FormatRegistry.Set('date-time', (value) => typeof value === 'string' && !isNaN(Date.parse(value)));
 }
+
+export const ScoringWeightsSchema = Type.Object({
+  connectivity: Type.Number({ minimum: 0, maximum: 1 }),
+  building: Type.Number({ minimum: 0, maximum: 1 }),
+  socioeconomic: Type.Number({ minimum: 0, maximum: 1 }),
+  environmental: Type.Number({ minimum: 0, maximum: 1 }),
+  urbanPlanning: Type.Number({ minimum: 0, maximum: 1 }),
+});
 
 export const AuditSubscoresSchema = Type.Object({
   building: Type.Number({ minimum: 0, maximum: 100, description: 'Building antiquity, CTE era and structural specs (0-100)' }),
@@ -40,6 +56,13 @@ export const AuditScoreBreakdownSchema = Type.Object({
   climateSafetyScore: Type.Number({ minimum: 0, maximum: 100, description: 'Flood and climate safety rating (0-100)' }),
   keyHighlights: Type.Array(Type.String(), { description: 'Positive attributes and strengths identified in public registers' }),
   keyRisks: Type.Array(Type.String(), { description: 'Due diligence alerts, potential renovation requirements, or environmental risks' }),
+  trafficLight: Type.Optional(TrafficLightStateSchema),
+  pillarTrafficLights: Type.Optional(PillarTrafficLightsSchema),
+  pillarAvailability: Type.Optional(PillarAvailabilitySchema),
+  coverage: Type.Optional(AuditCoverageSchema),
+  scoreConfidence: Type.Optional(ScoreConfidenceSchema),
+  methodologyVersion: Type.Optional(Type.String()),
+  weightsUsed: Type.Optional(ScoringWeightsSchema),
   substandardHousing: Type.Optional(SubstandardHousingAlertSchema),
   buildingInspection: Type.Optional(BuildingInspectionSchema),
   seismicHazard: Type.Optional(SeismicHazardSchema),
@@ -58,11 +81,13 @@ export const PropertyAuditReportSchema = Type.Object({
   generatedAt: Type.String({ format: 'date-time', description: 'ISO 8601 generation timestamp' }),
   property: CadastralPropertySchema,
   typology: Type.Optional(PropertyTypologySchema),
-  neighborhood: CensusTractIncomeSchema,
+  neighborhood: Type.Optional(CensusTractIncomeSchema),
   environment: EnvironmentalDataSchema,
   connectivity: Type.Optional(CivicConnectivityDataSchema),
   urbanPlanning: Type.Optional(UrbanPlanningDataSchema),
   score: AuditScoreBreakdownSchema,
+  layers: Type.Optional(Type.Record(Type.String(), LayerStatusInfoSchema)),
+  coverage: Type.Optional(AuditCoverageSchema),
   rentalBenchmark: Type.Optional(RentalBenchmarkSchema),
   capex: Type.Optional(BuildingCapExRiskSchema),
   energy: Type.Optional(EnergyPerformanceCertificateSchema),

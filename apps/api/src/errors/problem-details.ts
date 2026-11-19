@@ -109,6 +109,66 @@ export class RateLimitExceededError extends ProblemDetailsException {
   }
 }
 
+export class ListingUrlInvalidError extends ProblemDetailsException {
+  constructor(detail: string, instance?: string) {
+    super({
+      status: 400,
+      type: 'https://openbarrio.org/errors/listing-url-invalid',
+      title: 'Invalid Listing URL',
+      detail,
+      instance,
+    });
+  }
+}
+
+export class ListingHostUnsupportedError extends ProblemDetailsException {
+  constructor(hostname: string, instance?: string) {
+    super({
+      status: 422,
+      type: 'https://openbarrio.org/errors/listing-host-unsupported',
+      title: 'Unsupported Listing Portal Host',
+      detail: `Host '${hostname}' is not in the allowlisted Spanish real-estate portals.`,
+      instance,
+    });
+  }
+}
+
+export class ListingPayloadTooLargeError extends ProblemDetailsException {
+  constructor(maxBytes: number, instance?: string) {
+    super({
+      status: 413,
+      type: 'https://openbarrio.org/errors/listing-payload-too-large',
+      title: 'Listing Text Payload Too Large',
+      detail: `Optional pasted listing text exceeds maximum allowed size of ${maxBytes} bytes.`,
+      instance,
+    });
+  }
+}
+
+export class ListingExtractionFailedError extends ProblemDetailsException {
+  constructor(detail: string, instance?: string) {
+    super({
+      status: 422,
+      type: 'https://openbarrio.org/errors/listing-extraction-failed',
+      title: 'Insufficient Listing Metadata',
+      detail,
+      instance,
+    });
+  }
+}
+
+export class UnsupportedMediaTypeError extends ProblemDetailsException {
+  constructor(expected: string, instance?: string) {
+    super({
+      status: 415,
+      type: 'https://openbarrio.org/errors/unsupported-media-type',
+      title: 'Unsupported Media Type',
+      detail: `Expected Content-Type '${expected}'.`,
+      instance,
+    });
+  }
+}
+
 /**
  * Hono error handler transforming exceptions and validation failures into RFC 7807 payloads.
  */

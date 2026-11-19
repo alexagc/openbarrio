@@ -52,8 +52,8 @@ export const AirQualityDataSchema = Type.Object({
 });
 
 export const EnvironmentalDataSchema = Type.Object({
-  noise: NoiseDataSchema,
-  floodRisk: FloodRiskDataSchema,
+  noise: Type.Optional(NoiseDataSchema),
+  floodRisk: Type.Optional(FloodRiskDataSchema),
   airQuality: Type.Optional(AirQualityDataSchema),
 });
 

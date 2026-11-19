@@ -59,6 +59,22 @@ export const Header: React.FC<HeaderProps> = ({ onOpenMap }) => {
           {t('nav.officialSources')}
         </button>
 
+        <button
+          type="button"
+          onClick={() => setViewMode('sources-status')}
+          className="font-body text-sm text-on-surface-variant hover:text-primary transition-colors cursor-pointer"
+        >
+          {t('sourcesStatus.navLabel')}
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setViewMode('methodology')}
+          className="font-body text-sm text-on-surface-variant hover:text-primary transition-colors cursor-pointer"
+        >
+          {t('methodology.navLabel')}
+        </button>
+
         {/* Tools Dropdown */}
         <div className="relative" ref={toolsDropdownRef}>
           <button

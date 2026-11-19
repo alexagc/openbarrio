@@ -1,4 +1,5 @@
 import {
+  isLayerUsable,
   PropertyAuditReport,
   BuildingCapExRisk,
 } from '@openbarrio/core';
@@ -32,16 +33,16 @@ export interface DuelPillarComparisonProps {
   capexB: BuildingCapExRisk;
   scoreA: number;
   scoreB: number;
-  noiseA: number;
-  noiseB: number;
-  incomeA: number;
-  incomeB: number;
-  yearA: number;
-  yearB: number;
-  ageA: number;
-  ageB: number;
-  walkScoreA: number;
-  walkScoreB: number;
+  noiseA?: number;
+  noiseB?: number;
+  incomeA?: number;
+  incomeB?: number;
+  yearA?: number;
+  yearB?: number;
+  ageA?: number;
+  ageB?: number;
+  walkScoreA?: number;
+  walkScoreB?: number;
   onCopy: (text: string, isA: boolean) => void;
   copiedA: boolean;
   copiedB: boolean;
@@ -144,40 +145,48 @@ export function DuelPillarComparison({
     return (
       cand.capex ||
       deriveBuildingCapEx(
-        cand.property.building.constructionYear || 1975,
-        cand.property.building.builtSurfaceM2 || 90
+        cand.property.building.constructionYear,
+        cand.property.building.builtSurfaceM2
       )
     );
   };
 
-  const getCandidateYear = (cand: PropertyAuditReport, idx: number) => {
+  const getCandidateYear = (cand: PropertyAuditReport, idx: number): number | undefined => {
     if (idx === 0) return yearA;
     if (idx === 1) return yearB;
-    return cand.property.building.constructionYear || 1975;
+    return cand.property.building.constructionYear > 0
+      ? cand.property.building.constructionYear
+      : undefined;
   };
 
-  const getCandidateAge = (cand: PropertyAuditReport, idx: number) => {
+  const getCandidateAge = (cand: PropertyAuditReport, idx: number): number | undefined => {
     if (idx === 0) return ageA;
     if (idx === 1) return ageB;
-    return new Date().getFullYear() - getCandidateYear(cand, idx);
+    const yr = getCandidateYear(cand, idx);
+    return yr !== undefined ? new Date().getFullYear() - yr : undefined;
   };
 
-  const getCandidateNoise = (cand: PropertyAuditReport, idx: number) => {
+  const getCandidateNoise = (cand: PropertyAuditReport, idx: number): number | undefined => {
     if (idx === 0) return noiseA;
     if (idx === 1) return noiseB;
-    return cand.environment.noise?.dayEveningNightDecibels || 60;
+    if (cand.layers?.sica && !isLayerUsable(cand.layers.sica.status)) return undefined;
+    return cand.environment.noise?.dayEveningNightDecibels;
   };
 
-  const getCandidateIncome = (cand: PropertyAuditReport, idx: number) => {
+  const getCandidateIncome = (cand: PropertyAuditReport, idx: number): number | undefined => {
     if (idx === 0) return incomeA;
     if (idx === 1) return incomeB;
-    return cand.neighborhood.averageNetHouseholdIncomeEur || 35000;
+    if (cand.layers?.ine && !isLayerUsable(cand.layers.ine.status)) return undefined;
+    return cand.neighborhood?.averageNetHouseholdIncomeEur;
   };
 
-  const getCandidateWalkScore = (cand: PropertyAuditReport, idx: number) => {
+  const getCandidateWalkScore = (cand: PropertyAuditReport, idx: number): number | undefined => {
     if (idx === 0) return walkScoreA;
     if (idx === 1) return walkScoreB;
-    return cand.score.subscores.connectivity || 75;
+    if (cand.layers?.connectivity && !isLayerUsable(cand.layers.connectivity.status)) {
+      return undefined;
+    }
+    return cand.score.subscores.connectivity;
   };
 
   return (
@@ -224,7 +233,7 @@ export function DuelPillarComparison({
                     </h2>
                     <div className="font-mono text-xs text-on-surface-variant">
                       {cand.property.address.postalCode} {cand.property.address.municipality} · Sección Censal{' '}
-                      {cand.neighborhood.censusSectionCode}
+                      {cand.neighborhood?.censusSectionCode ?? '—'}
                     </div>
                   </div>
 
@@ -283,14 +292,22 @@ export function DuelPillarComparison({
                   <div className="p-2 rounded bg-surface-container border border-outline-variant">
                     <div className="text-on-surface-variant text-[10px]">Antigüedad / Año</div>
                     <div className="text-on-surface font-semibold mt-0.5">
-                      {cYear} <span className={meta.textAccentClass}>({cAge} años)</span>
+                      {cYear !== undefined ? (
+                        <>
+                          {cYear}{' '}
+                          <span className={meta.textAccentClass}>({cAge} años)</span>
+                        </>
+                      ) : (
+                        t('uncertainty.notAvailableShort')
+                      )}
                     </div>
                   </div>
                   <div className="p-2 rounded bg-surface-container border border-outline-variant">
                     <div className="text-on-surface-variant text-[10px]">Sup. Construida / Útil</div>
                     <div className="text-on-surface font-semibold mt-0.5">
                       {cand.property.building.builtSurfaceM2} m² /{' '}
-                      {Math.round(cand.property.building.builtSurfaceM2 * 0.86)} m²
+                      {Math.round(cand.property.building.builtSurfaceM2 * 0.86)}{' '}
+                      m²
                     </div>
                   </div>
                   <div className="p-2 rounded bg-surface-container border border-outline-variant">
@@ -298,63 +315,73 @@ export function DuelPillarComparison({
                     <div className="text-on-surface font-semibold mt-0.5">
                       {cand.property.unit?.participationCoefficient
                         ? `${cand.property.unit.participationCoefficient}%`
-                        : isBase
-                        ? '3.2000%'
-                        : '4.8500%'}
+                        : '—'}
                     </div>
                   </div>
                   <div className="p-2 rounded bg-surface-container border border-outline-variant">
-                    <div className="text-on-surface-variant text-[10px]">Régimen Jurídico</div>
+                    <div className="text-on-surface-variant text-[10px]">Estado Semáforo</div>
                     <div className="text-on-surface font-semibold mt-0.5">
-                      {isBase ? 'Pleno Dominio' : 'Residencial Singular'}
+                      {cand.score.trafficLight === 'UNCERTAIN'
+                        ? t('uncertainty.uncertainBadge')
+                        : cand.property.building.primaryUse}
                     </div>
                   </div>
                 </div>
 
-                <div className="mt-3 flex flex-wrap gap-2 text-[11px] font-mono">
-                  <span
-                    className={`inline-flex items-center gap-1 px-2.5 py-1 rounded ${
-                      candCapEx.iteStatus === 'favorable_active'
-                        ? 'bg-emerald-950/40 border border-primary/40 text-primary'
-                        : 'bg-amber-950/40 border border-amber-500/40 text-amber-300'
-                    }`}
-                  >
-                    {candCapEx.iteStatus === 'favorable_active' ? (
-                      <CheckCircle className="w-3 h-3" />
-                    ) : (
-                      <Clock className="w-3 h-3" />
-                    )}
-                    <span>
-                      ITE {candCapEx.iteStatus === 'favorable_active' ? 'Favorable' : 'Pendiente / Subsan.'}{' '}
-                      {candCapEx.iteDeadlineYear ? candCapEx.iteDeadlineYear : ''}
-                    </span>
-                  </span>
-                  <span
-                    className={`inline-flex items-center gap-1 px-2.5 py-1 rounded ${
-                      isBase
-                        ? 'bg-emerald-950/40 border border-primary/40 text-primary'
-                        : 'bg-rose-950/40 border border-rose-500/40 text-rose-300'
-                    }`}
-                  >
-                    {isBase ? <Shield className="w-3 h-3" /> : <HardHat className="w-3 h-3" />}
-                    <span>{isBase ? '0 Derramas activas' : 'Derrama Prevista (Ascensor/Petos)'}</span>
-                  </span>
-                  <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded bg-surface-container border border-outline-variant text-on-surface">
-                    <Award className="w-3 h-3 text-secondary" />
-                    <span>
-                      SERPAVI:{' '}
-                      {cand.rentalBenchmark?.isStressedHousingZone
-                        ? 'Zona Tensionada'
-                        : isBase
-                        ? 'Mercado Libre'
-                        : 'Zona Gran Afluencia'}
-                    </span>
-                  </span>
-                  <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded bg-surface-container border border-outline-variant text-on-surface">
-                    <Volume2 className="w-3 h-3 text-primary" />
-                    <span>Ruido: {cand.environment.noise?.dayEveningNightDecibels || 60} dBA</span>
-                  </span>
-                </div>
+                {(() => {
+                  const candNoise = getCandidateNoise(cand, idx);
+                  const staleLayer = Object.values(cand.layers ?? {}).find(
+                    (l) => l && l.status === 'stale' && l.verifiedAt
+                  );
+                  return (
+                    <div className="mt-3 flex flex-wrap gap-2 text-[11px] font-mono">
+                      <span
+                        className={`inline-flex items-center gap-1 px-2.5 py-1 rounded ${
+                          candCapEx.iteStatus === 'favorable_active'
+                            ? 'bg-emerald-950/40 border border-primary/40 text-primary'
+                            : 'bg-amber-950/40 border border-amber-500/40 text-amber-300'
+                        }`}
+                      >
+                        {candCapEx.iteStatus === 'favorable_active' ? (
+                          <CheckCircle className="w-3 h-3" />
+                        ) : (
+                          <Clock className="w-3 h-3" />
+                        )}
+                        <span>
+                          ITE {candCapEx.iteStatus === 'favorable_active' ? 'Favorable' : 'Pendiente / Subsan.'}{' '}
+                          {candCapEx.iteDeadlineYear ? candCapEx.iteDeadlineYear : ''}
+                        </span>
+                      </span>
+                      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded bg-surface-container border border-outline-variant text-on-surface">
+                        <Award className="w-3 h-3 text-secondary" />
+                        <span>
+                          SERPAVI:{' '}
+                          {cand.rentalBenchmark
+                            ? cand.rentalBenchmark.isStressedHousingZone
+                              ? 'Zona Tensionada'
+                              : 'Mercado Libre'
+                            : t('uncertainty.notAvailableShort')}
+                        </span>
+                      </span>
+                      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded bg-surface-container border border-outline-variant text-on-surface">
+                        <Volume2 className="w-3 h-3 text-primary" />
+                        <span>
+                          Ruido:{' '}
+                          {candNoise !== undefined
+                            ? `${candNoise} dBA`
+                            : t('uncertainty.notAvailableShort')}
+                        </span>
+                      </span>
+                      {staleLayer?.verifiedAt && (
+                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded bg-amber-950/40 border border-amber-500/40 text-amber-300">
+                          {t('uncertainty.staleVerified', {
+                            date: staleLayer.verifiedAt.slice(0, 10),
+                          })}
+                        </span>
+                      )}
+                    </div>
+                  );
+                })()}
               </div>
 
               <div className="mt-4 pt-3 border-t border-outline-variant/60 flex items-center justify-between text-xs font-mono text-on-surface-variant">
@@ -457,36 +484,52 @@ export function DuelPillarComparison({
                   const meta = CANDIDATE_METAS[idx] || CANDIDATE_METAS[0];
                   return (
                     <td key={meta.letter} className="py-3 px-space-md font-mono">
-                      <div className="font-bold text-on-surface">
-                        {ws} pts{' '}
-                        <span className={`${meta.textAccentClass} font-normal`}>
-                          ({ws >= 80 ? 'Excepcional' : 'Notable'})
-                        </span>
-                      </div>
-                      <div className="text-on-surface-variant text-[11px]">
-                        {idx === 0 ? 'Metro & dotaciones <300m' : 'Transporte <500m'}
-                      </div>
+                      {ws !== undefined ? (
+                        <>
+                          <div className="font-bold text-on-surface">
+                            {ws} pts{' '}
+                            <span className={`${meta.textAccentClass} font-normal`}>
+                              ({ws >= 80 ? 'Excepcional' : 'Notable'})
+                            </span>
+                          </div>
+                          <div className="text-on-surface-variant text-[11px]">
+                            {idx === 0 ? 'Metro & dotaciones <300m' : 'Transporte <500m'}
+                          </div>
+                        </>
+                      ) : (
+                        <span className="text-slate-400">{t('uncertainty.notAvailableShort')}</span>
+                      )}
                     </td>
                   );
                 })}
                 <td className="py-3 px-space-md font-mono font-semibold">
-                  {walkScoreA >= walkScoreB ? (
-                    <span className="text-cyan-300">+{walkScoreA - walkScoreB} pts {t('duel.candidateA')}</span>
+                  {walkScoreA !== undefined && walkScoreB !== undefined ? (
+                    walkScoreA >= walkScoreB ? (
+                      <span className="text-cyan-300">+{walkScoreA - walkScoreB} pts {t('duel.candidateA')}</span>
+                    ) : (
+                      <span className="text-amber-300">+{walkScoreB - walkScoreA} pts {t('duel.candidateB')}</span>
+                    )
                   ) : (
-                    <span className="text-amber-300">+{walkScoreB - walkScoreA} pts {t('duel.candidateB')}</span>
+                    <span className="text-slate-400">{t('uncertainty.notAvailableShort')}</span>
                   )}
                 </td>
                 <td className="py-3 px-space-md text-right">
-                  <span
-                    className={`inline-flex items-center gap-1 px-2.5 py-1 rounded font-mono text-[10px] font-semibold ${
-                      walkScoreA >= walkScoreB
-                        ? 'bg-cyan-950/60 border border-cyan-400/40 text-cyan-300'
-                        : 'bg-amber-950/60 border border-amber-400/40 text-amber-300'
-                    }`}
-                  >
-                    <Award className="w-3 h-3" />
-                    <span>{t('duel.verdictLabel')}: {walkScoreA >= walkScoreB ? t('duel.winnerA') : t('duel.winnerB')}</span>
-                  </span>
+                  {walkScoreA !== undefined && walkScoreB !== undefined ? (
+                    <span
+                      className={`inline-flex items-center gap-1 px-2.5 py-1 rounded font-mono text-[10px] font-semibold ${
+                        walkScoreA >= walkScoreB
+                          ? 'bg-cyan-950/60 border border-cyan-400/40 text-cyan-300'
+                          : 'bg-amber-950/60 border border-amber-400/40 text-amber-300'
+                      }`}
+                    >
+                      <Award className="w-3 h-3" />
+                      <span>{t('duel.verdictLabel')}: {walkScoreA >= walkScoreB ? t('duel.winnerA') : t('duel.winnerB')}</span>
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded font-mono text-[10px] font-semibold bg-slate-800/70 border border-slate-600 text-slate-300">
+                      No comparable
+                    </span>
+                  )}
                 </td>
               </tr>
 
@@ -506,31 +549,50 @@ export function DuelPillarComparison({
                   const meta = CANDIDATE_METAS[idx] || CANDIDATE_METAS[0];
                   return (
                     <td key={meta.letter} className="py-3 px-space-md font-mono">
-                      <div className="font-bold text-on-surface">{inc.toLocaleString('es-ES')} € / hogar</div>
-                      <div className="text-on-surface-variant text-[11px]">
-                        Decil censal {cand.neighborhood.percentileInMunicipality ? Math.ceil(cand.neighborhood.percentileInMunicipality / 10) : 8}
-                      </div>
+                      {inc !== undefined ? (
+                        <>
+                          <div className="font-bold text-on-surface">{inc.toLocaleString('es-ES')} € / hogar</div>
+                          <div className="text-on-surface-variant text-[11px]">
+                            Decil censal{' '}
+                            {cand.neighborhood?.percentileInMunicipality
+                              ? Math.ceil(cand.neighborhood.percentileInMunicipality / 10)
+                              : '—'}
+                          </div>
+                        </>
+                      ) : (
+                        <span className="text-slate-400">{t('uncertainty.notAvailableShort')}</span>
+                      )}
                     </td>
                   );
                 })}
                 <td className="py-3 px-space-md font-mono font-semibold">
-                  {incomeA >= incomeB ? (
-                    <span className="text-cyan-300">+{((incomeA - incomeB)).toLocaleString('es-ES')} € Inmueble A</span>
+                  {incomeA !== undefined && incomeB !== undefined ? (
+                    incomeA >= incomeB ? (
+                      <span className="text-cyan-300">+{((incomeA - incomeB)).toLocaleString('es-ES')} € Inmueble A</span>
+                    ) : (
+                      <span className="text-amber-300">+{((incomeB - incomeA)).toLocaleString('es-ES')} € Inmueble B</span>
+                    )
                   ) : (
-                    <span className="text-amber-300">+{((incomeB - incomeA)).toLocaleString('es-ES')} € Inmueble B</span>
+                    <span className="text-slate-400">{t('uncertainty.notAvailableShort')}</span>
                   )}
                 </td>
                 <td className="py-3 px-space-md text-right">
-                  <span
-                    className={`inline-flex items-center gap-1 px-2.5 py-1 rounded font-mono text-[10px] font-semibold ${
-                      incomeA >= incomeB
-                        ? 'bg-cyan-950/60 border border-cyan-400/40 text-cyan-300'
-                        : 'bg-amber-950/60 border border-amber-400/40 text-amber-300'
-                    }`}
-                  >
-                    <Award className="w-3 h-3" />
-                    <span>Ganador: {incomeA >= incomeB ? 'Inmueble A' : 'Inmueble B'}</span>
-                  </span>
+                  {incomeA !== undefined && incomeB !== undefined ? (
+                    <span
+                      className={`inline-flex items-center gap-1 px-2.5 py-1 rounded font-mono text-[10px] font-semibold ${
+                        incomeA >= incomeB
+                          ? 'bg-cyan-950/60 border border-cyan-400/40 text-cyan-300'
+                          : 'bg-amber-950/60 border border-amber-400/40 text-amber-300'
+                      }`}
+                    >
+                      <Award className="w-3 h-3" />
+                      <span>Ganador: {incomeA >= incomeB ? 'Inmueble A' : 'Inmueble B'}</span>
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded font-mono text-[10px] font-semibold bg-slate-800/70 border border-slate-600 text-slate-300">
+                      No comparable
+                    </span>
+                  )}
                 </td>
               </tr>
 
@@ -550,39 +612,59 @@ export function DuelPillarComparison({
                   const meta = CANDIDATE_METAS[idx] || CANDIDATE_METAS[0];
                   return (
                     <td key={meta.letter} className="py-3 px-space-md font-mono">
-                      <div className={`font-bold ${meta.textAccentClass}`}>
-                        {n} dBA <span className="text-on-surface-variant font-normal">(Lden)</span>
-                      </div>
-                      <div className="text-on-surface-variant text-[11px]">
-                        {n < 60 ? 'Exposición baja' : n <= 65 ? 'Moderada' : 'Eje rodado intenso'}
-                      </div>
+                      {n !== undefined ? (
+                        <>
+                          <div className={`font-bold ${meta.textAccentClass}`}>
+                            {n} dBA <span className="text-on-surface-variant font-normal">(Lden)</span>
+                          </div>
+                          <div className="text-on-surface-variant text-[11px]">
+                            {n < 60 ? 'Exposición baja' : n <= 65 ? 'Moderada' : 'Eje rodado intenso'}
+                          </div>
+                        </>
+                      ) : (
+                        <span className="text-slate-400">
+                          {cand.layers?.sica?.status === 'out_of_coverage'
+                            ? t('uncertainty.outOfCoverage')
+                            : t('uncertainty.notAvailableShort')}
+                        </span>
+                      )}
                     </td>
                   );
                 })}
                 <td className="py-3 px-space-md font-mono font-semibold">
-                  {noiseA <= noiseB ? (
-                    <span className="text-primary">
-                      -{noiseB - noiseA} dBA Inmueble A
-                      <br />
-                      <span className="text-[10px] text-on-surface-variant font-normal">
-                        ({Math.round(((noiseB - noiseA) / noiseB) * 100 * 3.5)}% más silencioso)
+                  {noiseA !== undefined && noiseB !== undefined ? (
+                    noiseA <= noiseB ? (
+                      <span className="text-primary">
+                        -{noiseB - noiseA} dBA Inmueble A
+                        <br />
+                        <span className="text-[10px] text-on-surface-variant font-normal">
+                          ({Math.round(((noiseB - noiseA) / noiseB) * 100 * 3.5)}% más silencioso)
+                        </span>
                       </span>
-                    </span>
+                    ) : (
+                      <span className="text-amber-300">-{noiseA - noiseB} dBA Inmueble B</span>
+                    )
                   ) : (
-                    <span className="text-amber-300">-{noiseA - noiseB} dBA Inmueble B</span>
+                    <span className="text-slate-400">{t('uncertainty.notAvailableShort')}</span>
                   )}
                 </td>
                 <td className="py-3 px-space-md text-right">
-                  <span
-                    className={`inline-flex items-center gap-1 px-2.5 py-1 rounded font-mono text-[10px] font-semibold ${
-                      noiseA <= noiseB
-                        ? 'bg-cyan-950/60 border border-cyan-400/40 text-cyan-300'
-                        : 'bg-amber-950/60 border border-amber-400/40 text-amber-300'
-                    }`}
-                  >
-                    <Award className="w-3 h-3" />
-                    <span>Ganador: {noiseA <= noiseB ? 'Inmueble A' : 'Inmueble B'}</span>
-                  </span>
+                  {noiseA !== undefined && noiseB !== undefined ? (
+                    <span
+                      className={`inline-flex items-center gap-1 px-2.5 py-1 rounded font-mono text-[10px] font-semibold ${
+                        noiseA <= noiseB
+                          ? 'bg-cyan-950/60 border border-cyan-400/40 text-cyan-300'
+                          : 'bg-amber-950/60 border border-amber-400/40 text-amber-300'
+                      }`}
+                    >
+                      <Award className="w-3 h-3" />
+                      <span>Ganador: {noiseA <= noiseB ? 'Inmueble A' : 'Inmueble B'}</span>
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded font-mono text-[10px] font-semibold bg-slate-800/70 border border-slate-600 text-slate-300">
+                      No comparable
+                    </span>
+                  )}
                 </td>
               </tr>
 
@@ -643,29 +725,45 @@ export function DuelPillarComparison({
                   const a = getCandidateAge(cand, idx);
                   return (
                     <td key={cand.property.cadastralReference || idx} className="py-3 px-space-md font-mono">
-                      <div className="font-bold text-on-surface">Año {y}</div>
-                      <div className="text-on-surface-variant text-[11px]">{a} años de antigüedad</div>
+                      {y !== undefined ? (
+                        <>
+                          <div className="font-bold text-on-surface">Año {y}</div>
+                          <div className="text-on-surface-variant text-[11px]">{a} años de antigüedad</div>
+                        </>
+                      ) : (
+                        <span className="text-slate-400">{t('uncertainty.notAvailableShort')}</span>
+                      )}
                     </td>
                   );
                 })}
                 <td className="py-3 px-space-md font-mono font-semibold">
-                  {yearA >= yearB ? (
-                    <span className="text-cyan-300">+{yearA - yearB} años más moderno Inmueble A</span>
+                  {yearA !== undefined && yearB !== undefined ? (
+                    yearA >= yearB ? (
+                      <span className="text-cyan-300">+{yearA - yearB} años más moderno Inmueble A</span>
+                    ) : (
+                      <span className="text-amber-300">+{yearB - yearA} años más moderno Inmueble B</span>
+                    )
                   ) : (
-                    <span className="text-amber-300">+{yearB - yearA} años más moderno Inmueble B</span>
+                    <span className="text-slate-400">{t('uncertainty.notAvailableShort')}</span>
                   )}
                 </td>
                 <td className="py-3 px-space-md text-right">
-                  <span
-                    className={`inline-flex items-center gap-1 px-2.5 py-1 rounded font-mono text-[10px] font-semibold ${
-                      yearA >= yearB
-                        ? 'bg-cyan-950/60 border border-cyan-400/40 text-cyan-300'
-                        : 'bg-amber-950/60 border border-amber-400/40 text-amber-300'
-                    }`}
-                  >
-                    <Award className="w-3 h-3" />
-                    <span>Ganador: {yearA >= yearB ? 'Inmueble A' : 'Inmueble B'}</span>
-                  </span>
+                  {yearA !== undefined && yearB !== undefined ? (
+                    <span
+                      className={`inline-flex items-center gap-1 px-2.5 py-1 rounded font-mono text-[10px] font-semibold ${
+                        yearA >= yearB
+                          ? 'bg-cyan-950/60 border border-cyan-400/40 text-cyan-300'
+                          : 'bg-amber-950/60 border border-amber-400/40 text-amber-300'
+                      }`}
+                    >
+                      <Award className="w-3 h-3" />
+                      <span>Ganador: {yearA >= yearB ? 'Inmueble A' : 'Inmueble B'}</span>
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded font-mono text-[10px] font-semibold bg-slate-800/70 border border-slate-600 text-slate-300">
+                      No comparable
+                    </span>
+                  )}
                 </td>
               </tr>
 
@@ -682,30 +780,55 @@ export function DuelPillarComparison({
                 </td>
                 {allCandidates.map((cand, idx) => {
                   const meta = CANDIDATE_METAS[idx] || CANDIDATE_METAS[0];
+                  const ceeMissing = !cand.energy || (cand.layers?.cee && !isLayerUsable(cand.layers.cee.status));
                   return (
                     <td key={cand.property.cadastralReference || idx} className="py-3 px-space-md font-mono">
-                      <div className={`font-bold ${meta.textLightClass}`}>
-                        Clase {cand.energy?.ratingEmissions || 'E'}
-                      </div>
-                      <div className="text-on-surface-variant text-[11px]">
-                        {cand.energy?.isEstimated ? 'Estimado CTE' : 'Oficial'} ·{' '}
-                        {cand.energy?.annualEstimatedCostEur ? `~${cand.energy.annualEstimatedCostEur} €/año` : '—'}
-                      </div>
+                      {!ceeMissing && cand.energy ? (
+                        <>
+                          <div className={`font-bold ${meta.textLightClass}`}>
+                            Clase {cand.energy.ratingEmissions}
+                          </div>
+                          <div className="text-on-surface-variant text-[11px]">
+                            {cand.energy.isEstimated ? 'Estimado CTE' : 'Oficial'} ·{' '}
+                            {cand.energy.annualEstimatedCostEur ? `~${cand.energy.annualEstimatedCostEur} €/año` : '—'}
+                          </div>
+                        </>
+                      ) : (
+                        <span className="text-slate-400">{t('uncertainty.notAvailableShort')}</span>
+                      )}
                     </td>
                   );
                 })}
                 <td className="py-3 px-space-md font-mono font-semibold">
-                  <span className="text-cyan-300">
-                    {reportA.energy && candidateB.energy
-                      ? `Ahorro: ~${Math.abs((candidateB.energy.annualEstimatedCostEur || 1000) - (reportA.energy.annualEstimatedCostEur || 1000))} €/año`
-                      : 'Calificación comparable'}
-                  </span>
+                  {reportA.energy?.annualEstimatedCostEur !== undefined &&
+                  candidateB.energy?.annualEstimatedCostEur !== undefined ? (
+                    <span className="text-cyan-300">
+                      Ahorro: ~
+                      {Math.abs(
+                        candidateB.energy.annualEstimatedCostEur - reportA.energy.annualEstimatedCostEur
+                      )}{' '}
+                      €/año
+                    </span>
+                  ) : (
+                    <span className="text-slate-400">{t('uncertainty.notAvailableShort')}</span>
+                  )}
                 </td>
                 <td className="py-3 px-space-md text-right">
-                  <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded bg-cyan-950/60 border border-cyan-400/40 text-cyan-300 font-mono text-[10px] font-semibold">
-                    <Shield className="w-3 h-3" />
-                    <span>Ganador: {(reportA.energy?.ratingEmissions || 'E') <= (candidateB.energy?.ratingEmissions || 'E') ? 'Inmueble A' : 'Inmueble B'}</span>
-                  </span>
+                  {reportA.energy && candidateB.energy ? (
+                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded bg-cyan-950/60 border border-cyan-400/40 text-cyan-300 font-mono text-[10px] font-semibold">
+                      <Shield className="w-3 h-3" />
+                      <span>
+                        Ganador:{' '}
+                        {reportA.energy.ratingEmissions <= candidateB.energy.ratingEmissions
+                          ? 'Inmueble A'
+                          : 'Inmueble B'}
+                      </span>
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded font-mono text-[10px] font-semibold bg-slate-800/70 border border-slate-600 text-slate-300">
+                      No comparable
+                    </span>
+                  )}
                 </td>
               </tr>
 
@@ -724,25 +847,52 @@ export function DuelPillarComparison({
                   const meta = CANDIDATE_METAS[idx] || CANDIDATE_METAS[0];
                   return (
                     <td key={cand.property.cadastralReference || idx} className="py-3 px-space-md font-mono">
-                      <div className={`font-bold ${meta.textLightClass}`}>
-                        +{cand.marketTrends?.summary.fiveYearIncomeGrowthPct ?? 18.5}% renta
-                      </div>
-                      <div className="text-on-surface-variant text-[11px]">
-                        +{cand.marketTrends?.summary.fiveYearPriceIndexGrowthPct ?? 20.0}% precio IPV
-                      </div>
+                      {cand.marketTrends ? (
+                        <>
+                          <div className={`font-bold ${meta.textLightClass}`}>
+                            +{cand.marketTrends.summary.fiveYearIncomeGrowthPct}% renta
+                          </div>
+                          <div className="text-on-surface-variant text-[11px]">
+                            +{cand.marketTrends.summary.fiveYearPriceIndexGrowthPct}% precio IPV
+                          </div>
+                        </>
+                      ) : (
+                        <span className="text-slate-400">{t('uncertainty.notAvailableShort')}</span>
+                      )}
                     </td>
                   );
                 })}
                 <td className="py-3 px-space-md font-mono font-semibold">
-                  <span className="text-cyan-300">
-                    +{Math.abs((reportA.marketTrends?.summary.fiveYearIncomeGrowthPct ?? 21.4) - (candidateB.marketTrends?.summary.fiveYearIncomeGrowthPct ?? 14.2)).toFixed(1)}% delta renta
-                  </span>
+                  {reportA.marketTrends && candidateB.marketTrends ? (
+                    <span className="text-cyan-300">
+                      +
+                      {Math.abs(
+                        reportA.marketTrends.summary.fiveYearIncomeGrowthPct -
+                          candidateB.marketTrends.summary.fiveYearIncomeGrowthPct
+                      ).toFixed(1)}
+                      % delta renta
+                    </span>
+                  ) : (
+                    <span className="text-slate-400">{t('uncertainty.notAvailableShort')}</span>
+                  )}
                 </td>
                 <td className="py-3 px-space-md text-right">
-                  <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded bg-cyan-950/60 border border-cyan-400/40 text-cyan-300 font-mono text-[10px] font-semibold">
-                    <Shield className="w-3 h-3" />
-                    <span>Ganador: {(reportA.marketTrends?.summary.fiveYearIncomeGrowthPct ?? 21.4) >= (candidateB.marketTrends?.summary.fiveYearIncomeGrowthPct ?? 14.2) ? 'Inmueble A' : 'Inmueble B'}</span>
-                  </span>
+                  {reportA.marketTrends && candidateB.marketTrends ? (
+                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded bg-cyan-950/60 border border-cyan-400/40 text-cyan-300 font-mono text-[10px] font-semibold">
+                      <Shield className="w-3 h-3" />
+                      <span>
+                        Ganador:{' '}
+                        {reportA.marketTrends.summary.fiveYearIncomeGrowthPct >=
+                        candidateB.marketTrends.summary.fiveYearIncomeGrowthPct
+                          ? 'Inmueble A'
+                          : 'Inmueble B'}
+                      </span>
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded font-mono text-[10px] font-semibold bg-slate-800/70 border border-slate-600 text-slate-300">
+                      No comparable
+                    </span>
+                  )}
                 </td>
               </tr>
 

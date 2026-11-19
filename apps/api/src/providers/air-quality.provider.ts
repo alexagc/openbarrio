@@ -1,6 +1,14 @@
-import { AirQualityData, AirQualityCategory } from '@openbarrio/core';
+import {
+  AirQualityData,
+  AirQualityCategory,
+  LayerResult,
+  layerOk,
+  layerOutOfCoverage,
+} from '@openbarrio/core';
 import { IAirQualityProvider } from './types.js';
 import { calculateHaversineDistanceMeters } from './connectivity.provider.js';
+
+export const AIR_QUALITY_SOURCE_NAME = 'MITECO ICA';
 
 export interface AirQualityStation {
   code: string;
@@ -79,28 +87,24 @@ export interface AirQualityProviderOptions {
 
 /**
  * Air Quality Provider querying official MITECO European Air Quality Index (ICA) monitoring stations.
+ * Returns `out_of_coverage` when no active monitoring station lies within 80 km rather than fabricating readings.
  */
 export class AirQualityProvider implements IAirQualityProvider {
-  private readonly apiUrl: string;
-  private readonly timeoutMs: number;
   private readonly stations: AirQualityStation[];
 
-  constructor(options: AirQualityProviderOptions = {}) {
-    this.apiUrl = options.apiUrl || 'https://ica.miteco.gob.es/api/v1/stations';
-    this.timeoutMs = options.timeoutMs || 4000;
+  constructor(_options: AirQualityProviderOptions = {}) {
     this.stations = [...DEFAULT_MITECO_STATIONS];
   }
 
-  async getAirQualityData(latitude: number, longitude: number): Promise<AirQualityData | undefined> {
+  async getAirQualityData(latitude: number, longitude: number): Promise<LayerResult<AirQualityData>> {
     return this.getAirQuality(latitude, longitude);
   }
 
-  async getAirQuality(latitude: number, longitude: number): Promise<AirQualityData | undefined> {
+  async getAirQuality(latitude: number, longitude: number): Promise<LayerResult<AirQualityData>> {
     if (latitude === 0 && longitude === 0) {
-      return undefined;
+      return layerOutOfCoverage(AIR_QUALITY_SOURCE_NAME);
     }
 
-    // Find nearest official monitoring station
     let nearest: AirQualityStation | undefined;
     let minDistance = Infinity;
 
@@ -117,31 +121,18 @@ export class AirQualityProvider implements IAirQualityProvider {
       }
     }
 
-    if (nearest && minDistance <= 80000) {
-      // Station within 80km
-      return {
+    if (nearest && minDistance <= 80_000) {
+      return layerOk(AIR_QUALITY_SOURCE_NAME, {
         aqiIndex: nearest.aqiIndex,
         category: nearest.category,
         stationName: nearest.name,
         no2MicrogramsM3: nearest.no2MicrogramsM3,
         pm25MicrogramsM3: nearest.pm25MicrogramsM3,
         pm10MicrogramsM3: nearest.pm10MicrogramsM3,
-      };
+      });
     }
 
-    // Regional baseline for coordinates outside major metropolitan sensors
-    const hash = Math.abs(Math.round(latitude * 1000 + longitude * 1000));
-    const aqi = 20 + (hash % 25);
-    const category: AirQualityCategory = aqi <= 30 ? 'GOOD' : 'FAIR';
-
-    return {
-      aqiIndex: aqi,
-      category,
-      stationName: `Red Autonómica - Sensor Regional #${(hash % 90) + 10}`,
-      no2MicrogramsM3: 15 + (hash % 15),
-      pm25MicrogramsM3: 6 + (hash % 6),
-      pm10MicrogramsM3: 10 + (hash % 10),
-    };
+    return layerOutOfCoverage(AIR_QUALITY_SOURCE_NAME);
   }
 }
 
@@ -149,20 +140,23 @@ export class AirQualityProvider implements IAirQualityProvider {
  * Deterministic In-Memory Mock Air Quality Provider.
  */
 export class MockAirQualityProvider implements IAirQualityProvider {
-  private readonly overrides: Map<string, AirQualityData> = new Map();
+  private readonly overrides: Map<string, LayerResult<AirQualityData>> = new Map();
   private readonly stations: AirQualityStation[] = [...DEFAULT_MITECO_STATIONS];
 
-  setOverride(key: string, data: AirQualityData): void {
-    this.overrides.set(key, data);
+  setOverride(key: string, data: AirQualityData | LayerResult<AirQualityData>): void {
+    this.overrides.set(
+      key,
+      'status' in data ? data : layerOk(AIR_QUALITY_SOURCE_NAME, data)
+    );
   }
 
-  async getAirQualityData(latitude: number, longitude: number): Promise<AirQualityData | undefined> {
+  async getAirQualityData(latitude: number, longitude: number): Promise<LayerResult<AirQualityData>> {
     return this.getAirQuality(latitude, longitude);
   }
 
-  async getAirQuality(latitude: number, longitude: number): Promise<AirQualityData | undefined> {
+  async getAirQuality(latitude: number, longitude: number): Promise<LayerResult<AirQualityData>> {
     if (latitude === 0 && longitude === 0) {
-      return undefined;
+      return layerOutOfCoverage(AIR_QUALITY_SOURCE_NAME);
     }
 
     const coordKey = `${latitude.toFixed(4)},${longitude.toFixed(4)}`;
@@ -186,25 +180,17 @@ export class MockAirQualityProvider implements IAirQualityProvider {
       }
     }
 
-    if (nearest && minDistance <= 80000) {
-      return {
+    if (nearest && minDistance <= 80_000) {
+      return layerOk(AIR_QUALITY_SOURCE_NAME, {
         aqiIndex: nearest.aqiIndex,
         category: nearest.category,
         stationName: nearest.name,
         no2MicrogramsM3: nearest.no2MicrogramsM3,
         pm25MicrogramsM3: nearest.pm25MicrogramsM3,
         pm10MicrogramsM3: nearest.pm10MicrogramsM3,
-      };
+      });
     }
 
-    const hash = Math.abs(Math.round(latitude * 1000 + longitude * 1000));
-    return {
-      aqiIndex: 26,
-      category: 'GOOD',
-      stationName: `Estación Calidad Aire #${(hash % 50) + 1}`,
-      no2MicrogramsM3: 20,
-      pm25MicrogramsM3: 7,
-      pm10MicrogramsM3: 12,
-    };
+    return layerOutOfCoverage(AIR_QUALITY_SOURCE_NAME);
   }
 }

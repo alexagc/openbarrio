@@ -4,11 +4,16 @@ import {
   CadastralUnitsResponse,
   CadastralGeometry,
   BuildingSurroundingsDTO,
+  LayerResult,
   detectCadastralJurisdiction,
+  layerOk,
+  layerStale,
 } from '@openbarrio/core';
 import type { D1Database } from '../types/env.js';
 import { ICatastroProvider } from './types.js';
 import { CadastralCache } from './cadastral-cache.js';
+import { CATASTRO_SOURCE_NAME } from './catastro.provider.js';
+import { mapErrorToLayerReason } from '../resilience/index.js';
 
 export interface CadastralRouterOptions {
   dgc: ICatastroProvider;
@@ -16,6 +21,7 @@ export interface CadastralRouterOptions {
   euskadi?: ICatastroProvider;
   db?: D1Database;
   ttlSeconds?: number;
+  now?: () => Date;
 }
 
 export class CadastralRouterProvider implements ICatastroProvider {
@@ -28,7 +34,11 @@ export class CadastralRouterProvider implements ICatastroProvider {
     this.dgc = options.dgc;
     this.navarra = options.navarra || options.dgc;
     this.euskadi = options.euskadi || options.dgc;
-    this.cache = new CadastralCache({ db: options.db, ttlSeconds: options.ttlSeconds });
+    this.cache = new CadastralCache({
+      db: options.db,
+      ttlSeconds: options.ttlSeconds,
+      now: options.now,
+    });
   }
 
   setDatabase(db: D1Database): void {
@@ -52,20 +62,60 @@ export class CadastralRouterProvider implements ICatastroProvider {
     return this.dgc;
   }
 
-  async getByCoordinates(latitude: number, longitude: number): Promise<CadastralProperty> {
-    const cacheKey = `coords:${latitude.toFixed(5)},${longitude.toFixed(5)}`;
-    const cached = await this.cache.get<CadastralProperty>(cacheKey);
-    if (cached) {
-      return cached;
+  private async resolvePropertyWithCache(
+    cacheKey: string,
+    cacheType: 'coordinates' | 'property',
+    fetcher: () => Promise<LayerResult<CadastralProperty>>
+  ): Promise<LayerResult<CadastralProperty>> {
+    const meta = await this.cache.getWithMeta<CadastralProperty>(cacheKey);
+    if (meta?.isFresh) {
+      return layerOk(
+        CATASTRO_SOURCE_NAME,
+        meta.data,
+        meta.fetchedAt ? { verifiedAt: meta.fetchedAt } : {}
+      );
     }
 
-    const provider = this.resolveProvider(undefined, { latitude, longitude });
-    const result = await provider.getByCoordinates(latitude, longitude);
-    if (!result.jurisdiction) {
-      result.jurisdiction = 'dgc';
+    try {
+      const liveRes = await fetcher();
+      const prop = liveRes.data!;
+      if (!prop.jurisdiction) {
+        prop.jurisdiction = 'dgc';
+      }
+      if (liveRes.status === 'ok') {
+        await this.cache.set(cacheKey, cacheType, prop.cadastralReference, prop);
+      }
+      return liveRes;
+    } catch (err) {
+      if (meta?.isUsableStale) {
+        return layerStale(CATASTRO_SOURCE_NAME, meta.data, {
+          verifiedAt: meta.fetchedAt ?? meta.expiresAt,
+          reason: mapErrorToLayerReason(err),
+          staleDays: meta.ageDays,
+        });
+      }
+      throw err;
     }
-    await this.cache.set(cacheKey, 'coordinates', result.cadastralReference, result);
-    return result;
+  }
+
+  async getByCoordinates(latitude: number, longitude: number): Promise<CadastralProperty> {
+    const res = await this.getByCoordinatesWithStatus(latitude, longitude);
+    return res.data!;
+  }
+
+  async getByCoordinatesWithStatus(
+    latitude: number,
+    longitude: number
+  ): Promise<LayerResult<CadastralProperty>> {
+    const cacheKey = `coords:${latitude.toFixed(5)},${longitude.toFixed(5)}`;
+    const provider = this.resolveProvider(undefined, { latitude, longitude });
+
+    return this.resolvePropertyWithCache(cacheKey, 'coordinates', async () => {
+      if (provider.getByCoordinatesWithStatus) {
+        return provider.getByCoordinatesWithStatus(latitude, longitude);
+      }
+      return layerOk(CATASTRO_SOURCE_NAME, await provider.getByCoordinates(latitude, longitude));
+    });
   }
 
   async getByCadastralReference(
@@ -73,23 +123,31 @@ export class CadastralRouterProvider implements ICatastroProvider {
     fallbackCoords?: CadastralCoordinates,
     preferredPortal?: string
   ): Promise<CadastralProperty> {
+    const res = await this.getByCadastralReferenceWithStatus(refcat, fallbackCoords, preferredPortal);
+    return res.data!;
+  }
+
+  async getByCadastralReferenceWithStatus(
+    refcat: string,
+    fallbackCoords?: CadastralCoordinates,
+    preferredPortal?: string
+  ): Promise<LayerResult<CadastralProperty>> {
     const cleanRef = refcat.replace(/[\s\-_.]/g, '').toUpperCase();
     const cacheKey = `prop:${cleanRef}${preferredPortal ? `:${preferredPortal}` : ''}`;
-    const cached = await this.cache.get<CadastralProperty>(cacheKey);
-    if (cached) {
-      return cached;
-    }
-
     const provider = this.resolveProvider(
       refcat,
       fallbackCoords ? { latitude: fallbackCoords.latitude, longitude: fallbackCoords.longitude } : undefined
     );
-    const result = await provider.getByCadastralReference(refcat, fallbackCoords, preferredPortal);
-    if (!result.jurisdiction) {
-      result.jurisdiction = 'dgc';
-    }
-    await this.cache.set(cacheKey, 'property', cleanRef, result);
-    return result;
+
+    return this.resolvePropertyWithCache(cacheKey, 'property', async () => {
+      if (provider.getByCadastralReferenceWithStatus) {
+        return provider.getByCadastralReferenceWithStatus(refcat, fallbackCoords, preferredPortal);
+      }
+      return layerOk(
+        CATASTRO_SOURCE_NAME,
+        await provider.getByCadastralReference(refcat, fallbackCoords, preferredPortal)
+      );
+    });
   }
 
   async getUnitsByCadastralReference(refcat: string): Promise<CadastralUnitsResponse> {

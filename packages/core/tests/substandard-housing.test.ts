@@ -444,8 +444,25 @@ describe('Phase 22: Infravivienda / Substandard Commercial-to-Residential Heuris
     };
 
     it('applies up to 25 points penalty to buildingHealthScore and urbanPlanningScore when substandard housing is detected', () => {
-      const regularScore = calculateBarrioScore(regularResidentialProperty, mockNeighborhood, mockEnvironment);
-      const substandardScore = calculateBarrioScore(commercialGroundFloorProperty, mockNeighborhood, mockEnvironment);
+      const mockUrbanPlanning = {
+        landClassification: 'URBAN_CONSOLIDATED' as const,
+        isProtectedLand: false,
+        declaredRenovationsCount: 0,
+        lastRenovationYear: null,
+        isStressedHousingZone: false,
+      };
+      const regularScore = calculateBarrioScore({
+        property: regularResidentialProperty,
+        neighborhood: mockNeighborhood,
+        environment: mockEnvironment,
+        urbanPlanning: mockUrbanPlanning,
+      });
+      const substandardScore = calculateBarrioScore({
+        property: commercialGroundFloorProperty,
+        neighborhood: mockNeighborhood,
+        environment: mockEnvironment,
+        urbanPlanning: mockUrbanPlanning,
+      });
 
       // Building health penalty: ~25 points difference
       expect(substandardScore.subscores.building).toBeLessThanOrEqual(regularScore.subscores.building - 20);

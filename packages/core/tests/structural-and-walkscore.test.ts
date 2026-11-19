@@ -320,14 +320,26 @@ describe('Phase 23: Building Inspection (ITE/IEE), Seismic Hazard & Pedestrian I
     });
 
     it('penalizes environmental score for elevated seismic hazard zones (ab >= 0.12g)', () => {
-      const baseline = calculateBarrioScore(baseProperty, baseNeighborhood);
+      const baseEnvironment = {
+        noise: {
+          dayEveningNightDecibels: 52,
+          category: 'QUIET' as const,
+          predominantSource: 'ROAD_TRAFFIC' as const,
+        },
+        floodRisk: {
+          level: 'NONE' as const,
+          returnPeriodYears: null,
+          isInPreferentialFlowZone: false,
+        },
+      };
+      const baseline = calculateBarrioScore(baseProperty, baseNeighborhood, baseEnvironment);
       const granadaSeismic = evaluateSeismicVulnerability('18087', 2010); // ab=0.23g >= 0.12g
       expect(granadaSeismic.basicAccelerationG).toBeGreaterThanOrEqual(0.12);
 
       const scored = calculateBarrioScore(
         baseProperty,
         baseNeighborhood,
-        undefined,
+        baseEnvironment,
         undefined,
         undefined,
         undefined,

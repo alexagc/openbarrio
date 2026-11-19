@@ -20,9 +20,7 @@ export class PisosComAdapter extends BasePortalAdapter {
   }
 
   getMountTarget(doc: Document): Element | null {
-    return doc.querySelector(
-      '.maindata-info, .basic-data, #sidebar, .details-box, main, body'
-    );
+    return doc.querySelector(this.getJoinedSelectors('mountTarget'));
   }
 
   extract(doc: Document, url: string): ExtractedPropertyData | null {
@@ -46,7 +44,7 @@ export class PisosComAdapter extends BasePortalAdapter {
     // 3. Cadastral reference fallback
     if (!data.cadastralReference) {
       data.cadastralReference = this.extractCadastralReference(doc, [
-        doc.querySelector('.description__body, .description, .description-block, #descriptionBlock'),
+        doc.querySelector(this.getJoinedSelectors('description')),
       ]);
     }
 
@@ -67,9 +65,7 @@ export class PisosComAdapter extends BasePortalAdapter {
   private extractFromDom(doc: Document, data: ExtractedPropertyData): void {
     // Title
     if (!data.title) {
-      const titleEl = doc.querySelector(
-        '.main-info__title, h1.title, .maindata-info h1, .title-block h1, h1'
-      );
+      const titleEl = doc.querySelector(this.getJoinedSelectors('title'));
       if (titleEl && titleEl.textContent) {
         data.title = titleEl.textContent.trim();
       }
@@ -77,9 +73,7 @@ export class PisosComAdapter extends BasePortalAdapter {
 
     // Address & zone
     if (!data.address || !data.zone) {
-      const locationEl = doc.querySelector(
-        '.main-info__address, .maindata-info .location, .location-info, .maindata-info .zone, .location'
-      );
+      const locationEl = doc.querySelector(this.getJoinedSelectors('zone'));
       if (locationEl && locationEl.textContent) {
         const text = locationEl.textContent.trim();
         if (!data.address) data.address = text;
@@ -89,9 +83,7 @@ export class PisosComAdapter extends BasePortalAdapter {
 
     // Price
     if (!data.priceEur) {
-      const priceEl = doc.querySelector(
-        '.price__value, .price-box .price, .maindata-info .price, .price-block .price, .price'
-      );
+      const priceEl = doc.querySelector(this.getJoinedSelectors('price'));
       if (priceEl && priceEl.textContent) {
         const price = this.parsePrice(priceEl.textContent);
         if (price) data.priceEur = price;
@@ -99,9 +91,7 @@ export class PisosComAdapter extends BasePortalAdapter {
     }
 
     // Features: Surface m² & construction year
-    const featureNodes = doc.querySelectorAll(
-      '.basic-info__characteristics li, .characteristic__value, .basic-data-item, .char-block li, .characteristics-list li, .details-features li, .feature-item'
-    );
+    const featureNodes = doc.querySelectorAll(this.getJoinedSelectors('features'));
     for (const node of Array.from(featureNodes)) {
       const text = node.textContent?.trim() || '';
 

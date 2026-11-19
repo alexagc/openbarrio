@@ -33,8 +33,10 @@ describe('CEEProvider & Normative Fallback Engine', () => {
   describe('Normative CTE/NBE Fallback Inference', () => {
     it('infers Class A for buildings built under CTE 2019 nZEB (2020+)', async () => {
       const prop = createMockProperty(2022);
-      const cee = await provider.getEnergyCertificate(prop);
+      const res = await provider.getEnergyCertificate(prop);
 
+      expect(res.status).toBe('ok');
+      const cee = res.data!;
       expect(cee.isEstimated).toBe(true);
       expect(cee.ratingEmissions).toBe('A');
       expect(cee.ratingConsumption).toBe('A');
@@ -45,8 +47,10 @@ describe('CEEProvider & Normative Fallback Engine', () => {
 
     it('infers Class D for buildings built under initial CTE 2006 (2007-2019)', async () => {
       const prop = createMockProperty(2012);
-      const cee = await provider.getEnergyCertificate(prop);
+      const res = await provider.getEnergyCertificate(prop);
 
+      expect(res.status).toBe('ok');
+      const cee = res.data!;
       expect(cee.isEstimated).toBe(true);
       expect(cee.ratingEmissions).toBe('D');
       expect(cee.ratingConsumption).toBe('D');
@@ -55,8 +59,10 @@ describe('CEEProvider & Normative Fallback Engine', () => {
 
     it('infers Class E for buildings built under NBE-CT-79 (1980-2006)', async () => {
       const prop = createMockProperty(1990);
-      const cee = await provider.getEnergyCertificate(prop);
+      const res = await provider.getEnergyCertificate(prop);
 
+      expect(res.status).toBe('ok');
+      const cee = res.data!;
       expect(cee.isEstimated).toBe(true);
       expect(cee.ratingEmissions).toBe('E');
       expect(cee.ratingConsumption).toBe('E');
@@ -65,13 +71,25 @@ describe('CEEProvider & Normative Fallback Engine', () => {
 
     it('infers Class G for pre-1980 uninsulated buildings', async () => {
       const prop = createMockProperty(1965);
-      const cee = await provider.getEnergyCertificate(prop);
+      const res = await provider.getEnergyCertificate(prop);
 
+      expect(res.status).toBe('ok');
+      const cee = res.data!;
       expect(cee.isEstimated).toBe(true);
       expect(cee.ratingEmissions).toBe('G');
       expect(cee.ratingConsumption).toBe('G');
       expect(cee.estimationBasis).toContain('Pre-1979');
       expect(cee.co2Emissions).toBeGreaterThan(50);
+    });
+
+    it('returns out_of_coverage (not_applicable) for unbuilt vacant plots', async () => {
+      const prop = createMockProperty(0);
+      prop.typology = 'VACANT_PLOT';
+      const res = await provider.getEnergyCertificate(prop);
+
+      expect(res.status).toBe('out_of_coverage');
+      expect(res.reason).toBe('not_applicable');
+      expect(res.data).toBeUndefined();
     });
   });
 
@@ -80,7 +98,9 @@ describe('CEEProvider & Normative Fallback Engine', () => {
       const prop = createMockProperty(1924);
       prop.cadastralReference = '9872023VH5797S0001WX';
 
-      const cee = await mockProvider.getEnergyCertificate(prop);
+      const res = await mockProvider.getEnergyCertificate(prop);
+      expect(res.status).toBe('ok');
+      const cee = res.data!;
       expect(cee.isEstimated).toBe(false);
       expect(cee.ratingEmissions).toBe('B');
       expect(cee.registrationNumber).toBe('MDR-2023-CEE-09412');
@@ -91,7 +111,9 @@ describe('CEEProvider & Normative Fallback Engine', () => {
       const prop = createMockProperty(1924);
       prop.cadastralReference = '9872023VH5797S0002AB'; // Exactly 20-char unit in building 9872023VH5797S
 
-      const cee = await mockProvider.getEnergyCertificate(prop);
+      const res = await mockProvider.getEnergyCertificate(prop);
+      expect(res.status).toBe('ok');
+      const cee = res.data!;
       expect(cee.isEstimated).toBe(false);
       expect(cee.ratingEmissions).toBe('B');
       expect(cee.registrationNumber).toBe('MDR-2023-CEE-09412');
@@ -101,7 +123,9 @@ describe('CEEProvider & Normative Fallback Engine', () => {
       const prop = createMockProperty(1975);
       prop.cadastralReference = '2807901VK4720E0001EX';
 
-      const cee = await mockProvider.getEnergyCertificate(prop);
+      const res = await mockProvider.getEnergyCertificate(prop);
+      expect(res.status).toBe('ok');
+      const cee = res.data!;
       expect(cee.isEstimated).toBe(false);
       expect(cee.isExpired).toBe(true);
       expect(cee.ratingEmissions).toBe('G');
@@ -131,12 +155,27 @@ describe('CEEProvider & Normative Fallback Engine', () => {
       const prop = createMockProperty(2005);
       prop.cadastralReference = '08019A002000050001AB'; // 20-char unit
 
-      const result = await d1Provider.getEnergyCertificate(prop);
+      const res = await d1Provider.getEnergyCertificate(prop);
+      expect(res.status).toBe('ok');
+      const result = res.data!;
       expect(result.isEstimated).toBe(false);
       expect(result.ratingEmissions).toBe('C');
       expect(result.ratingConsumption).toBe('B');
       expect(result.isExpired).toBe(false);
       expect(result.dataSource).toBe('ICAEN (Generalitat de Catalunya)');
+    });
+
+    it('returns unavailable when D1 query throws instead of swallowing error', async () => {
+      const failingD1: any = {
+        prepare: () => {
+          throw new Error('D1 read error');
+        },
+      };
+
+      const d1Provider = new CEEProvider({ db: failingD1 });
+      const res = await d1Provider.getEnergyCertificate(createMockProperty(2005));
+      expect(res.status).toBe('unavailable');
+      expect(res.data).toBeUndefined();
     });
   });
 });

@@ -83,8 +83,10 @@ describe('Civic Connectivity & Walkability Provider', () => {
     const provider = new MockCivicConnectivityProvider();
 
     it('resolves amenities and high walkscore for Madrid Centro', async () => {
-      const res = await provider.getConnectivityByCoordinates(40.42028, -3.70379);
+      const result = await provider.getConnectivityByCoordinates(40.42028, -3.70379);
 
+      expect(result.status).toBe('ok');
+      const res = result.data!;
       expect(res.walkScore15Min).toBeGreaterThan(60);
       expect(res.facilitiesWithin15MinCount).toBeGreaterThan(0);
       expect(res.nearestTransit).toBeDefined();
@@ -95,39 +97,37 @@ describe('Civic Connectivity & Walkability Provider', () => {
     });
 
     it('resolves amenities for Barcelona Eixample', async () => {
-      const res = await provider.getConnectivityByCoordinates(41.39167, 2.16472);
+      const result = await provider.getConnectivityByCoordinates(41.39167, 2.16472);
 
+      expect(result.status).toBe('ok');
+      const res = result.data!;
       expect(res.walkScore15Min).toBeGreaterThan(60);
       expect(res.nearestTransit?.name).toContain('Passeig de Gràcia');
       expect(res.nearestHealthcare?.name).toContain('CAP');
     });
 
-    it('returns 0 walkscore for null coordinates (0, 0)', async () => {
-      const res = await provider.getConnectivityByCoordinates(0, 0);
+    it('returns out_of_coverage for null coordinates (0, 0)', async () => {
+      const result = await provider.getConnectivityByCoordinates(0, 0);
 
-      expect(res.walkScore15Min).toBe(0);
-      expect(res.facilitiesWithin15MinCount).toBe(0);
-      expect(res.nearestTransit).toBeUndefined();
+      expect(result.status).toBe('out_of_coverage');
+      expect(result.data).toBeUndefined();
     });
 
-    it('synthesizes realistic facilities for arbitrary Spanish coordinates', async () => {
-      const res = await provider.getConnectivityByCoordinates(38.905, -6.345); // Mérida
+    it('returns out_of_coverage instead of fabricating synthetic facilities outside seeded radius', async () => {
+      const result = await provider.getConnectivityByCoordinates(38.905, -6.345); // Mérida
 
-      expect(res.walkScore15Min).toBeGreaterThan(0);
-      expect(res.nearestTransit).toBeDefined();
-      expect(res.nearestHealthcare).toBeDefined();
-      expect(res.nearestEducation).toBeDefined();
-      expect(res.nearestPark).toBeDefined();
+      expect(result.status).toBe('out_of_coverage');
+      expect(result.data).toBeUndefined();
     });
   });
 
   describe('D1CivicConnectivityProvider', () => {
-    it('returns 0 score when database is uninitialized', async () => {
+    it('returns unavailable when database is uninitialized', async () => {
       const d1Provider = new D1CivicConnectivityProvider();
-      const res = await d1Provider.getConnectivityByCoordinates(40.42028, -3.70379);
+      const result = await d1Provider.getConnectivityByCoordinates(40.42028, -3.70379);
 
-      expect(res.walkScore15Min).toBe(0);
-      expect(res.facilitiesWithin15MinCount).toBe(0);
+      expect(result.status).toBe('unavailable');
+      expect(result.data).toBeUndefined();
     });
 
     it('executes bounding box query and computes geodesic distance when db is bound', async () => {
@@ -159,8 +159,10 @@ describe('Civic Connectivity & Walkability Provider', () => {
       };
 
       const d1Provider = new D1CivicConnectivityProvider({ db: mockDb });
-      const res = await d1Provider.getConnectivityByCoordinates(40.42028, -3.70379);
+      const result = await d1Provider.getConnectivityByCoordinates(40.42028, -3.70379);
 
+      expect(result.status).toBe('ok');
+      const res = result.data!;
       expect(res.walkScore15Min).toBeGreaterThan(0);
       expect(res.nearestTransit?.name).toBe('Metro Sol');
       expect(res.nearestHealthcare?.name).toBe('CS Centro');

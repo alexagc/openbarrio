@@ -22,9 +22,7 @@ export class FotocasaExtractor extends BasePortalAdapter {
   }
 
   getMountTarget(doc: Document): Element | null {
-    return doc.querySelector(
-      '.re-DetailHeader, .re-DetailFeaturesList, .re-DetailBody, main, body'
-    );
+    return doc.querySelector(this.getJoinedSelectors('mountTarget'));
   }
 
   extract(doc: Document, url: string): ExtractedPropertyData | null {
@@ -123,9 +121,7 @@ export class FotocasaExtractor extends BasePortalAdapter {
   private extractFromDom(doc: Document, data: ExtractedPropertyData): void {
     // Title
     if (!data.title) {
-      const titleEl = doc.querySelector(
-        'h1.re-DetailHeader-propertyTitle, .re-DetailHeader-address, h1'
-      );
+      const titleEl = doc.querySelector(this.getJoinedSelectors('title'));
       if (titleEl && titleEl.textContent) {
         data.title = titleEl.textContent.trim();
       }
@@ -133,9 +129,7 @@ export class FotocasaExtractor extends BasePortalAdapter {
 
     // Price
     if (!data.priceEur) {
-      const priceEl = doc.querySelector(
-        '.re-DetailHeader-price, .re-DetailHeader-price span'
-      );
+      const priceEl = doc.querySelector(this.getJoinedSelectors('price'));
       if (priceEl && priceEl.textContent) {
         const val = this.parsePrice(priceEl.textContent);
         if (val) data.priceEur = val;
@@ -143,9 +137,7 @@ export class FotocasaExtractor extends BasePortalAdapter {
     }
 
     // Features: Surface m² and Construction year
-    const featureNodes = doc.querySelectorAll(
-      '.re-DetailHeader-featuresItem, .re-DetailFeaturesList-feature, .re-DetailFeaturesList-featureItem'
-    );
+    const featureNodes = doc.querySelectorAll(this.getJoinedSelectors('features'));
     for (const node of Array.from(featureNodes)) {
       const text = node.textContent?.trim() || '';
 
