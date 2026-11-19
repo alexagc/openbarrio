@@ -1,11 +1,12 @@
-import type { PropertyAuditReport } from '@openbarrio/core';
+import type { PropertyAuditReport, RemoteSelectorsBundle } from '@openbarrio/core';
 
 export type ExtensionMessageType =
   | 'AUDIT_COORDS'
   | 'AUDIT_REFCAT'
   | 'GET_CONFIG'
   | 'SET_CONFIG'
-  | 'CHECK_HEALTH';
+  | 'CHECK_HEALTH'
+  | 'GET_SELECTORS';
 
 export interface AuditCoordsRequest {
   type: 'AUDIT_COORDS';
@@ -38,12 +39,17 @@ export interface CheckHealthRequest {
   type: 'CHECK_HEALTH';
 }
 
+export interface GetSelectorsRequest {
+  type: 'GET_SELECTORS';
+}
+
 export type ExtensionRequest =
   | AuditCoordsRequest
   | AuditRefcatRequest
   | GetConfigRequest
   | SetConfigRequest
-  | CheckHealthRequest;
+  | CheckHealthRequest
+  | GetSelectorsRequest;
 
 export interface ExtensionResponse<T = unknown> {
   success: boolean;
@@ -53,6 +59,7 @@ export interface ExtensionResponse<T = unknown> {
 }
 
 export type AuditResponse = ExtensionResponse<PropertyAuditReport>;
+export type SelectorsResponse = ExtensionResponse<RemoteSelectorsBundle>;
 
 export interface ExtensionConfig {
   apiUrl: string;

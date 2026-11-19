@@ -42,7 +42,8 @@ export function edgeCacheMiddleware(options: EdgeCacheOptions = {}): MiddlewareH
     if (
       path === '/health' ||
       path.startsWith('/docs') ||
-      path.startsWith('/api/v1/status')
+      path.startsWith('/api/v1/status') ||
+      path.startsWith('/api/v1/extension/')
     ) {
       return next();
     }

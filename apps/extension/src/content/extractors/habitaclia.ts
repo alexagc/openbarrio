@@ -25,9 +25,7 @@ export class HabitacliaAdapter extends BasePortalAdapter {
   }
 
   getMountTarget(doc: Document): Element | null {
-    return doc.querySelector(
-      '.detail-summary, #js-contact-box, .detail, .main-content, main, body'
-    );
+    return doc.querySelector(this.getJoinedSelectors('mountTarget'));
   }
 
   extract(doc: Document, url: string): ExtractedPropertyData | null {
@@ -51,7 +49,7 @@ export class HabitacliaAdapter extends BasePortalAdapter {
     // 3. Cadastral reference fallback
     if (!data.cadastralReference) {
       data.cadastralReference = this.extractCadastralReference(doc, [
-        doc.querySelector('.detail-description, .description, #js-detail-description'),
+        doc.querySelector(this.getJoinedSelectors('description')),
       ]);
     }
 
@@ -72,9 +70,7 @@ export class HabitacliaAdapter extends BasePortalAdapter {
   private extractFromDom(doc: Document, data: ExtractedPropertyData): void {
     // Title
     if (!data.title) {
-      const titleEl = doc.querySelector(
-        'h1.summary-title, h1.heading, h1.detail-title, h1'
-      );
+      const titleEl = doc.querySelector(this.getJoinedSelectors('title'));
       if (titleEl && titleEl.textContent) {
         data.title = titleEl.textContent.trim();
       }
@@ -82,9 +78,7 @@ export class HabitacliaAdapter extends BasePortalAdapter {
 
     // Location / Address / Zone
     if (!data.address || !data.zone) {
-      const locationEl = doc.querySelector(
-        '.location, .summary-location, .detail-location, .address'
-      );
+      const locationEl = doc.querySelector(this.getJoinedSelectors('zone'));
       if (locationEl && locationEl.textContent) {
         const text = locationEl.textContent.trim();
         if (!data.address) data.address = text;
@@ -94,9 +88,7 @@ export class HabitacliaAdapter extends BasePortalAdapter {
 
     // Price
     if (!data.priceEur) {
-      const priceEl = doc.querySelector(
-        '.price span, .font-2, .summary-price, .has-price, .price'
-      );
+      const priceEl = doc.querySelector(this.getJoinedSelectors('price'));
       if (priceEl && priceEl.textContent) {
         const price = this.parsePrice(priceEl.textContent);
         if (price) data.priceEur = price;
@@ -104,9 +96,7 @@ export class HabitacliaAdapter extends BasePortalAdapter {
     }
 
     // Features: Surface m² & construction year
-    const featureNodes = doc.querySelectorAll(
-      '.summary-feature span, .summary-feature *, .feature, .feature-container li, .summary-features li, ul.features li, .detail-info-tags span, .has-more-info li'
-    );
+    const featureNodes = doc.querySelectorAll(this.getJoinedSelectors('features'));
     for (const node of Array.from(featureNodes)) {
       const text = node.textContent?.trim() || '';
 

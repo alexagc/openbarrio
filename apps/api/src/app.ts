@@ -244,6 +244,20 @@ export function buildOpenApiSpec(): Record<string, any> {
           },
         },
       },
+      '/api/v1/extension/selectors': {
+        get: {
+          tags: ['Extension'],
+          summary: 'Fetch versioned JSON-only CSS selector configuration for portal adapters',
+          description:
+            'Returns schema-validated CSS selector configuration (<32 KB, JSON only, no executable code) for the 5 supported Spanish real-estate portals.',
+          responses: {
+            '200': {
+              description: 'Valid RemoteSelectorsBundle JSON',
+            },
+            '500': { description: 'RFC 7807 Selector config validation failure' },
+          },
+        },
+      },
     },
   };
 }

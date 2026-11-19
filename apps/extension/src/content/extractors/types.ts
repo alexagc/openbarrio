@@ -1,3 +1,5 @@
+import type { PortalSelectorConfig } from '@openbarrio/core';
+
 export type PortalType =
   | 'idealista'
   | 'fotocasa'
@@ -53,4 +55,5 @@ export interface PropertyExtractor {
   canExtract(url: string): boolean;
   extract(document: Document, url: string): ExtractedPropertyData | null;
   getMountTarget?(document: Document): Element | null;
+  setSelectorConfig?(config?: PortalSelectorConfig): void;
 }

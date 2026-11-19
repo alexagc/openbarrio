@@ -17,9 +17,7 @@ export class IdealistaExtractor extends BasePortalAdapter {
   }
 
   getMountTarget(doc: Document): Element | null {
-    return doc.querySelector(
-      '.main-info, .info-data, .details-property, main, body'
-    );
+    return doc.querySelector(this.getJoinedSelectors('mountTarget'));
   }
 
   extract(doc: Document, url: string): ExtractedPropertyData | null {
@@ -40,7 +38,9 @@ export class IdealistaExtractor extends BasePortalAdapter {
 
     // 3. Extract Cadastral Reference if present in description or table
     if (!data.cadastralReference) {
-      data.cadastralReference = this.extractCadastralReference(doc);
+      data.cadastralReference = this.extractCadastralReference(doc, [
+        doc.querySelector(this.getJoinedSelectors('description')),
+      ]);
     }
 
     // 4. Coordinates extraction fallback (meta tags, scripts, data-attributes)
@@ -61,34 +61,28 @@ export class IdealistaExtractor extends BasePortalAdapter {
   private extractFromDom(doc: Document, data: ExtractedPropertyData): void {
     // Title
     if (!data.title) {
-      const titleEl = doc.querySelector(
-        '.main-info__title-main, h1.property-title, .info-data-header, h1'
-      );
+      const titleEl = doc.querySelector(this.getJoinedSelectors('title'));
       if (titleEl && titleEl.textContent) {
         data.title = titleEl.textContent.trim();
       }
     }
 
     // Zone / Location subtitle
-    const zoneEl = doc.querySelector('.main-info__title-minor, .header-map-list');
+    const zoneEl = doc.querySelector(this.getJoinedSelectors('zone'));
     if (zoneEl && zoneEl.textContent) {
       data.zone = zoneEl.textContent.trim();
     }
 
     // Price
     if (!data.priceEur) {
-      const priceEl = doc.querySelector(
-        '.info-data-price, .price-features__current-price, .txt-bold'
-      );
+      const priceEl = doc.querySelector(this.getJoinedSelectors('price'));
       if (priceEl && priceEl.textContent) {
         data.priceEur = this.parsePrice(priceEl.textContent);
       }
     }
 
     // Features: Surface m² and Construction year
-    const featureNodes = doc.querySelectorAll(
-      '.info-features span, .details-property_features li, .details-property-feature-one'
-    );
+    const featureNodes = doc.querySelectorAll(this.getJoinedSelectors('features'));
     for (const node of Array.from(featureNodes)) {
       const text = node.textContent?.trim() || '';
 

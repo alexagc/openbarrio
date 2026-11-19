@@ -4,6 +4,7 @@ import {
   AuditResponse,
   ExtensionConfig,
   ExtensionResponse,
+  SelectorsResponse,
 } from '../shared/messages.js';
 
 let widgetInstance: OpenBarrioWidget | null = null;
@@ -14,6 +15,18 @@ async function runAuditInjection(): Promise<void> {
 
   if (!extractor) {
     return;
+  }
+
+  // Load validated JSON-only selectors (falls back to bundled selectors silently)
+  try {
+    const selectorsRes = (await chrome.runtime.sendMessage({
+      type: 'GET_SELECTORS',
+    })) as SelectorsResponse;
+    if (selectorsRes?.success && selectorsRes.data?.portals?.[extractor.portal]) {
+      extractor.setSelectorConfig?.(selectorsRes.data.portals[extractor.portal]);
+    }
+  } catch {
+    // Bundled selectors remain active inside the adapter
   }
 
   // Extract property data from DOM / JSON-LD
