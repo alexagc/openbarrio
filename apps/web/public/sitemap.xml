@@ -169,10 +169,26 @@
     <xhtml:link rel="alternate" hreflang="es" href="https://openbarrio.org/fuentes-oficiales"/>
     <xhtml:link rel="alternate" hreflang="en" href="https://openbarrio.org/official-sources"/>
     <xhtml:link rel="alternate" hreflang="ca" href="https://openbarrio.org/fonts-oficials"/>
+    <xhtml:link rel="alternate" hreflang="gl" href="https://openbarrio.org/fontes-oficiais"/>
+    <xhtml:link rel="alternate" hreflang="eu" href="https://openbarrio.org/iturri-ofizialak"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://openbarrio.org/fuentes-oficiales"/>
     <lastmod>2026-11-12</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
+  </url>
+
+  <!-- Official Sources Operational Status -->
+  <url>
+    <loc>https://openbarrio.org/estado-fuentes</loc>
+    <xhtml:link rel="alternate" hreflang="es" href="https://openbarrio.org/estado-fuentes"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://openbarrio.org/sources-status"/>
+    <xhtml:link rel="alternate" hreflang="ca" href="https://openbarrio.org/estat-fonts"/>
+    <xhtml:link rel="alternate" hreflang="gl" href="https://openbarrio.org/estado-fontes"/>
+    <xhtml:link rel="alternate" hreflang="eu" href="https://openbarrio.org/iturrien-egoera"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://openbarrio.org/estado-fuentes"/>
+    <lastmod>2026-11-19</lastmod>
+    <changefreq>hourly</changefreq>
+    <priority>0.7</priority>
   </url>
 
   <!-- Sample Key Municipalities -->

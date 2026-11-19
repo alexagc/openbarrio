@@ -13,6 +13,7 @@ import {
   calculateBarrioScore,
   MunicipalitySummaryDTO,
   MunicipalityDetailDTO,
+  SourcesStatusResponse,
 } from '@openbarrio/core';
 
 export class ApiError extends Error {
@@ -658,6 +659,19 @@ export class OpenBarrioApiClient {
         updatedAt: new Date().toISOString(),
       };
     }
+  }
+
+  /**
+   * Fetch live operational status, circuit-breaker states, and latest D1 snapshot dates
+   * for official ministerial providers. Never fabricates healthy operational data on network errors.
+   */
+  async getSourcesStatus(): Promise<SourcesStatusResponse> {
+    const url = `${this.baseUrl}/api/v1/status/sources`;
+    const res = await fetch(url, { cache: 'no-store' });
+    if (!res.ok) {
+      return this.handleHttpError(res);
+    }
+    return (await res.json()) as SourcesStatusResponse;
   }
 
   private async handleHttpError(response: Response): Promise<never> {

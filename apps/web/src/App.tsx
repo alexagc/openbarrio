@@ -3,6 +3,7 @@ import { LanguageProvider } from './i18n';
 import { LandingView } from './views/LandingView';
 import { GisWorkspaceView } from './views/GisWorkspaceView';
 import { TransparencyView } from './views/TransparencyView';
+import { SourcesStatusView } from './views/SourcesStatusView';
 import { SurfaceCheckerToolView } from './views/tools/SurfaceCheckerToolView';
 import { RentLegalCalculatorToolView } from './views/tools/RentLegalCalculatorToolView';
 import { ItpIbiSimulatorToolView } from './views/tools/ItpIbiSimulatorToolView';
@@ -64,6 +65,8 @@ export function AppContent() {
         <GisWorkspaceView />
       ) : viewMode === 'transparency' ? (
         <TransparencyView />
+      ) : viewMode === 'sources-status' ? (
+        <SourcesStatusView />
       ) : viewMode === 'tool-surface' ? (
         <SurfaceCheckerToolView isEmbed={Boolean(isEmbed)} />
       ) : viewMode === 'tool-rent' ? (

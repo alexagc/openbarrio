@@ -8,6 +8,7 @@ export type ViewMode =
   | 'landing'
   | 'map'
   | 'transparency'
+  | 'sources-status'
   | 'tool-surface'
   | 'tool-rent'
   | 'tool-itp'
@@ -151,6 +152,7 @@ export function useUrlSync(
 
       if (
         newState.viewMode === 'transparency' ||
+        newState.viewMode === 'sources-status' ||
         newState.viewMode === 'tool-surface' ||
         newState.viewMode === 'tool-rent' ||
         newState.viewMode === 'tool-itp' ||

@@ -33,6 +33,15 @@ export const SEO_ROUTE_DEFINITIONS: RouteSlugMapping[] = [
     aliases: ['/transparencia', '/fuentes', '/sources', '/transparency', '/gardentasuna'],
   },
   {
+    viewMode: 'sources-status',
+    es: '/estado-fuentes',
+    en: '/sources-status',
+    ca: '/estat-fonts',
+    gl: '/estado-fontes',
+    eu: '/iturrien-egoera',
+    aliases: ['/status', '/fuentes/estado'],
+  },
+  {
     viewMode: 'tool-surface',
     es: '/comprobar-metros-catastro',
     en: '/check-cadastral-surface',
