@@ -147,7 +147,11 @@ async function handleStaticAssetRequest(event, request) {
 
   const networkPromise = fetch(request)
     .then(async (response) => {
-      if (response && response.ok && (!response.type || response.type === 'basic')) {
+      if (
+        response &&
+        response.ok &&
+        (!response.type || response.type === 'basic' || response.type === 'default')
+      ) {
         await cache.put(request, response.clone());
       }
       return response;
