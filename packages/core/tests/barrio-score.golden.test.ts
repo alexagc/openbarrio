@@ -411,4 +411,46 @@ describe('BarrioScore Golden Snapshots (v1.3.2 safety net)', () => {
     });
     expect(score.overallScore).toBe(92);
   });
+
+  it('golden 9: v2.0.0 absent SICA acoustic source keeps flood score without green light', () => {
+    const score = calculateBarrioScore({
+      property: makeProperty(),
+      neighborhood: baseNeighborhood,
+      environment: { floodRisk: safeEnvironment.floodRisk },
+      connectivity: primeConnectivity,
+      urbanPlanning: consolidatedUrban,
+      layers: {
+        sica: { status: 'unavailable', sourceName: 'MITECO SICA', reason: 'timeout' },
+        snczi: { status: 'ok', sourceName: 'MITECO SNCZI' },
+      },
+    });
+
+    expect(score.acousticComfortScore).toBe(0);
+    expect(score.climateSafetyScore).toBe(100);
+    expect(score.subscores.environmental).toBe(100);
+    expect(score.pillarTrafficLights?.environmental).toBe('UNCERTAIN');
+    expect(score.trafficLight).toBe('AMBER');
+    expect(score.coverage?.missingCriticalLayers).toEqual(['sica']);
+  });
+
+  it('golden 10: v2.0.0 <= 2 pillars available yields UNCERTAIN traffic light and renormalized weights', () => {
+    const score = calculateBarrioScore({
+      property: makeProperty(),
+      neighborhood: baseNeighborhood,
+    });
+
+    expect(score.subscores.connectivity).toBe(0);
+    expect(score.subscores.environmental).toBe(0);
+    expect(score.subscores.urbanPlanning).toBe(0);
+    expect(score.coverage?.pillarsWithData).toBe(2);
+    expect(score.trafficLight).toBe('UNCERTAIN');
+    expect(score.scoreConfidence).toBe('uncertain');
+    expect(score.weightsUsed).toEqual({
+      connectivity: 0,
+      building: 0.25 / 0.45,
+      socioeconomic: 0.20 / 0.45,
+      environmental: 0,
+      urbanPlanning: 0,
+    });
+  });
 });

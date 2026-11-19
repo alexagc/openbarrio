@@ -109,19 +109,25 @@ describe('Phase 16 Core Civic Intelligence & Urban 3D DTOs', () => {
     };
 
     it('penalizes urbanPlanning subscore when critical VUT saturation is present', () => {
-      const baselineScore = calculateBarrioScore(mockProperty, mockNeighborhood);
+      const mockUrbanPlanning = {
+        landClassification: 'URBAN_CONSOLIDATED' as const,
+        isProtectedLand: false,
+        declaredRenovationsCount: 0,
+        lastRenovationYear: null,
+        isStressedHousingZone: false,
+      };
+      const baselineScore = calculateBarrioScore({
+        property: mockProperty,
+        neighborhood: mockNeighborhood,
+        urbanPlanning: mockUrbanPlanning,
+      });
       const criticalVut = evaluateVutSaturation('2807901001', 1000, 140, 560);
-      const penalizedScore = calculateBarrioScore(
-        mockProperty,
-        mockNeighborhood,
-        undefined,
-        undefined,
-        undefined,
-        undefined,
-        undefined,
-        undefined,
-        criticalVut
-      );
+      const penalizedScore = calculateBarrioScore({
+        property: mockProperty,
+        neighborhood: mockNeighborhood,
+        urbanPlanning: mockUrbanPlanning,
+        vut: criticalVut,
+      });
 
       expect(penalizedScore.subscores.urbanPlanning).toBeLessThan(baselineScore.subscores.urbanPlanning);
       expect(penalizedScore.keyRisks.some((r) => r.includes('Critical tourist apartment saturation'))).toBe(true);
