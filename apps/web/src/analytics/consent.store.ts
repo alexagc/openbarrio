@@ -100,7 +100,7 @@ export const useConsentStore = create<ConsentStoreState>((set) => ({
     }
 
     const today = formatUtcDay(now);
-    let isReturning14d = false;
+    let isReturning14d: boolean;
 
     if (today === stored.lastSeenDay) {
       isReturning14d = stored.returning14dDay === today;
