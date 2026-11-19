@@ -1,9 +1,20 @@
+import { STALE_MAX_DAYS, computeStaleAgeDays } from '@openbarrio/core';
 import type { D1Database } from '../types/env.js';
 
 export interface CadastralCacheOptions {
   db?: D1Database;
   ttlSeconds?: number;
   maxEntries?: number;
+  now?: () => Date;
+}
+
+export interface CadastralCacheMeta<T> {
+  data: T;
+  fetchedAt?: string;
+  expiresAt: string;
+  ageDays: number;
+  isFresh: boolean;
+  isUsableStale: boolean;
 }
 
 export type CadastralCacheType =
@@ -17,17 +28,21 @@ export type CadastralCacheType =
  * CadastralCache: Write-Through LRU Cache backed by Cloudflare D1 (or local SQLite).
  * Caches official Sede Electrónica del Catastro (OVC) and INSPIRE WFS query results
  * with a 90-day TTL, collapsing repeat audit latencies from ~1,500ms to <3ms.
+ * Enforces zero-write-on-read: expired entries are never deleted during `get()` reads
+ * and remain eligible for stale serving (<=365 days) until `pruneExpired()` cron cleanup.
  */
 export class CadastralCache {
   private db?: D1Database;
   private readonly ttlSeconds: number;
   private readonly maxEntries: number;
+  private readonly now: () => Date;
 
   constructor(options: CadastralCacheOptions = {}) {
     this.db = options.db;
     // Default 90 days = 90 * 86,400 seconds = 7,776,000 seconds
     this.ttlSeconds = options.ttlSeconds ?? 90 * 86400;
     this.maxEntries = options.maxEntries ?? 50000;
+    this.now = options.now ?? (() => new Date());
   }
 
   setDatabase(db: D1Database): void {
@@ -39,34 +54,55 @@ export class CadastralCache {
   }
 
   /**
-   * Retrieves a cached cadastral object by cache key.
-   * If expired, removes the stale entry and returns null.
-   * On hit, updates access_count and last_accessed_at for LRU tracking.
+   * Retrieves a fresh cached cadastral object by cache key.
+   * Zero-write-on-read: expired entries are NOT deleted here (use `pruneExpired()`).
    */
   async get<T>(key: string): Promise<T | null> {
+    const meta = await this.getWithMeta<T>(key);
+    return meta && meta.isFresh ? meta.data : null;
+  }
+
+  /**
+   * Retrieves a cached cadastral object along with freshness and stale usability metadata.
+   * Never performs D1 write/delete operations on read.
+   */
+  async getWithMeta<T>(key: string): Promise<CadastralCacheMeta<T> | null> {
     if (!this.db) return null;
 
     try {
-      const nowIso = new Date().toISOString();
+      const currentNow = this.now();
+      const nowIso = currentNow.toISOString();
       const row = await this.db
-        .prepare('SELECT data_json, expires_at FROM cadastral_cache WHERE cache_key = ?')
+        .prepare('SELECT data_json, expires_at, updated_at FROM cadastral_cache WHERE cache_key = ?')
         .bind(key)
-        .first<{ data_json: string; expires_at: string }>();
+        .first<{ data_json: string; expires_at: string; updated_at?: string | null }>();
 
-      if (!row) return null;
+      if (!row || !row.data_json) return null;
 
-      if (row.expires_at <= nowIso) {
-        // Asynchronously delete expired entry
-        this.db
-          .prepare('DELETE FROM cadastral_cache WHERE cache_key = ?')
-          .bind(key)
-          .run()
-          .catch(() => {});
-        return null;
-      }
+      const isFresh = row.expires_at > nowIso;
+      const expiresMs = Date.parse(row.expires_at);
+      const derivedFetchedIso = row.updated_at
+        ? row.updated_at
+        : !Number.isNaN(expiresMs)
+        ? new Date(expiresMs - this.ttlSeconds * 1000).toISOString()
+        : undefined;
 
-      // FinOps: Return cached JSON without write amplification (no hot-path UPDATE on reads)
-      return JSON.parse(row.data_json) as T;
+      const ageDays = derivedFetchedIso
+        ? computeStaleAgeDays(derivedFetchedIso, currentNow)
+        : isFresh
+        ? 0
+        : STALE_MAX_DAYS + 1;
+
+      const data = JSON.parse(row.data_json) as T;
+
+      return {
+        data,
+        fetchedAt: derivedFetchedIso,
+        expiresAt: row.expires_at,
+        ageDays,
+        isFresh,
+        isUsableStale: !isFresh && ageDays <= STALE_MAX_DAYS,
+      };
     } catch {
       return null;
     }

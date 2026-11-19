@@ -46,9 +46,18 @@ export class AuditService {
     waitUntil?: (promise: Promise<unknown>) => void
   ): Promise<PropertyAuditReport> {
     // 1. Fetch cadastral property data from Catastro (primary anchor)
-    const property = await this.providers.catastro.getByCoordinates(latitude, longitude);
+    const catastroRes = this.providers.catastro.getByCoordinatesWithStatus
+      ? await this.providers.catastro.getByCoordinatesWithStatus(latitude, longitude)
+      : layerOk(
+          'Sede Electrónica del Catastro (OVC)',
+          await this.providers.catastro.getByCoordinates(latitude, longitude)
+        );
 
-    return this.generateReportForProperty(property, waitUntil);
+    return this.generateReportForProperty(
+      catastroRes.data!,
+      waitUntil,
+      toLayerStatusInfo(catastroRes)
+    );
   }
 
   /**
@@ -61,9 +70,22 @@ export class AuditService {
     waitUntil?: (promise: Promise<unknown>) => void
   ): Promise<PropertyAuditReport> {
     // 1. Fetch cadastral property data from Catastro (primary anchor)
-    const property = await this.providers.catastro.getByCadastralReference(refcat, fallbackCoords, preferredPortal);
+    const catastroRes = this.providers.catastro.getByCadastralReferenceWithStatus
+      ? await this.providers.catastro.getByCadastralReferenceWithStatus(
+          refcat,
+          fallbackCoords,
+          preferredPortal
+        )
+      : layerOk(
+          'Sede Electrónica del Catastro (OVC)',
+          await this.providers.catastro.getByCadastralReference(refcat, fallbackCoords, preferredPortal)
+        );
 
-    return this.generateReportForProperty(property, waitUntil);
+    return this.generateReportForProperty(
+      catastroRes.data!,
+      waitUntil,
+      toLayerStatusInfo(catastroRes)
+    );
   }
 
   /**
@@ -95,7 +117,8 @@ export class AuditService {
 
   private async generateReportForProperty(
     property: CadastralProperty,
-    waitUntil?: (promise: Promise<unknown>) => void
+    waitUntil?: (promise: Promise<unknown>) => void,
+    resolvedCatastroLayer?: LayerStatusInfo
   ): Promise<PropertyAuditReport> {
     const lat = property.coordinates.latitude;
     const lon = property.coordinates.longitude;
@@ -252,9 +275,9 @@ export class AuditService {
     );
 
     // 12. Assemble all 13 typed layer statuses and compute honest BarrioScore
-    const catastroLayer = toLayerStatusInfo(
-      layerOk('Sede Electrónica del Catastro (OVC)', property)
-    );
+    const catastroLayer =
+      resolvedCatastroLayer ??
+      toLayerStatusInfo(layerOk('Sede Electrónica del Catastro (OVC)', property));
     const allLayers: Record<LayerKey, LayerStatusInfo> = {
       catastro: catastroLayer,
       ine: neighborhoodRes.layer,

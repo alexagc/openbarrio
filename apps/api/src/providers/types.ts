@@ -28,6 +28,14 @@ export interface ICatastroProvider {
   getByCoordinates(latitude: number, longitude: number): Promise<CadastralProperty>;
 
   /**
+   * Optional status-aware coordinate lookup carrying stale snapshot metadata when upstream fails.
+   */
+  getByCoordinatesWithStatus?(
+    latitude: number,
+    longitude: number
+  ): Promise<LayerResult<CadastralProperty>>;
+
+  /**
    * Look up cadastral property details by 14- or 20-character cadastral reference (RC).
    */
   getByCadastralReference(
@@ -35,6 +43,15 @@ export interface ICatastroProvider {
     fallbackCoords?: CadastralCoordinates,
     preferredPortal?: string
   ): Promise<CadastralProperty>;
+
+  /**
+   * Optional status-aware reference lookup carrying stale snapshot metadata when upstream fails.
+   */
+  getByCadastralReferenceWithStatus?(
+    refcat: string,
+    fallbackCoords?: CadastralCoordinates,
+    preferredPortal?: string
+  ): Promise<LayerResult<CadastralProperty>>;
 
   /**
    * Look up horizontal division units for a given 14- or 20-character cadastral reference.
