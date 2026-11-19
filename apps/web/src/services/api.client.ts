@@ -14,6 +14,7 @@ import {
   MunicipalitySummaryDTO,
   MunicipalityDetailDTO,
   SourcesStatusResponse,
+  ListingResolveResponse,
 } from '@openbarrio/core';
 
 export class ApiError extends Error {
@@ -672,6 +673,35 @@ export class OpenBarrioApiClient {
       return this.handleHttpError(res);
     }
     return (await res.json()) as SourcesStatusResponse;
+  }
+
+  /**
+   * Resolves minimal location/cadastral metadata from a user-supplied portal listing URL
+   * (and optional pasted snippet). Never persists data and surfaces real RFC 7807 errors.
+   */
+  async resolveListingUrl(
+    url: string,
+    rawText?: string
+  ): Promise<ListingResolveResponse> {
+    const endpoint = `${this.baseUrl}/api/v1/listing/resolve`;
+    const body: { url: string; rawText?: string } = { url };
+    if (rawText && rawText.trim().length > 0) {
+      body.rawText = rawText;
+    }
+
+    const res = await fetch(endpoint, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+      },
+      body: JSON.stringify(body),
+    });
+
+    if (!res.ok) {
+      return this.handleHttpError(res);
+    }
+    return (await res.json()) as ListingResolveResponse;
   }
 
   private async handleHttpError(response: Response): Promise<never> {
