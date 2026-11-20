@@ -36,6 +36,16 @@ on:
         required: false
         default: true
         type: boolean
+      run_transit:
+        description: 'Run GTFS/NAP Transit Isochrones ETL'
+        required: false
+        default: true
+        type: boolean
+      sync_transit:
+        description: 'Sync GTFS Transit chunks to Cloudflare D1 (set true on dedicated FinOps sync day)'
+        required: false
+        default: false
+        type: boolean
       sync_vut_radon_serpavi:
         description: 'Sync VUT Tourist Housing, CTE Radon & SERPAVI to D1 (default: true)'
         required: false
@@ -322,12 +332,54 @@ jobs:
           retention-days: 7
 
   # =========================================================================
+  # Job 4b: Territorial Layers — GTFS/NAP Transit & Broadband Coverage
+  # =========================================================================
+  etl-transit-broadband:
+    name: ETL 4b - GTFS/NAP Transit & Broadband Coverage
+    runs-on: ubuntu-latest
+    if: inputs.apply_only != true && (github.event_name == 'schedule' || inputs.run_transit != false)
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+          cache-dependency-path: 'packages/etl/requirements.txt'
+
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r packages/etl/requirements.txt
+          python3 -c "import duckdb; c = duckdb.connect(); c.execute('INSTALL spatial;')"
+
+      - name: Run GTFS/NAP Transit Processing (DuckDB Spatial -> D1 SQL)
+        env:
+          NAP_API_KEY: ${{ secrets.NAP_API_KEY }}
+        run: |
+          mkdir -p packages/etl/dist
+          python3 packages/etl/src/process_gtfs_transit.py \
+            --download-nap \
+            --seed-mvp \
+            --output-sql packages/etl/dist/transit_stops.sql
+
+      - name: Upload Transit & Territorial Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: artifact-transit-broadband
+          path: |
+            packages/etl/dist/transit_stops.sql
+          retention-days: 7
+
+  # =========================================================================
   # Job 5: Quality Gatekeeper & Aggregator Deployer (D1 & R2 Sync)
   # =========================================================================
   deploy-and-gate:
     name: Gatekeeper & Cloudflare Deployment (D1 & R2)
     runs-on: ubuntu-latest
-    needs: [etl-ine-ign, etl-snczi-floods, etl-sica-noise, etl-civic-cee]
+    needs: [etl-ine-ign, etl-snczi-floods, etl-sica-noise, etl-civic-cee, etl-transit-broadband]
     if: always() && (inputs.apply_only == true || inputs.sync_vut_radon_serpavi == true || contains(needs.*.result, 'success'))
     env:
       HAS_CF_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN != '' }}
@@ -426,6 +478,14 @@ jobs:
           node scripts/apply-d1-chunks.mjs packages/etl/chunks/vut_census_tracts --remote
           node scripts/apply-d1-chunks.mjs packages/etl/chunks/cte_radon --remote
           node scripts/apply-d1-chunks.mjs packages/etl/chunks/serpavi_benchmarks --remote
+
+      - name: Apply Cloudflare D1 Chunks (GTFS/NAP Transit Stops)
+        if: inputs.dry_run != true && env.HAS_CF_TOKEN == 'true' && inputs.sync_transit == true
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          node scripts/apply-d1-chunks.mjs packages/etl/chunks/transit_stops --remote
 
       - name: Sync Cloudflare D1 (Municipal ITE & IGN Seismic)
         if: inputs.dry_run != true && env.HAS_CF_TOKEN == 'true' && (hashFiles('packages/etl/dist/municipal_ite.sql') != '' || hashFiles('packages/etl/dist/openbarrio-etl-dist/municipal_ite.sql') != '' || hashFiles('packages/etl/dist/ign_seismic.sql') != '' || hashFiles('packages/etl/dist/openbarrio-etl-dist/ign_seismic.sql') != '' || hashFiles('packages/etl/chunks/ign_seismic/*.sql') != '')

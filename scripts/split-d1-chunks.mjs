@@ -180,6 +180,15 @@ export function runAllSplits() {
       altOutDir: 'packages/etl/dist/openbarrio-etl-dist/chunks_seismic',
       prefix: 'ign_seismic',
     },
+    {
+      candidates: [
+        'packages/etl/dist/transit_stops.sql',
+        'packages/etl/dist/openbarrio-etl-dist/transit_stops.sql',
+      ],
+      outDir: 'packages/etl/chunks/transit_stops',
+      altOutDir: 'packages/etl/dist/openbarrio-etl-dist/chunks_transit',
+      prefix: 'transit_stops',
+    },
   ];
 
   for (const t of targets) {
