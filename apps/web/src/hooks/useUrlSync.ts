@@ -2,7 +2,7 @@ import { useEffect, useCallback, useRef } from 'react';
 import { parseLocalizedRoute, getLocalizedPath } from '../utils/seo-routes';
 import { SupportedLanguage } from '../i18n/types';
 
-export type DossierTab = 'summary' | 'building' | 'environment' | 'market';
+export type DossierTab = 'summary' | 'building' | 'environment' | 'market' | 'checklist';
 
 export type ViewMode =
   | 'landing'
@@ -99,7 +99,7 @@ export function parseUrlState(): UrlParamsState {
   }
 
   // Support both mobile map tab toggle ('map' | 'dossier') and 4-way dossier tabs
-  const validDossierTabs: DossierTab[] = ['summary', 'building', 'environment', 'market'];
+  const validDossierTabs: DossierTab[] = ['summary', 'building', 'environment', 'market', 'checklist'];
   const dossierTab: DossierTab = validDossierTabs.includes(tabParam as DossierTab)
     ? (tabParam as DossierTab)
     : 'summary';

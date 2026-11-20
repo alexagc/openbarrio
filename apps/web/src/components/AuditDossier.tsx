@@ -25,6 +25,8 @@ import { FiscalSimulatorCard } from './dossier/FiscalSimulatorCard';
 import { BuildingInspectionCard } from './dossier/BuildingInspectionCard';
 import { SeismicSafetyCard } from './dossier/SeismicSafetyCard';
 import { PedestrianIsochronesCard } from './dossier/PedestrianIsochronesCard';
+import { VisitChecklistPanel } from './dossier/VisitChecklistPanel';
+import { trackAnalyticsEvent } from '../analytics';
 import { downloadCadastralGML } from '../utils/gml';
 import { DossierTab } from '../hooks/useUrlSync';
 import { useWorkspaceStore } from '../store/workspace.store';
@@ -50,6 +52,7 @@ import {
   AlertTriangle,
   AlertOctagon,
   BookOpen,
+  CheckSquare,
 } from 'lucide-react';
 
 interface AuditDossierProps {
@@ -84,6 +87,9 @@ export function AuditDossier({
   const currentTab: DossierTab = controlledTab ?? storeDossierTab ?? internalTab;
 
   const handleTabClick = (tab: DossierTab) => {
+    if (tab === 'checklist') {
+      void trackAnalyticsEvent({ event: 'lens_used', lens: 'checklist' });
+    }
     if (onTabChange) {
       onTabChange(tab);
     } else {
@@ -593,6 +599,22 @@ export function AuditDossier({
           <Coins className="w-3.5 h-3.5" />
           <span>{t('dossier.tabMarket')}</span>
         </button>
+
+        <button
+          type="button"
+          role="tab"
+          data-testid="tab-btn-checklist"
+          aria-selected={currentTab === 'checklist'}
+          onClick={() => handleTabClick('checklist')}
+          className={`flex-1 py-3 text-center font-mono text-xs font-semibold transition-all duration-150 flex items-center justify-center gap-1.5 cursor-pointer border-b-2 ${
+            currentTab === 'checklist'
+              ? 'text-primary border-primary bg-surface-container-low/50'
+              : 'text-on-surface-variant hover:text-on-surface border-transparent'
+          }`}
+        >
+          <CheckSquare className="w-3.5 h-3.5" />
+          <span>{t('checklist.tabLabel')}</span>
+        </button>
       </nav>
 
       {/* 3. TAB PANELS CONTENT AREA */}
@@ -910,6 +932,15 @@ export function AuditDossier({
               <NeighborhoodTrendsCard trends={marketTrends} typology={typology} />
             </div>
           )}
+        </div>
+
+        {/* ================= TAB 5: CHECKLIST DE VISITA ================= */}
+        <div
+          role="tabpanel"
+          data-testid="tab-checklist"
+          className={currentTab === 'checklist' ? 'space-y-4 p-space-lg' : 'hidden print:block print:p-space-lg'}
+        >
+          <VisitChecklistPanel report={report} />
         </div>
       </div>
 

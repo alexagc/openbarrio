@@ -1029,6 +1029,74 @@ export interface TranslationSchema {
     storageUnavailableError: string;
     storageQuotaError: string;
   };
+  checklist: {
+    tabLabel: string;
+    title: string;
+    subtitle: string;
+    exportMdBtn: string;
+    exportTxtBtn: string;
+    printBtn: string;
+    exportRefcatLabel: string;
+    exportDateLabel: string;
+    exportProfileLabel: string;
+    exportProfileNone: string;
+    askLabel: string;
+    verifyLabel: string;
+    countTotal: string;
+    countCritical: string;
+    countImportant: string;
+    countUnverified: string;
+    emptyTitle: string;
+    emptyDesc: string;
+    legalDisclaimer: string;
+    severity: {
+      critical: string;
+      important: string;
+      info: string;
+    };
+    category: {
+      structural: string;
+      legal: string;
+      environmental: string;
+      energy: string;
+      neighborhood: string;
+      verification: string;
+    };
+    items: {
+      substandard_housing: { title: string; ask: string; verify: string };
+      age_old_building: { title: string; ask: string; verify: string };
+      ite_action_required: { title: string; ask: string; verify: string };
+      noise_high: { title: string; ask: string; verify: string };
+      flood_hazard: { title: string; ask: string; verify: string };
+      radon_ground_contact: { title: string; ask: string; verify: string };
+      cee_expired: { title: string; ask: string; verify: string };
+      cee_missing: { title: string; ask: string; verify: string };
+      seismic_vulnerable: { title: string; ask: string; verify: string };
+      vut_high_pressure: { title: string; ask: string; verify: string };
+      capex_high: { title: string; ask: string; verify: string };
+      urban_planning_risk: { title: string; ask: string; verify: string };
+    };
+    unverified: {
+      stale: { title: string };
+      unavailable: { title: string };
+      out_of_coverage: { title: string };
+      layers: {
+        catastro: { ask: string; verify: string };
+        ine: { ask: string; verify: string };
+        sica: { ask: string; verify: string };
+        snczi: { ask: string; verify: string };
+        mivau: { ask: string; verify: string };
+        cee: { ask: string; verify: string };
+        radon: { ask: string; verify: string };
+        seismic: { ask: string; verify: string };
+        ite: { ask: string; verify: string };
+        vut: { ask: string; verify: string };
+        airQuality: { ask: string; verify: string };
+        urbanPlanning: { ask: string; verify: string };
+        connectivity: { ask: string; verify: string };
+      };
+    };
+  };
 }
 
 export interface LanguageContextType {

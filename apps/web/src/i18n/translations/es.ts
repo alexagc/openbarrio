@@ -1042,4 +1042,165 @@ export const es: TranslationSchema = {
     storageUnavailableError: 'Tu navegador bloquea el almacenamiento local (IndexedDB) en modo privado; el Modo Visita offline no puede persistir dossieres.',
     storageQuotaError: 'Cuota de almacenamiento local agotada; elimina algún dossier guardado para liberar espacio.',
   },
+  checklist: {
+    tabLabel: 'Checklist',
+    title: 'Checklist de visita in situ',
+    subtitle: 'Lista determinista generada a partir de alertas oficiales y capas no verificadas del dossier.',
+    exportMdBtn: 'Exportar .MD',
+    exportTxtBtn: 'Exportar .TXT',
+    printBtn: 'Imprimir A4',
+    exportRefcatLabel: 'Referencia Catastral',
+    exportDateLabel: 'Generado',
+    exportProfileLabel: 'Perfil activo',
+    exportProfileNone: 'Ninguno (base v2.1.0)',
+    askLabel: 'Preguntar',
+    verifyLabel: 'Verificar en visita',
+    countTotal: '{{count}} puntos',
+    countCritical: '{{count}} críticos',
+    countImportant: '{{count}} importantes',
+    countUnverified: '{{count}} sin verificar',
+    emptyTitle: 'Sin alertas activas ni capas pendientes',
+    emptyDesc: 'Todas las capas evaluadas están verificadas y no se detectaron alertas críticas para esta visita.',
+    legalDisclaimer: 'Aviso informativo: esta checklist se genera automáticamente a partir de datos públicos abiertos y no constituye asesoramiento jurídico, técnico ni inmobiliario.',
+    severity: {
+      critical: 'Crítico',
+      important: 'Importante',
+      info: 'Informativo',
+    },
+    category: {
+      structural: 'Estructura',
+      legal: 'Legal',
+      environmental: 'Entorno',
+      energy: 'Energía',
+      neighborhood: 'Barrio',
+      verification: 'Verificación',
+    },
+    items: {
+      substandard_housing: {
+        title: 'Posible infravivienda / uso catastral no residencial ({{use}}, planta {{floor}})',
+        ask: 'Solicita la cédula de habitabilidad o licencia de primera ocupación y el cambio de uso aprobado.',
+        verify: 'Comprueba en el inmueble ventilación directa, altura libre y posibilidad de empadronamiento.',
+      },
+      age_old_building: {
+        title: 'Edificio antiguo ({{year}}, {{age}} años)',
+        ask: 'Pregunta por derramas recientes o previstas en fontanería, bajantes, cubierta e instalación eléctrica.',
+        verify: 'Revisa humedades en techos/esquinas, cuadro eléctrico, presión de agua y aislamiento de ventanas.',
+      },
+      ite_action_required: {
+        title: 'ITE / IEE en estado {{status}}',
+        ask: 'Pide copia del último certificado ITE/IEE, presupuesto de subsanación y actas de la comunidad.',
+        verify: 'Observa grietas en fachada, patio interior, cubierta y estado de zonas comunes.',
+      },
+      noise_high: {
+        title: 'Nivel de ruido ambiental elevado ({{lden}} dBA Lden)',
+        ask: 'Pregunta por el tipo de acristalamiento (doble/climalit, RPT) y si da a patio interior.',
+        verify: 'Visita en hora punta y abre las ventanas unos minutos para comprobar el ruido real.',
+      },
+      flood_hazard: {
+        title: 'Riesgo de inundabilidad SNCZI ({{level}}, T={{returnPeriod}} años)',
+        ask: 'Consulta historial de siniestros por agua y cobertura de seguro de hogar/comunidad.',
+        verify: 'Inspecciona garajes, trasteros, portales y marcas de humedad en muros bajos.',
+      },
+      radon_ground_contact: {
+        title: 'Exposición a gas radón ({{zone}}) en planta baja o contacto con el terreno',
+        ask: 'Pregunta si existe barrera anti-radón (CTE DB-HS 6) o medición previa en Bq/m³.',
+        verify: 'Comprueba la ventilación natural o forzada de sótanos, cámaras sanitarias y soleras.',
+      },
+      cee_expired: {
+        title: 'Certificado de Eficiencia Energética (CEE) caducado ({{validUntil}})',
+        ask: 'Exige el CEE renovado y registrado antes de firmar contrato o arras (RD 390/2021).',
+        verify: 'Comprueba el sistema de calefacción/ACS real, orientación y carpinterías.',
+      },
+      cee_missing: {
+        title: 'CEE oficial no disponible o estimado',
+        ask: 'Solicita la etiqueta energética oficial registrada en la comunidad autónoma.',
+        verify: 'Revisa caldera/bomba de calor, radiadores y espesor de cerramientos.',
+      },
+      seismic_vulnerable: {
+        title: 'Vulnerabilidad sísmica pre-NCSE-94 (aceleración {{ab}}g)',
+        ask: 'Pregunta por refuerzos estructurales o rehabilitaciones integrales realizadas tras 1994.',
+        verify: 'Observa fisuras diagonales en tabiques, pilares en planta baja y juntas de dilatación.',
+      },
+      vut_high_pressure: {
+        title: 'Presión alta de viviendas turísticas ({{ratio}}% en la sección censal)',
+        ask: 'Consulta los estatutos de la comunidad sobre prohibición o limitación de VUT.',
+        verify: 'Observa presencia de cajetines de llaves, cartelería turística o trasiego en el portal.',
+      },
+      capex_high: {
+        title: 'Riesgo alto de CapEx comunitario (índice {{score}}/100)',
+        ask: 'Pide las tres últimas actas de junta, saldo del fondo de reserva y recibos de comunidad.',
+        verify: 'Comprueba ascensor, portal, buzones, cubierta y estado general de conservación.',
+      },
+      urban_planning_risk: {
+        title: 'Condicionante urbanístico ({{classification}})',
+        ask: 'Solicita cédula urbanística o nota simple para verificar cargas, protección o fuera de ordenación.',
+        verify: 'Verifica alineaciones, retranqueos o posibles afecciones visibles en la parcela.',
+      },
+    },
+    unverified: {
+      stale: {
+        title: 'Dato desactualizado en {{source}} (hace {{days}} días) — verificar vigencia',
+      },
+      unavailable: {
+        title: 'Fuente {{source}} no disponible — verificación documental obligatoria',
+      },
+      out_of_coverage: {
+        title: 'Inmueble fuera de cobertura en {{source}} — comprobar manualmente',
+      },
+      layers: {
+        catastro: {
+          ask: 'Pide nota simple y certificación catastral descriptiva y gráfica actualizada.',
+          verify: 'Contrasta superficie útil y construida real con la anunciada.',
+        },
+        ine: {
+          ask: 'Consulta referencias socioeconómicas y demográficas locales del distrito.',
+          verify: 'Recorre las calles colindantes a distintas horas para evaluar actividad y servicios.',
+        },
+        sica: {
+          ask: 'Pregunta por aislamiento acústico de ventanas y ordenanzas locales de ocio/tráfico.',
+          verify: 'Realiza la visita en horario diurno y nocturno con ventanas abiertas y cerradas.',
+        },
+        snczi: {
+          ask: 'Solicita información sobre historial de lluvias intensas o drenaje del edificio.',
+          verify: 'Revisa sumideros, pendientes del portal y posibles marcas de agua en sótano.',
+        },
+        mivau: {
+          ask: 'Comprueba si el municipio está declarado zona tensionada y pide contrato anterior si aplica.',
+          verify: 'Verifica el índice de referencia de alquiler aplicable en el portal del MIVAU.',
+        },
+        cee: {
+          ask: 'Exige el Certificado de Eficiencia Energética oficial registrado.',
+          verify: 'Revisa carpinterías, persianas, puente térmico y equipo de climatización.',
+        },
+        radon: {
+          ask: 'Consulta el mapa oficial de radón del CSN para el municipio.',
+          verify: 'Comprueba ventilación de planta baja o sótano.',
+        },
+        seismic: {
+          ask: 'Solicita ficha técnica estructural o año exacto de rehabilitación.',
+          verify: 'Revisa estado de pilares, muros de carga y ausencia de grietas.',
+        },
+        ite: {
+          ask: 'Pide certificado ITE/IEE en vigor directamente al propietario o administrador.',
+          verify: 'Inspecciona visualmente fachada, balcones, bajantes y cubierta.',
+        },
+        vut: {
+          ask: 'Pregunta al administrador por el número de viviendas turísticas en la finca.',
+          verify: 'Fíjate en cerraduras electrónicas o entradas frecuentes con equipaje.',
+        },
+        airQuality: {
+          ask: 'Consulta estaciones de calidad del aire locales o planes de bajas emisiones.',
+          verify: 'Observa densidad de tráfico pesado y ventilación cruzada de la vivienda.',
+        },
+        urbanPlanning: {
+          ask: 'Solicita cédula o informe urbanístico en el Ayuntamiento.',
+          verify: 'Comprueba uso permitido y posibles obras o solares colindantes.',
+        },
+        connectivity: {
+          ask: 'Pregunta por distancias reales a centros de salud, colegios y transporte público.',
+          verify: 'Realiza a pie el trayecto hasta la parada de transporte y comercios básicos.',
+        },
+      },
+    },
+  },
 };

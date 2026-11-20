@@ -1039,4 +1039,165 @@ export const eu: TranslationSchema = {
     storageUnavailableError: 'Zure nabigatzaileak IndexedDB blokeatzen du modu pribatuan; offline Bisita Moduak ezin du dossierik gorde.',
     storageQuotaError: 'Tokiko biltegiratze-kuota agortu da; ezabatu gordetako dossier bat lekua egiteko.',
   },
+  checklist: {
+    tabLabel: 'Checklist',
+    title: 'Bisitarako checklist-a (in situ)',
+    subtitle: 'Dossierreko alerta ofizialetatik eta egiaztatu gabeko geruzetatik sortutako zerrenda determinista.',
+    exportMdBtn: 'Esportatu .MD',
+    exportTxtBtn: 'Esportatu .TXT',
+    printBtn: 'Inprimatu A4',
+    exportRefcatLabel: 'Katastro-erreferentzia',
+    exportDateLabel: 'Sortua',
+    exportProfileLabel: 'Profil aktiboa',
+    exportProfileNone: 'Bat ere ez (oinarria v2.1.0)',
+    askLabel: 'Galdetu',
+    verifyLabel: 'Egiaztatu bisitan',
+    countTotal: '{{count}} puntu',
+    countCritical: '{{count}} kritiko',
+    countImportant: '{{count}} garrantzitsu',
+    countUnverified: '{{count}} egiaztatu gabe',
+    emptyTitle: 'Ez dago alerta aktiborik ezta geruza pendenterik',
+    emptyDesc: 'Ebaluatutako geruza guztiak egiaztatuta daude eta ez da alerta kritikorik detektatu bisita honetarako.',
+    legalDisclaimer: 'Informazio-oharra: checklist hau datu publiko irekietatik automatikoki sortzen da eta ez da aholkularitza juridiko, tekniko edo higiezinen arlokoa.',
+    severity: {
+      critical: 'Kritikoa',
+      important: 'Garrantzitsua',
+      info: 'Informaziozkoa',
+    },
+    category: {
+      structural: 'Egitura',
+      legal: 'Legala',
+      environmental: 'Ingurunea',
+      energy: 'Energia',
+      neighborhood: 'Auzoa',
+      verification: 'Egiaztapena',
+    },
+    items: {
+      substandard_housing: {
+        title: 'Balizko azpietxebizitza / bizitegiz kanpoko katastro-erabilera ({{use}}, {{floor}} solairua)',
+        ask: 'Eskatu bizigarritasun-zedula edo lehen okupazioko lizentzia eta onartutako erabilera-aldaketa.',
+        verify: 'Egiaztatu aireztapen zuzena, altuera librea eta erroldatzeko aukera.',
+      },
+      age_old_building: {
+        title: 'Eraikin zaharra ({{year}}, {{age}} urte)',
+        ask: 'Galdetu iturgintza, zorroten, estalki edo elektrizitate-instalazioko derramei buruz.',
+        verify: 'Berrikusi sabai/izkinetako hezetasunak, koadro elektrikoa, ur-presioa eta leihoen isolamendua.',
+      },
+      ite_action_required: {
+        title: 'ITE / IEE egoera: {{status}}',
+        ask: 'Eskatu azken ITE/IEE ziurtagiriaren kopia, konponketa-aurrekontua eta komunitate-aktak.',
+        verify: 'Begiratu fatxadako pitzadurak, barne-patioa, estalkia eta eremu komunen egoera.',
+      },
+      noise_high: {
+        title: 'Ingurumen-zarata maila altua ({{lden}} dBA Lden)',
+        ask: 'Galdetu leihoetako beira motari buruz (bikoitza/climalit) eta barne-patiora ematen duen.',
+        verify: 'Bisitatu puntako orduan eta ireki leihoak minutu batzuez benetako zarata neurtzeko.',
+      },
+      flood_hazard: {
+        title: 'SNCZI uholde-arriskua ({{level}}, T={{returnPeriod}} urte)',
+        ask: 'Kontsultatu uragatiko ezbeharren historiala eta etxeko/komunitateko aseguruaren estaldura.',
+        verify: 'Ikuskatu garajeak, trastelekuak, ataria eta beheko hormetako hezetasun-markak.',
+      },
+      radon_ground_contact: {
+        title: 'Radon gasaren esposizioa ({{zone}}) beheko solairuan edo lurrarekin kontaktuan',
+        ask: 'Galdetu radonaren aurkako hesirik (CTE DB-HS 6) edo aurretiko Bq/m³ neurketarik dagoen.',
+        verify: 'Egiaztatu sotoen, ganbera sanitarioen eta zoladuren aireztapen natural edo behartua.',
+      },
+      cee_expired: {
+        title: 'Iraungitako Energia-eraginkortasun Ziurtagiria (CEE: {{validUntil}})',
+        ask: 'Eskatu CEE berritua eta erregistratua kontratua edo arrasak sinatu aurretik (RD 390/2021).',
+        verify: 'Egiaztatu berokuntza/ur bero sistema erreala, orientazioa eta arotzeriak.',
+      },
+      cee_missing: {
+        title: 'CEE ofiziala ez dago eskuragarri edo estimatua da',
+        ask: 'Eskatu autonomia-erkidegoan erregistratutako etiketa energetiko ofiziala.',
+        verify: 'Berrikusi galdara/bero-ponpa, erradiadoreak eta itxituren lodiera.',
+      },
+      seismic_vulnerable: {
+        title: 'NCSE-94 aurreko kalteberatasun sismikoa ({{ab}}g azelerazioa)',
+        ask: 'Galdetu 1994 ondoren egindako egitura-indartze edo birgaitze integralei buruz.',
+        verify: 'Begiratu trenkadetako pitzadura diagonalak, beheko solairuko zutabeak eta dilatazio-juntak.',
+      },
+      vut_high_pressure: {
+        title: 'Etxebizitza turistikoen presio altua (%{{ratio}} zentsu-sekzioan)',
+        ask: 'Kontsultatu komunitateko estatutuetan VUT debekatuta edo mugatuta dagoen.',
+        verify: 'Begiratu giltza-kutxatilarik, kartel turistikorik edo atarian mugimendu handirik dagoen.',
+      },
+      capex_high: {
+        title: 'Komunitateko CapEx arrisku altua ({{score}}/100 indizea)',
+        ask: 'Eskatu azken hiru batzar-aktak, erreserba-funtsaren saldoa eta komunitate-ordainagiriak.',
+        verify: 'Egiaztatu igogailua, ataria, postontziak, estalkia eta kontserbazio-egoera orokorra.',
+      },
+      urban_planning_risk: {
+        title: 'Hirigintza-baldintzatzailea ({{classification}})',
+        ask: 'Eskatu hirigintza-zedula edo ohar soila kargak, babesa edo antolamenduz kanpokoa egiaztatzeko.',
+        verify: 'Egiaztatu lerrokadurak, atzeraemanguneak edo partzelan ikus daitezkeen afekzioak.',
+      },
+    },
+    unverified: {
+      stale: {
+        title: '{{source}} iturriko datu zaharkitua (duela {{days}} egun) — egiaztatu indarraldia',
+      },
+      unavailable: {
+        title: '{{source}} iturria ez dago erabilgarri — derrigorrezko dokumentu-egiaztapena',
+      },
+      out_of_coverage: {
+        title: '{{source}} estalduratik kanpo — eskuz egiaztatu',
+      },
+      layers: {
+        catastro: {
+          ask: 'Eskatu ohar soila eta katastro-ziurtagiri deskribatzaile eta grafiko eguneratua.',
+          verify: 'Alderatu benetako azalera erabilgarria eta eraikia iragarritakoarekin.',
+        },
+        ine: {
+          ask: 'Kontsultatu barrutiko tokiko erreferentzia sozioekonomiko eta demografikoak.',
+          verify: 'Ibili inguruko kaleetan ordu desberdinetan jarduera eta zerbitzuak neurtzeko.',
+        },
+        sica: {
+          ask: 'Galdetu leihoen isolamendu akustikoari eta tokiko aisialdi/trafiko ordenantzei buruz.',
+          verify: 'Egin bisita egunez eta gauez leihoak irekita eta itxita.',
+        },
+        snczi: {
+          ask: 'Eskatu euri bortitzen historialari edo eraikinaren drainatzeari buruzko informazioa.',
+          verify: 'Berrikusi hustubideak, atariko maldak eta sotoko ur-markak.',
+        },
+        mivau: {
+          ask: 'Egiaztatu udalerria eremu tentsionatua den eta eskatu aurreko kontratua badagokio.',
+          verify: 'Egiaztatu aplikagarria den alokairu-erreferentzia indizea MIVAU atarian.',
+        },
+        cee: {
+          ask: 'Eskatu erregistratutako Energia-eraginkortasun Ziurtagiri ofiziala.',
+          verify: 'Berrikusi arotzeriak, pertsianak, zubi termikoa eta klimatizazio-ekipoa.',
+        },
+        radon: {
+          ask: 'Kontsultatu CSNren radon-mapa ofiziala udalerriarentzat.',
+          verify: 'Egiaztatu beheko solairuaren edo sotoaren aireztapena.',
+        },
+        seismic: {
+          ask: 'Eskatu egitura-fitxa teknikoa edo birgaitzearen urte zehatza.',
+          verify: 'Berrikusi zutabeen, karga-hormen eta pitzaduren egoera.',
+        },
+        ite: {
+          ask: 'Eskatu indarrean dagoen ITE/IEE ziurtagiria jabeari edo administratzaileari.',
+          verify: 'Ikuskatu fatxada, balkoiak, zorrotenak eta estalkia.',
+        },
+        vut: {
+          ask: 'Galdetu administratzaileari finkan zenbat etxebizitza turistiko dauden.',
+          verify: 'Begiratu sarraila elektronikorik edo ekipajearekin sarrera maizik dagoen.',
+        },
+        airQuality: {
+          ask: 'Kontsultatu tokiko aire-kalitate estazioak edo emisio gutxiko eremuak.',
+          verify: 'Begiratu trafiko astunaren dentsitatea eta etxebizitzaren aireztapen gurutzatua.',
+        },
+        urbanPlanning: {
+          ask: 'Eskatu hirigintza-zedula edo txostena Udalean.',
+          verify: 'Egiaztatu baimendutako erabilera eta inguruko obra edo orubeak.',
+        },
+        connectivity: {
+          ask: 'Galdetu osasun-zentroetara, eskoletara eta garraio publikora dauden benetako distantziei buruz.',
+          verify: 'Egin oinez garraio-geltokira eta oinarrizko dendetara arteko ibilbidea.',
+        },
+      },
+    },
+  },
 };

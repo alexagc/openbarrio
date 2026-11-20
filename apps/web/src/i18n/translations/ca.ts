@@ -1042,4 +1042,165 @@ export const ca: TranslationSchema = {
     storageUnavailableError: 'El navegador bloqueja IndexedDB en mode privat; el Mode Visita offline no pot desar dossiers.',
     storageQuotaError: 'Quota d’emmagatzematge local exhaurida; elimina algun dossier desat per alliberar espai.',
   },
+  checklist: {
+    tabLabel: 'Checklist',
+    title: 'Checklist de visita in situ',
+    subtitle: 'Llista determinista generada a partir d’alertes oficials i capes no verificades del dossier.',
+    exportMdBtn: 'Exportar .MD',
+    exportTxtBtn: 'Exportar .TXT',
+    printBtn: 'Imprimir A4',
+    exportRefcatLabel: 'Referència Cadastral',
+    exportDateLabel: 'Generat',
+    exportProfileLabel: 'Perfil actiu',
+    exportProfileNone: 'Cap (base v2.1.0)',
+    askLabel: 'Preguntar',
+    verifyLabel: 'Verificar en visita',
+    countTotal: '{{count}} punts',
+    countCritical: '{{count}} crítics',
+    countImportant: '{{count}} importants',
+    countUnverified: '{{count}} sense verificar',
+    emptyTitle: 'Sense alertes actives ni capes pendents',
+    emptyDesc: 'Totes les capes avaluades estan verificades i no s’han detectat alertes crítiques per a aquesta visita.',
+    legalDisclaimer: 'Avís informatiu: aquesta checklist es genera automàticament a partir de dades públiques obertes i no constitueix assessorament jurídic, tècnic ni immobiliari.',
+    severity: {
+      critical: 'Crític',
+      important: 'Important',
+      info: 'Informatiu',
+    },
+    category: {
+      structural: 'Estructura',
+      legal: 'Legal',
+      environmental: 'Entorn',
+      energy: 'Energia',
+      neighborhood: 'Barri',
+      verification: 'Verificació',
+    },
+    items: {
+      substandard_housing: {
+        title: 'Possible infrahabitatge / ús cadastral no residencial ({{use}}, planta {{floor}})',
+        ask: 'Sol·licita la cèdula d’habitabilitat o llicència de primera ocupació i el canvi d’ús aprovat.',
+        verify: 'Comprova a l’immoble la ventilació directa, alçada lliure i possibilitat d’empadronament.',
+      },
+      age_old_building: {
+        title: 'Edifici antic ({{year}}, {{age}} anys)',
+        ask: 'Pregunta per derrames recents o previstes en fontaneria, baixants, coberta i instal·lació elèctrica.',
+        verify: 'Revisa humitats en sostres/cantonades, quadre elèctric, pressió d’aigua i aïllament de finestres.',
+      },
+      ite_action_required: {
+        title: 'ITE / IEE en estat {{status}}',
+        ask: 'Demana còpia de l’últim certificat ITE/IEE, pressupost de reparació i actes de la comunitat.',
+        verify: 'Observa esquerdes a la façana, pati interior, coberta i estat de zones comunes.',
+      },
+      noise_high: {
+        title: 'Nivell de soroll ambiental elevat ({{lden}} dBA Lden)',
+        ask: 'Pregunta pel tipus de vidres (doble/climalit) i si dona a pati interior.',
+        verify: 'Visita en hora punta i obre les finestres uns minuts per comprovar el soroll real.',
+      },
+      flood_hazard: {
+        title: 'Risc d’inundabilitat SNCZI ({{level}}, T={{returnPeriod}} anys)',
+        ask: 'Consulta l’historial de sinistres per aigua i cobertura d’assegurança de llar/comunitat.',
+        verify: 'Inspecciona garatges, trasters, portals i marques d’humitat en murs baixos.',
+      },
+      radon_ground_contact: {
+        title: 'Exposició a gas radó ({{zone}}) en planta baixa o contacte amb el terreny',
+        ask: 'Pregunta si existeix barrera antiradó (CTE DB-HS 6) o mesura prèvia en Bq/m³.',
+        verify: 'Comprova la ventilació natural o forçada de soterranis, cambres sanitàries i soleres.',
+      },
+      cee_expired: {
+        title: 'Certificat d’Eficiència Energètica (CEE) caducat ({{validUntil}})',
+        ask: 'Exigeix el CEE renovat i registrat abans de signar contracte o arres (RD 390/2021).',
+        verify: 'Comprova el sistema real de calefacció/ACS, orientació i tancaments.',
+      },
+      cee_missing: {
+        title: 'CEE oficial no disponible o estimat',
+        ask: 'Sol·licita l’etiqueta energètica oficial registrada a la comunitat autònoma.',
+        verify: 'Revisa caldera/bomba de calor, radiadors i gruix de tancaments.',
+      },
+      seismic_vulnerable: {
+        title: 'Vulnerabilitat sísmica pre-NCSE-94 (acceleració {{ab}}g)',
+        ask: 'Pregunta per reforços estructurals o rehabilitacions integrals fetes després de 1994.',
+        verify: 'Observa fissures diagonals en envans, pilars en planta baixa i juntes de dilatació.',
+      },
+      vut_high_pressure: {
+        title: 'Pressió alta d’habitatges turístics ({{ratio}}% a la secció censal)',
+        ask: 'Consulta els estatuts de la comunitat sobre prohibició o limitació de VUT.',
+        verify: 'Observa presència de caixetins de claus, cartelleria turística o tràfec al portal.',
+      },
+      capex_high: {
+        title: 'Risc alt de CapEx comunitari (índex {{score}}/100)',
+        ask: 'Demana les tres últimes actes de junta, saldo del fons de reserva i rebuts de comunitat.',
+        verify: 'Comprova ascensor, portal, bústies, coberta i estat general de conservació.',
+      },
+      urban_planning_risk: {
+        title: 'Condicionant urbanístic ({{classification}})',
+        ask: 'Sol·licita cèdula urbanística o nota simple per verificar càrregues, protecció o fora d’ordenació.',
+        verify: 'Verifica alineacions, reculades o possibles afeccions visibles a la parcel·la.',
+      },
+    },
+    unverified: {
+      stale: {
+        title: 'Dada desactualitzada a {{source}} (fa {{days}} dies) — verificar vigència',
+      },
+      unavailable: {
+        title: 'Font {{source}} no disponible — verificació documental obligatòria',
+      },
+      out_of_coverage: {
+        title: 'Immoble fora de cobertura a {{source}} — comprovar manualment',
+      },
+      layers: {
+        catastro: {
+          ask: 'Demana nota simple i certificació cadastral descriptiva i gràfica actualitzada.',
+          verify: 'Contrasta la superfície útil i construïda real amb l’anunciada.',
+        },
+        ine: {
+          ask: 'Consulta referències socioeconòmiques i demogràfiques locals del districte.',
+          verify: 'Recorre els carrers propers a diferents hores per avaluar activitat i serveis.',
+        },
+        sica: {
+          ask: 'Pregunta per l’aïllament acústic de finestres i ordenances locals d’oci/trànsit.',
+          verify: 'Fes la visita en horari diürn i nocturn amb finestres obertes i tancades.',
+        },
+        snczi: {
+          ask: 'Sol·licita informació sobre historial de pluges intenses o drenatge de l’edifici.',
+          verify: 'Revisa embornals, pendents del portal i possibles marques d’aigua al soterrani.',
+        },
+        mivau: {
+          ask: 'Comprova si el municipi és zona tensionada i demana contracte anterior si escau.',
+          verify: 'Verifica l’índex de referència de lloguer aplicable al portal del MIVAU.',
+        },
+        cee: {
+          ask: 'Exigeix el Certificat d’Eficiència Energètica oficial registrat.',
+          verify: 'Revisa tancaments, persianes, pont tèrmic i equip de climatització.',
+        },
+        radon: {
+          ask: 'Consulta el mapa oficial de radó del CSN per al municipi.',
+          verify: 'Comprova la ventilació de planta baixa o soterrani.',
+        },
+        seismic: {
+          ask: 'Sol·licita fitxa tècnica estructural o any exacte de rehabilitació.',
+          verify: 'Revisa estat de pilars, murs de càrrega i absència d’esquerdes.',
+        },
+        ite: {
+          ask: 'Demana certificat ITE/IEE vigent directament al propietari o administrador.',
+          verify: 'Inspecciona visualment façana, balcons, baixants i coberta.',
+        },
+        vut: {
+          ask: 'Pregunta a l’administrador pel nombre d’habitatges turístics a la finca.',
+          verify: 'Fixa’t en panys electrònics o entrades freqüents amb equipatge.',
+        },
+        airQuality: {
+          ask: 'Consulta estacions de qualitat de l’aire locals o plans de baixes emissions.',
+          verify: 'Observa densitat de trànsit pesant i ventilació creuada de l’habitatge.',
+        },
+        urbanPlanning: {
+          ask: 'Sol·licita cèdula o informe urbanístic a l’Ajuntament.',
+          verify: 'Comprova ús permès i possibles obres o solars confrontants.',
+        },
+        connectivity: {
+          ask: 'Pregunta per distàncies reals a centres de salut, escoles i transport públic.',
+          verify: 'Fes a peu el trajecte fins a la parada de transport i comerços bàsics.',
+        },
+      },
+    },
+  },
 };

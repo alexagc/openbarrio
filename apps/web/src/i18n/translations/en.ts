@@ -1042,4 +1042,165 @@ export const en: TranslationSchema = {
     storageUnavailableError: 'IndexedDB storage is blocked in private browsing mode; Visit Mode cannot persist dossiers locally.',
     storageQuotaError: 'Local storage quota exceeded; remove an older saved dossier to free space.',
   },
+  checklist: {
+    tabLabel: 'Checklist',
+    title: 'On-site visit checklist',
+    subtitle: 'Deterministic checklist generated from official dossier alerts and unverified data layers.',
+    exportMdBtn: 'Export .MD',
+    exportTxtBtn: 'Export .TXT',
+    printBtn: 'Print A4',
+    exportRefcatLabel: 'Cadastral Reference',
+    exportDateLabel: 'Generated',
+    exportProfileLabel: 'Active profile',
+    exportProfileNone: 'None (base v2.1.0)',
+    askLabel: 'Ask',
+    verifyLabel: 'Verify on-site',
+    countTotal: '{{count}} items',
+    countCritical: '{{count}} critical',
+    countImportant: '{{count}} important',
+    countUnverified: '{{count}} unverified',
+    emptyTitle: 'No active alerts or pending layers',
+    emptyDesc: 'All evaluated layers are verified and no critical alerts were detected for this visit.',
+    legalDisclaimer: 'Informational notice: this checklist is deterministically generated from open public data and does not constitute legal, technical, or real estate advice.',
+    severity: {
+      critical: 'Critical',
+      important: 'Important',
+      info: 'Info',
+    },
+    category: {
+      structural: 'Structural',
+      legal: 'Legal',
+      environmental: 'Environment',
+      energy: 'Energy',
+      neighborhood: 'Neighborhood',
+      verification: 'Verification',
+    },
+    items: {
+      substandard_housing: {
+        title: 'Potential substandard housing / non-residential cadastral use ({{use}}, floor {{floor}})',
+        ask: 'Request the habitability certificate (cédula de habitabilidad) or approved change-of-use permit.',
+        verify: 'Check direct natural ventilation, ceiling height, and municipal registration eligibility.',
+      },
+      age_old_building: {
+        title: 'Older building ({{year}}, {{age}} years)',
+        ask: 'Ask about recent or planned special assessments for plumbing, risers, roof, and electrical wiring.',
+        verify: 'Inspect ceilings/corners for dampness, electrical panel, water pressure, and window insulation.',
+      },
+      ite_action_required: {
+        title: 'Technical Building Inspection (ITE/IEE) status: {{status}}',
+        ask: 'Request a copy of the latest ITE/IEE certificate, remediation budget, and HOA meeting minutes.',
+        verify: 'Check facade cracks, inner courtyard, roof condition, and common areas.',
+      },
+      noise_high: {
+        title: 'Elevated ambient noise level ({{lden}} dBA Lden)',
+        ask: 'Ask about window glazing (double glazing, thermal break) and whether rooms face an inner courtyard.',
+        verify: 'Visit during peak traffic hours and open windows briefly to assess real noise.',
+      },
+      flood_hazard: {
+        title: 'SNCZI flood hazard ({{level}}, T={{returnPeriod}} years)',
+        ask: 'Ask about past water damage claims and building/home insurance coverage.',
+        verify: 'Inspect garages, storage rooms, lobby, and lower walls for water marks.',
+      },
+      radon_ground_contact: {
+        title: 'Radon gas exposure ({{zone}}) on ground floor or ground contact',
+        ask: 'Ask whether a radon barrier (CTE DB-HS 6) or prior Bq/m³ measurement exists.',
+        verify: 'Check natural or mechanical ventilation in basements, crawl spaces, and ground slabs.',
+      },
+      cee_expired: {
+        title: 'Expired Energy Performance Certificate (CEE: {{validUntil}})',
+        ask: 'Require a renewed and registered CEE before signing any purchase or lease contract (RD 390/2021).',
+        verify: 'Check actual heating/hot water equipment, orientation, and window frames.',
+      },
+      cee_missing: {
+        title: 'Official CEE unavailable or estimated',
+        ask: 'Request the official energy label registered with the regional authority.',
+        verify: 'Inspect boiler/heat pump, radiators, and wall/window insulation.',
+      },
+      seismic_vulnerable: {
+        title: 'Pre-NCSE-94 seismic vulnerability (acceleration {{ab}}g)',
+        ask: 'Ask about structural reinforcements or major renovations carried out after 1994.',
+        verify: 'Look for diagonal wall cracks, ground-floor columns, and expansion joints.',
+      },
+      vut_high_pressure: {
+        title: 'High tourist-apartment pressure ({{ratio}}% in census tract)',
+        ask: 'Check HOA bylaws regarding restrictions or bans on short-term tourist rentals.',
+        verify: 'Look for lockboxes, tourist signage, or frequent luggage traffic at the entrance.',
+      },
+      capex_high: {
+        title: 'High community CapEx risk (index {{score}}/100)',
+        ask: 'Request the last three HOA meeting minutes, reserve fund balance, and monthly fee receipts.',
+        verify: 'Check elevator, lobby, mailboxes, roof, and overall building maintenance.',
+      },
+      urban_planning_risk: {
+        title: 'Urban planning condition ({{classification}})',
+        ask: 'Request an urban planning certificate or Land Registry extract (nota simple) to verify encumbrances.',
+        verify: 'Check setbacks, alignments, or visible planning constraints on the parcel.',
+      },
+    },
+    unverified: {
+      stale: {
+        title: 'Stale data from {{source}} ({{days}} days old) — verify currency',
+      },
+      unavailable: {
+        title: 'Source {{source}} unavailable — manual document check required',
+      },
+      out_of_coverage: {
+        title: 'Outside coverage in {{source}} — verify manually',
+      },
+      layers: {
+        catastro: {
+          ask: 'Request an updated Land Registry extract and descriptive Cadastral certificate.',
+          verify: 'Cross-check actual usable and built surface against advertised figures.',
+        },
+        ine: {
+          ask: 'Check local municipal socioeconomic and demographic references.',
+          verify: 'Walk surrounding streets at different times to assess neighborhood activity and services.',
+        },
+        sica: {
+          ask: 'Ask about window acoustic insulation and local nightlife/traffic ordinances.',
+          verify: 'Visit during both daytime and evening with windows open and closed.',
+        },
+        snczi: {
+          ask: 'Ask about historical heavy-rain incidents or building drainage.',
+          verify: 'Inspect street drains, entrance slope, and basement walls for water marks.',
+        },
+        mivau: {
+          ask: 'Check if the municipality is a declared stressed housing zone and request prior lease if applicable.',
+          verify: 'Verify the applicable official rental reference index on the MIVAU portal.',
+        },
+        cee: {
+          ask: 'Require the official registered Energy Performance Certificate.',
+          verify: 'Inspect window frames, shutters, thermal bridges, and HVAC equipment.',
+        },
+        radon: {
+          ask: 'Check the official CSN radon map for the municipality.',
+          verify: 'Check ground-floor or basement ventilation.',
+        },
+        seismic: {
+          ask: 'Request structural specifications or exact year of major rehabilitation.',
+          verify: 'Inspect columns, load-bearing walls, and absence of structural cracks.',
+        },
+        ite: {
+          ask: 'Request a valid ITE/IEE certificate directly from the owner or property manager.',
+          verify: 'Visually inspect facade, balconies, downspouts, and roof.',
+        },
+        vut: {
+          ask: 'Ask the property manager how many tourist apartments operate in the building.',
+          verify: 'Look for keypad locks or frequent guests with luggage.',
+        },
+        airQuality: {
+          ask: 'Check local air quality stations or low-emission zone rules.',
+          verify: 'Observe heavy traffic density and cross-ventilation inside the unit.',
+        },
+        urbanPlanning: {
+          ask: 'Request an urban planning report from the City Council.',
+          verify: 'Check permitted uses and adjacent construction sites or vacant lots.',
+        },
+        connectivity: {
+          ask: 'Ask for real walking distances to healthcare centers, schools, and transit.',
+          verify: 'Walk the route to the nearest transit stop and essential shops.',
+        },
+      },
+    },
+  },
 };
