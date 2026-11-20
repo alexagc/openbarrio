@@ -21,6 +21,8 @@ export * from './types/audit.js';
 export * from './types/http.js';
 export * from './types/analytics.js';
 export * from './types/visit-mode.js';
+export * from './types/visit-checklist.js';
+export * from './checklist/generate-visit-checklist.js';
 export * from './tokens/index.js';
 export * from './scoring/traffic-light.js';
 export * from './scoring/weights.js';
