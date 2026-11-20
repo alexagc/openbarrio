@@ -36,12 +36,16 @@ function createSampleAuditReport(): PropertyAuditReport {
     neighborhood: {
       censusSectionCode: '2807901028',
       averageNetHouseholdIncomeEur: 28000,
+      averageNetPersonIncomeEur: 14500,
       percentileInMunicipality: 45,
+      rankingInCity: { rank: 1200, totalSections: 2443 },
+      demographics: { medianAge: 42, singlePersonHouseholdPercentage: 31 },
     },
     environment: {
       noise: {
         dayEveningNightDecibels: 52,
-        predominantSource: 'TRAFFIC',
+        category: 'QUIET',
+        predominantSource: 'ROAD_TRAFFIC',
       },
       floodRisk: {
         level: 'NONE',
@@ -51,9 +55,12 @@ function createSampleAuditReport(): PropertyAuditReport {
     },
     connectivity: {
       walkScore15Min: 95,
+      facilitiesWithin15MinCount: 28,
     },
     energy: {
       ratingEmissions: 'C',
+      ratingConsumption: 'C',
+      scope: 'building',
       isEstimated: false,
       isExpired: false,
     },

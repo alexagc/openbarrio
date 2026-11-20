@@ -268,6 +268,39 @@ exports[`VisitChecklistPanel & Export > matches printable checklist DOM snapshot
             >
               Verificación
             </span>
+            <span
+              class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-mono border bg-surface-container text-outline border-outline-variant "
+              data-status="unavailable"
+              data-testid="layer-status-badge"
+              title="Fuente oficial (MITECO SNCZI) temporalmente no disponible. Este indicador no se estima ni aporta puntos favorables."
+            >
+              <svg
+                aria-hidden="true"
+                class="lucide lucide-cloud-off w-3 h-3 shrink-0"
+                fill="none"
+                height="24"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+                width="24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="M10.94 5.274A7 7 0 0 1 15.71 10h1.79a4.5 4.5 0 0 1 4.222 6.057"
+                />
+                <path
+                  d="M18.796 18.81A4.5 4.5 0 0 1 17.5 19H9A7 7 0 0 1 5.79 5.78"
+                />
+                <path
+                  d="m2 2 20 20"
+                />
+              </svg>
+              <span>
+                No disponible
+              </span>
+            </span>
           </div>
           <p
             class="text-xs sm:text-sm font-semibold text-on-surface "
@@ -741,6 +774,40 @@ exports[`VisitChecklistPanel & Export > matches printable checklist DOM snapshot
               class="px-2 py-0.5 rounded text-[10px] font-mono bg-surface-container-high border border-outline-variant text-on-surface-variant"
             >
               Verificación
+            </span>
+            <span
+              class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-mono border bg-amber-500/15 text-amber-300 border-amber-500/50 font-semibold "
+              data-amber="true"
+              data-status="stale"
+              data-testid="layer-status-badge"
+              title="Dato histórico con más de 90 días (ITE Municipal, verificado el 2026-06-01). Se actualizará automáticamente al restablecerse la fuente."
+            >
+              <svg
+                aria-hidden="true"
+                class="lucide lucide-triangle-exclamation-point lucide-alert-triangle lucide-triangle-alert w-3 h-3 shrink-0"
+                fill="none"
+                height="24"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+                width="24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"
+                />
+                <path
+                  d="M12 9v4"
+                />
+                <path
+                  d="M12 17h.01"
+                />
+              </svg>
+              <span>
+                Verificado el 2026-06-01 (ITE Municipal)
+              </span>
             </span>
           </div>
           <p

@@ -107,7 +107,7 @@ describe('Transit Isochrones & Broadband Coverage UI (v1.5.0 Block 3)', () => {
   it('supports Walk <-> GTFS Transit tab switching via click and keyboard arrows', () => {
     renderWithLang(
       <PedestrianIsochronesCard
-        connectivity={{ walkScore15Min: 91 }}
+        connectivity={{ walkScore15Min: 91, facilitiesWithin15MinCount: 18 }}
         transit={sampleTransitFull}
         transitLayer={{
           status: 'ok',
@@ -157,7 +157,7 @@ describe('Transit Isochrones & Broadband Coverage UI (v1.5.0 Block 3)', () => {
 
     const { rerender } = renderWithLang(
       <PedestrianIsochronesCard
-        connectivity={{ walkScore15Min: 78 }}
+        connectivity={{ walkScore15Min: 78, facilitiesWithin15MinCount: 18 }}
         transit={partialTransit}
         transitLayer={{
           status: 'out_of_coverage',
@@ -179,7 +179,7 @@ describe('Transit Isochrones & Broadband Coverage UI (v1.5.0 Block 3)', () => {
     rerender(
       <LanguageProvider initialLanguage="en">
         <PedestrianIsochronesCard
-          connectivity={{ walkScore15Min: 60 }}
+          connectivity={{ walkScore15Min: 60, facilitiesWithin15MinCount: 18 }}
           transitLayer={{
             status: 'out_of_coverage',
             sourceName: 'MITMS NAP GTFS Transporte',
@@ -296,15 +296,21 @@ describe('Transit Isochrones & Broadband Coverage UI (v1.5.0 Block 3)', () => {
       property: sampleProperty,
       neighborhood: {
         censusSectionCode: '2807901001',
-        municipalityName: 'Madrid',
         averageNetHouseholdIncomeEur: 38000,
+        averageNetPersonIncomeEur: 19500,
         percentileInMunicipality: 78,
+        rankingInCity: { rank: 420, totalSections: 2443 },
+        demographics: { medianAge: 43, singlePersonHouseholdPercentage: 34 },
       },
       environment: {
-        noise: { dayEveningNightDecibels: 58, predominantSource: 'ROAD_TRAFFIC' },
+        noise: {
+          dayEveningNightDecibels: 58,
+          category: 'MODERATE',
+          predominantSource: 'ROAD_TRAFFIC',
+        },
         floodRisk: { level: 'NONE', returnPeriodYears: null, isInPreferentialFlowZone: false },
       },
-      connectivity: { walkScore15Min: 91 },
+      connectivity: { walkScore15Min: 91, facilitiesWithin15MinCount: 18 },
       urbanPlanning: {
         landClassification: 'URBAN_CONSOLIDATED',
         isProtectedLand: false,
@@ -318,10 +324,14 @@ describe('Transit Isochrones & Broadband Coverage UI (v1.5.0 Block 3)', () => {
       property: sampleProperty,
       typology: 'RESIDENTIAL',
       environment: {
-        noise: { dayEveningNightDecibels: 58, predominantSource: 'ROAD_TRAFFIC' },
+        noise: {
+          dayEveningNightDecibels: 58,
+          category: 'MODERATE',
+          predominantSource: 'ROAD_TRAFFIC',
+        },
         floodRisk: { level: 'NONE', returnPeriodYears: null, isInPreferentialFlowZone: false },
       },
-      connectivity: { walkScore15Min: 91 },
+      connectivity: { walkScore15Min: 91, facilitiesWithin15MinCount: 18 },
       transit: sampleTransitFull,
       broadband: sampleBroadbandOk,
       score,

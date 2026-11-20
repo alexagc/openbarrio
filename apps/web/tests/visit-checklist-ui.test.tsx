@@ -20,7 +20,7 @@ function createReportWithAlerts(): PropertyAuditReport {
         municipalityCode: '28079',
         provinceCode: '28',
       },
-      coordinates: { lat: 40.418, lon: -3.695 },
+      coordinates: { latitude: 40.418, longitude: -3.695, srs: 'EPSG:4326' },
       building: {
         constructionYear: 1955,
         builtSurfaceM2: 1800,
@@ -34,7 +34,8 @@ function createReportWithAlerts(): PropertyAuditReport {
     environment: {
       noise: {
         dayEveningNightDecibels: 72,
-        predominantSource: 'TRAFFIC',
+        category: 'NOISY',
+        predominantSource: 'ROAD_TRAFFIC',
       },
       floodRisk: {
         level: 'NONE',
@@ -44,6 +45,8 @@ function createReportWithAlerts(): PropertyAuditReport {
     },
     energy: {
       ratingEmissions: 'E',
+      ratingConsumption: 'E',
+      scope: 'building',
       isExpired: true,
       validUntil: '2024-01-15',
       isEstimated: false,

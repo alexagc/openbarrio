@@ -140,8 +140,12 @@ export function VisitChecklistPanel({
               </span>
               {item.layerStatus !== 'ok' && (
                 <LayerStatusBadge
-                  status={item.layerStatus}
-                  staleDays={layerInfo?.staleDays}
+                  info={
+                    layerInfo ?? {
+                      status: item.layerStatus,
+                      sourceName: String(item.params?.source ?? item.sourceLayer),
+                    }
+                  }
                 />
               )}
             </div>
