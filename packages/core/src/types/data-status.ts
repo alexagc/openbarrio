@@ -24,6 +24,7 @@ export const ALL_LAYER_KEYS = [
   'airQuality',
   'urbanPlanning',
   'connectivity',
+  'transit',
 ] as const;
 
 export const LayerStatusSchema = Type.Union([
@@ -56,6 +57,7 @@ export const LayerKeySchema = Type.Union([
   Type.Literal('airQuality'),
   Type.Literal('urbanPlanning'),
   Type.Literal('connectivity'),
+  Type.Literal('transit'),
 ]);
 
 export const LayerStatusInfoSchema = Type.Object({
@@ -65,6 +67,8 @@ export const LayerStatusInfoSchema = Type.Object({
   verifiedAt: Type.Optional(Type.String()),
   reason: Type.Optional(LayerReasonSchema),
   staleDays: Type.Optional(Type.Number({ minimum: 0 })),
+  coveragePct: Type.Optional(Type.Number({ minimum: 0, maximum: 100 })),
+  granularity: Type.Optional(Type.String()),
 });
 
 export function createLayerResultSchema<T extends TSchema>(dataSchema: T) {
@@ -76,6 +80,8 @@ export function createLayerResultSchema<T extends TSchema>(dataSchema: T) {
     verifiedAt: Type.Optional(Type.String()),
     reason: Type.Optional(LayerReasonSchema),
     staleDays: Type.Optional(Type.Number({ minimum: 0 })),
+    coveragePct: Type.Optional(Type.Number({ minimum: 0, maximum: 100 })),
+    granularity: Type.Optional(Type.String()),
   });
 }
 
@@ -131,11 +137,15 @@ export interface LayerResult<T> {
   verifiedAt?: string;
   reason?: LayerReason;
   staleDays?: number;
+  coveragePct?: number;
+  granularity?: string;
 }
 
 export interface LayerOkOptions {
   sourceDate?: string;
   verifiedAt?: string;
+  coveragePct?: number;
+  granularity?: string;
 }
 
 export interface LayerStaleOptions {
@@ -143,12 +153,17 @@ export interface LayerStaleOptions {
   verifiedAt: string;
   reason?: LayerReason;
   staleDays?: number;
+  coveragePct?: number;
+  granularity?: string;
 }
 
-export interface LayerOutOfCoverageOptions {
+export interface LayerOutOfCoverageOptions<T = never> {
   sourceDate?: string;
   verifiedAt?: string;
   reason?: Extract<LayerReason, 'no_coverage' | 'not_applicable'>;
+  coveragePct?: number;
+  granularity?: string;
+  data?: T;
 }
 
 /**
@@ -186,6 +201,8 @@ export function layerOk<T>(
     sourceName,
     ...(options.sourceDate ? { sourceDate: options.sourceDate } : {}),
     verifiedAt: options.verifiedAt ?? new Date().toISOString(),
+    ...(typeof options.coveragePct === 'number' ? { coveragePct: options.coveragePct } : {}),
+    ...(options.granularity ? { granularity: options.granularity } : {}),
   };
 }
 
@@ -207,6 +224,8 @@ export function layerStale<T>(
     verifiedAt: options.verifiedAt,
     ...(options.reason ? { reason: options.reason } : {}),
     staleDays,
+    ...(typeof options.coveragePct === 'number' ? { coveragePct: options.coveragePct } : {}),
+    ...(options.granularity ? { granularity: options.granularity } : {}),
   };
 }
 
@@ -226,14 +245,17 @@ export function layerUnavailable<T = never>(
 
 export function layerOutOfCoverage<T = never>(
   sourceName: string,
-  options: LayerOutOfCoverageOptions = {}
+  options: LayerOutOfCoverageOptions<T> = {}
 ): LayerResult<T> {
   return {
     status: 'out_of_coverage',
+    ...(options.data !== undefined ? { data: options.data } : {}),
     sourceName,
     reason: options.reason ?? 'no_coverage',
     ...(options.sourceDate ? { sourceDate: options.sourceDate } : {}),
     ...(options.verifiedAt ? { verifiedAt: options.verifiedAt } : {}),
+    ...(typeof options.coveragePct === 'number' ? { coveragePct: options.coveragePct } : {}),
+    ...(options.granularity ? { granularity: options.granularity } : {}),
   };
 }
 
@@ -245,5 +267,7 @@ export function toLayerStatusInfo<T>(result: LayerResult<T>): LayerStatusInfo {
     ...(result.verifiedAt ? { verifiedAt: result.verifiedAt } : {}),
     ...(result.reason ? { reason: result.reason } : {}),
     ...(typeof result.staleDays === 'number' ? { staleDays: result.staleDays } : {}),
+    ...(typeof result.coveragePct === 'number' ? { coveragePct: result.coveragePct } : {}),
+    ...(result.granularity ? { granularity: result.granularity } : {}),
   };
 }

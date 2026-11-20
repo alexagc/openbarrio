@@ -9,6 +9,7 @@ import {
   CensusTractIncome,
   RentalBenchmark,
   CivicConnectivityData,
+  TransitAccessibility,
   UrbanPlanningData,
   EnergyPerformanceCertificate,
   NeighborhoodTrends,
@@ -138,8 +139,19 @@ export class AuditService {
     const neighborhood = neighborhoodRes.data;
     const censusSectionCode = neighborhood?.censusSectionCode;
 
+    const provCode = property.address.provinceCode || property.address.postalCode.slice(0, 2) || '28';
+    const rawMuniCode = property.address.municipalityCode || '';
+    const resolvedMuniCode =
+      rawMuniCode.length >= 5
+        ? rawMuniCode
+        : rawMuniCode.length > 0
+        ? `${provCode}${rawMuniCode.padStart(3, '0')}`
+        : censusSectionCode && censusSectionCode.length >= 5
+        ? censusSectionCode.slice(0, 5)
+        : undefined;
+
     // 3. Fetch parallel provider metrics using census tract context
-    const [envAggregate, connectivityRes, urbanPlanningRes, energyRes] = await Promise.all([
+    const [envAggregate, connectivityRes, urbanPlanningRes, energyRes, transitRes] = await Promise.all([
       this.resolveEnvironment(property, censusSectionCode, waitUntil),
       this.resolveConnectivity(lat, lon, {
         municipality: property.address.municipality,
@@ -147,11 +159,13 @@ export class AuditService {
       }),
       this.resolveUrbanPlanning(property),
       this.resolveEnergy(property),
+      this.resolveTransit(lat, lon, resolvedMuniCode),
     ]);
     const environment = envAggregate.data;
     const connectivity = connectivityRes.data;
     const urbanPlanning = urbanPlanningRes.data;
     const energy = energyRes.data;
+    const transit = transitRes.data;
 
     // 4. Calculate MIVAU SERPAVI rental benchmark & check stressed market status (Residential only)
     let rentalBenchmark: RentalBenchmark | undefined;
@@ -209,16 +223,7 @@ export class AuditService {
         floorLevel = -1;
       }
     }
-    const provCode = property.address.provinceCode || property.address.postalCode.slice(0, 2) || '28';
-    const rawMuniCode = property.address.municipalityCode || '';
-    const radonMuniCode =
-      rawMuniCode.length >= 5
-        ? rawMuniCode
-        : rawMuniCode.length > 0
-        ? `${provCode}${rawMuniCode.padStart(3, '0')}`
-        : censusSectionCode && censusSectionCode.length >= 5
-        ? censusSectionCode.slice(0, 5)
-        : `${provCode}001`;
+    const radonMuniCode = resolvedMuniCode ?? `${provCode}001`;
     const radonRes = await this.providers.radon.getRadonEvaluation(
       radonMuniCode,
       provCode,
@@ -274,7 +279,7 @@ export class AuditService {
       connectivity?.nearbyFacilities || []
     );
 
-    // 12. Assemble all 13 typed layer statuses and compute honest BarrioScore
+    // 12. Assemble all typed layer statuses and compute honest BarrioScore
     const catastroLayer =
       resolvedCatastroLayer ??
       toLayerStatusInfo(layerOk('Sede Electrónica del Catastro (OVC)', property));
@@ -292,6 +297,7 @@ export class AuditService {
       airQuality: toLayerStatusInfo(envAggregate.layers.airQuality),
       urbanPlanning: urbanPlanningRes.layer,
       connectivity: connectivityRes.layer,
+      transit: transitRes.layer,
     };
 
     const score = calculateBarrioScore({
@@ -346,6 +352,7 @@ export class AuditService {
       buildingInspection,
       seismicHazard,
       pedestrianIsochrones,
+      ...(transit ? { transit } : {}),
     };
   }
 
@@ -522,6 +529,31 @@ export class AuditService {
     const res = await this.providers.connectivity.getConnectivityData(latitude, longitude, context);
     return {
       data: isLayerUsable(res.status) ? res.data : undefined,
+      layer: toLayerStatusInfo(res),
+    };
+  }
+
+  private async resolveTransit(
+    latitude: number,
+    longitude: number,
+    municipalityCode?: string
+  ): Promise<{ data?: TransitAccessibility; layer: LayerStatusInfo }> {
+    if (!this.providers.transit) {
+      return {
+        data: undefined,
+        layer: toLayerStatusInfo(layerUnavailable('MITMS NAP GTFS Transporte', 'upstream_error')),
+      };
+    }
+    const res = await this.providers.transit.getTransitAccessibility(
+      latitude,
+      longitude,
+      municipalityCode
+    );
+    const keepPartialData =
+      isLayerUsable(res.status) ||
+      (res.status === 'out_of_coverage' && res.data !== undefined);
+    return {
+      data: keepPartialData ? res.data : undefined,
       layer: toLayerStatusInfo(res),
     };
   }

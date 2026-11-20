@@ -9,6 +9,7 @@ import {
   FloodRiskData,
   RentalBenchmark,
   CivicConnectivityData,
+  TransitAccessibility,
   UrbanPlanningData,
   AirQualityData,
   EnergyPerformanceCertificate,
@@ -235,4 +236,16 @@ export interface IMunicipalityProvider {
    * Retrieve rich municipal profile and aggregated civic intelligence by canonical slug or 5-digit INE code.
    */
   getBySlugOrCode(slugOrCode: string): Promise<MunicipalityDetailDTO>;
+}
+
+export interface ITransitProvider {
+  /**
+   * Retrieve GTFS/NAP transit accessibility (5/10/15-min stops, headways, hub times)
+   * with explicit coverage percentage (`out_of_coverage` when partial or absent).
+   */
+  getTransitAccessibility(
+    latitude: number,
+    longitude: number,
+    municipalityCode?: string
+  ): Promise<LayerResult<TransitAccessibility>>;
 }

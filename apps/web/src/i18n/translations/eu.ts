@@ -1202,6 +1202,10 @@ export const eu: TranslationSchema = {
           ask: 'Galdetu osasun-zentroetara, eskoletara eta garraio publikora dauden benetako distantziei buruz.',
           verify: 'Egin oinez garraio-geltokira eta oinarrizko dendetara arteko ibilbidea.',
         },
+        transit: {
+          ask: 'Kontsultatu lineak, puntako orduetako ordutegiak eta igarotze-maiztasunak tokiko partzuergoan.',
+          verify: 'Egiaztatu geltokirainoko benetako oinezko distantzia eta transbordo-denborak.',
+        },
       },
     },
   },

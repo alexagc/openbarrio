@@ -81,6 +81,10 @@ export const RESILIENCE_CONFIG: Record<LayerKey, ProviderResilienceConfig> = {
     sourceName: 'IGN / CNIG Equipamientos',
     ...DEFAULT_RETRY_AND_BREAKER,
   },
+  transit: {
+    sourceName: 'MITMS NAP GTFS Transporte',
+    ...DEFAULT_RETRY_AND_BREAKER,
+  },
 };
 
 export function getProviderResilienceConfig(providerKey: LayerKey): ProviderResilienceConfig {

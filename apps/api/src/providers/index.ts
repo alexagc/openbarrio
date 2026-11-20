@@ -13,6 +13,7 @@ import {
   IRadonProvider,
   IVutProvider,
   IMunicipalityProvider,
+  ITransitProvider,
 } from './types.js';
 import { D1Database, CloudflareEnv } from '../types/env.js';
 import { CircuitBreakerRegistry, SourceSnapshotStore, defaultBreakerRegistry } from '../resilience/index.js';
@@ -52,6 +53,10 @@ import {
   AirQualityProvider,
   MockAirQualityProvider,
 } from './air-quality.provider.js';
+import {
+  D1TransitProvider,
+  MockTransitProvider,
+} from './transit.provider.js';
 
 export * from './types.js';
 export * from './catastro.provider.js';
@@ -83,6 +88,7 @@ export * from './radon.provider.js';
 export * from './vut.provider.js';
 export * from './municipality.provider.js';
 export * from './municipality.mock.js';
+export * from './transit.provider.js';
 
 export interface ProviderContainer {
   catastro: ICatastroProvider;
@@ -99,6 +105,7 @@ export interface ProviderContainer {
   radon: IRadonProvider;
   vut: IVutProvider;
   municipality: IMunicipalityProvider;
+  transit: ITransitProvider;
   snapshotStore?: SourceSnapshotStore;
   telemetryStore?: TelemetryStore;
   breaker?: CircuitBreakerRegistry;
@@ -119,6 +126,7 @@ export function createMockProviders(overrides?: Partial<ProviderContainer>): Pro
   const radon = new MockRadonProvider();
   const vut = new MockVutProvider();
   const municipality = new MockMunicipalityProvider();
+  const transit = new MockTransitProvider();
 
   const effectiveSica = overrides?.sica || sica;
   const effectiveSnczi = overrides?.snczi || snczi;
@@ -147,6 +155,7 @@ export function createMockProviders(overrides?: Partial<ProviderContainer>): Pro
     radon: overrides?.radon || radon,
     vut: overrides?.vut || vut,
     municipality: overrides?.municipality || municipality,
+    transit: overrides?.transit || transit,
     snapshotStore: overrides?.snapshotStore,
     telemetryStore: overrides?.telemetryStore || new TelemetryStore({ db: overrides?.db }),
     breaker: overrides?.breaker || defaultBreakerRegistry,
@@ -199,6 +208,7 @@ export function createProviders(
   const defaultRadon = new RadonProvider(db);
   const defaultVut = new VutProvider(db, { breaker });
   const defaultMunicipality = new MunicipalityProvider({ db });
+  const defaultTransit = new D1TransitProvider({ db });
 
   const effectiveSica = overrides?.sica || defaultSICA;
   const effectiveSnczi = overrides?.snczi || defaultSNCZI;
@@ -227,6 +237,7 @@ export function createProviders(
     radon: overrides?.radon || defaultRadon,
     vut: overrides?.vut || defaultVut,
     municipality: overrides?.municipality || defaultMunicipality,
+    transit: overrides?.transit || defaultTransit,
     snapshotStore: overrides?.snapshotStore || snapshotStore,
     telemetryStore,
     breaker,

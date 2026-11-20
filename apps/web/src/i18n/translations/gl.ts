@@ -1202,6 +1202,10 @@ export const gl: TranslationSchema = {
           ask: 'Pregunta por distancias reais a centros de saúde, colexios e transporte público.',
           verify: 'Realiza a pé o traxecto ata a parada de transporte e comercios básicos.',
         },
+        transit: {
+          ask: 'Consulta liñas, horarios reais de hora punta e frecuencia de paso no consorcio local.',
+          verify: 'Comproba a distancia a pé real ata a parada e os tempos de transbordo.',
+        },
       },
     },
   },

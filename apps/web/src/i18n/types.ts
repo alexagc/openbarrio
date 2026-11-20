@@ -1099,6 +1099,7 @@ export interface TranslationSchema {
         airQuality: { ask: string; verify: string };
         urbanPlanning: { ask: string; verify: string };
         connectivity: { ask: string; verify: string };
+        transit: { ask: string; verify: string };
       };
     };
   };

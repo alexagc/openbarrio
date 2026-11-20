@@ -39,7 +39,7 @@ export async function resolveWithStaleWhileRevalidate<T>(
     snapshotStore,
     breaker = defaultBreakerRegistry,
     waitUntil,
-    now = () => new Date(),
+    now,
     fetcher,
   } = options;
 
@@ -48,7 +48,9 @@ export async function resolveWithStaleWhileRevalidate<T>(
     : null;
 
   if (snapshot) {
-    const ageDays = computeStaleAgeDays(snapshot.verifiedAt, now());
+    const ageDays = now
+      ? computeStaleAgeDays(snapshot.verifiedAt, now())
+      : snapshot.ageDays;
 
     if (ageDays <= STALE_FRESH_DAYS) {
       return layerOk(sourceName, snapshot.data, {

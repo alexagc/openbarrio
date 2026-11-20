@@ -14,6 +14,7 @@ import { BuildingSurroundingsSchema } from './surroundings.js';
 import { SubstandardHousingAlertSchema } from './substandard-housing.js';
 import { BuildingInspectionSchema } from './building-inspection.js';
 import { SeismicHazardSchema } from './seismic.js';
+import { TransitAccessibilitySchema } from './transit.js';
 import { LayerStatusInfoSchema } from './data-status.js';
 import {
   AuditCoverageSchema,
@@ -100,6 +101,7 @@ export const PropertyAuditReportSchema = Type.Object({
   buildingInspection: Type.Optional(BuildingInspectionSchema),
   seismicHazard: Type.Optional(SeismicHazardSchema),
   pedestrianIsochrones: Type.Optional(PedestrianIsochronesSchema),
+  transit: Type.Optional(TransitAccessibilitySchema),
 });
 
 export type AuditSubscores = Static<typeof AuditSubscoresSchema>;

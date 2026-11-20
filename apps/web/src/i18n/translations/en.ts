@@ -1205,6 +1205,10 @@ export const en: TranslationSchema = {
           ask: 'Ask for real walking distances to healthcare centers, schools, and transit.',
           verify: 'Walk the route to the nearest transit stop and essential shops.',
         },
+        transit: {
+          ask: 'Check active lines, peak schedules, and service headways with the local transit authority.',
+          verify: 'Walk the real street route to the stop and verify transfer times.',
+        },
       },
     },
   },

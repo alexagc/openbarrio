@@ -1205,6 +1205,10 @@ export const ca: TranslationSchema = {
           ask: 'Pregunta per distàncies reals a centres de salut, escoles i transport públic.',
           verify: 'Fes a peu el trajecte fins a la parada de transport i comerços bàsics.',
         },
+        transit: {
+          ask: 'Consulta línies, horaris reals d’hora punta i freqüència de pas al consorci local.',
+          verify: 'Comprova la distància a peu real fins a la parada i els temps de transbordament.',
+        },
       },
     },
   },
