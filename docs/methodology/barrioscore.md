@@ -77,8 +77,10 @@ Effective weights per cadastral property typology (`SCORING_WEIGHTS_BY_TYPOLOGY`
 ### Layer States
 - `ok`: Live or fresh cached verification within **30** days (`STALE_FRESH_DAYS = 30`).
 - `stale`: Last verified snapshot served while upstream is degraded, aged up to **365** days (`STALE_MAX_DAYS = 365`). UI displays an amber age warning from **90** days onward (`STALE_AMBER_DAYS = 90`).
+  - **Broadband coverage exception (SETELECO / CNMC):** Because open SETELECO Singular Population Entity (ESP) datasets ceased open publication after 2020, the `broadband` layer applies a dedicated 6-year maximum staleness window (`BROADBAND_STALE_MAX_DAYS = 2190`). Historical ESP records (`population_entity`) are always served transparently as `stale` (never `ok`), while all other 14 layers retain `STALE_MAX_DAYS = 365`.
 - `out_of_coverage`: Official registry/map does not cover the parcel (never treated as safe or zero risk; zero pillar credit).
-- `unavailable`: Upstream timeout/error/circuit-open or snapshot older than **365** days (never receives favorable points).
+- `unavailable`: Upstream timeout/error/circuit-open or snapshot older than `STALE_MAX_DAYS` (or `BROADBAND_STALE_MAX_DAYS` for broadband) — never receives favorable points.
+- **Informative-only v1.5.0 layers (`transit`, `broadband`):** GTFS/NAP transit accessibility and SETELECO/CNMC broadband coverage surface transparently alongside declared coverage/granularity and carry **zero** weight in BarrioScore calculation.
 
 ### Traffic Light Rules
 - **`GREEN`**: `overallScore >= 70`, `pillarsWithData >= 3`, AND both critical layers (`sica`, `snczi`) are usable (`ok` or `stale`).

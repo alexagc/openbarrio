@@ -29,6 +29,7 @@ export const VISIT_CHECKLIST_ITEM_IDS = [
   'age_old_building',
   'cee_expired',
   'cee_missing',
+  'broadband_verify_portal',
 ] as const;
 
 export type KnownChecklistAlertId = (typeof VISIT_CHECKLIST_ITEM_IDS)[number];
@@ -378,6 +379,29 @@ export function generateVisitChecklist(
       params: { classification: up.landClassification },
       sourceLayer: 'urbanPlanning',
       layerStatus: resolveLayerStatus(layers, 'urbanPlanning'),
+    });
+  }
+
+  // 11b. Broadband aggregate granularity or sub-90% FTTH verification prompt
+  if (
+    report.broadband &&
+    (report.broadband.granularity !== 'parcel' || report.broadband.ftthPct < 90)
+  ) {
+    items.push({
+      id: 'broadband_verify_portal',
+      category: 'neighborhood',
+      severity: report.broadband.ftthPct < 50 ? 'important' : 'info',
+      trigger: { alertId: 'broadband_verify_portal', value: report.broadband.ftthPct },
+      titleKey: 'checklist.items.broadband_verify_portal.title',
+      askKey: 'checklist.items.broadband_verify_portal.ask',
+      verifyKey: 'checklist.items.broadband_verify_portal.verify',
+      params: {
+        pct: Math.round(report.broadband.ftthPct),
+        granularity: report.broadband.granularity,
+        year: report.broadband.sourceYear,
+      },
+      sourceLayer: 'broadband',
+      layerStatus: resolveLayerStatus(layers, 'broadband'),
     });
   }
 

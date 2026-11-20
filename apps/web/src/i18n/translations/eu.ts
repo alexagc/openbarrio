@@ -1139,6 +1139,11 @@ export const eu: TranslationSchema = {
         ask: 'Eskatu hirigintza-zedula edo ohar soila kargak, babesa edo antolamenduz kanpokoa egiaztatzeko.',
         verify: 'Egiaztatu lerrokadurak, atzeraemanguneak edo partzelan ikus daitezkeen afekzioak.',
       },
+      broadband_verify_portal: {
+        title: 'Zuntz optikoa (FTTH) atarian egiaztatu ({{pct}}% · {{granularity}} {{year}})',
+        ask: 'Galdetu jabeari zein operadorak eskaintzen duten zuntz aktiboa etxebizitzan.',
+        verify: 'Egiaztatu kutxa optikoa (CTO) telekomunikazio-gelan eta barruko 5G estaldura.',
+      },
     },
     unverified: {
       stale: {
@@ -1206,6 +1211,10 @@ export const eu: TranslationSchema = {
         transit: {
           ask: 'Kontsultatu lineak, puntako orduetako ordutegiak eta igarotze-maiztasunak tokiko partzuergoan.',
           verify: 'Egiaztatu geltokirainoko benetako oinezko distantzia eta transbordo-denborak.',
+        },
+        broadband: {
+          ask: 'Galdetu zein operadorek duten FTTH zuntza eraikinean bertan.',
+          verify: 'Egiaztatu helbide zehatzeko estaldura eta barruko mugikor-seinalea.',
         },
       },
     },

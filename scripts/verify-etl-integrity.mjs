@@ -251,6 +251,25 @@ if (db) {
   }
 }
 
+// 8c. SETELECO / CNMC Broadband Coverage Verification
+console.log('\n📡 8c. SETELECO / CNMC Broadband Coverage (broadband_coverage):');
+if (db) {
+  try {
+    const bbCount = db.prepare('SELECT count(*) as total FROM broadband_coverage').get();
+    assert(bbCount.total > 0, `broadband_coverage contains ${bbCount.total} territories`);
+
+    const badGranularity = db.prepare(
+      "SELECT count(*) as total FROM broadband_coverage WHERE granularity NOT IN ('parcel', 'population_entity', 'municipality')"
+    ).get();
+    assert(badGranularity.total === 0, 'All broadband_coverage rows declare a valid granularity value');
+
+    const badFtth = db.prepare('SELECT count(*) as total FROM broadband_coverage WHERE ftth_pct < 0 OR ftth_pct > 100').get();
+    assert(badFtth.total === 0, 'All broadband_coverage ftth_pct values are strictly bounded in [0, 100]');
+  } catch (err) {
+    assert(false, `Failed to query broadband_coverage: ${err.message}`);
+  }
+}
+
 // 9. Live API End-to-End Multi-Domain Resolution Across Spain
 console.log('\n🇪🇸 9. Live API End-to-End Multi-Domain Verification Across Spain:');
 const testCoords = [

@@ -33,7 +33,8 @@ export type DossierSectionKey =
   | 'rental'
   | 'fiscal'
   | 'vut'
-  | 'market_trends';
+  | 'market_trends'
+  | 'broadband';
 
 export interface ProfileTemplate {
   id: ProfileId;
@@ -70,6 +71,7 @@ export const PROFILE_TEMPLATES: Record<ProfileId, ProfileTemplate> = {
       'fiscal',
       'vut',
       'market_trends',
+      'broadband',
     ],
     focusSignals: ['education', 'healthcare', 'parks', 'noise'],
   },
@@ -96,6 +98,7 @@ export const PROFILE_TEMPLATES: Record<ProfileId, ProfileTemplate> = {
       'amenities',
       'noise',
       'flood',
+      'broadband',
     ],
     focusSignals: ['market_trends', 'capex', 'ite', 'vut'],
   },
@@ -122,6 +125,7 @@ export const PROFILE_TEMPLATES: Record<ProfileId, ProfileTemplate> = {
       'fiscal',
       'vut',
       'market_trends',
+      'broadband',
     ],
     focusSignals: ['healthcare', 'transit', 'accessibility', 'noise'],
   },
@@ -148,6 +152,7 @@ export const PROFILE_TEMPLATES: Record<ProfileId, ProfileTemplate> = {
       'seismic',
       'fiscal',
       'market_trends',
+      'broadband',
     ],
     focusSignals: ['serpavi', 'cee', 'substandard_housing', 'noise'],
   },

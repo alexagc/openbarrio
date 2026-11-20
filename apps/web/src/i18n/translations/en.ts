@@ -1142,6 +1142,11 @@ export const en: TranslationSchema = {
         ask: 'Request an urban planning certificate or Land Registry extract (nota simple) to verify encumbrances.',
         verify: 'Check setbacks, alignments, or visible planning constraints on the parcel.',
       },
+      broadband_verify_portal: {
+        title: 'Verify FTTH fiber availability at building portal ({{pct}}% · {{granularity}} {{year}})',
+        ask: 'Ask which FTTH carriers currently provide active service inside the unit.',
+        verify: 'Inspect the optical distribution terminal (CTO) in the riser/lobby and indoor 5G signal.',
+      },
     },
     unverified: {
       stale: {
@@ -1209,6 +1214,10 @@ export const en: TranslationSchema = {
         transit: {
           ask: 'Check active lines, peak schedules, and service headways with the local transit authority.',
           verify: 'Walk the real street route to the stop and verify transfer times.',
+        },
+        broadband: {
+          ask: 'Ask which telecom operators serve FTTH directly inside the building.',
+          verify: 'Check exact street-address availability with carriers and test indoor mobile coverage.',
         },
       },
     },

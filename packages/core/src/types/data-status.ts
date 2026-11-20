@@ -7,6 +7,7 @@ import { Type, Static, TSchema } from '@sinclair/typebox';
 export const STALE_FRESH_DAYS = 30;
 export const STALE_AMBER_DAYS = 90;
 export const STALE_MAX_DAYS = 365;
+export const BROADBAND_STALE_MAX_DAYS = 2190;
 
 export const CRITICAL_LAYER_KEYS = ['sica', 'snczi'] as const;
 
@@ -25,6 +26,7 @@ export const ALL_LAYER_KEYS = [
   'urbanPlanning',
   'connectivity',
   'transit',
+  'broadband',
 ] as const;
 
 export const LayerStatusSchema = Type.Union([
@@ -58,6 +60,7 @@ export const LayerKeySchema = Type.Union([
   Type.Literal('urbanPlanning'),
   Type.Literal('connectivity'),
   Type.Literal('transit'),
+  Type.Literal('broadband'),
 ]);
 
 export const LayerStatusInfoSchema = Type.Object({
@@ -184,6 +187,14 @@ export function isStaleAmber(staleDays?: number): boolean {
 
 export function isStaleExpired(staleDays: number): boolean {
   return staleDays > STALE_MAX_DAYS;
+}
+
+export function getStaleMaxDaysForLayer(layerKey?: LayerKey): number {
+  return layerKey === 'broadband' ? BROADBAND_STALE_MAX_DAYS : STALE_MAX_DAYS;
+}
+
+export function isLayerStaleExpired(staleDays: number, layerKey?: LayerKey): boolean {
+  return staleDays > getStaleMaxDaysForLayer(layerKey);
 }
 
 export function isLayerUsable(status?: LayerStatus): boolean {

@@ -1081,6 +1081,7 @@ export interface TranslationSchema {
       vut_high_pressure: { title: string; ask: string; verify: string };
       capex_high: { title: string; ask: string; verify: string };
       urban_planning_risk: { title: string; ask: string; verify: string };
+      broadband_verify_portal: { title: string; ask: string; verify: string };
     };
     unverified: {
       stale: { title: string };
@@ -1101,6 +1102,7 @@ export interface TranslationSchema {
         urbanPlanning: { ask: string; verify: string };
         connectivity: { ask: string; verify: string };
         transit: { ask: string; verify: string };
+        broadband: { ask: string; verify: string };
       };
     };
   };

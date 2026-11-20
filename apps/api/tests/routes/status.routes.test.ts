@@ -7,7 +7,7 @@ import { CircuitBreakerRegistry, SourceSnapshotStore } from '../../src/resilienc
 import type { D1Database } from '../../src/types/env.js';
 
 describe('GET /api/v1/status/sources', () => {
-  it('returns schema-valid operational/unknown status across all 13 configured data layers', async () => {
+  it('returns schema-valid operational/unknown status across all 15 configured data layers', async () => {
     const breaker = new CircuitBreakerRegistry();
     breaker.recordSuccess('catastro');
 
@@ -62,6 +62,12 @@ describe('GET /api/v1/status/sources', () => {
     expect(sica.status).toBe('operational');
     expect(sica.lastVerifiedAt).toBe('2026-11-18T10:00:00.000Z');
     expect(sica.sourceDate).toBe('2026-11-01');
+
+    const transit = body.sources.find((s: any) => s.key === 'transit');
+    expect(transit?.sourceName).toBe('MITMS NAP GTFS Transporte');
+
+    const broadband = body.sources.find((s: any) => s.key === 'broadband');
+    expect(broadband?.sourceName).toBe('SETELECO / CNMC Banda Ancha');
 
     // Enforce strict zero-write D1 policy
     expect(executedSqls.some((s) => /^\s*(INSERT|UPDATE|DELETE)\b/i.test(s))).toBe(false);

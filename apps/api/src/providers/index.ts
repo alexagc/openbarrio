@@ -14,6 +14,7 @@ import {
   IVutProvider,
   IMunicipalityProvider,
   ITransitProvider,
+  IBroadbandProvider,
 } from './types.js';
 import { D1Database, CloudflareEnv } from '../types/env.js';
 import { CircuitBreakerRegistry, SourceSnapshotStore, defaultBreakerRegistry } from '../resilience/index.js';
@@ -57,6 +58,10 @@ import {
   D1TransitProvider,
   MockTransitProvider,
 } from './transit.provider.js';
+import {
+  D1BroadbandProvider,
+  MockBroadbandProvider,
+} from './broadband.provider.js';
 
 export * from './types.js';
 export * from './catastro.provider.js';
@@ -89,6 +94,7 @@ export * from './vut.provider.js';
 export * from './municipality.provider.js';
 export * from './municipality.mock.js';
 export * from './transit.provider.js';
+export * from './broadband.provider.js';
 
 export interface ProviderContainer {
   catastro: ICatastroProvider;
@@ -106,6 +112,7 @@ export interface ProviderContainer {
   vut: IVutProvider;
   municipality: IMunicipalityProvider;
   transit: ITransitProvider;
+  broadband: IBroadbandProvider;
   snapshotStore?: SourceSnapshotStore;
   telemetryStore?: TelemetryStore;
   breaker?: CircuitBreakerRegistry;
@@ -127,6 +134,7 @@ export function createMockProviders(overrides?: Partial<ProviderContainer>): Pro
   const vut = new MockVutProvider();
   const municipality = new MockMunicipalityProvider();
   const transit = new MockTransitProvider();
+  const broadband = new MockBroadbandProvider();
 
   const effectiveSica = overrides?.sica || sica;
   const effectiveSnczi = overrides?.snczi || snczi;
@@ -156,6 +164,7 @@ export function createMockProviders(overrides?: Partial<ProviderContainer>): Pro
     vut: overrides?.vut || vut,
     municipality: overrides?.municipality || municipality,
     transit: overrides?.transit || transit,
+    broadband: overrides?.broadband || broadband,
     snapshotStore: overrides?.snapshotStore,
     telemetryStore: overrides?.telemetryStore || new TelemetryStore({ db: overrides?.db }),
     breaker: overrides?.breaker || defaultBreakerRegistry,
@@ -209,6 +218,7 @@ export function createProviders(
   const defaultVut = new VutProvider(db, { breaker });
   const defaultMunicipality = new MunicipalityProvider({ db });
   const defaultTransit = new D1TransitProvider({ db });
+  const defaultBroadband = new D1BroadbandProvider({ db });
 
   const effectiveSica = overrides?.sica || defaultSICA;
   const effectiveSnczi = overrides?.snczi || defaultSNCZI;
@@ -238,6 +248,7 @@ export function createProviders(
     vut: overrides?.vut || defaultVut,
     municipality: overrides?.municipality || defaultMunicipality,
     transit: overrides?.transit || defaultTransit,
+    broadband: overrides?.broadband || defaultBroadband,
     snapshotStore: overrides?.snapshotStore || snapshotStore,
     telemetryStore,
     breaker,

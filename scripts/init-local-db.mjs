@@ -18,7 +18,7 @@ db.exec('PRAGMA journal_mode = WAL;');
 db.exec('PRAGMA synchronous = NORMAL;');
 
 // 1. Always apply all migrations idempotently
-console.log('📦 Applying D1 schemas (0001 - 0011)...');
+console.log('📦 Applying D1 schemas (0001 - 0012)...');
 const migrationFiles = [
   'apps/api/migrations/0001_initial_schema.sql',
   'apps/api/migrations/0002_civic_facilities.sql',
@@ -31,6 +31,7 @@ const migrationFiles = [
   'apps/api/migrations/0009_source_snapshots.sql',
   'apps/api/migrations/0010_telemetry_aggregates.sql',
   'apps/api/migrations/0011_transit_stops.sql',
+  'apps/api/migrations/0012_broadband_coverage.sql',
 ];
 
 for (const mig of migrationFiles) {
@@ -498,6 +499,53 @@ if (transitDistSql && transitCount < 10) {
   for (const r of stopRows) stopStmt.run(...r);
   db.exec('COMMIT;');
   console.log(`✅ Seeded ${stopRows.length} GTFS/NAP transit stops across ${covRows.length} coverage zones.`);
+}
+
+// 8. Seed SETELECO / CNMC Broadband Coverage if empty
+const broadbandCandidates = [
+  'packages/etl/dist/broadband_coverage.sql',
+  'packages/etl/dist/openbarrio-etl-dist/broadband_coverage.sql',
+];
+const broadbandDistSql = broadbandCandidates.find((p) => fs.existsSync(p));
+const broadbandCount = Number(db.prepare('SELECT count(*) as total FROM broadband_coverage').get()?.total || 0);
+
+if (broadbandDistSql && broadbandCount === 0) {
+  console.log(`📡 Loading SETELECO / CNMC broadband coverage from ${broadbandDistSql}...`);
+  const sql = fs.readFileSync(broadbandDistSql, 'utf8');
+  db.exec(sql);
+  const newCount = db.prepare('SELECT count(*) as total FROM broadband_coverage').get()?.total || 0;
+  console.log(`✅ Loaded ${newCount} broadband coverage territories.`);
+} else if (broadbandCount === 0) {
+  console.log('📡 Seeding canonical SETELECO / CNMC broadband coverage rows...');
+  const bbStmt = db.prepare(`
+    INSERT OR REPLACE INTO broadband_coverage
+    (territory_code, municipality_code, entity_name, granularity, ftth_pct, fixed_max_mbps, mobile_5g_pct, source_year, source_date, source_dataset)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `);
+  const bbRows = [
+    ['28079', '28079', 'Madrid', 'municipality', 99.1, 10000, 98.4, 2025, '2026-11-01', 'CNMCData / SETELECO Municipal 2025'],
+    ['08019', '08019', 'Barcelona', 'municipality', 99.3, 10000, 98.7, 2025, '2026-11-01', 'CNMCData / SETELECO Municipal 2025'],
+    ['46250', '46250', 'València', 'municipality', 98.6, 10000, 97.2, 2025, '2026-11-01', 'CNMCData / SETELECO Municipal 2025'],
+    ['41091', '41091', 'Sevilla', 'municipality', 97.8, 1000, 96.5, 2025, '2026-11-01', 'CNMCData / SETELECO Municipal 2025'],
+    ['48020', '48020', 'Bilbao', 'municipality', 98.4, 10000, 96.8, 2025, '2026-11-01', 'CNMCData / SETELECO Municipal 2025'],
+    ['20069', '20069', 'Donostia / San Sebastián', 'municipality', 98.1, 10000, 96.1, 2025, '2026-11-01', 'CNMCData / SETELECO Municipal 2025'],
+    ['31201', '31201', 'Pamplona / Iruña', 'municipality', 97.9, 1000, 95.4, 2025, '2026-11-01', 'CNMCData / SETELECO Municipal 2025'],
+    ['50297', '50297', 'Zaragoza', 'municipality', 96.9, 1000, 95.2, 2024, '2024-06-30', 'SETELECO Cobertura Banda Ancha 2024'],
+    ['29067', '29067', 'Málaga', 'municipality', 96.4, 1000, 95.0, 2024, '2024-06-30', 'SETELECO Cobertura Banda Ancha 2024'],
+    ['18087', '18087', 'Granada', 'municipality', 95.8, 1000, 93.4, 2024, '2024-06-30', 'SETELECO Cobertura Banda Ancha 2024'],
+    ['30030', '30030', 'Murcia', 'municipality', 94.2, 1000, 91.8, 2024, '2024-06-30', 'SETELECO Cobertura Banda Ancha 2024'],
+    ['07040', '07040', 'Palma', 'municipality', 95.1, 1000, 92.6, 2024, '2024-06-30', 'SETELECO Cobertura Banda Ancha 2024'],
+    ['36057', '36057', 'Vigo', 'municipality', 94.6, 1000, 90.4, 2024, '2024-06-30', 'SETELECO Cobertura Banda Ancha 2024'],
+    ['15030', '15030', 'A Coruña', 'municipality', 96.2, 1000, 92.1, 2024, '2024-06-30', 'SETELECO Cobertura Banda Ancha 2024'],
+    ['28068000100', '28068', 'Guadarrama (ESP 2020)', 'population_entity', 82.4, 300, 12.0, 2020, '2020-12-31', 'SETELECO ESP Serie Histórica 2020'],
+    ['44216000100', '44216', 'Teruel (ESP 2020)', 'population_entity', 78.5, 300, 8.5, 2020, '2020-12-31', 'SETELECO ESP Serie Histórica 2020'],
+    ['42173000100', '42173', 'Soria (ESP 2020)', 'population_entity', 79.1, 300, 9.0, 2020, '2020-12-31', 'SETELECO ESP Serie Histórica 2020'],
+  ];
+
+  db.exec('BEGIN TRANSACTION;');
+  for (const r of bbRows) bbStmt.run(...r);
+  db.exec('COMMIT;');
+  console.log(`✅ Seeded ${bbRows.length} SETELECO / CNMC broadband coverage rows.`);
 }
 
 const finalRow = db.prepare('SELECT count(*) as total FROM census_tract_income').get();

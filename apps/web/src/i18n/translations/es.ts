@@ -1142,6 +1142,11 @@ export const es: TranslationSchema = {
         ask: 'Solicita cédula urbanística o nota simple para verificar cargas, protección o fuera de ordenación.',
         verify: 'Verifica alineaciones, retranqueos o posibles afecciones visibles en la parcela.',
       },
+      broadband_verify_portal: {
+        title: 'Verificar fibra óptica (FTTH) en el portal ({{pct}}% · {{granularity}} {{year}})',
+        ask: 'Pregunta al propietario qué operadores tienen fibra activa actualmente en la vivienda.',
+        verify: 'Comprueba la caja terminal óptica (CTO) en el cuarto de telecos y cobertura móvil 5G interior.',
+      },
     },
     unverified: {
       stale: {
@@ -1209,6 +1214,10 @@ export const es: TranslationSchema = {
         transit: {
           ask: 'Consulta líneas, horarios reales de hora punta y frecuencia de paso en el consorcio local.',
           verify: 'Comprueba la distancia a pie real hasta la parada y los tiempos de transbordo.',
+        },
+        broadband: {
+          ask: 'Pregunta qué operadoras llegan con fibra FTTH al edificio.',
+          verify: 'Comprueba la cobertura de operadoras por dirección exacta y señal móvil interior.',
         },
       },
     },

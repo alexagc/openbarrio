@@ -10,6 +10,7 @@ import {
   RentalBenchmark,
   CivicConnectivityData,
   TransitAccessibility,
+  BroadbandCoverage,
   UrbanPlanningData,
   EnergyPerformanceCertificate,
   NeighborhoodTrends,
@@ -151,7 +152,7 @@ export class AuditService {
         : undefined;
 
     // 3. Fetch parallel provider metrics using census tract context
-    const [envAggregate, connectivityRes, urbanPlanningRes, energyRes, transitRes] = await Promise.all([
+    const [envAggregate, connectivityRes, urbanPlanningRes, energyRes, transitRes, broadbandRes] = await Promise.all([
       this.resolveEnvironment(property, censusSectionCode, waitUntil),
       this.resolveConnectivity(lat, lon, {
         municipality: property.address.municipality,
@@ -160,12 +161,14 @@ export class AuditService {
       this.resolveUrbanPlanning(property),
       this.resolveEnergy(property),
       this.resolveTransit(lat, lon, resolvedMuniCode),
+      this.resolveBroadband(resolvedMuniCode, property.cadastralReference),
     ]);
     const environment = envAggregate.data;
     const connectivity = connectivityRes.data;
     const urbanPlanning = urbanPlanningRes.data;
     const energy = energyRes.data;
     const transit = transitRes.data;
+    const broadband = broadbandRes.data;
 
     // 4. Calculate MIVAU SERPAVI rental benchmark & check stressed market status (Residential only)
     let rentalBenchmark: RentalBenchmark | undefined;
@@ -298,6 +301,7 @@ export class AuditService {
       urbanPlanning: urbanPlanningRes.layer,
       connectivity: connectivityRes.layer,
       transit: transitRes.layer,
+      broadband: broadbandRes.layer,
     };
 
     const score = calculateBarrioScore({
@@ -353,6 +357,7 @@ export class AuditService {
       seismicHazard,
       pedestrianIsochrones,
       ...(transit ? { transit } : {}),
+      ...(broadband ? { broadband } : {}),
     };
   }
 
@@ -554,6 +559,26 @@ export class AuditService {
       (res.status === 'out_of_coverage' && res.data !== undefined);
     return {
       data: keepPartialData ? res.data : undefined,
+      layer: toLayerStatusInfo(res),
+    };
+  }
+
+  private async resolveBroadband(
+    municipalityCode?: string,
+    cadastralReference?: string
+  ): Promise<{ data?: BroadbandCoverage; layer: LayerStatusInfo }> {
+    if (!this.providers.broadband) {
+      return {
+        data: undefined,
+        layer: toLayerStatusInfo(layerUnavailable('SETELECO / CNMC Banda Ancha', 'upstream_error')),
+      };
+    }
+    const res = await this.providers.broadband.getBroadbandCoverage(
+      municipalityCode,
+      cadastralReference
+    );
+    return {
+      data: isLayerUsable(res.status) ? res.data : undefined,
       layer: toLayerStatusInfo(res),
     };
   }

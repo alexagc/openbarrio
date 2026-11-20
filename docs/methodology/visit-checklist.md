@@ -22,6 +22,7 @@
 | `age_old_building` | `structural` | `catastro` | Built building age `>= 50` years relative to injected `now` | `important` |
 | `cee_expired` | `energy` | `cee` | Official CEE `isExpired === true` (RD 390/2021) | `important` |
 | `cee_missing` | `energy` | `cee` | Built property with missing or estimated CEE when `cee` layer is `ok`/`stale` | `important` |
+| `broadband_verify_portal` | `neighborhood` | `broadband` | Official SETELECO / CNMC dataset granularity !== `'parcel'` or FTTH coverage < 90% | `info` (`important` if `< 50%`) |
 
 ---
 

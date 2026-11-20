@@ -217,7 +217,7 @@ export function buildOpenApiSpec(): Record<string, any> {
       '/api/v1/status/sources': {
         get: {
           tags: ['Status'],
-          summary: 'Inspect real-time health, circuit breaker states, and latest verified D1 snapshots for all 13 public data layers',
+          summary: 'Inspect real-time health, circuit breaker states, and latest verified D1 snapshots for all 15 public data layers',
           description:
             'Read-only operational status endpoint aggregating in-memory isolate circuit breakers and latest snapshot timestamps from D1 without performing write queries',
           responses: {

@@ -202,6 +202,20 @@ describe('generateVisitChecklist — golden alert rules & determinism', () => {
       isProtectedLand: true,
       isStressedHousingZone: true,
     };
+    report.broadband = {
+      municipalityCode: '18087',
+      territoryCode: '18087',
+      entityName: 'Granada',
+      granularity: 'municipality',
+      ftthPct: 95.8,
+      fixedMaxMbps: 1000,
+      mobile5gPct: 93.4,
+      sourceYear: 2024,
+      sourceDate: '2024-06-30',
+      sourceDataset: 'SETELECO Cobertura Banda Ancha 2024',
+      disclaimer: 'Municipal aggregate.',
+      informativeOnly: true,
+    };
 
     const checklist = generateVisitChecklist(report, { now: fixedNow });
     const ids = checklist.items.map((i) => i.id);
@@ -277,5 +291,58 @@ describe('generateVisitChecklist — golden alert rules & determinism', () => {
     const investorNoiseIdx = investorChecklist.items.findIndex((i) => i.id === 'noise_high');
     const investorVutIdx = investorChecklist.items.findIndex((i) => i.id === 'vut_high_pressure');
     expect(investorVutIdx).toBeLessThan(investorNoiseIdx);
+  });
+
+  it('emits broadband_verify_portal when non-parcel or sub-90% FTTH, omits for verified parcel >=90%, and emits unverified transit/broadband items', () => {
+    const report = createBaseReport();
+    // Absent broadband -> no broadband_verify_portal
+    expect(generateVisitChecklist(report, { now: fixedNow }).items.find((i) => i.id === 'broadband_verify_portal')).toBeUndefined();
+
+    // Parcel with 100% FTTH -> no broadband_verify_portal
+    report.broadband = {
+      municipalityCode: '28079',
+      territoryCode: '1234567VK1234S0001AB',
+      entityName: 'Madrid',
+      granularity: 'parcel',
+      ftthPct: 100,
+      fixedMaxMbps: 10000,
+      mobile5gPct: 99,
+      sourceYear: 2025,
+      sourceDate: '2026-11-01',
+      sourceDataset: 'CNMC Parcel',
+      disclaimer: 'Parcel record.',
+      informativeOnly: true,
+    };
+    expect(generateVisitChecklist(report, { now: fixedNow }).items.find((i) => i.id === 'broadband_verify_portal')).toBeUndefined();
+
+    // Low rural FTTH (< 50%) at population_entity -> important severity
+    report.broadband = {
+      ...report.broadband,
+      territoryCode: '44216000100',
+      granularity: 'population_entity',
+      ftthPct: 42.5,
+      sourceYear: 2020,
+      sourceDate: '2020-12-31',
+    };
+    const lowChecklist = generateVisitChecklist(report, { now: fixedNow });
+    const bbItem = lowChecklist.items.find((i) => i.id === 'broadband_verify_portal');
+    expect(bbItem?.severity).toBe('important');
+    expect(bbItem?.params).toEqual({ pct: 43, granularity: 'population_entity', year: 2020 });
+
+    // Unverified transit & broadband layers emit deterministic verification prompts
+    report.layers!.transit = {
+      status: 'out_of_coverage',
+      sourceName: 'MITMS NAP GTFS Transporte',
+      coveragePct: 50,
+    };
+    report.layers!.broadband = {
+      status: 'stale',
+      sourceName: 'SETELECO / CNMC Banda Ancha',
+      staleDays: 2150,
+      granularity: 'population_entity',
+    };
+    const withUnverified = generateVisitChecklist(report, { now: fixedNow });
+    expect(withUnverified.items.find((i) => i.id === 'unverified_transit')?.layerStatus).toBe('out_of_coverage');
+    expect(withUnverified.items.find((i) => i.id === 'unverified_broadband')?.layerStatus).toBe('stale');
   });
 });

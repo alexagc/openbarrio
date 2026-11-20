@@ -249,3 +249,14 @@ export interface ITransitProvider {
     municipalityCode?: string
   ): Promise<LayerResult<TransitAccessibility>>;
 }
+
+export interface IBroadbandProvider {
+  /**
+   * Retrieve SETELECO / CNMC broadband (FTTH & 5G) coverage with explicit
+   * territorial granularity (`parcel` | `population_entity` | `municipality`).
+   */
+  getBroadbandCoverage(
+    municipalityCode?: string,
+    cadastralReference?: string
+  ): Promise<LayerResult<BroadbandCoverage>>;
+}
