@@ -9,6 +9,8 @@ import {
   FloodRiskData,
   RentalBenchmark,
   CivicConnectivityData,
+  TransitAccessibility,
+  BroadbandCoverage,
   UrbanPlanningData,
   AirQualityData,
   EnergyPerformanceCertificate,
@@ -235,4 +237,27 @@ export interface IMunicipalityProvider {
    * Retrieve rich municipal profile and aggregated civic intelligence by canonical slug or 5-digit INE code.
    */
   getBySlugOrCode(slugOrCode: string): Promise<MunicipalityDetailDTO>;
+}
+
+export interface ITransitProvider {
+  /**
+   * Retrieve GTFS/NAP transit accessibility (5/10/15-min stops, headways, hub times)
+   * with explicit coverage percentage (`out_of_coverage` when partial or absent).
+   */
+  getTransitAccessibility(
+    latitude: number,
+    longitude: number,
+    municipalityCode?: string
+  ): Promise<LayerResult<TransitAccessibility>>;
+}
+
+export interface IBroadbandProvider {
+  /**
+   * Retrieve SETELECO / CNMC broadband (FTTH & 5G) coverage with explicit
+   * territorial granularity (`parcel` | `population_entity` | `municipality`).
+   */
+  getBroadbandCoverage(
+    municipalityCode?: string,
+    cadastralReference?: string
+  ): Promise<LayerResult<BroadbandCoverage>>;
 }

@@ -1,14 +1,17 @@
 import { useState, useRef } from 'react';
-import { ArrowLeft, MapPin, Download, Printer, Sparkles, ChevronLeft, ChevronRight } from 'lucide-react';
+import { ArrowLeft, MapPin, Download, Printer, Sparkles, ChevronLeft, ChevronRight, BookmarkCheck } from 'lucide-react';
+import { VISIT_MODE_MAX_DOSSIERS } from '@openbarrio/core';
 import { useTranslation } from '../i18n';
 import { SearchBar, SAMPLE_PRESETS } from '../components/SearchBar';
 import { MapView } from '../components/map/MapView';
 import { AuditDossier } from '../components/AuditDossier';
+import { SavedVisitsPanel } from '../components/dossier/SavedVisitsPanel';
 import { SkeletonDossier } from '../components/SkeletonDossier';
 import { ErrorAlert } from '../components/ErrorAlert';
 import { MobileBottomNav, MobileNavDestination } from '../components/MobileBottomNav';
 import { CadastralBottomSheet, SheetSnapPoint } from '../components/CadastralBottomSheet';
 import { downloadCadastralGML } from '../utils/gml';
+import { usePwaStore } from '../store/pwa.store';
 import {
   useWorkspaceStore,
   useReport,
@@ -48,7 +51,18 @@ export function GisWorkspaceView() {
   // Tablet & Desktop Split Divider and Gestures
   const [splitRatio, setSplitRatio] = useState<number>(52);
   const [isSheetDragging, setIsSheetDragging] = useState<boolean>(false);
+  const [isSavedVisitsOpen, setIsSavedVisitsOpen] = useState<boolean>(false);
   const mainContainerRef = useRef<HTMLDivElement>(null);
+
+  const isOnline = usePwaStore((s) => s.isOnline);
+  const savedDossiers = usePwaStore((s) => s.savedDossiers);
+
+  const resolvedErrorMessage =
+    error?.message === 'OFFLINE_DOSSIER_NOT_SAVED'
+      ? t('visitMode.offlineNotSavedError')
+      : error?.message === 'OFFLINE_SEARCH_UNAVAILABLE'
+        ? t('visitMode.offlineSearchUnavailable')
+        : error?.message || '';
 
   const handleDividerPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
     if (e.button !== 0) return;
@@ -184,6 +198,20 @@ export function GisWorkspaceView() {
 
         {/* Right: Actions & Location Cluster */}
         <div className="flex items-center gap-2 shrink-0">
+          <button
+            type="button"
+            data-testid="topbar-saved-visits-btn"
+            onClick={() => setIsSavedVisitsOpen((prev) => !prev)}
+            className="inline-flex items-center gap-1.5 px-2.5 py-1.5 bg-surface-container-high border border-outline-variant hover:border-primary text-on-surface rounded text-xs font-mono font-semibold transition-colors cursor-pointer min-h-[36px]"
+            title={t('visitMode.savedPanelTitle')}
+          >
+            <BookmarkCheck className="w-3.5 h-3.5 text-primary" />
+            <span className="hidden sm:inline">{t('visitMode.savedVisitsBtn')}</span>
+            <span>
+              ({savedDossiers.length}/{VISIT_MODE_MAX_DOSSIERS})
+            </span>
+          </button>
+
           <div className="hidden xl:flex items-center gap-1.5 px-2 py-1 rounded bg-surface-container-high border border-outline-variant text-on-surface-variant text-xs font-mono">
             <MapPin className="w-3.5 h-3.5 text-tertiary" />
             <span>{activeLocation}</span>
@@ -216,9 +244,11 @@ export function GisWorkspaceView() {
 
           <button
             type="button"
+            data-testid="topbar-export-pdf-btn"
+            disabled={!isOnline}
             onClick={() => window.print()}
-            className="bg-inverse-primary hover:bg-primary-container text-white text-xs font-semibold px-3 py-1.5 rounded flex items-center gap-1.5 transition-colors shadow-sm cursor-pointer min-h-[36px]"
-            title={t('dossier.exportPdfTooltip')}
+            className="bg-inverse-primary hover:bg-primary-container text-white text-xs font-semibold px-3 py-1.5 rounded flex items-center gap-1.5 transition-colors shadow-sm cursor-pointer min-h-[36px] disabled:opacity-50 disabled:cursor-not-allowed"
+            title={!isOnline ? t('visitMode.pdfDisabledOffline') : t('dossier.exportPdfTooltip')}
           >
             <Printer className="w-3.5 h-3.5" />
             <span className="hidden sm:inline">{t('workspace.exportPdf')}</span>
@@ -264,7 +294,7 @@ export function GisWorkspaceView() {
             }
             report={report}
             isLoading={isLoading}
-            error={error?.message}
+            error={resolvedErrorMessage || null}
             onDismissError={() => setError(null)}
             onViewReport={() => {
               setActiveTab('dossier');
@@ -360,10 +390,16 @@ export function GisWorkspaceView() {
           className="hidden md:flex md:w-[48%] xl:w-[40%] h-full bg-surface overflow-y-auto flex-col"
           style={splitRatio !== 52 ? { width: `${100 - splitRatio}%` } : undefined}
         >
+          {isSavedVisitsOpen && (
+            <div className="p-4 border-b border-outline-variant shrink-0">
+              <SavedVisitsPanel onSelectDossier={() => setIsSavedVisitsOpen(false)} />
+            </div>
+          )}
+
           {error ? (
-            <div className="p-4">
+            <div className="p-4 space-y-4">
               <ErrorAlert
-                message={error.message}
+                message={resolvedErrorMessage}
                 problem={error.problem}
                 onRetry={() => {
                   if (selectedCoords) {
@@ -372,6 +408,7 @@ export function GisWorkspaceView() {
                 }}
                 onSelectSample={handleLoadSample}
               />
+              {!isSavedVisitsOpen && savedDossiers.length > 0 && <SavedVisitsPanel />}
             </div>
           ) : isLoading ? (
             <div className="p-4">
@@ -384,12 +421,15 @@ export function GisWorkspaceView() {
               onOpenDuel={() => handleOpenDuel()}
             />
           ) : (
-            <div className="text-center py-16 bg-surface-container rounded border border-dashed border-outline-variant p-8 m-4">
-              <MapPin className="w-10 h-10 text-outline mx-auto mb-3" />
-              <h3 className="font-bold text-on-surface">{t('workspace.selectPropertyTitle')}</h3>
-              <p className="text-xs text-on-surface-variant mt-1 max-w-sm mx-auto">
-                {t('workspace.selectPropertyDesc')}
-              </p>
+            <div className="p-4 space-y-4">
+              {!isSavedVisitsOpen && savedDossiers.length > 0 && <SavedVisitsPanel />}
+              <div className="text-center py-16 bg-surface-container rounded border border-dashed border-outline-variant p-8">
+                <MapPin className="w-10 h-10 text-outline mx-auto mb-3" />
+                <h3 className="font-bold text-on-surface">{t('workspace.selectPropertyTitle')}</h3>
+                <p className="text-xs text-on-surface-variant mt-1 max-w-sm mx-auto">
+                  {t('workspace.selectPropertyDesc')}
+                </p>
+              </div>
             </div>
           )}
         </section>

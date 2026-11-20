@@ -72,6 +72,15 @@ export function createSitemapRoutes(
         changefreq: 'monthly',
       },
       {
+        es: `${baseUrl}/privacidad`,
+        en: `${baseUrl}/privacy`,
+        ca: `${baseUrl}/privacitat`,
+        gl: `${baseUrl}/privacidade`,
+        eu: `${baseUrl}/pribatutasuna`,
+        priority: '0.7',
+        changefreq: 'monthly',
+      },
+      {
         es: `${baseUrl}/comprobar-metros-catastro`,
         en: `${baseUrl}/check-cadastral-surface`,
         ca: `${baseUrl}/comprovar-metres-cadastre`,

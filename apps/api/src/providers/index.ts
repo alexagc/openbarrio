@@ -13,9 +13,12 @@ import {
   IRadonProvider,
   IVutProvider,
   IMunicipalityProvider,
+  ITransitProvider,
+  IBroadbandProvider,
 } from './types.js';
 import { D1Database, CloudflareEnv } from '../types/env.js';
 import { CircuitBreakerRegistry, SourceSnapshotStore, defaultBreakerRegistry } from '../resilience/index.js';
+import { TelemetryStore } from '../telemetry/telemetry-store.js';
 import { CatastroProvider } from './catastro.provider.js';
 import { MockCatastroProvider } from './catastro.mock.js';
 import { NavarraCatastroProvider } from './navarra.provider.js';
@@ -51,6 +54,14 @@ import {
   AirQualityProvider,
   MockAirQualityProvider,
 } from './air-quality.provider.js';
+import {
+  D1TransitProvider,
+  MockTransitProvider,
+} from './transit.provider.js';
+import {
+  D1BroadbandProvider,
+  MockBroadbandProvider,
+} from './broadband.provider.js';
 
 export * from './types.js';
 export * from './catastro.provider.js';
@@ -82,6 +93,8 @@ export * from './radon.provider.js';
 export * from './vut.provider.js';
 export * from './municipality.provider.js';
 export * from './municipality.mock.js';
+export * from './transit.provider.js';
+export * from './broadband.provider.js';
 
 export interface ProviderContainer {
   catastro: ICatastroProvider;
@@ -98,7 +111,10 @@ export interface ProviderContainer {
   radon: IRadonProvider;
   vut: IVutProvider;
   municipality: IMunicipalityProvider;
+  transit: ITransitProvider;
+  broadband: IBroadbandProvider;
   snapshotStore?: SourceSnapshotStore;
+  telemetryStore?: TelemetryStore;
   breaker?: CircuitBreakerRegistry;
   db?: D1Database;
 }
@@ -117,6 +133,8 @@ export function createMockProviders(overrides?: Partial<ProviderContainer>): Pro
   const radon = new MockRadonProvider();
   const vut = new MockVutProvider();
   const municipality = new MockMunicipalityProvider();
+  const transit = new MockTransitProvider();
+  const broadband = new MockBroadbandProvider();
 
   const effectiveSica = overrides?.sica || sica;
   const effectiveSnczi = overrides?.snczi || snczi;
@@ -145,7 +163,10 @@ export function createMockProviders(overrides?: Partial<ProviderContainer>): Pro
     radon: overrides?.radon || radon,
     vut: overrides?.vut || vut,
     municipality: overrides?.municipality || municipality,
+    transit: overrides?.transit || transit,
+    broadband: overrides?.broadband || broadband,
     snapshotStore: overrides?.snapshotStore,
+    telemetryStore: overrides?.telemetryStore || new TelemetryStore({ db: overrides?.db }),
     breaker: overrides?.breaker || defaultBreakerRegistry,
     db: overrides?.db,
   };
@@ -177,6 +198,7 @@ export function createProviders(
 
   const breaker = overrides?.breaker || defaultBreakerRegistry;
   const snapshotStore = new SourceSnapshotStore({ db });
+  const telemetryStore = overrides?.telemetryStore || new TelemetryStore({ db });
   const defaultCatastro = new CadastralRouterProvider({
     dgc: new CatastroProvider({ db, breaker }),
     navarra: new NavarraCatastroProvider(),
@@ -195,6 +217,8 @@ export function createProviders(
   const defaultRadon = new RadonProvider(db);
   const defaultVut = new VutProvider(db, { breaker });
   const defaultMunicipality = new MunicipalityProvider({ db });
+  const defaultTransit = new D1TransitProvider({ db });
+  const defaultBroadband = new D1BroadbandProvider({ db });
 
   const effectiveSica = overrides?.sica || defaultSICA;
   const effectiveSnczi = overrides?.snczi || defaultSNCZI;
@@ -223,7 +247,10 @@ export function createProviders(
     radon: overrides?.radon || defaultRadon,
     vut: overrides?.vut || defaultVut,
     municipality: overrides?.municipality || defaultMunicipality,
+    transit: overrides?.transit || defaultTransit,
+    broadband: overrides?.broadband || defaultBroadband,
     snapshotStore: overrides?.snapshotStore || snapshotStore,
+    telemetryStore,
     breaker,
     db: overrides?.db || db,
   };
@@ -235,6 +262,11 @@ export function injectDatabase(providers: ProviderContainer, db: D1Database): vo
     providers.snapshotStore.setDatabase(db);
   } else {
     providers.snapshotStore = new SourceSnapshotStore({ db });
+  }
+  if (providers.telemetryStore) {
+    providers.telemetryStore.setDatabase(db);
+  } else {
+    providers.telemetryStore = new TelemetryStore({ db });
   }
   for (const provider of Object.values(providers)) {
     if (provider && typeof (provider as any).setDatabase === 'function') {

@@ -24,7 +24,7 @@ describe('GET /api/v1/extension/selectors', () => {
 
     const parsed = JSON.parse(raw);
     expect(Value.Check(RemoteSelectorsBundleSchema, parsed)).toBe(true);
-    expect(validateRemoteSelectorsBundle(raw, '1.4.0').valid).toBe(true);
+    expect(validateRemoteSelectorsBundle(raw, '1.5.0').valid).toBe(true);
     expect(Object.keys(parsed.portals).sort()).toEqual([
       'fotocasa',
       'habitaclia',

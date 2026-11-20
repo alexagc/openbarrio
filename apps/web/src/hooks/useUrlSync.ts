@@ -1,8 +1,9 @@
 import { useEffect, useCallback, useRef } from 'react';
+import { isProfileId, type ActiveProfileId } from '@openbarrio/core';
 import { parseLocalizedRoute, getLocalizedPath } from '../utils/seo-routes';
 import { SupportedLanguage } from '../i18n/types';
 
-export type DossierTab = 'summary' | 'building' | 'environment' | 'market';
+export type DossierTab = 'summary' | 'building' | 'environment' | 'market' | 'checklist';
 
 export type ViewMode =
   | 'landing'
@@ -10,6 +11,7 @@ export type ViewMode =
   | 'transparency'
   | 'sources-status'
   | 'methodology'
+  | 'privacy'
   | 'tool-surface'
   | 'tool-rent'
   | 'tool-itp'
@@ -26,6 +28,7 @@ export interface UrlParamsState {
   compare?: string[];
   municipalitySlug?: string;
   isEmbed?: boolean;
+  profile?: ActiveProfileId;
 }
 
 export function parseUrlState(): UrlParamsState {
@@ -98,12 +101,14 @@ export function parseUrlState(): UrlParamsState {
   }
 
   // Support both mobile map tab toggle ('map' | 'dossier') and 4-way dossier tabs
-  const validDossierTabs: DossierTab[] = ['summary', 'building', 'environment', 'market'];
+  const validDossierTabs: DossierTab[] = ['summary', 'building', 'environment', 'market', 'checklist'];
   const dossierTab: DossierTab = validDossierTabs.includes(tabParam as DossierTab)
     ? (tabParam as DossierTab)
     : 'summary';
 
   const activeTab: 'dossier' | 'map' = tabParam === 'map' ? 'map' : 'dossier';
+  const perfilParam = searchParams.get('perfil');
+  const profile: ActiveProfileId = isProfileId(perfilParam) ? perfilParam : 'none';
 
   return {
     viewMode,
@@ -115,6 +120,7 @@ export function parseUrlState(): UrlParamsState {
     compare: compareRefs,
     municipalitySlug,
     isEmbed,
+    profile,
   };
 }
 
@@ -155,6 +161,7 @@ export function useUrlSync(
         newState.viewMode === 'transparency' ||
         newState.viewMode === 'sources-status' ||
         newState.viewMode === 'methodology' ||
+        newState.viewMode === 'privacy' ||
         newState.viewMode === 'tool-surface' ||
         newState.viewMode === 'tool-rent' ||
         newState.viewMode === 'tool-itp' ||
@@ -193,6 +200,10 @@ export function useUrlSync(
         params.set('vs', newState.vs);
       }
 
+      if (newState.profile && newState.profile !== 'none') {
+        params.set('perfil', newState.profile);
+      }
+
       const queryString = params.toString();
       const targetUrl = queryString ? `${targetPath}?${queryString}` : targetPath;
 
@@ -223,6 +234,7 @@ export function useUrlSync(
     state.coords?.lat,
     state.coords?.lon,
     state.vs,
+    state.profile,
     syncToUrl,
   ]);
 

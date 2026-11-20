@@ -1,6 +1,6 @@
 # Listing URL Channel: Architecture, Portal ToS Boundaries & Legal Limits
 
-- **Version:** `1.4.0`
+- **Version:** `1.5.0`
 - **Endpoint:** `POST /api/v1/listing/resolve`
 - **Web Flow:** Landing Page -> "Desde URL de anuncio" / "From listing URL" (`HeroSection` / `ListingUrlResolver`)
 - **Primary Implementation:** `packages/core/src/types/listing.ts`, `apps/api/src/services/listing-resolver.service.ts`, `apps/api/src/routes/listing.routes.ts`

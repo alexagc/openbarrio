@@ -1,8 +1,10 @@
 import {
   METHODOLOGY_CHANGELOG,
   METHODOLOGY_VERSION,
+  PROFILE_IDS,
   SCORING_MODIFIERS,
   SCORING_WEIGHTS_BY_TYPOLOGY,
+  getWeightsForProfile,
   type PropertyTypology,
 } from '@openbarrio/core';
 import { Activity, ArrowLeft, BookOpen, Map as MapIcon, ShieldAlert } from 'lucide-react';
@@ -152,6 +154,87 @@ export function MethodologyView() {
                         </td>
                         <td className="px-4 py-3 text-right tabular-nums text-on-surface">
                           {Math.round(w.urbanPlanning * 100)}%
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </section>
+
+          {/* Decision Profiles Effective Weights Table (live from @openbarrio/core) */}
+          <section className="space-y-3">
+            <div className="space-y-1">
+              <h2 className="font-headline text-xl font-bold text-on-surface">
+                {t('methodology.profilesSectionTitle')}
+              </h2>
+              <p className="text-xs sm:text-sm text-on-surface-variant">
+                {t('methodology.profilesSectionSubtitle')}
+              </p>
+            </div>
+
+            <div
+              className="overflow-x-auto rounded-xl border border-outline-variant bg-surface-container shadow-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+              role="region"
+              tabIndex={0}
+              aria-label={t('methodology.profilesTableAria')}
+            >
+              <table
+                data-testid="methodology-profiles-table"
+                className="w-full min-w-[720px] border-collapse text-left text-sm"
+              >
+                <thead>
+                  <tr className="border-b border-outline-variant bg-surface-container-high font-mono text-xs text-on-surface-variant">
+                    <th scope="col" className="px-4 py-3 font-semibold">
+                      {t('methodology.colProfile')}
+                    </th>
+                    <th scope="col" className="px-4 py-3 font-semibold text-right tabular-nums">
+                      {t('methodology.colConnectivity')}
+                    </th>
+                    <th scope="col" className="px-4 py-3 font-semibold text-right tabular-nums">
+                      {t('methodology.colBuilding')}
+                    </th>
+                    <th scope="col" className="px-4 py-3 font-semibold text-right tabular-nums">
+                      {t('methodology.colSocioeconomic')}
+                    </th>
+                    <th scope="col" className="px-4 py-3 font-semibold text-right tabular-nums">
+                      {t('methodology.colEnvironmental')}
+                    </th>
+                    <th scope="col" className="px-4 py-3 font-semibold text-right tabular-nums">
+                      {t('methodology.colUrbanPlanning')}
+                    </th>
+                    <th scope="col" className="px-4 py-3 font-semibold">
+                      {t('methodology.colFocus')}
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-outline-variant/60 font-mono text-xs">
+                  {(['none', ...PROFILE_IDS] as const).map((pid) => {
+                    const w = getWeightsForProfile('RESIDENTIAL', pid);
+                    const pct1 = (v: number) => `${(v * 100).toFixed(1)}%`;
+                    return (
+                      <tr key={pid} className="hover:bg-surface-container-low/60 transition-colors">
+                        <th scope="row" className="px-4 py-3 font-semibold text-on-surface">
+                          {pid === 'none' ? t('profiles.none') : t(`profiles.options.${pid}.label`)}
+                        </th>
+                        <td className="px-4 py-3 text-right tabular-nums text-on-surface">
+                          {pct1(w.connectivity)}
+                        </td>
+                        <td className="px-4 py-3 text-right tabular-nums text-on-surface">
+                          {pct1(w.building)}
+                        </td>
+                        <td className="px-4 py-3 text-right tabular-nums text-on-surface">
+                          {pct1(w.socioeconomic)}
+                        </td>
+                        <td className="px-4 py-3 text-right tabular-nums text-on-surface">
+                          {pct1(w.environmental)}
+                        </td>
+                        <td className="px-4 py-3 text-right tabular-nums text-on-surface">
+                          {pct1(w.urbanPlanning)}
+                        </td>
+                        <td className="px-4 py-3 font-sans text-on-surface-variant">
+                          {pid === 'none' ? '—' : t(`profiles.options.${pid}.desc`)}
                         </td>
                       </tr>
                     );

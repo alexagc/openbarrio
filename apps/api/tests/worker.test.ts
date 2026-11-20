@@ -12,12 +12,12 @@ describe('Cloudflare Worker Scheduled Cron & HTTP Handler', () => {
     expect(data.service).toBe('openbarrio-api');
   });
 
-  it('triggers CadastralCache.pruneExpired via ctx.waitUntil on cron trigger', async () => {
-    let executedDeleteSql = '';
+  it('triggers CadastralCache.pruneExpired and TelemetryStore pruning via ctx.waitUntil on cron trigger', async () => {
+    const executedDeleteSqls: string[] = [];
     const mockDb: any = {
       prepare: vi.fn((sql: string) => {
-        if (sql.includes('DELETE FROM cadastral_cache')) {
-          executedDeleteSql = sql;
+        if (sql.includes('DELETE FROM')) {
+          executedDeleteSqls.push(sql);
         }
         return {
           bind: vi.fn(() => ({
@@ -45,8 +45,16 @@ describe('Cloudflare Worker Scheduled Cron & HTTP Handler', () => {
     expect(mockCtx.waitUntil).toHaveBeenCalledTimes(1);
     await Promise.all(waitUntilPromises);
 
-    expect(executedDeleteSql).toContain('DELETE FROM cadastral_cache');
-    expect(executedDeleteSql).toContain('expires_at <= ?');
+    expect(
+      executedDeleteSqls.some(
+        (sql) => sql.includes('DELETE FROM cadastral_cache') && sql.includes('expires_at <= ?')
+      )
+    ).toBe(true);
+    expect(
+      executedDeleteSqls.some(
+        (sql) => sql.includes('DELETE FROM telemetry_daily_aggregates') && sql.includes('day < ?1')
+      )
+    ).toBe(true);
   });
 
   it('handles gracefully when DB binding is absent', async () => {

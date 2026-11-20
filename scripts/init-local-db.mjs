@@ -18,7 +18,7 @@ db.exec('PRAGMA journal_mode = WAL;');
 db.exec('PRAGMA synchronous = NORMAL;');
 
 // 1. Always apply all migrations idempotently
-console.log('📦 Applying D1 schemas (0001 - 0009)...');
+console.log('📦 Applying D1 schemas (0001 - 0012)...');
 const migrationFiles = [
   'apps/api/migrations/0001_initial_schema.sql',
   'apps/api/migrations/0002_civic_facilities.sql',
@@ -29,6 +29,9 @@ const migrationFiles = [
   'apps/api/migrations/0007_cadastral_cache.sql',
   'apps/api/migrations/0008_building_inspection_and_seismic.sql',
   'apps/api/migrations/0009_source_snapshots.sql',
+  'apps/api/migrations/0010_telemetry_aggregates.sql',
+  'apps/api/migrations/0011_transit_stops.sql',
+  'apps/api/migrations/0012_broadband_coverage.sql',
 ];
 
 for (const mig of migrationFiles) {
@@ -439,6 +442,110 @@ if (ceeCount >= 150000) {
   } else {
     console.log('ℹ️ No full CEE chunks or large dump found (normative CTE engine will be used as fallback).');
   }
+}
+
+// 7. Seed GTFS/NAP Transit Stops & Feed Coverage if empty
+const transitCandidates = [
+  'packages/etl/dist/transit_stops.sql',
+  'packages/etl/dist/openbarrio-etl-dist/transit_stops.sql',
+];
+const transitDistSql = transitCandidates.find((p) => fs.existsSync(p));
+const transitCount = Number(db.prepare('SELECT count(*) as total FROM transit_stops').get()?.total || 0);
+
+if (transitDistSql && transitCount < 10) {
+  console.log(`🚆 Loading GTFS/NAP transit stops from ${transitDistSql}...`);
+  const sql = fs.readFileSync(transitDistSql, 'utf8');
+  db.exec(sql);
+  const newCount = db.prepare('SELECT count(*) as total FROM transit_stops').get()?.total || 0;
+  console.log(`✅ Loaded ${newCount} GTFS/NAP transit stops.`);
+} else if (transitCount === 0) {
+  console.log('🚆 Seeding canonical GTFS/NAP transit MVP stops & coverage...');
+  const covStmt = db.prepare(`
+    INSERT OR REPLACE INTO transit_feed_coverage
+    (municipality_code, area_name, ingested_feeds_count, expected_feeds_count, coverage_pct, covered_operators_json, missing_operators_json, source_date)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+  `);
+  const covRows = [
+    ['28079', 'Madrid', 4, 4, 100, JSON.stringify(['Metro de Madrid', 'EMT Madrid', 'Renfe Cercanías', 'Metro Ligero']), '[]', '2026-11-01'],
+    ['08019', 'Barcelona', 4, 4, 100, JSON.stringify(['TMB Metro', 'TMB Bus', 'Rodalies de Catalunya', 'FGC / TRAM']), '[]', '2026-11-01'],
+    ['46250', 'València', 2, 2, 100, JSON.stringify(['EMT València', 'Metrovalencia (FGV)']), '[]', '2026-11-01'],
+    ['41091', 'Sevilla', 2, 2, 100, JSON.stringify(['TUSSAM', 'Metro de Sevilla / CTAN']), '[]', '2026-11-01'],
+    ['50297', 'Zaragoza', 1, 2, 50, JSON.stringify(['Tranvía de Zaragoza']), JSON.stringify(['Avanza Bus Urbano', 'Renfe Cercanías Zaragoza']), '2026-11-01'],
+    ['29067', 'Málaga', 1, 2, 50, JSON.stringify(['EMT Málaga']), JSON.stringify(['Metro de Málaga', 'Renfe Cercanías Málaga']), '2026-11-01'],
+  ];
+
+  const stopStmt = db.prepare(`
+    INSERT OR REPLACE INTO transit_stops
+    (stop_id, feed_id, operator_name, municipality_code, province_code, stop_name, mode, latitude, longitude, routes_count, peak_headway_min, offpeak_headway_min, hub_travel_times_json, source_date, license_id)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `);
+  const stopRows = [
+    ['crtm-madrid:SOL', 'crtm-madrid', 'CRTM Madrid (Metro / Cercanías)', '28079', '28', 'Sol (Metro L1, L2, L3 · Cercanías C3, C4)', 'metro', 40.4169, -3.7035, 5, 3.0, 5.0, JSON.stringify([{ hubName: 'Atocha Renfe', inVehicleMinutes: 4, mode: 'rail', lineName: 'C3 / C4' }, { hubName: 'Nuevos Ministerios', inVehicleMinutes: 7, mode: 'rail', lineName: 'C3 / C4' }]), '2026-11-01', 'MITMS-NAP-RISP / CRTM Open Data'],
+    ['crtm-madrid:GRAN_VIA', 'crtm-madrid', 'CRTM Madrid (Metro)', '28079', '28', 'Gran Vía (Metro L1, L5)', 'metro', 40.4201, -3.7022, 2, 3.5, 5.5, JSON.stringify([{ hubName: 'Sol', inVehicleMinutes: 2, mode: 'metro', lineName: 'L1' }, { hubName: 'Atocha', inVehicleMinutes: 7, mode: 'metro', lineName: 'L1' }]), '2026-11-01', 'MITMS-NAP-RISP / CRTM Open Data'],
+    ['crtm-madrid:CALLAO', 'crtm-madrid', 'CRTM Madrid (Metro)', '28079', '28', 'Callao (Metro L3, L5)', 'metro', 40.4202, -3.7056, 2, 3.5, 6.0, JSON.stringify([{ hubName: 'Moncloa', inVehicleMinutes: 7, mode: 'metro', lineName: 'L3' }]), '2026-11-01', 'MITMS-NAP-RISP / CRTM Open Data'],
+    ['crtm-madrid:CASTELLANA_BM', 'crtm-madrid', 'CRTM Madrid (Metro / EMT)', '28079', '28', 'Santiago Bernabéu (Metro L10 · EMT 14, 27, 40)', 'metro', 40.4521, -3.6908, 5, 4.0, 6.5, JSON.stringify([{ hubName: 'Nuevos Ministerios', inVehicleMinutes: 2, mode: 'metro', lineName: 'L10' }]), '2026-11-01', 'MITMS-NAP-RISP / CRTM Open Data'],
+    ['crtm-madrid:VILLAVERDE_ALTO', 'crtm-madrid', 'CRTM Madrid (Metro / Cercanías)', '28079', '28', 'Villaverde Alto (L3 · Cercanías C4, C5)', 'rail', 40.3479, -3.7098, 3, 6.0, 10.0, JSON.stringify([{ hubName: 'Atocha Renfe', inVehicleMinutes: 13, mode: 'rail', lineName: 'C4 / C5' }]), '2026-11-01', 'MITMS-NAP-RISP / CRTM Open Data'],
+    ['tmb-atm-barcelona:PASSEIG_GRACIA', 'tmb-atm-barcelona', 'TMB & ATM Barcelona', '08019', '08', 'Passeig de Gràcia (L2, L3, L4 · Rodalies R2)', 'metro', 41.3922, 2.1652, 5, 3.0, 5.0, JSON.stringify([{ hubName: 'Plaça de Catalunya', inVehicleMinutes: 2, mode: 'metro', lineName: 'L3' }, { hubName: 'Barcelona Sants', inVehicleMinutes: 6, mode: 'rail', lineName: 'R2' }]), '2026-11-01', 'CC-BY-4.0 / TMB Open Data'],
+    ['tmb-atm-barcelona:DIAGONAL', 'tmb-atm-barcelona', 'TMB & ATM Barcelona', '08019', '08', 'Diagonal / Provença (L3, L5 · FGC)', 'metro', 41.3936, 2.1604, 4, 3.5, 5.5, JSON.stringify([{ hubName: 'Plaça de Catalunya', inVehicleMinutes: 4, mode: 'rail', lineName: 'FGC S1/S2' }]), '2026-11-01', 'CC-BY-4.0 / TMB Open Data'],
+    ['emt-atmv-valencia:COLON', 'emt-atmv-valencia', 'Metrovalencia & EMT València', '46250', '46', 'Colón (Metrovalencia L3, L5, L7, L9)', 'metro', 39.4695, -0.3715, 4, 5.0, 8.0, JSON.stringify([{ hubName: 'Xàtiva / Estació del Nord', inVehicleMinutes: 2, mode: 'metro', lineName: 'L3 / L5' }]), '2026-11-01', 'CC-BY-4.0 (GVA / Ayto. València)'],
+    ['emt-atmv-valencia:XATIVA', 'emt-atmv-valencia', 'Metrovalencia & EMT València', '46250', '46', 'Xàtiva (Metro L3, L5, L9 · Estació del Nord)', 'metro', 39.4673, -0.3771, 5, 4.5, 7.5, JSON.stringify([{ hubName: 'Joaquín Sorolla AVE', inVehicleMinutes: 4, mode: 'metro', lineName: 'L1 / L2' }]), '2026-11-01', 'CC-BY-4.0 (GVA / Ayto. València)'],
+    ['tussam-ctan-sevilla:PLAZA_NUEVA', 'tussam-ctan-sevilla', 'TUSSAM & MetroCentro Sevilla', '41091', '41', 'Plaza Nueva (Tranvía T1 · TUSSAM)', 'tram', 37.3888, -5.9962, 4, 6.0, 10.0, JSON.stringify([{ hubName: 'Puerta de Jerez (Metro L1)', inVehicleMinutes: 4, mode: 'tram', lineName: 'T1' }]), '2026-11-01', 'CC-BY-4.0 (IDE Sevilla / Junta de Andalucía)'],
+    ['tussam-ctan-sevilla:PUERTA_JEREZ', 'tussam-ctan-sevilla', 'Metro de Sevilla & TUSSAM', '41091', '41', 'Puerta de Jerez (Metro L1 · Tranvía T1)', 'metro', 37.3821, -5.9945, 3, 5.0, 8.5, JSON.stringify([{ hubName: 'Nervión / Santa Justa', inVehicleMinutes: 7, mode: 'metro', lineName: 'L1' }]), '2026-11-01', 'CC-BY-4.0 (IDE Sevilla / Junta de Andalucía)'],
+    ['zaragoza-tranvia:PLAZA_ESPANA', 'zaragoza-tranvia', 'Tranvía de Zaragoza', '50297', '50', 'Plaza España (Tranvía L1)', 'tram', 41.6528, -0.8809, 1, 5.5, 9.0, JSON.stringify([{ hubName: 'Gran Vía / Universidad', inVehicleMinutes: 7, mode: 'tram', lineName: 'L1' }]), '2026-11-01', 'CC-BY-4.0 (Ayto. Zaragoza)'],
+  ];
+
+  db.exec('BEGIN TRANSACTION;');
+  for (const r of covRows) covStmt.run(...r);
+  for (const r of stopRows) stopStmt.run(...r);
+  db.exec('COMMIT;');
+  console.log(`✅ Seeded ${stopRows.length} GTFS/NAP transit stops across ${covRows.length} coverage zones.`);
+}
+
+// 8. Seed SETELECO / CNMC Broadband Coverage if empty
+const broadbandCandidates = [
+  'packages/etl/dist/broadband_coverage.sql',
+  'packages/etl/dist/openbarrio-etl-dist/broadband_coverage.sql',
+];
+const broadbandDistSql = broadbandCandidates.find((p) => fs.existsSync(p));
+const broadbandCount = Number(db.prepare('SELECT count(*) as total FROM broadband_coverage').get()?.total || 0);
+
+if (broadbandDistSql && broadbandCount === 0) {
+  console.log(`📡 Loading SETELECO / CNMC broadband coverage from ${broadbandDistSql}...`);
+  const sql = fs.readFileSync(broadbandDistSql, 'utf8');
+  db.exec(sql);
+  const newCount = db.prepare('SELECT count(*) as total FROM broadband_coverage').get()?.total || 0;
+  console.log(`✅ Loaded ${newCount} broadband coverage territories.`);
+} else if (broadbandCount === 0) {
+  console.log('📡 Seeding canonical SETELECO / CNMC broadband coverage rows...');
+  const bbStmt = db.prepare(`
+    INSERT OR REPLACE INTO broadband_coverage
+    (territory_code, municipality_code, entity_name, granularity, ftth_pct, fixed_max_mbps, mobile_5g_pct, source_year, source_date, source_dataset)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `);
+  const bbRows = [
+    ['28079', '28079', 'Madrid', 'municipality', 99.1, 10000, 98.4, 2025, '2026-11-01', 'CNMCData / SETELECO Municipal 2025'],
+    ['08019', '08019', 'Barcelona', 'municipality', 99.3, 10000, 98.7, 2025, '2026-11-01', 'CNMCData / SETELECO Municipal 2025'],
+    ['46250', '46250', 'València', 'municipality', 98.6, 10000, 97.2, 2025, '2026-11-01', 'CNMCData / SETELECO Municipal 2025'],
+    ['41091', '41091', 'Sevilla', 'municipality', 97.8, 1000, 96.5, 2025, '2026-11-01', 'CNMCData / SETELECO Municipal 2025'],
+    ['48020', '48020', 'Bilbao', 'municipality', 98.4, 10000, 96.8, 2025, '2026-11-01', 'CNMCData / SETELECO Municipal 2025'],
+    ['20069', '20069', 'Donostia / San Sebastián', 'municipality', 98.1, 10000, 96.1, 2025, '2026-11-01', 'CNMCData / SETELECO Municipal 2025'],
+    ['31201', '31201', 'Pamplona / Iruña', 'municipality', 97.9, 1000, 95.4, 2025, '2026-11-01', 'CNMCData / SETELECO Municipal 2025'],
+    ['50297', '50297', 'Zaragoza', 'municipality', 96.9, 1000, 95.2, 2024, '2024-06-30', 'SETELECO Cobertura Banda Ancha 2024'],
+    ['29067', '29067', 'Málaga', 'municipality', 96.4, 1000, 95.0, 2024, '2024-06-30', 'SETELECO Cobertura Banda Ancha 2024'],
+    ['18087', '18087', 'Granada', 'municipality', 95.8, 1000, 93.4, 2024, '2024-06-30', 'SETELECO Cobertura Banda Ancha 2024'],
+    ['30030', '30030', 'Murcia', 'municipality', 94.2, 1000, 91.8, 2024, '2024-06-30', 'SETELECO Cobertura Banda Ancha 2024'],
+    ['07040', '07040', 'Palma', 'municipality', 95.1, 1000, 92.6, 2024, '2024-06-30', 'SETELECO Cobertura Banda Ancha 2024'],
+    ['36057', '36057', 'Vigo', 'municipality', 94.6, 1000, 90.4, 2024, '2024-06-30', 'SETELECO Cobertura Banda Ancha 2024'],
+    ['15030', '15030', 'A Coruña', 'municipality', 96.2, 1000, 92.1, 2024, '2024-06-30', 'SETELECO Cobertura Banda Ancha 2024'],
+    ['28068000100', '28068', 'Guadarrama (ESP 2020)', 'population_entity', 82.4, 300, 12.0, 2020, '2020-12-31', 'SETELECO ESP Serie Histórica 2020'],
+    ['44216000100', '44216', 'Teruel (ESP 2020)', 'population_entity', 78.5, 300, 8.5, 2020, '2020-12-31', 'SETELECO ESP Serie Histórica 2020'],
+    ['42173000100', '42173', 'Soria (ESP 2020)', 'population_entity', 79.1, 300, 9.0, 2020, '2020-12-31', 'SETELECO ESP Serie Histórica 2020'],
+  ];
+
+  db.exec('BEGIN TRANSACTION;');
+  for (const r of bbRows) bbStmt.run(...r);
+  db.exec('COMMIT;');
+  console.log(`✅ Seeded ${bbRows.length} SETELECO / CNMC broadband coverage rows.`);
 }
 
 const finalRow = db.prepare('SELECT count(*) as total FROM census_tract_income').get();

@@ -27,6 +27,7 @@ import { MapTelemetryHud } from './MapTelemetryHud';
 import { MapLegendHud } from './MapLegendHud';
 import { ThematicLensSelector, ThematicLens } from './ThematicLensSelector';
 import { SeasonPreset } from '../../utils/solar';
+import { trackAnalyticsEvent } from '../../analytics';
 
 // Export geodesic utilities for backward compatibility
 export { wgs84ToUtm30n, createGeodesicCircle, escapeHtml };
@@ -99,6 +100,7 @@ export function MapView({
 
   const handleSelectLens = useCallback((lens: ThematicLens) => {
     setActiveLens(lens);
+    void trackAnalyticsEvent({ event: 'lens_used', lens: 'layer' });
     if (lens === 'urban') {
       setShowIsochrones(true);
       setShowIneIncome(true);

@@ -32,7 +32,7 @@ describe('Remote Selector Config Loader & Bundled Fallback (MV3 Safe)', () => {
 
   it('loads valid remote selector upgrade, validates schema & stores 24h cache', async () => {
     const upgraded = structuredClone(BUNDLED_PORTAL_SELECTORS);
-    upgraded.version = '1.4.1';
+    upgraded.version = '1.5.1';
     upgraded.portals.idealista.title = ['.new-idealista-heading', 'h1'];
 
     const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
@@ -44,14 +44,14 @@ describe('Remote Selector Config Loader & Bundled Fallback (MV3 Safe)', () => {
 
     const first = await loadRemoteSelectors('https://api.openbarrio.org', 1_000_000);
     expect(first.source).toBe('remote');
-    expect(first.bundle.version).toBe('1.4.1');
+    expect(first.bundle.version).toBe('1.5.1');
     expect(storageMap.has(SELECTORS_STORAGE_KEY)).toBe(true);
     expect(fetchSpy).toHaveBeenCalledTimes(1);
 
     // Second call within 24h hits cache without invoking fetch
     const second = await loadRemoteSelectors('https://api.openbarrio.org', 1_000_000 + 60_000);
     expect(second.source).toBe('cache');
-    expect(second.bundle.version).toBe('1.4.1');
+    expect(second.bundle.version).toBe('1.5.1');
     expect(fetchSpy).toHaveBeenCalledTimes(1);
   });
 
@@ -66,7 +66,7 @@ describe('Remote Selector Config Loader & Bundled Fallback (MV3 Safe)', () => {
       bundle: BUNDLED_PORTAL_SELECTORS,
     });
 
-    // 2. Version downgrade (1.3.2 < 1.4.0)
+    // 2. Version downgrade (1.3.2 < 1.5.0)
     const downgraded = { ...BUNDLED_PORTAL_SELECTORS, version: '1.3.2' };
     vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
       new Response(JSON.stringify(downgraded), { status: 200 })
@@ -89,7 +89,7 @@ describe('Remote Selector Config Loader & Bundled Fallback (MV3 Safe)', () => {
 
     // 4. Schema invalid
     vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
-      new Response(JSON.stringify({ version: '1.4.1' }), { status: 200 })
+      new Response(JSON.stringify({ version: '1.5.1' }), { status: 200 })
     );
     expect(await loadRemoteSelectors('https://api.openbarrio.org')).toMatchObject({
       source: 'bundled_fallback',
@@ -99,7 +99,7 @@ describe('Remote Selector Config Loader & Bundled Fallback (MV3 Safe)', () => {
 
     // 5. Unsafe script/CSS injection token
     const unsafe = structuredClone(BUNDLED_PORTAL_SELECTORS);
-    unsafe.version = '1.4.2';
+    unsafe.version = '1.5.2';
     unsafe.portals.fotocasa.title = ['javascript:alert(1)'];
     vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
       new Response(JSON.stringify(unsafe), { status: 200 })
@@ -121,7 +121,7 @@ describe('Remote Selector Config Loader & Bundled Fallback (MV3 Safe)', () => {
 
   it('serves GET_SELECTORS extension message and lets extractors consume overridden selectors', async () => {
     const upgraded = structuredClone(BUNDLED_PORTAL_SELECTORS);
-    upgraded.version = '1.4.2';
+    upgraded.version = '1.5.2';
     upgraded.portals.idealista.title = ['.v14-custom-title'];
 
     vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
@@ -131,7 +131,7 @@ describe('Remote Selector Config Loader & Bundled Fallback (MV3 Safe)', () => {
     const msgRes = await handleExtensionMessage({ type: 'GET_SELECTORS' });
     expect(msgRes.success).toBe(true);
     const bundle = msgRes.data as typeof BUNDLED_PORTAL_SELECTORS;
-    expect(bundle.version).toBe('1.4.2');
+    expect(bundle.version).toBe('1.5.2');
 
     const dom = new JSDOM(
       `<html><body><div class="v14-custom-title">Ático Renovado Chamberí</div><span data-latitude="40.42" data-longitude="-3.70"></span></body></html>`,

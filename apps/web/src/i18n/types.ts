@@ -847,6 +847,7 @@ export interface TranslationSchema {
     linkMethodology: string;
     linkLicense: string;
     linkTransparency: string;
+    linkPrivacy: string;
   };
   uncertainty: {
     statusOk: string;
@@ -894,6 +895,8 @@ export interface TranslationSchema {
     errorText: string;
     isolateCaveat: string;
     generatedAtLabel: string;
+    noteTransit: string;
+    noteBroadband: string;
   };
   methodology: {
     navLabel: string;
@@ -922,6 +925,11 @@ export interface TranslationSchema {
     colRule: string;
     viewMethodologyCta: string;
     viewSourcesStatusCta: string;
+    profilesSectionTitle: string;
+    profilesSectionSubtitle: string;
+    profilesTableAria: string;
+    colProfile: string;
+    colFocus: string;
   };
   listingUrl: {
     tabLabel: string;
@@ -945,6 +953,225 @@ export interface TranslationSchema {
     errorPayloadTooLarge: string;
     errorRateLimit: string;
     errorGeneric: string;
+  };
+  consent: {
+    bannerAria: string;
+    title: string;
+    description: string;
+    acceptBtn: string;
+    rejectBtn: string;
+    learnMore: string;
+  };
+  privacy: {
+    navLabel: string;
+    seoTitle: string;
+    seoDescription: string;
+    title: string;
+    subtitle: string;
+    consentTitle: string;
+    consentDesc: string;
+    currentStatusLabel: string;
+    statusAccepted: string;
+    statusRejected: string;
+    statusUndecided: string;
+    acceptBtn: string;
+    withdrawBtn: string;
+    withdrawnNotice: string;
+    eventsTitle: string;
+    eventsSubtitle: string;
+    eventsTableAria: string;
+    colEventId: string;
+    colTrigger: string;
+    colProperties: string;
+    colPurpose: string;
+    eventDossierGeneratedTrigger: string;
+    eventDossierGeneratedDesc: string;
+    eventLensUsedTrigger: string;
+    eventLensUsedDesc: string;
+    eventChecklistExportedTrigger: string;
+    eventChecklistExportedDesc: string;
+    eventVisitModeEnabledTrigger: string;
+    eventVisitModeEnabledDesc: string;
+    eventPropsOptionalReturning: string;
+    limitsTitle: string;
+    retentionRule: string;
+    returningWindowRule: string;
+    payloadLimitRule: string;
+    localDossiersRule: string;
+    neverCollectedTitle: string;
+    neverCollected1: string;
+    neverCollected2: string;
+    neverCollected3: string;
+    neverCollected4: string;
+    legalAndBiasTitle: string;
+    legalBasisText: string;
+    biasDisclosureText: string;
+    extensionScopeText: string;
+  };
+  pwa: {
+    notificationsRegionAria: string;
+    updateTitle: string;
+    updateDescription: string;
+    updateBtn: string;
+    dismissBtn: string;
+    actionsAvailable: string;
+  };
+  visitMode: {
+    saveForVisitBtn: string;
+    savedForVisitBtn: string;
+    saveForVisitTooltip: string;
+    savedVisitsBtn: string;
+    savedPanelTitle: string;
+    savedPanelDesc: string;
+    savedPanelEmpty: string;
+    savedOnDate: string;
+    openSavedBtn: string;
+    removeSavedBtn: string;
+    offlineBanner: string;
+    offlineScopeNotice: string;
+    expiredWarning: string;
+    pdfDisabledOffline: string;
+    offlineNotSavedError: string;
+    offlineSearchUnavailable: string;
+    storageUnavailableError: string;
+    storageQuotaError: string;
+  };
+  checklist: {
+    tabLabel: string;
+    title: string;
+    subtitle: string;
+    exportMdBtn: string;
+    exportTxtBtn: string;
+    printBtn: string;
+    exportRefcatLabel: string;
+    exportDateLabel: string;
+    exportProfileLabel: string;
+    exportProfileNone: string;
+    askLabel: string;
+    verifyLabel: string;
+    countTotal: string;
+    countCritical: string;
+    countImportant: string;
+    countUnverified: string;
+    emptyTitle: string;
+    emptyDesc: string;
+    legalDisclaimer: string;
+    severity: {
+      critical: string;
+      important: string;
+      info: string;
+    };
+    category: {
+      structural: string;
+      legal: string;
+      environmental: string;
+      energy: string;
+      neighborhood: string;
+      verification: string;
+    };
+    items: {
+      substandard_housing: { title: string; ask: string; verify: string };
+      age_old_building: { title: string; ask: string; verify: string };
+      ite_action_required: { title: string; ask: string; verify: string };
+      noise_high: { title: string; ask: string; verify: string };
+      flood_hazard: { title: string; ask: string; verify: string };
+      radon_ground_contact: { title: string; ask: string; verify: string };
+      cee_expired: { title: string; ask: string; verify: string };
+      cee_missing: { title: string; ask: string; verify: string };
+      seismic_vulnerable: { title: string; ask: string; verify: string };
+      vut_high_pressure: { title: string; ask: string; verify: string };
+      capex_high: { title: string; ask: string; verify: string };
+      urban_planning_risk: { title: string; ask: string; verify: string };
+      broadband_verify_portal: { title: string; ask: string; verify: string };
+    };
+    unverified: {
+      stale: { title: string };
+      unavailable: { title: string };
+      out_of_coverage: { title: string };
+      layers: {
+        catastro: { ask: string; verify: string };
+        ine: { ask: string; verify: string };
+        sica: { ask: string; verify: string };
+        snczi: { ask: string; verify: string };
+        mivau: { ask: string; verify: string };
+        cee: { ask: string; verify: string };
+        radon: { ask: string; verify: string };
+        seismic: { ask: string; verify: string };
+        ite: { ask: string; verify: string };
+        vut: { ask: string; verify: string };
+        airQuality: { ask: string; verify: string };
+        urbanPlanning: { ask: string; verify: string };
+        connectivity: { ask: string; verify: string };
+        transit: { ask: string; verify: string };
+        broadband: { ask: string; verify: string };
+      };
+    };
+  };
+  profiles: {
+    selectorLabel: string;
+    chipLabel: string;
+    none: string;
+    noneShort: string;
+    scoreForProfile: string;
+    options: {
+      family: { label: string; desc: string };
+      investor: { label: string; desc: string };
+      senior: { label: string; desc: string };
+      renter: { label: string; desc: string };
+    };
+  };
+  transit: {
+    modeTabsAria: string;
+    tabWalk: string;
+    tabTransit: string;
+    resolutionBadge: string;
+    parametricWalkNotice: string;
+    partialCoverageWarning: string;
+    coveredOperatorsLabel: string;
+    missingOperatorsLabel: string;
+    zeroCoverageDetail: string;
+    stops5Min: string;
+    stops10Min: string;
+    stops15Min: string;
+    stopsUnit: string;
+    peakHeadway: string;
+    offPeakHeadway: string;
+    minutesShort: string;
+    nearestStopsTitle: string;
+    hubTravelTimesTitle: string;
+    hubBreakdown: string;
+    walkLegShort: string;
+    routesCount: string;
+    parametricFootnote: string;
+    modes: {
+      metro: string;
+      rail: string;
+      tram: string;
+      bus: string;
+      ferry: string;
+    };
+  };
+  broadband: {
+    title: string;
+    subtitle: string;
+    ftthLabel: string;
+    mobile5gLabel: string;
+    maxSpeedLabel: string;
+    maxSpeedUnit: string;
+    notReported: string;
+    granularityLabel: string;
+    granularities: {
+      parcel: string;
+      population_entity: string;
+      municipality: string;
+    };
+    datasetLabel: string;
+    sourceYearLabel: string;
+    disclaimerBanner: string;
+    informativeOnlyNote: string;
+    unavailableTitle: string;
+    unavailableDetail: string;
+    outOfCoverageDetail: string;
   };
 }
 

@@ -5,6 +5,7 @@ import { GisWorkspaceView } from './views/GisWorkspaceView';
 import { TransparencyView } from './views/TransparencyView';
 import { SourcesStatusView } from './views/SourcesStatusView';
 import { MethodologyView } from './views/MethodologyView';
+import { PrivacyView } from './views/PrivacyView';
 import { SurfaceCheckerToolView } from './views/tools/SurfaceCheckerToolView';
 import { RentLegalCalculatorToolView } from './views/tools/RentLegalCalculatorToolView';
 import { ItpIbiSimulatorToolView } from './views/tools/ItpIbiSimulatorToolView';
@@ -14,6 +15,10 @@ import { UnitPickerModal } from './components/UnitPickerModal';
 import { PropertyDuelModal } from './components/comparator/PropertyDuelModal';
 import { CertifiedPdfReport } from './components/CertifiedPdfReport';
 import { ChromeExtensionBanner } from './components/common/ChromeExtensionBanner';
+import { ConsentBanner } from './components/common/ConsentBanner';
+import { SwUpdateToast } from './components/common/SwUpdateToast';
+import { useConsentStore } from './analytics';
+import { usePwaStore } from './store/pwa.store';
 import {
   useWorkspaceStore,
   useViewMode,
@@ -48,10 +53,14 @@ export function AppContent() {
   const setDuelCandidateB = useWorkspaceStore((s) => s.setDuelCandidateB);
   const loadAuditByRefcat = useWorkspaceStore((s) => s.loadAuditByRefcat);
   const initFromUrl = useWorkspaceStore((s) => s.initFromUrl);
+  const hydrateConsent = useConsentStore((s) => s.hydrateConsent);
+  const initPwaListeners = usePwaStore((s) => s.initPwaListeners);
 
   useEffect(() => {
     initFromUrl();
-  }, [initFromUrl]);
+    hydrateConsent();
+    return initPwaListeners();
+  }, [initFromUrl, hydrateConsent, initPwaListeners]);
 
   // Scroll to top on route / view transition
   useEffect(() => {
@@ -70,6 +79,8 @@ export function AppContent() {
         <SourcesStatusView />
       ) : viewMode === 'methodology' ? (
         <MethodologyView />
+      ) : viewMode === 'privacy' ? (
+        <PrivacyView />
       ) : viewMode === 'tool-surface' ? (
         <SurfaceCheckerToolView isEmbed={Boolean(isEmbed)} />
       ) : viewMode === 'tool-rent' ? (
@@ -141,6 +152,9 @@ export function AppContent() {
       )}
 
       {report && <CertifiedPdfReport report={report} />}
+
+      {!isEmbed && <ConsentBanner />}
+      {!isEmbed && <SwUpdateToast />}
     </>
   );
 }

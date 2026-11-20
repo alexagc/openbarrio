@@ -3,8 +3,12 @@ import {
   ProblemDetails,
   CadastralUnitsResponse,
   PropertyAuditReport,
+  type ActiveProfileId,
 } from '@openbarrio/core';
 import { apiClient, ExtendedAuditReport, ApiError } from '../services/api.client';
+import { trackAnalyticsEvent } from '../analytics';
+import { defaultVisitDossierStorage } from '../pwa/visit-dossier-store';
+import { usePwaStore } from './pwa.store';
 import { parseUrlState, DossierTab, ViewMode } from '../hooks/useUrlSync';
 import { getLocalizedPath, parseLocalizedRoute } from '../utils/seo-routes';
 import type { SupportedLanguage } from '../i18n/types';
@@ -19,6 +23,7 @@ export interface WorkspaceState {
   isEmbed?: boolean;
   activeTab: 'dossier' | 'map';
   dossierTab: DossierTab;
+  activeProfile: ActiveProfileId;
   mobileNavDestination: MobileNavDestination;
   sheetSnapPoint: SheetSnapPoint;
   isMobileLayersOpen: boolean;
@@ -50,6 +55,7 @@ export interface WorkspaceState {
   setIsEmbed: (isEmbed: boolean) => void;
   setActiveTab: (tab: 'dossier' | 'map') => void;
   setDossierTab: (tab: DossierTab) => void;
+  setActiveProfile: (profile: ActiveProfileId) => void;
   setMobileNavDestination: (dest: MobileNavDestination) => void;
   setSheetSnapPoint: (snap: SheetSnapPoint) => void;
   setIsMobileLayersOpen: (open: boolean) => void;
@@ -95,6 +101,7 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
   isEmbed: initialUrl.isEmbed,
   activeTab: initialUrl.activeTab,
   dossierTab: initialUrl.dossierTab,
+  activeProfile: initialUrl.profile ?? 'none',
   mobileNavDestination: initialUrl.activeTab === 'dossier' ? 'report' : 'map',
   sheetSnapPoint: initialUrl.activeTab === 'dossier' ? 'full' : 'peek',
   isMobileLayersOpen: false,
@@ -143,6 +150,14 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
     get().syncUrl();
   },
 
+  setActiveProfile: (activeProfile) => {
+    set({ activeProfile });
+    if (activeProfile !== 'none') {
+      void trackAnalyticsEvent({ event: 'lens_used', lens: 'profile' });
+    }
+    get().syncUrl();
+  },
+
   setMobileNavDestination: (mobileNavDestination) => set({ mobileNavDestination }),
   setSheetSnapPoint: (sheetSnapPoint) => set({ sheetSnapPoint }),
   setIsMobileLayersOpen: (isMobileLayersOpen) => set({ isMobileLayersOpen }),
@@ -187,6 +202,14 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
       viewMode: 'map',
     });
 
+    if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+      set({
+        isLoading: false,
+        error: { message: 'OFFLINE_SEARCH_UNAVAILABLE' },
+      });
+      return null;
+    }
+
     try {
       const liveReport = await apiClient.auditByCoordinates(lat, lon);
       set({
@@ -197,7 +220,9 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
         },
         isLoading: false,
       });
+      usePwaStore.getState().clearActiveSavedDossierMeta();
       get().syncUrl();
+      void trackAnalyticsEvent({ event: 'dossier_generated' });
       return liveReport;
     } catch (err: unknown) {
       const apiErr = err instanceof ApiError ? err : null;
@@ -224,6 +249,38 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
       viewMode: 'map',
     });
 
+    const loadSavedOffline = async (): Promise<ExtendedAuditReport | null> => {
+      try {
+        const saved = await defaultVisitDossierStorage.getSavedDossier(cleanRefcat);
+        if (!saved) return null;
+        const savedReport: ExtendedAuditReport = saved.report;
+        set({
+          report: savedReport,
+          selectedCoords: {
+            lat: savedReport.property.coordinates.latitude,
+            lon: savedReport.property.coordinates.longitude,
+          },
+          isLoading: false,
+          error: null,
+        });
+        usePwaStore.getState().markLoadedOffline(saved);
+        get().syncUrl();
+        return savedReport;
+      } catch {
+        return null;
+      }
+    };
+
+    if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+      const offlineHit = await loadSavedOffline();
+      if (offlineHit) return offlineHit;
+      set({
+        isLoading: false,
+        error: { message: 'OFFLINE_DOSSIER_NOT_SAVED' },
+      });
+      return null;
+    }
+
     try {
       const liveReport = await apiClient.auditByCadastralReference(cleanRefcat, fallbackCoords, portal);
       set({
@@ -234,10 +291,16 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
         },
         isLoading: false,
       });
+      usePwaStore.getState().clearActiveSavedDossierMeta();
       get().syncUrl();
+      void trackAnalyticsEvent({ event: 'dossier_generated' });
       return liveReport;
     } catch (err: unknown) {
       const apiErr = err instanceof ApiError ? err : null;
+      if (!apiErr || apiErr.status === 0) {
+        const offlineHit = await loadSavedOffline();
+        if (offlineHit) return offlineHit;
+      }
       set({
         isLoading: false,
         error: {
@@ -326,7 +389,7 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
       return;
     }
 
-    if (viewMode === 'sources-status' || viewMode === 'methodology') {
+    if (viewMode === 'sources-status' || viewMode === 'methodology' || viewMode === 'privacy') {
       const curPath = window.location.pathname;
       const parsed = parseLocalizedRoute(curPath, window.location.search);
       if (parsed.viewMode !== viewMode) {
@@ -416,6 +479,11 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
       }
     }
 
+    const activeProfile = get().activeProfile;
+    if (activeProfile && activeProfile !== 'none') {
+      params.set('perfil', activeProfile);
+    }
+
     const qs = params.toString();
     const targetUrl = qs ? `${targetPath}?${qs}` : targetPath;
     const cur = window.location.pathname + window.location.search;
@@ -436,6 +504,7 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
       isEmbed: state.isEmbed,
       activeTab: state.activeTab,
       dossierTab: state.dossierTab,
+      activeProfile: state.profile ?? 'none',
       sheetSnapPoint: state.activeTab === 'dossier' ? 'full' : 'peek',
       mobileNavDestination: state.activeTab === 'dossier' ? 'report' : 'map',
       isDuelOpen,
@@ -459,6 +528,7 @@ export const useCompareRefs = () => useWorkspaceStore((state) => state.compareRe
 export const useViewMode = () => useWorkspaceStore((state) => state.viewMode);
 export const useActiveTab = () => useWorkspaceStore((state) => state.activeTab);
 export const useDossierTab = () => useWorkspaceStore((state) => state.dossierTab);
+export const useActiveProfile = () => useWorkspaceStore((state) => state.activeProfile);
 export const useReport = () => useWorkspaceStore((state) => state.report);
 export const useSelectedCoords = () => useWorkspaceStore((state) => state.selectedCoords);
 export const useIsLoading = () => useWorkspaceStore((state) => state.isLoading);
