@@ -29,6 +29,7 @@ import { FiscalSimulatorCard } from './dossier/FiscalSimulatorCard';
 import { BuildingInspectionCard } from './dossier/BuildingInspectionCard';
 import { SeismicSafetyCard } from './dossier/SeismicSafetyCard';
 import { PedestrianIsochronesCard } from './dossier/PedestrianIsochronesCard';
+import { BroadbandConnectivityCard } from './dossier/BroadbandConnectivityCard';
 import { VisitChecklistPanel } from './dossier/VisitChecklistPanel';
 import { trackAnalyticsEvent } from '../analytics';
 import { downloadCadastralGML } from '../utils/gml';
@@ -1048,6 +1049,21 @@ export function AuditDossier({
                   </div>
                 ),
               },
+              ...(report.broadband || report.layers?.broadband
+                ? [
+                    {
+                      key: 'broadband' as const,
+                      node: (
+                        <div key="broadband" data-section="broadband" className="page-break-inside-avoid">
+                          <BroadbandConnectivityCard
+                            broadband={report.broadband}
+                            broadbandLayer={report.layers?.broadband}
+                          />
+                        </div>
+                      ),
+                    },
+                  ]
+                : []),
             ],
             activeProfile
           ).map((s) => s.node)}

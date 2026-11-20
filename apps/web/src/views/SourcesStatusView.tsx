@@ -257,6 +257,11 @@ export function SourcesStatusView() {
                               {t('sourcesStatus.noteTransit')}
                             </p>
                           )}
+                          {src.key === 'broadband' && (
+                            <p className="font-body text-[11px] font-normal text-on-surface-variant mt-1 max-w-md leading-snug">
+                              {t('sourcesStatus.noteBroadband')}
+                            </p>
+                          )}
                         </th>
                         <td className="px-4 py-3.5">
                           <span

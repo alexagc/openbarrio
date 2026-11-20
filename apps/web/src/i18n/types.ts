@@ -896,6 +896,7 @@ export interface TranslationSchema {
     isolateCaveat: string;
     generatedAtLabel: string;
     noteTransit: string;
+    noteBroadband: string;
   };
   methodology: {
     navLabel: string;
@@ -1149,6 +1150,28 @@ export interface TranslationSchema {
       bus: string;
       ferry: string;
     };
+  };
+  broadband: {
+    title: string;
+    subtitle: string;
+    ftthLabel: string;
+    mobile5gLabel: string;
+    maxSpeedLabel: string;
+    maxSpeedUnit: string;
+    notReported: string;
+    granularityLabel: string;
+    granularities: {
+      parcel: string;
+      population_entity: string;
+      municipality: string;
+    };
+    datasetLabel: string;
+    sourceYearLabel: string;
+    disclaimerBanner: string;
+    informativeOnlyNote: string;
+    unavailableTitle: string;
+    unavailableDetail: string;
+    outOfCoverageDetail: string;
   };
 }
 
