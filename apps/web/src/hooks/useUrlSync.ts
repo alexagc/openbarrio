@@ -1,4 +1,5 @@
 import { useEffect, useCallback, useRef } from 'react';
+import { isProfileId, type ActiveProfileId } from '@openbarrio/core';
 import { parseLocalizedRoute, getLocalizedPath } from '../utils/seo-routes';
 import { SupportedLanguage } from '../i18n/types';
 
@@ -27,6 +28,7 @@ export interface UrlParamsState {
   compare?: string[];
   municipalitySlug?: string;
   isEmbed?: boolean;
+  profile?: ActiveProfileId;
 }
 
 export function parseUrlState(): UrlParamsState {
@@ -105,6 +107,8 @@ export function parseUrlState(): UrlParamsState {
     : 'summary';
 
   const activeTab: 'dossier' | 'map' = tabParam === 'map' ? 'map' : 'dossier';
+  const perfilParam = searchParams.get('perfil');
+  const profile: ActiveProfileId = isProfileId(perfilParam) ? perfilParam : 'none';
 
   return {
     viewMode,
@@ -116,6 +120,7 @@ export function parseUrlState(): UrlParamsState {
     compare: compareRefs,
     municipalitySlug,
     isEmbed,
+    profile,
   };
 }
 
@@ -195,6 +200,10 @@ export function useUrlSync(
         params.set('vs', newState.vs);
       }
 
+      if (newState.profile && newState.profile !== 'none') {
+        params.set('perfil', newState.profile);
+      }
+
       const queryString = params.toString();
       const targetUrl = queryString ? `${targetPath}?${queryString}` : targetPath;
 
@@ -225,6 +234,7 @@ export function useUrlSync(
     state.coords?.lat,
     state.coords?.lon,
     state.vs,
+    state.profile,
     syncToUrl,
   ]);
 

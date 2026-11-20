@@ -1,9 +1,11 @@
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import {
   PropertyAuditReport,
   PropertyTypology,
   LandClassification,
   METHODOLOGY_VERSION,
+  PROFILE_IDS,
+  PROFILE_TEMPLATES,
   VISIT_MODE_STALE_WARN_DAYS,
   detectPropertyTypology,
   detectCadastralJurisdiction,
@@ -11,6 +13,8 @@ import {
   evaluateSeismicVulnerability,
   isSavedDossierExpired,
   normalizeVisitDossierId,
+  type ActiveProfileId,
+  type DossierSectionKey,
 } from '@openbarrio/core';
 import { ScoreGauge } from './ScoreGauge';
 import { PillarCards, BuildingCadastralCard } from './PillarCard';
@@ -53,6 +57,7 @@ import {
   AlertOctagon,
   BookOpen,
   CheckSquare,
+  Users,
 } from 'lucide-react';
 
 interface AuditDossierProps {
@@ -61,6 +66,21 @@ interface AuditDossierProps {
   onOpenDuel?: () => void;
   activeTab?: DossierTab;
   onTabChange?: (tab: DossierTab) => void;
+  activeProfile?: ActiveProfileId;
+  onProfileChange?: (profile: ActiveProfileId) => void;
+}
+
+function sortDossierSections(
+  sections: Array<{ key: DossierSectionKey; node: ReactNode }>,
+  profile: ActiveProfileId
+): Array<{ key: DossierSectionKey; node: ReactNode }> {
+  if (profile === 'none') return sections;
+  const order = PROFILE_TEMPLATES[profile].sectionOrder;
+  return [...sections].sort((a, b) => {
+    const idxA = order.indexOf(a.key);
+    const idxB = order.indexOf(b.key);
+    return (idxA === -1 ? 999 : idxA) - (idxB === -1 ? 999 : idxB);
+  });
 }
 
 export function AuditDossier({
@@ -69,11 +89,24 @@ export function AuditDossier({
   onOpenDuel,
   activeTab: controlledTab,
   onTabChange,
+  activeProfile: controlledProfile,
+  onProfileChange,
 }: AuditDossierProps) {
   const { t, language } = useTranslation();
   const storeDossierTab = useWorkspaceStore((s) => s.dossierTab);
   const setStoreDossierTab = useWorkspaceStore((s) => s.setDossierTab);
+  const storeActiveProfile = useWorkspaceStore((s) => s.activeProfile);
+  const setStoreActiveProfile = useWorkspaceStore((s) => s.setActiveProfile);
   const setViewMode = useWorkspaceStore((s) => s.setViewMode);
+
+  const activeProfile: ActiveProfileId = controlledProfile ?? storeActiveProfile ?? 'none';
+  const handleProfileChange = (nextProfile: ActiveProfileId) => {
+    if (onProfileChange) {
+      onProfileChange(nextProfile);
+    } else {
+      setStoreActiveProfile(nextProfile);
+    }
+  };
 
   const isOnline = usePwaStore((s) => s.isOnline);
   const savedDossiers = usePwaStore((s) => s.savedDossiers);
@@ -479,6 +512,65 @@ export function AuditDossier({
           </div>
         )}
 
+        {/* Active Decision Profile Chip (Always visible on screen & print) + Selector */}
+        <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
+          <span
+            data-testid="active-profile-chip"
+            className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-mono font-semibold border ${
+              activeProfile === 'none'
+                ? 'bg-surface-container border-outline-variant text-on-surface-variant'
+                : 'bg-primary/15 border-primary/40 text-primary'
+            }`}
+          >
+            <Users className="w-3.5 h-3.5" />
+            <span>
+              {t('profiles.chipLabel', {
+                profile:
+                  activeProfile === 'none'
+                    ? t('profiles.none')
+                    : t(`profiles.options.${activeProfile}.label`),
+              })}
+            </span>
+          </span>
+
+          <div
+            data-testid="profile-selector"
+            className="flex flex-wrap items-center gap-1 no-print"
+            role="group"
+            aria-label={t('profiles.selectorLabel')}
+          >
+            <button
+              type="button"
+              data-testid="profile-btn-none"
+              aria-pressed={activeProfile === 'none'}
+              onClick={() => handleProfileChange('none')}
+              className={`px-2 py-0.5 rounded text-[11px] font-mono border transition-colors cursor-pointer ${
+                activeProfile === 'none'
+                  ? 'bg-surface-container-high border-primary text-primary font-semibold'
+                  : 'bg-surface-container border-outline-variant text-on-surface-variant hover:text-on-surface'
+              }`}
+            >
+              {t('profiles.noneShort')}
+            </button>
+            {PROFILE_IDS.map((pid) => (
+              <button
+                key={pid}
+                type="button"
+                data-testid={`profile-btn-${pid}`}
+                aria-pressed={activeProfile === pid}
+                onClick={() => handleProfileChange(pid)}
+                className={`px-2 py-0.5 rounded text-[11px] font-mono border transition-colors cursor-pointer ${
+                  activeProfile === pid
+                    ? 'bg-primary/20 border-primary text-primary font-semibold'
+                    : 'bg-surface-container border-outline-variant text-on-surface-variant hover:text-on-surface'
+                }`}
+              >
+                {t(`profiles.options.${pid}.label`)}
+              </button>
+            ))}
+          </div>
+        </div>
+
         {/* Action Toolbar */}
         <div className="mt-3 flex items-center gap-2 no-print flex-wrap">
           <button
@@ -735,6 +827,7 @@ export function AuditDossier({
                 percentile={neighborhood?.percentileInMunicipality}
                 typology={typology}
                 layers={report.layers}
+                activeProfile={activeProfile}
               />
             </div>
 
@@ -772,46 +865,93 @@ export function AuditDossier({
             <BuildingCadastralCard property={property} urbanPlanning={urbanPlanning} />
           </div>
 
-          {/* Technical Building Inspection (ITE/IEE) */}
-          {!isUnbuilt && (
-            <div className="page-break-inside-avoid">
-              <BuildingInspectionCard
-                inspection={buildingInspection || evaluateBuildingInspectionAlert(property)}
-                property={property}
-              />
-            </div>
-          )}
+          {sortDossierSections(
+            [
+              ...(!isUnbuilt
+                ? [
+                    {
+                      key: 'building_inspection' as const,
+                      node: (
+                        <div key="building_inspection" data-section="building_inspection" className="page-break-inside-avoid">
+                          <BuildingInspectionCard
+                            inspection={buildingInspection || evaluateBuildingInspectionAlert(property)}
+                            property={property}
+                          />
+                        </div>
+                      ),
+                    },
+                  ]
+                : []),
+              {
+                key: 'seismic' as const,
+                node: (
+                  <div key="seismic" data-section="seismic" className="page-break-inside-avoid">
+                    <SeismicSafetyCard
+                      seismic={
+                        seismicHazard ||
+                        evaluateSeismicVulnerability(
+                          property.address.municipalityCode || '28079',
+                          property.building.constructionYear,
+                          undefined,
+                          property.address.municipality,
+                          property.address.provinceCode
+                        )
+                      }
+                      constructionYear={property.building.constructionYear}
+                      municipality={property.address.municipality}
+                    />
+                  </div>
+                ),
+              },
+              ...(radon
+                ? [
+                    {
+                      key: 'radon' as const,
+                      node: (
+                        <div key="radon" data-section="radon" className="page-break-inside-avoid">
+                          <RadonCard
+                            radon={radon}
+                            municipality={property.address.municipality}
+                            floor={property.unit?.floor}
+                          />
+                        </div>
+                      ),
+                    },
+                  ]
+                : []),
+              ...(typology !== 'VACANT_PLOT' && typology !== 'RUSTIC' && typology !== 'INDUSTRIAL'
+                ? [
+                    ...(report.capex
+                      ? [
+                          {
+                            key: 'capex' as const,
+                            node: (
+                              <div key="capex" data-section="capex" className="page-break-inside-avoid">
+                                <BuildingCapExCard report={report} />
+                              </div>
+                            ),
+                          },
+                        ]
+                      : []),
+                    ...(energy
+                      ? [
+                          {
+                            key: 'energy' as const,
+                            node: (
+                              <div key="energy" data-section="energy" className="page-break-inside-avoid">
+                                <EnergyPerformanceCard energy={energy} />
+                              </div>
+                            ),
+                          },
+                        ]
+                      : []),
+                  ]
+                : []),
+            ],
+            activeProfile
+          ).map((s) => s.node)}
 
-          {/* IGN NCSE-02 Seismic Hazard & Vulnerability */}
-          <div className="page-break-inside-avoid">
-            <SeismicSafetyCard
-              seismic={
-                seismicHazard ||
-                evaluateSeismicVulnerability(
-                  property.address.municipalityCode || '28079',
-                  property.building.constructionYear,
-                  undefined,
-                  property.address.municipality,
-                  property.address.provinceCode
-                )
-              }
-              constructionYear={property.building.constructionYear}
-              municipality={property.address.municipality}
-            />
-          </div>
-
-          {/* Radon Geological Evaluation */}
-          {radon && (
-            <div className="page-break-inside-avoid">
-              <RadonCard
-                radon={radon}
-                municipality={property.address.municipality}
-                floor={property.unit?.floor}
-              />
-            </div>
-          )}
-
-          {/* Building CapEx & Energy Diagnostics (Adapted for Non-Residential Typologies) */}
+          {/* Non-residential typology notices */}
           {typology === 'VACANT_PLOT' ? (
             <div data-testid="vacant-plot-notice" className="p-4 rounded-lg bg-surface-container-low border border-outline-variant text-xs space-y-1.5">
               <div className="flex items-center gap-2 text-amber-400 font-semibold">
@@ -853,21 +993,7 @@ export function AuditDossier({
                 </div>
               </div>
             </div>
-          ) : (
-            <>
-              {report.capex && (
-                <div className="page-break-inside-avoid">
-                  <BuildingCapExCard report={report} />
-                </div>
-              )}
-              {/* CEE Energy Performance */}
-              {energy && (
-                <div className="page-break-inside-avoid">
-                  <EnergyPerformanceCard energy={energy} />
-                </div>
-              )}
-            </>
-          )}
+          ) : null}
         </div>
 
         {/* ================= TAB 3: ENTORNO & CONECTIVIDAD ================= */}
@@ -876,36 +1002,53 @@ export function AuditDossier({
           data-testid="tab-environment"
           className={currentTab === 'environment' ? 'space-y-4 p-space-lg' : 'hidden'}
         >
-          {/* VUT Tourist Saturation Risk */}
-          {vut && (
-            <div className="page-break-inside-avoid">
-              <VutSaturationCard vut={vut} />
-            </div>
-          )}
-
-          {/* 15-Minute City Pedestrian Isochrones & Catchment */}
-          <div className="page-break-inside-avoid">
-            <PedestrianIsochronesCard
-              isochrones={pedestrianIsochrones}
-              connectivity={connectivity}
-            />
-          </div>
-
-          {/* 5 Dedicated Pillars */}
-          <div className="page-break-inside-avoid">
-            <PillarCards
-              property={property}
-              neighborhood={neighborhood}
-              environment={environment}
-              connectivity={connectivity}
-              urbanPlanning={urbanPlanning}
-              rentalBenchmark={rentalBenchmark}
-              layers={report.layers}
-              pillarTrafficLights={score.pillarTrafficLights}
-              hideConnectivityPillar={true}
-              hideBuildingPillar={true}
-            />
-          </div>
+          {sortDossierSections(
+            [
+              ...(vut
+                ? [
+                    {
+                      key: 'vut' as const,
+                      node: (
+                        <div key="vut" data-section="vut" className="page-break-inside-avoid">
+                          <VutSaturationCard vut={vut} />
+                        </div>
+                      ),
+                    },
+                  ]
+                : []),
+              {
+                key: 'amenities' as const,
+                node: (
+                  <div key="amenities" data-section="amenities" className="page-break-inside-avoid">
+                    <PedestrianIsochronesCard
+                      isochrones={pedestrianIsochrones}
+                      connectivity={connectivity}
+                    />
+                  </div>
+                ),
+              },
+              {
+                key: 'noise' as const,
+                node: (
+                  <div key="noise" data-section="noise" className="page-break-inside-avoid">
+                    <PillarCards
+                      property={property}
+                      neighborhood={neighborhood}
+                      environment={environment}
+                      connectivity={connectivity}
+                      urbanPlanning={urbanPlanning}
+                      rentalBenchmark={rentalBenchmark}
+                      layers={report.layers}
+                      pillarTrafficLights={score.pillarTrafficLights}
+                      hideConnectivityPillar={true}
+                      hideBuildingPillar={true}
+                    />
+                  </div>
+                ),
+              },
+            ],
+            activeProfile
+          ).map((s) => s.node)}
         </div>
 
         {/* ================= TAB 4: MERCADO & FINANZAS ================= */}
@@ -914,24 +1057,43 @@ export function AuditDossier({
           data-testid="tab-market"
           className={currentTab === 'market' ? 'space-y-4 p-space-lg' : 'hidden'}
         >
-          {/* Fiscal Simulator & Surface Discrepancy */}
-          <div className="page-break-inside-avoid">
-            <FiscalSimulatorCard property={property} fiscal={fiscal} typology={typology} />
-          </div>
-
-          {/* MIVAU SERPAVI Rental Module (Only shown for residential typologies) */}
-          {rentalBenchmark && typology === 'RESIDENTIAL' && (
-            <div className="page-break-inside-avoid">
-              <RentalModule rental={rentalBenchmark} />
-            </div>
-          )}
-
-          {/* Longitudinal Market & Neighborhood Trends */}
-          {marketTrends && (
-            <div className="page-break-inside-avoid">
-              <NeighborhoodTrendsCard trends={marketTrends} typology={typology} />
-            </div>
-          )}
+          {sortDossierSections(
+            [
+              {
+                key: 'fiscal' as const,
+                node: (
+                  <div key="fiscal" data-section="fiscal" className="page-break-inside-avoid">
+                    <FiscalSimulatorCard property={property} fiscal={fiscal} typology={typology} />
+                  </div>
+                ),
+              },
+              ...(rentalBenchmark && typology === 'RESIDENTIAL'
+                ? [
+                    {
+                      key: 'rental' as const,
+                      node: (
+                        <div key="rental" data-section="rental" className="page-break-inside-avoid">
+                          <RentalModule rental={rentalBenchmark} />
+                        </div>
+                      ),
+                    },
+                  ]
+                : []),
+              ...(marketTrends
+                ? [
+                    {
+                      key: 'market_trends' as const,
+                      node: (
+                        <div key="market_trends" data-section="market_trends" className="page-break-inside-avoid">
+                          <NeighborhoodTrendsCard trends={marketTrends} typology={typology} />
+                        </div>
+                      ),
+                    },
+                  ]
+                : []),
+            ],
+            activeProfile
+          ).map((s) => s.node)}
         </div>
 
         {/* ================= TAB 5: CHECKLIST DE VISITA ================= */}
@@ -940,7 +1102,7 @@ export function AuditDossier({
           data-testid="tab-checklist"
           className={currentTab === 'checklist' ? 'space-y-4 p-space-lg' : 'hidden print:block print:p-space-lg'}
         >
-          <VisitChecklistPanel report={report} />
+          <VisitChecklistPanel report={report} profile={activeProfile} />
         </div>
       </div>
 

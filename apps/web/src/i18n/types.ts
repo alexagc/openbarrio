@@ -1097,6 +1097,19 @@ export interface TranslationSchema {
       };
     };
   };
+  profiles: {
+    selectorLabel: string;
+    chipLabel: string;
+    none: string;
+    noneShort: string;
+    scoreForProfile: string;
+    options: {
+      family: { label: string; desc: string };
+      investor: { label: string; desc: string };
+      senior: { label: string; desc: string };
+      renter: { label: string; desc: string };
+    };
+  };
 }
 
 export interface LanguageContextType {

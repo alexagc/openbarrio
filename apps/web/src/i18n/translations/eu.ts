@@ -1200,4 +1200,29 @@ export const eu: TranslationSchema = {
       },
     },
   },
+  profiles: {
+    selectorLabel: 'Hautatu erabaki-profila',
+    chipLabel: 'Profila: {{profile}}',
+    none: 'Bat ere ez (oinarria v2.1.0)',
+    noneShort: 'Oinarria',
+    scoreForProfile: 'Zure profilerako score-a ({{profile}})',
+    options: {
+      family: {
+        label: 'Familia',
+        desc: 'Ingurunea, zarata, ikastetxeak/osasuna eta konektibitatea lehenesten ditu.',
+      },
+      investor: {
+        label: 'Inbertitzailea',
+        desc: 'Fiskalitatea, merkatua, CapEx, ITE eta VUT presio turistikoa lehenesten ditu.',
+      },
+      senior: {
+        label: 'Adinekoa',
+        desc: 'Irisgarritasuna, gertuko osasuna, garraioa eta erosotasun akustikoa lehenesten ditu.',
+      },
+      renter: {
+        label: 'Alokairua',
+        desc: 'SERPAVI indizea, CEE, azpietxebizitza-arriskua eta zarata lehenesten ditu.',
+      },
+    },
+  },
 };

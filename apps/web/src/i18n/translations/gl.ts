@@ -1200,4 +1200,29 @@ export const gl: TranslationSchema = {
       },
     },
   },
+  profiles: {
+    selectorLabel: 'Seleccionar perfil de decisión',
+    chipLabel: 'Perfil: {{profile}}',
+    none: 'Ningún (base v2.1.0)',
+    noneShort: 'Base',
+    scoreForProfile: 'Score para o teu perfil ({{profile}})',
+    options: {
+      family: {
+        label: 'Familia',
+        desc: 'Prioriza contorna, ruído, centros educativos/sanitarios e conectividade.',
+      },
+      investor: {
+        label: 'Inversor',
+        desc: 'Prioriza fiscalidade, mercado, CapEx, ITE e presión turística VUT.',
+      },
+      senior: {
+        label: 'Maior',
+        desc: 'Prioriza accesibilidade, sanidade próxima, transporte e confort acústico.',
+      },
+      renter: {
+        label: 'Alugueiro',
+        desc: 'Prioriza índice SERPAVI, CEE, risco de infravivenda e ruído.',
+      },
+    },
+  },
 };

@@ -3,6 +3,7 @@ import {
   ProblemDetails,
   CadastralUnitsResponse,
   PropertyAuditReport,
+  type ActiveProfileId,
 } from '@openbarrio/core';
 import { apiClient, ExtendedAuditReport, ApiError } from '../services/api.client';
 import { trackAnalyticsEvent } from '../analytics';
@@ -22,6 +23,7 @@ export interface WorkspaceState {
   isEmbed?: boolean;
   activeTab: 'dossier' | 'map';
   dossierTab: DossierTab;
+  activeProfile: ActiveProfileId;
   mobileNavDestination: MobileNavDestination;
   sheetSnapPoint: SheetSnapPoint;
   isMobileLayersOpen: boolean;
@@ -53,6 +55,7 @@ export interface WorkspaceState {
   setIsEmbed: (isEmbed: boolean) => void;
   setActiveTab: (tab: 'dossier' | 'map') => void;
   setDossierTab: (tab: DossierTab) => void;
+  setActiveProfile: (profile: ActiveProfileId) => void;
   setMobileNavDestination: (dest: MobileNavDestination) => void;
   setSheetSnapPoint: (snap: SheetSnapPoint) => void;
   setIsMobileLayersOpen: (open: boolean) => void;
@@ -98,6 +101,7 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
   isEmbed: initialUrl.isEmbed,
   activeTab: initialUrl.activeTab,
   dossierTab: initialUrl.dossierTab,
+  activeProfile: initialUrl.profile ?? 'none',
   mobileNavDestination: initialUrl.activeTab === 'dossier' ? 'report' : 'map',
   sheetSnapPoint: initialUrl.activeTab === 'dossier' ? 'full' : 'peek',
   isMobileLayersOpen: false,
@@ -143,6 +147,14 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
 
   setDossierTab: (dossierTab) => {
     set({ dossierTab });
+    get().syncUrl();
+  },
+
+  setActiveProfile: (activeProfile) => {
+    set({ activeProfile });
+    if (activeProfile !== 'none') {
+      void trackAnalyticsEvent({ event: 'lens_used', lens: 'profile' });
+    }
     get().syncUrl();
   },
 
@@ -467,6 +479,11 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
       }
     }
 
+    const activeProfile = get().activeProfile;
+    if (activeProfile && activeProfile !== 'none') {
+      params.set('perfil', activeProfile);
+    }
+
     const qs = params.toString();
     const targetUrl = qs ? `${targetPath}?${qs}` : targetPath;
     const cur = window.location.pathname + window.location.search;
@@ -487,6 +504,7 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
       isEmbed: state.isEmbed,
       activeTab: state.activeTab,
       dossierTab: state.dossierTab,
+      activeProfile: state.profile ?? 'none',
       sheetSnapPoint: state.activeTab === 'dossier' ? 'full' : 'peek',
       mobileNavDestination: state.activeTab === 'dossier' ? 'report' : 'map',
       isDuelOpen,
@@ -510,6 +528,7 @@ export const useCompareRefs = () => useWorkspaceStore((state) => state.compareRe
 export const useViewMode = () => useWorkspaceStore((state) => state.viewMode);
 export const useActiveTab = () => useWorkspaceStore((state) => state.activeTab);
 export const useDossierTab = () => useWorkspaceStore((state) => state.dossierTab);
+export const useActiveProfile = () => useWorkspaceStore((state) => state.activeProfile);
 export const useReport = () => useWorkspaceStore((state) => state.report);
 export const useSelectedCoords = () => useWorkspaceStore((state) => state.selectedCoords);
 export const useIsLoading = () => useWorkspaceStore((state) => state.isLoading);

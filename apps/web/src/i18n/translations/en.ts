@@ -1203,4 +1203,29 @@ export const en: TranslationSchema = {
       },
     },
   },
+  profiles: {
+    selectorLabel: 'Select decision profile',
+    chipLabel: 'Profile: {{profile}}',
+    none: 'None (base v2.1.0)',
+    noneShort: 'Base',
+    scoreForProfile: 'Score for your profile ({{profile}})',
+    options: {
+      family: {
+        label: 'Family',
+        desc: 'Prioritizes environment, noise, schools/healthcare, and connectivity.',
+      },
+      investor: {
+        label: 'Investor',
+        desc: 'Prioritizes taxes, market trends, CapEx, ITE, and VUT pressure.',
+      },
+      senior: {
+        label: 'Senior',
+        desc: 'Prioritizes accessibility, nearby healthcare, transit, and quietness.',
+      },
+      renter: {
+        label: 'Renter',
+        desc: 'Prioritizes SERPAVI rent cap, CEE, substandard housing risk, and noise.',
+      },
+    },
+  },
 };

@@ -1203,4 +1203,29 @@ export const ca: TranslationSchema = {
       },
     },
   },
+  profiles: {
+    selectorLabel: 'Seleccionar perfil de decisió',
+    chipLabel: 'Perfil: {{profile}}',
+    none: 'Cap (base v2.1.0)',
+    noneShort: 'Base',
+    scoreForProfile: 'Score per al teu perfil ({{profile}})',
+    options: {
+      family: {
+        label: 'Família',
+        desc: 'Prioritza entorn, soroll, centres educatius/sanitaris i connectivitat.',
+      },
+      investor: {
+        label: 'Inversor',
+        desc: 'Prioritza fiscalitat, mercat, CapEx, ITE i pressió turística VUT.',
+      },
+      senior: {
+        label: 'Gent gran',
+        desc: 'Prioritza accessibilitat, sanitat propera, transport i confort acústic.',
+      },
+      renter: {
+        label: 'Lloguer',
+        desc: 'Prioritza índex SERPAVI, CEE, risc d’infrahabitatge i soroll.',
+      },
+    },
+  },
 };
