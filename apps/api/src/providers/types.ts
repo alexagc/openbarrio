@@ -10,6 +10,7 @@ import {
   RentalBenchmark,
   CivicConnectivityData,
   TransitAccessibility,
+  BroadbandCoverage,
   UrbanPlanningData,
   AirQualityData,
   EnergyPerformanceCertificate,

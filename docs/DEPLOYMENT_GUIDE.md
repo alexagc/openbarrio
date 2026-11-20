@@ -281,3 +281,26 @@ Configured centrally in `apps/api/src/resilience/config.ts`:
 ### 9.3. Listing URL Channel & Remote Extension Selectors
 * **`POST /api/v1/listing/resolve`:** Zero outbound fetch by design (allowlist + in-memory parsing only). Protected by dedicated in-memory per-isolate rate limits (`10` req/min/IP, `100` req/day/IP). Edge cache middleware bypasses `/api/v1/status`, `/api/v1/extension/`, and non-GET routes.
 * **`GET /api/v1/extension/selectors`:** Serves validated `BUNDLED_PORTAL_SELECTORS` JSON (`<= 32 KB`, `Cache-Control: public, max-age=3600`) for Chrome Extension MV3 clients to update DOM selectors cleanly without extension store resubmission or additional permissions.
+
+---
+
+## 10. On-Site Decision Platform, Offline PWA, Transit & Broadband (v1.5.0)
+
+### 10.1. Remote Cloudflare D1 Migrations (`0010`–`0012`)
+Before deploying Worker `v1.5.0`, apply the three new schema migrations to remote Cloudflare D1 in order:
+```bash
+npx wrangler d1 execute openbarrio-d1 --file=./apps/api/migrations/0010_telemetry_aggregates.sql --remote
+npx wrangler d1 execute openbarrio-d1 --file=./apps/api/migrations/0011_transit_stops.sql --remote
+npx wrangler d1 execute openbarrio-d1 --file=./apps/api/migrations/0012_broadband_coverage.sql --remote
+```
+* **`0010_telemetry_aggregates.sql`:** Daily aggregated privacy telemetry table (`POST /api/v1/telemetry`), storing strictly anonymous event counts (`event`, `date`, `lens`, `profile`) with isolate memory batching and monthly cron pruning (`0 3 1 * *`) enforcing 13-month retention.
+* **`0011_transit_stops.sql`:** Stores NAP-licensed GTFS transit stops (`transit_stops`) and consortium feed completeness (`transit_feed_coverage`).
+* **`0012_broadband_coverage.sql`:** Stores SETELECO/CNMC broadband metrics (`broadband_coverage`) keyed by `territory_code` and `municipality_code` with explicit `granularity` (`parcel | population_entity | municipality`) and `source_date`.
+
+### 10.2. CI-Only `NAP_API_KEY` Secret & D1 FinOps Sync Flags
+* **`NAP_API_KEY`:** Configure as a **GitHub Actions repository secret** only when ingesting automated feeds from MITMS NAP (`https://nap.transportes.gob.es/`). Never inject `NAP_API_KEY` into Cloudflare Worker runtime secrets.
+* **Dedicated-Day Chunk Sync:** `.github/workflows/data-pipeline.yml` runs `etl-transit-broadband` cleanly, and gates remote D1 writes behind explicit dispatch inputs `sync_transit=true` and `sync_broadband=true` (`false` by default) so heavy CEE/facilities sync days remain safely under the 100,000 rows/day free D1 write quota.
+
+### 10.3. Offline PWA Service Worker & Privacy Telemetry Headers
+* **`apps/web/public/sw.js` (`APP_VERSION = '1.5.0'`, `ob-shell-v1.5.0`):** Caches static shell assets only (no third-party tiles or ministerial XML) and triggers an accessible manual update toast via `SKIP_WAITING` without surprise reloads. Serve `/sw.js` and `/manifest.webmanifest` with `Cache-Control: no-cache, must-revalidate` so browsers always detect new Worker versions promptly.
+* **Privacy & Consent (`/privacidad`):** Telemetry requires explicit user opt-in and sends zero cookies, IP storage, or cadastral references.

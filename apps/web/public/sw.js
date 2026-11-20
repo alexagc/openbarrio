@@ -6,7 +6,7 @@
  * - Stale-while-revalidate for same-origin static assets; shell fallback for offline navigation
  */
 
-const APP_VERSION = '1.4.0';
+const APP_VERSION = '1.5.0';
 const SHELL_CACHE_PREFIX = 'ob-shell-v';
 const SHELL_CACHE_NAME = SHELL_CACHE_PREFIX + APP_VERSION;
 

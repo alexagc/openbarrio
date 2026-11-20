@@ -10,10 +10,11 @@
 * Never make live outbound network requests inside unit tests.
 
 ## 3. Local Test Execution with Docker
-Before submitting pull requests, run all tests in the containerized environment:
+Before submitting pull requests, run all tests and lint checks in the containerized environment (v1.5.0 verified at **733/733 tests** across **99 test files** and **0 ESLint warnings**):
 * `make docker-test` or `docker compose run --rm openbarrio pnpm test`
+* `make docker-lint` or `docker compose run --rm openbarrio pnpm lint` (`eslint . --max-warnings=0`)
 * Package-specific testing:
-  - Core: `docker compose run --rm openbarrio pnpm --filter @openbarrio/core test`
-  - API: `docker compose run --rm openbarrio pnpm --filter @openbarrio/api test`
-  - Web: `docker compose run --rm openbarrio pnpm --filter @openbarrio/web test`
-  - Extension: `docker compose run --rm openbarrio pnpm --filter @openbarrio/extension test`
+  - Core: `docker compose run --rm openbarrio pnpm --filter @openbarrio/core test` (19 files, 189 tests)
+  - API: `docker compose run --rm openbarrio pnpm --filter @openbarrio/api test` (29 files, 212 tests)
+  - Web: `docker compose run --rm openbarrio pnpm --filter @openbarrio/web test` (41 files, 246 tests)
+  - Extension: `docker compose run --rm openbarrio pnpm --filter @openbarrio/extension test` (10 files, 86 tests)
