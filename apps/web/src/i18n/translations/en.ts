@@ -936,6 +936,11 @@ export const en: TranslationSchema = {
     colRule: 'Applied rule',
     viewMethodologyCta: 'View methodology',
     viewSourcesStatusCta: 'View sources status',
+    profilesSectionTitle: 'Decision profiles & effective weights (v2.1.0 · Residential)',
+    profilesSectionSubtitle: 'Multipliers [0.6–1.5] renormalize the 5 pillars without altering the base BarrioScore or uncertainty/critical-layer gates.',
+    profilesTableAria: 'Effective pillar weights table per decision profile for residential properties',
+    colProfile: 'Profile',
+    colFocus: 'Dossier & checklist focus',
   },
   listingUrl: {
     tabLabel: 'From listing URL',

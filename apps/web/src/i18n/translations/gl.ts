@@ -933,6 +933,11 @@ export const gl: TranslationSchema = {
     colRule: 'Regra aplicada',
     viewMethodologyCta: 'Ver metodoloxía',
     viewSourcesStatusCta: 'Ver estado de fontes',
+    profilesSectionTitle: 'Perfís de decisión e pesos efectivos (v2.1.0 · Residencial)',
+    profilesSectionSubtitle: 'Os multiplicadores [0.6–1.5] renormalizan os 5 piares sen alterar o BarrioScore base nin os bloqueos de incerteza ou capas críticas.',
+    profilesTableAria: 'Táboa de pesos efectivos por perfil de decisión en vivenda residencial',
+    colProfile: 'Perfil',
+    colFocus: 'Orde de dossier e checklist',
   },
   listingUrl: {
     tabLabel: 'Desde URL de anuncio',

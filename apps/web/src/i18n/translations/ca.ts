@@ -936,6 +936,11 @@ export const ca: TranslationSchema = {
     colRule: 'Regla aplicada',
     viewMethodologyCta: 'Veure metodologia',
     viewSourcesStatusCta: 'Veure estat de fonts',
+    profilesSectionTitle: 'Perfils de decisió i pesos efectius (v2.1.0 · Residencial)',
+    profilesSectionSubtitle: 'Els multiplicadors [0.6–1.5] renormalitzen els 5 pilars sense alterar el BarrioScore base ni els bloquejos d’incertesa o capes crítiques.',
+    profilesTableAria: 'Taula de pesos efectius per perfil de decisió en habitatge residencial',
+    colProfile: 'Perfil',
+    colFocus: 'Ordre de dossier i checklist',
   },
   listingUrl: {
     tabLabel: 'Des d’URL d’anunci',

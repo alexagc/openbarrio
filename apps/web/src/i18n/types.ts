@@ -923,6 +923,11 @@ export interface TranslationSchema {
     colRule: string;
     viewMethodologyCta: string;
     viewSourcesStatusCta: string;
+    profilesSectionTitle: string;
+    profilesSectionSubtitle: string;
+    profilesTableAria: string;
+    colProfile: string;
+    colFocus: string;
   };
   listingUrl: {
     tabLabel: string;

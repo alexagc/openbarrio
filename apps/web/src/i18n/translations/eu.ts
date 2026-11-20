@@ -933,6 +933,11 @@ export const eu: TranslationSchema = {
     colRule: 'Aplikatutako araua',
     viewMethodologyCta: 'Ikusi metodologia',
     viewSourcesStatusCta: 'Ikusi iturrien egoera',
+    profilesSectionTitle: 'Erabaki-profilak eta pisu eraginkorrak (v2.1.0 · Bizitegia)',
+    profilesSectionSubtitle: 'Biderkatzaileek [0.6–1.5] 5 zutabeak birnormalizatzen dituzte oinarrizko BarrioScore-a edo ziurgabetasun/geruza kritikoen mugak aldatu gabe.',
+    profilesTableAria: 'Bizitegi-etxebizitzetarako erabaki-profil bakoitzeko pisu eraginkorren taula',
+    colProfile: 'Profila',
+    colFocus: 'Dossier eta checklist lehentasuna',
   },
   listingUrl: {
     tabLabel: 'Iragarkiaren URLtik',
