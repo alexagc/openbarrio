@@ -27,3 +27,4 @@ export * from './tokens/index.js';
 export * from './scoring/traffic-light.js';
 export * from './scoring/weights.js';
 export * from './scoring/barrio-score.js';
+export * from './scoring/profiles.js';

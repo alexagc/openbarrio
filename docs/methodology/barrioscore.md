@@ -1,6 +1,6 @@
 # BarrioScore Public Methodology Specification
 
-- **Methodology Version:** `2.0.0`
+- **Methodology Version:** `2.1.0`
 - **Source of Truth:** `packages/core/src/scoring/weights.ts`, `packages/core/src/scoring/barrio-score.ts`, `packages/core/src/scoring/traffic-light.ts`, and `packages/core/src/types/data-status.ts`
 - **Published Public Page:** `https://openbarrio.org/metodologia` (`es`, `en`, `ca`, `gl`, `eu`)
 
@@ -99,5 +99,6 @@ Verified continuously in `packages/core/tests/barrio-score.golden.test.ts` and `
 
 ## 7. Methodology Changelog
 
+- **`2.1.0`** (`2026-11-20`): Added deterministic decision-profile weight multipliers (family, investor, senior, renter) with [0.6-1.5] clamp and renormalization while preserving immutable base BarrioScore and UNCERTAIN/critical-layer caps.
 - **`2.0.0`** (`2026-11-19`): Eliminated silent favorable defaults on unavailable/out-of-coverage layers; added proportional weight renormalization across verified pillars, UNCERTAIN (<3/5 pillars) traffic-light state, and SICA/SNCZI critical-layer green ceiling.
 - **`1.0.0`** (`2026-10-01`): Initial 5-pillar weighted BarrioScore across Catastro OVC, INE ADRH, MITECO SICA/SNCZI, MIVAU SERPAVI/SIU, and CNIG 15-minute civic connectivity.
