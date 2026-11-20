@@ -1023,6 +1023,8 @@ export function AuditDossier({
                     <PedestrianIsochronesCard
                       isochrones={pedestrianIsochrones}
                       connectivity={connectivity}
+                      transit={report.transit}
+                      transitLayer={report.layers?.transit}
                     />
                   </div>
                 ),

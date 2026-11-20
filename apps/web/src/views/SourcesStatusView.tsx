@@ -252,6 +252,11 @@ export function SourcesStatusView() {
                         <th scope="row" className="px-4 py-3.5 font-medium text-on-surface">
                           <div className="font-headline font-semibold text-sm">{src.sourceName}</div>
                           <div className="font-mono text-[11px] text-on-surface-variant">{src.key}</div>
+                          {src.key === 'transit' && (
+                            <p className="font-body text-[11px] font-normal text-on-surface-variant mt-1 max-w-md leading-snug">
+                              {t('sourcesStatus.noteTransit')}
+                            </p>
+                          )}
                         </th>
                         <td className="px-4 py-3.5">
                           <span

@@ -895,6 +895,7 @@ export interface TranslationSchema {
     errorText: string;
     isolateCaveat: string;
     generatedAtLabel: string;
+    noteTransit: string;
   };
   methodology: {
     navLabel: string;
@@ -1114,6 +1115,37 @@ export interface TranslationSchema {
       investor: { label: string; desc: string };
       senior: { label: string; desc: string };
       renter: { label: string; desc: string };
+    };
+  };
+  transit: {
+    modeTabsAria: string;
+    tabWalk: string;
+    tabTransit: string;
+    resolutionBadge: string;
+    parametricWalkNotice: string;
+    partialCoverageWarning: string;
+    coveredOperatorsLabel: string;
+    missingOperatorsLabel: string;
+    zeroCoverageDetail: string;
+    stops5Min: string;
+    stops10Min: string;
+    stops15Min: string;
+    stopsUnit: string;
+    peakHeadway: string;
+    offPeakHeadway: string;
+    minutesShort: string;
+    nearestStopsTitle: string;
+    hubTravelTimesTitle: string;
+    hubBreakdown: string;
+    walkLegShort: string;
+    routesCount: string;
+    parametricFootnote: string;
+    modes: {
+      metro: string;
+      rail: string;
+      tram: string;
+      bus: string;
+      ferry: string;
     };
   };
 }
