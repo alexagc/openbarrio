@@ -24,6 +24,9 @@ import csv
 import os
 import sqlite3
 import sys
+import urllib.request
+
+INE_MUNICIPIOS_URL = "https://raw.githubusercontent.com/codeforspain/ds-organizacion-administrativa/master/data/municipios.csv"
 
 DEFAULT_OUTPUT_SQL = os.path.join(
     os.path.dirname(__file__), "..", "dist", "openbarrio-etl-dist", "ign_seismic.sql"
@@ -327,8 +330,21 @@ def load_all_spanish_municipalities(csv_path: str) -> list:
     records = []
 
     if not os.path.exists(csv_path):
-        print(f"⚠️ INE municipalities file not found at {csv_path}. Using fallback canonical dataset.")
-        return []
+        print(f"⚠️ INE municipalities file not found at {csv_path}. Downloading official catalog...")
+        os.makedirs(os.path.dirname(csv_path), exist_ok=True)
+        try:
+            req = urllib.request.Request(
+                INE_MUNICIPIOS_URL,
+                headers={"User-Agent": "OpenBarrio-ETL/1.5 (+https://github.com/alexagc/openbarrio)"},
+            )
+            with urllib.request.urlopen(req, timeout=30) as resp:
+                data = resp.read()
+            with open(csv_path, "wb") as f:
+                f.write(data)
+            print(f"✅ Downloaded official INE municipalities catalog ({len(data)} bytes) to {csv_path}.")
+        except Exception as exc:
+            print(f"❌ Failed to download INE municipalities catalog: {exc}")
+            return []
 
     with open(csv_path, "r", encoding="utf-8") as f:
         reader = csv.DictReader(f)
