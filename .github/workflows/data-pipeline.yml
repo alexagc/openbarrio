@@ -376,12 +376,12 @@ jobs:
             --seed-mvp \
             --output-sql packages/etl/dist/transit_stops.sql
 
-      - name: Run SETELECO / CNMC Broadband Coverage Processing (DuckDB -> D1 SQL)
+      - name: Run SETELECO / CNMC Broadband Coverage Processing (Official National XLSX -> D1 SQL)
         if: github.event_name == 'schedule' || inputs.run_broadband != false
         run: |
           mkdir -p packages/etl/dist
           python3 packages/etl/src/process_broadband_coverage.py \
-            --seed-official \
+            --download-official \
             --output-sql packages/etl/dist/broadband_coverage.sql
 
       - name: Upload Transit & Territorial Artifacts

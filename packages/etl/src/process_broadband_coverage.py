@@ -11,9 +11,24 @@ Granularity & Staleness Transparency (docs/research/broadband-coverage.md):
 """
 
 import argparse
+import io
 import os
+import re
 import sqlite3
-import duckdb
+import urllib.request
+import xml.etree.ElementTree as ET
+import zipfile
+
+DEFAULT_SETELECO_XLSX_URL = (
+    "https://digital.gob.es/content/dam/portal-mtdfp/avance-digital/"
+    "telecomunicacion-e-infraestructuras-digitales/areas_interes/banda-ancha/"
+    "cobertura/documents/"
+    "Cobertura_BA_Espa%C3%B1a_2021-2025_MUN_PROV_CCAA_Nacional_datosgob_DEF.xlsx"
+)
+SETELECO_SHEET_NAME = "Municipio_%hogar"
+SETELECO_SOURCE_YEAR = 2025
+SETELECO_SOURCE_DATE = "2025-06-30"
+SETELECO_SOURCE_DATASET = "SETELECO Cobertura Banda Ancha Junio 2025 (Municipio_%hogar)"
 
 DEFAULT_OUTPUT_SQL = os.path.join(
     os.path.dirname(__file__), "..", "dist", "broadband_coverage.sql"
@@ -69,6 +84,7 @@ def ingest_broadband_csv(
         print(f"Notice: Broadband CSV not found at {csv_path}.")
         return []
 
+    import duckdb
     con = duckdb.connect()
     safe_path = csv_path.replace("\\", "/")
     con.execute(
@@ -206,19 +222,176 @@ def sync_sqlite_database(db_path: str, records: list[tuple]):
     print(f"Synced {len(records)} broadband coverage records to {db_path}.")
 
 
+def _col_ref_to_idx(cell_ref: str) -> int:
+    """Converts Excel cell reference (e.g. 'AC12') to 0-based column index."""
+    letters = "".join(ch for ch in cell_ref if ch.isalpha()).upper()
+    idx = 0
+    for ch in letters:
+        idx = idx * 26 + (ord(ch) - ord("A") + 1)
+    return max(0, idx - 1)
+
+
+def _to_pct(raw_val: str | None) -> float | None:
+    if raw_val is None or str(raw_val).strip() == "":
+        return None
+    try:
+        num = float(str(raw_val).strip().replace(",", "."))
+    except ValueError:
+        return None
+    pct = num * 100.0 if 0.0 <= num <= 1.05 else num
+    return round(min(100.0, max(0.0, pct)), 2)
+
+
+def ingest_seteleco_xlsx(
+    xlsx_bytes: bytes,
+    target_sheet: str = SETELECO_SHEET_NAME,
+    source_year: int = SETELECO_SOURCE_YEAR,
+    source_date: str = SETELECO_SOURCE_DATE,
+    source_dataset: str = SETELECO_SOURCE_DATASET,
+) -> list[tuple]:
+    """Parses the official SETELECO national XLSX workbook across all ~8,131 municipalities."""
+    with zipfile.ZipFile(io.BytesIO(xlsx_bytes)) as zf:
+        wb = ET.fromstring(zf.read("xl/workbook.xml"))
+        rels = ET.fromstring(zf.read("xl/_rels/workbook.xml.rels"))
+        rel_map = {
+            rel.attrib["Id"]: rel.attrib["Target"].lstrip("/")
+            for rel in rels.iter()
+            if rel.tag.endswith("Relationship")
+        }
+
+        sheet_path = None
+        for elem in wb.iter():
+            if elem.tag.endswith("sheet") and elem.attrib.get("name") == target_sheet:
+                rid = next(
+                    (v for k, v in elem.attrib.items() if k.endswith("}id") or k == "r:id"),
+                    None,
+                )
+                if rid and rid in rel_map:
+                    target = rel_map[rid]
+                    sheet_path = target if target.startswith("xl/") else f"xl/{target}"
+                    break
+
+        if not sheet_path or sheet_path not in zf.namelist():
+            raise RuntimeError(f"Sheet '{target_sheet}' not found in SETELECO XLSX archive.")
+
+        shared_strings: list[str] = []
+        if "xl/sharedStrings.xml" in zf.namelist():
+            for si in ET.fromstring(zf.read("xl/sharedStrings.xml")).iter():
+                if si.tag.endswith("}si"):
+                    shared_strings.append(
+                        "".join(t.text or "" for t in si.iter() if t.tag.endswith("}t"))
+                    )
+
+        ws_root = ET.fromstring(zf.read(sheet_path))
+        parsed_rows: list[dict[int, str | None]] = []
+        for row_el in ws_root.iter():
+            if not row_el.tag.endswith("}row"):
+                continue
+            row_dict: dict[int, str | None] = {}
+            for cell_el in row_el:
+                ref = cell_el.attrib.get("r", "")
+                col_idx = _col_ref_to_idx(ref) if ref else len(row_dict)
+                cell_type = cell_el.attrib.get("t")
+                val_el = next((x for x in cell_el if x.tag.endswith("}v")), None)
+                val = val_el.text if val_el is not None else None
+                if cell_type == "s" and val is not None:
+                    val = shared_strings[int(val)]
+                row_dict[col_idx] = val
+            if row_dict:
+                parsed_rows.append(row_dict)
+
+    if not parsed_rows:
+        return []
+
+    headers = {
+        idx: re.sub(r"\s+", " ", (val or "").strip().lower())
+        for idx, val in parsed_rows[0].items()
+        if val
+    }
+
+    cmun_col = next((i for i, h in headers.items() if h == "cmun"), None)
+    name_col = next((i for i, h in headers.items() if h == "municipio"), None)
+    ftth_cols = sorted(i for i, h in headers.items() if h.startswith("ftth"))
+    g5_cols = sorted(i for i, h in headers.items() if h.startswith("5g (") or h.startswith("5g("))
+    gbps1_cols = sorted(i for i, h in headers.items() if "1gbps" in h)
+    mbps100_cols = sorted(i for i, h in headers.items() if "100mbps" in h)
+    mbps30_cols = sorted(i for i, h in headers.items() if "30mbps" in h)
+
+    if cmun_col is None or name_col is None or not ftth_cols:
+        raise RuntimeError(f"Unexpected SETELECO header layout in '{target_sheet}'.")
+
+    ftth_col = ftth_cols[-1]
+    g5_col = g5_cols[-1] if g5_cols else None
+    gbps1_col = gbps1_cols[-1] if gbps1_cols else None
+    mbps100_col = mbps100_cols[-1] if mbps100_cols else None
+    mbps30_col = mbps30_cols[-1] if mbps30_cols else None
+
+    out: list[tuple] = []
+    for row in parsed_rows[1:]:
+        raw_cmun = (row.get(cmun_col) or "").strip()
+        raw_name = (row.get(name_col) or "").strip()
+        ftth_pct = _to_pct(row.get(ftth_col))
+        if not raw_cmun or not raw_name or ftth_pct is None:
+            continue
+        muni_code = raw_cmun.zfill(5)[:5]
+        if not muni_code.isdigit():
+            continue
+
+        g5_pct = _to_pct(row.get(g5_col)) if g5_col is not None else None
+        p_1g = _to_pct(row.get(gbps1_col)) if gbps1_col is not None else None
+        p_100 = _to_pct(row.get(mbps100_col)) if mbps100_col is not None else None
+        p_30 = _to_pct(row.get(mbps30_col)) if mbps30_col is not None else None
+        max_mbps = (
+            1000 if (p_1g is not None and p_1g > 0)
+            else 100 if (p_100 is not None and p_100 > 0)
+            else 30 if (p_30 is not None and p_30 > 0)
+            else None
+        )
+
+        out.append(
+            (
+                muni_code,
+                muni_code,
+                raw_name,
+                "municipality",
+                ftth_pct,
+                max_mbps,
+                g5_pct,
+                int(source_year),
+                source_date,
+                source_dataset,
+            )
+        )
+    return out
+
+
 def main():
     parser = argparse.ArgumentParser(description="Process SETELECO / CNMC broadband coverage datasets.")
+    parser.add_argument("--download-official", action="store_true", help="Download full national SETELECO XLSX dataset (~8,131 municipalities)")
+    parser.add_argument("--xlsx-url", default=DEFAULT_SETELECO_XLSX_URL, help="Official SETELECO XLSX download URL")
     parser.add_argument("--input-csv", default="", help="Optional input CSV from SETELECO or CNMCData")
     parser.add_argument("--granularity", default="municipality", choices=sorted(VALID_GRANULARITIES))
     parser.add_argument("--source-year", type=int, default=2025)
     parser.add_argument("--source-date", default="2026-11-01")
     parser.add_argument("--source-dataset", default="CNMCData / SETELECO")
-    parser.add_argument("--seed-official", action="store_true", help="Include canonical SETELECO/CNMC reference seed")
+    parser.add_argument("--seed-official", action="store_true", help="Fallback local seed for offline smoke testing only")
     parser.add_argument("--output-sql", default=DEFAULT_OUTPUT_SQL, help="Output SQL path")
     parser.add_argument("--sync-db", action="store_true", help="Sync directly with data/openbarrio.sqlite")
     args = parser.parse_args()
 
     records: list[tuple] = []
+    if args.download_official:
+        print(f"Downloading full official SETELECO broadband dataset from {args.xlsx_url}...")
+        req = urllib.request.Request(
+            args.xlsx_url,
+            headers={"User-Agent": "OpenBarrio-ETL/1.5 (+https://github.com/alexagc/openbarrio)"},
+        )
+        with urllib.request.urlopen(req, timeout=120) as resp:
+            xlsx_bytes = resp.read()
+        official_rows = ingest_seteleco_xlsx(xlsx_bytes)
+        print(f"Parsed {len(official_rows)} official Spanish municipalities from SETELECO XLSX.")
+        records.extend(official_rows)
+
     if args.input_csv:
         records.extend(
             ingest_broadband_csv(
@@ -230,11 +403,14 @@ def main():
             )
         )
 
-    if not records or args.seed_official:
+    if args.seed_official:
         existing_codes = {r[0] for r in records}
         for row in OFFICIAL_BROADBAND_SEED:
             if row[0] not in existing_codes:
                 records.append(row)
+
+    if not records:
+        raise RuntimeError("No broadband records ingested. Pass --download-official or --input-csv.")
 
     sql_content = generate_sql(records)
     for out_path in {os.path.abspath(args.output_sql), os.path.abspath(ALT_OUTPUT_SQL)}:

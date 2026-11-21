@@ -13,6 +13,8 @@
    * **Cloudflare R2 (Zero-Egress Object Storage + PMTiles):** Used for heavy spatial vector layers (flood polygons, acoustic noise contours, census boundaries) streamed directly to MapLibre GL frontend and queried serverless via Edge Point-in-Polygon.
 3. **Containerized & Host Zero-Pollution Ingestion:**
    Data ingestion pipelines run either inside containerized environments (Docker Desktop via WSL 2) or via automated GitHub Actions workflows (`.github/workflows/data-pipeline.yml`). Never pollute the developer host machine with native build toolchains.
+4. **Full Official Datasets Only (Zero Toy Seeds in Production ETL):**
+   Autonomous ETL scripts and `.github/workflows/data-pipeline.yml` **MUST** ingest complete official national or regional datasets directly from Spanish public administration endpoints (e.g., full SETELECO ~8,131-municipality workbook, INE ADRH, MITECO SICA/SNCZI, MITMS NAP GTFS). Production ETL runs must **NEVER** rely on hardcoded sample/seed subsets; small seeds may exist strictly for isolated unit tests or offline developer smoke checks.
 
 ---
 

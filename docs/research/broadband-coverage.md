@@ -17,7 +17,8 @@
 2. **2021–2024+ Methodology Shift — Cadastral Parcel vs. Open Downloads (`parcel` vs. `municipality`):**
    - From 2021 onward (annual June 30 cutoff under `UNICO-DATOS`), SETELECO collects operator availability at the **14-digit cadastral parcel** (`parcel`) level for fixed technologies (FTTH/FTTP, HFC, FWA) and grid cells for **5G** mobile coverage.
    - **Open Bulk Availability Finding:** While SETELECO exposes interactive ArcGIS Experience Builder viewers for single-address / single-parcel lookup, **bulk national parcel-level raw dumps are NOT published for open bulk download** due to confidentiality / operator NDA constraints under `UNICO-DATOS`.
-   - Open downloadable multi-year XLSX/CSV workbooks (`avances.digital.gob.es` / `datos.gob.es`) are aggregated at **municipality (`municipality`)**, province, and autonomous community levels.
+   - Open downloadable multi-year XLSX workbooks (`digital.gob.es` / `datos.gob.es`) are aggregated at **municipality (`municipality`)**, province, and autonomous community levels:
+     - `Cobertura_BA_España_2021-2025_MUN_PROV_CCAA_Nacional_datosgob_DEF.xlsx` (sheet `Municipio_%hogar`, June 2025 cutoff `2025-06-30`, covering all ~8,131 Spanish municipalities).
 
 ### 1.2. CNMC (`CNMCData`) Open Datasets
 - **Portal:** `data.cnmc.es` (Telecomunicaciones — panel interactivo y descargas CSV/JSON/API).
