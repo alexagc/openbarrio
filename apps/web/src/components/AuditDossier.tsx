@@ -711,7 +711,7 @@ export function AuditDossier({
       </nav>
 
       {/* 3. TAB PANELS CONTENT AREA */}
-      <div className="flex-1 overflow-y-auto">
+      <div className="shrink-0">
         {/* ================= TAB 1: RESUMEN & SCORE ================= */}
         <div
           role="tabpanel"

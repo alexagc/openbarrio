@@ -168,6 +168,15 @@ exports[`VisitChecklistPanel & Export > matches printable checklist DOM snapshot
         5 puntos
       </span>
       <span
+        class="px-2 py-0.5 rounded bg-emerald-500/15 border border-emerald-500/40 text-emerald-300"
+        data-testid="checklist-checked-counter"
+      >
+        0
+        /
+        5
+         ✓
+      </span>
+      <span
         class="px-2 py-0.5 rounded bg-rose-500/15 border border-rose-500/40 text-rose-300"
       >
         1 críticos

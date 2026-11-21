@@ -50,27 +50,27 @@ export function ChromeExtensionBanner({
     return (
       <aside
         aria-label="Extensión de OpenBarrio"
-        className={`fixed bottom-4 left-1/2 -translate-x-1/2 z-50 w-[95%] max-w-2xl bg-surface-container-high/95 backdrop-blur-md border border-primary/30 shadow-2xl rounded-2xl p-4 transition-all duration-300 ${className}`}
+        className={`fixed bottom-4 left-1/2 -translate-x-1/2 z-40 w-[95%] max-w-2xl bg-surface-container-high/95 backdrop-blur-md border border-primary/30 shadow-2xl rounded-2xl p-3.5 sm:p-4 transition-all duration-300 ${className}`}
       >
-        <div className="flex items-center justify-between gap-4">
-          <div className="flex items-center gap-3 min-w-0">
-            <div className="w-10 h-10 rounded-xl bg-primary/15 border border-primary/30 flex items-center justify-center shrink-0 text-primary">
-              <Sparkles className="w-5 h-5" />
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
+          <div className="flex items-start sm:items-center gap-3 min-w-0">
+            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-primary/15 border border-primary/30 flex items-center justify-center shrink-0 text-primary">
+              <Sparkles className="w-4 h-4 sm:w-5 sm:h-5" />
             </div>
             <div className="min-w-0">
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 <span className="text-xs font-bold uppercase tracking-wider text-primary">
                   {t('extensionBanner.freeExtension')}
                 </span>
-                <span className="text-[10px] bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono font-medium">Manifest V3</span>
+                <span className="text-[10px] bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono font-medium shrink-0">Manifest V3</span>
               </div>
-              <p className="text-sm font-semibold text-on-surface truncate">
+              <p className="text-xs sm:text-sm font-semibold text-on-surface line-clamp-2 sm:truncate">
                 {contextText || t('extensionBanner.contextSurface')}
               </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-2 shrink-0">
+          <div className="flex items-center justify-end gap-2 shrink-0">
             <a
               href={ctaUrl}
               target="_blank"

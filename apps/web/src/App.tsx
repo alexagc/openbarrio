@@ -54,6 +54,7 @@ export function AppContent() {
   const loadAuditByRefcat = useWorkspaceStore((s) => s.loadAuditByRefcat);
   const initFromUrl = useWorkspaceStore((s) => s.initFromUrl);
   const hydrateConsent = useConsentStore((s) => s.hydrateConsent);
+  const isConsentBannerVisible = useConsentStore((s) => s.bannerVisible);
   const initPwaListeners = usePwaStore((s) => s.initPwaListeners);
 
   useEffect(() => {
@@ -95,8 +96,8 @@ export function AppContent() {
         <LandingView />
       )}
 
-      {/* Floating sticky extension banner for programmatic & tool views when not in embed mode */}
-      {!isEmbed && viewMode !== 'map' && (
+      {/* Floating sticky extension banner only after GDPR banner is resolved (never overlaps) */}
+      {!isEmbed && viewMode !== 'map' && !isConsentBannerVisible && (
         <ChromeExtensionBanner variant="sticky" />
       )}
 

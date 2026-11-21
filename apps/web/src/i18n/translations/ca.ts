@@ -913,7 +913,7 @@ export const ca: TranslationSchema = {
   },
   methodology: {
     navLabel: 'Metodologia',
-    seoTitle: 'Metodologia BarrioScore v2.0.0 | OpenBarrio',
+    seoTitle: 'Metodologia BarrioScore v2.1.0 | OpenBarrio',
     seoDescription: 'Fórmula declarativa pública, pesos per tipologia, penalitzacions i tractament de dades absents de l’índex BarrioScore.',
     title: 'Metodologia Pública BarrioScore',
     subtitle: 'Documentació oberta i verificada de fórmules, ponderacions per tipologia i regles estrictes contra la falsa seguretat.',

@@ -185,7 +185,7 @@ export function GisWorkspaceView() {
         </div>
 
         {/* Center: Search Bar */}
-        <div className="flex-1 max-w-2xl px-space-sm hidden md:block">
+        <div className="flex-1 min-w-0 max-w-md xl:max-w-xl px-space-sm hidden md:block">
           <SearchBar
             variant="topbar"
             activeRefcat={activeRefcat}
@@ -212,7 +212,7 @@ export function GisWorkspaceView() {
             </span>
           </button>
 
-          <div className="hidden xl:flex items-center gap-1.5 px-2 py-1 rounded bg-surface-container-high border border-outline-variant text-on-surface-variant text-xs font-mono">
+          <div className="hidden 2xl:flex items-center gap-1.5 px-2 py-1 rounded bg-surface-container-high border border-outline-variant text-on-surface-variant text-xs font-mono">
             <MapPin className="w-3.5 h-3.5 text-tertiary" />
             <span>{activeLocation}</span>
           </div>
@@ -267,6 +267,16 @@ export function GisWorkspaceView() {
           isLoading={isLoading}
         />
       </div>
+
+      {/* Unified Saved Visits Drawer (works on both mobile & desktop) */}
+      {isSavedVisitsOpen && (
+        <div
+          data-testid="saved-visits-drawer"
+          className="fixed inset-x-3 md:inset-x-auto md:right-4 top-28 md:top-16 md:w-[440px] max-h-[75vh] overflow-y-auto z-50 rounded-xl bg-surface border border-outline-variant shadow-2xl p-4 no-print"
+        >
+          <SavedVisitsPanel onSelectDossier={() => setIsSavedVisitsOpen(false)} />
+        </div>
+      )}
 
       {/* Tablet Adaptive Split Workspace */}
       <main
@@ -390,12 +400,6 @@ export function GisWorkspaceView() {
           className="hidden md:flex md:w-[48%] xl:w-[40%] h-full bg-surface overflow-y-auto flex-col"
           style={splitRatio !== 52 ? { width: `${100 - splitRatio}%` } : undefined}
         >
-          {isSavedVisitsOpen && (
-            <div className="p-4 border-b border-outline-variant shrink-0">
-              <SavedVisitsPanel onSelectDossier={() => setIsSavedVisitsOpen(false)} />
-            </div>
-          )}
-
           {error ? (
             <div className="p-4 space-y-4">
               <ErrorAlert

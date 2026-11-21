@@ -910,7 +910,7 @@ export const eu: TranslationSchema = {
   },
   methodology: {
     navLabel: 'Metodologia',
-    seoTitle: 'BarrioScore v2.0.0 Metodologia | OpenBarrio',
+    seoTitle: 'BarrioScore v2.1.0 Metodologia | OpenBarrio',
     seoDescription: 'BarrioScore indizearen formula irekia, tipologiaren araberako pisuak, doikuntzak eta datu faltaren arauak.',
     title: 'BarrioScore Metodologia Publikoa',
     subtitle: 'Formula irekiak, katastro-tipologiaren araberako pisuak eta segurtasun faltsuaren aurkako arau zorrotzak.',

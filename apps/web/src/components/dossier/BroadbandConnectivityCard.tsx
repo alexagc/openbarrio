@@ -35,10 +35,10 @@ export const BroadbandConnectivityCard: React.FC<BroadbandConnectivityCardProps>
       className="p-space-lg rounded-xl bg-surface border border-outline-variant/70 space-y-3.5 shadow-sm hover:border-outline-variant transition-colors"
     >
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-outline-variant pb-2.5 gap-2">
+      <div className="flex flex-col border-b border-outline-variant pb-2.5 gap-2">
         <div className="flex items-start gap-2">
           <Wifi className="w-4 h-4 text-primary shrink-0 mt-0.5" />
-          <div>
+          <div className="min-w-0">
             <h3 className="font-title-md text-title-md text-on-surface font-semibold">
               {t('broadband.title')}
             </h3>
@@ -47,7 +47,7 @@ export const BroadbandConnectivityCard: React.FC<BroadbandConnectivityCardProps>
             </p>
           </div>
         </div>
-        <div className="flex flex-wrap items-center gap-2 self-start sm:self-auto shrink-0">
+        <div className="flex flex-wrap items-center gap-2">
           <LayerStatusBadge info={broadbandLayer} showOk />
           {broadband && (
             <span

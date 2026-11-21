@@ -92,6 +92,13 @@ export function VisitChecklistPanel({
   const renderItem = (item: VisitChecklistItem) => {
     const isChecked = Boolean(checkedIds[item.id]);
     const layerInfo = report.layers?.[item.sourceLayer];
+    const localizedParams =
+      item.params && typeof item.params.granularity === 'string'
+        ? {
+            ...item.params,
+            granularity: t(`broadband.granularities.${item.params.granularity}`),
+          }
+        : item.params;
 
     return (
       <li
@@ -112,7 +119,7 @@ export function VisitChecklistPanel({
             aria-checked={isChecked}
             onClick={() => toggleItem(item.id)}
             className="mt-0.5 text-primary hover:text-primary-container transition-colors shrink-0 cursor-pointer no-print"
-            aria-label={t(item.titleKey, item.params)}
+            aria-label={t(item.titleKey, localizedParams)}
           >
             {isChecked ? (
               <CheckSquare className="w-4 h-4 text-emerald-400" />
@@ -155,7 +162,7 @@ export function VisitChecklistPanel({
                 isChecked ? 'line-through' : ''
               }`}
             >
-              {t(item.titleKey, item.params)}
+              {t(item.titleKey, localizedParams)}
             </p>
 
             {item.askKey && (
@@ -163,7 +170,7 @@ export function VisitChecklistPanel({
                 <span className="font-mono font-semibold text-primary">
                   {t('checklist.askLabel')}:{' '}
                 </span>
-                <span>{t(item.askKey, item.params)}</span>
+                <span>{t(item.askKey, localizedParams)}</span>
               </p>
             )}
 
@@ -172,7 +179,7 @@ export function VisitChecklistPanel({
                 <span className="font-mono font-semibold text-secondary">
                   {t('checklist.verifyLabel')}:{' '}
                 </span>
-                <span>{t(item.verifyKey, item.params)}</span>
+                <span>{t(item.verifyKey, localizedParams)}</span>
               </p>
             )}
           </div>
@@ -238,6 +245,14 @@ export function VisitChecklistPanel({
           <span className="px-2 py-0.5 rounded bg-surface-container border border-outline-variant text-on-surface">
             {t('checklist.countTotal', { count: checklist.counts.total })}
           </span>
+          {checklist.counts.total > 0 && (
+            <span
+              data-testid="checklist-checked-counter"
+              className="px-2 py-0.5 rounded bg-emerald-500/15 border border-emerald-500/40 text-emerald-300"
+            >
+              {checklist.items.filter((i) => checkedIds[i.id]).length}/{checklist.counts.total} ✓
+            </span>
+          )}
           {checklist.counts.critical > 0 && (
             <span className="px-2 py-0.5 rounded bg-rose-500/15 border border-rose-500/40 text-rose-300">
               {t('checklist.countCritical', { count: checklist.counts.critical })}

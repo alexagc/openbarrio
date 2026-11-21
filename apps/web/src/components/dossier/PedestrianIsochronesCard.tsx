@@ -97,7 +97,8 @@ export const PedestrianIsochronesCard: React.FC<PedestrianIsochronesCardProps> =
   const isPartialCoverage =
     transitLayer?.status === 'out_of_coverage' &&
     Boolean(transit) &&
-    (transit?.coveragePct ?? 0) > 0;
+    (transit?.coveragePct ?? 0) > 0 &&
+    (transit?.coveragePct ?? 0) < 100;
   const coveragePctValue = transit?.coveragePct ?? transitLayer?.coveragePct ?? 0;
 
   return (

@@ -12,9 +12,10 @@ export const ConsentBanner: React.FC = () => {
   const { t } = useTranslation();
   const { bannerVisible, acceptConsent, rejectConsent } = useConsent();
   const isEmbed = useIsEmbed();
+  const viewMode = useWorkspaceStore((s) => s.viewMode);
   const setViewMode = useWorkspaceStore((s) => s.setViewMode);
 
-  if (!bannerVisible || isEmbed) {
+  if (!bannerVisible || isEmbed || viewMode === 'privacy') {
     return null;
   }
 
@@ -26,7 +27,7 @@ export const ConsentBanner: React.FC = () => {
       role="region"
       aria-label={t('consent.bannerAria')}
       data-testid="consent-banner"
-      className="fixed bottom-4 left-4 right-4 sm:left-auto sm:right-4 sm:max-w-lg z-40 rounded-xl bg-surface-container border border-outline-variant shadow-2xl p-4 no-print"
+      className="fixed bottom-4 left-4 right-4 sm:left-auto sm:right-4 sm:max-w-lg z-50 rounded-xl bg-surface-container border border-outline-variant shadow-2xl p-4 no-print"
     >
       <div className="flex items-start gap-3">
         <div className="p-2 rounded-lg bg-primary/15 text-primary shrink-0 mt-0.5">

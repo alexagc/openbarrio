@@ -910,7 +910,7 @@ export const gl: TranslationSchema = {
   },
   methodology: {
     navLabel: 'Metodoloxía',
-    seoTitle: 'Metodoloxía BarrioScore v2.0.0 | OpenBarrio',
+    seoTitle: 'Metodoloxía BarrioScore v2.1.0 | OpenBarrio',
     seoDescription: 'Fórmula declarativa pública, pesos por tipoloxía, penalizacións e tratamento de datos ausentes do índice BarrioScore.',
     title: 'Metodoloxía Pública BarrioScore',
     subtitle: 'Documentación aberta e verificada de fórmulas, ponderacións por tipoloxía e regras estritas contra a falsa seguridade.',
