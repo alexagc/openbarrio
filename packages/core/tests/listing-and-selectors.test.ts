@@ -36,17 +36,17 @@ describe('Listing & Remote Selectors Schemas (@openbarrio/core)', () => {
   });
 
   it('compares semver strings accurately', () => {
-    expect(compareSemver('1.4.0', '1.4.0')).toBe(0);
-    expect(compareSemver('1.4.1', '1.4.0')).toBe(1);
-    expect(compareSemver('1.3.9', '1.4.0')).toBe(-1);
+    expect(compareSemver('1.5.0', '1.5.0')).toBe(0);
+    expect(compareSemver('1.5.1', '1.5.0')).toBe(1);
+    expect(compareSemver('1.4.9', '1.5.0')).toBe(-1);
   });
 
   it('accepts valid non-downgrading remote selector JSON bundles and rejects downgrades/oversize/code', () => {
     const upgradeBundle = {
       ...BUNDLED_PORTAL_SELECTORS,
-      version: '1.4.1',
+      version: '1.5.1',
     };
-    const valid = validateRemoteSelectorsBundle(JSON.stringify(upgradeBundle), '1.4.0');
+    const valid = validateRemoteSelectorsBundle(JSON.stringify(upgradeBundle), '1.5.0');
     expect(valid.valid).toBe(true);
 
     // Downgrade rejected
@@ -54,12 +54,12 @@ describe('Listing & Remote Selectors Schemas (@openbarrio/core)', () => {
       ...BUNDLED_PORTAL_SELECTORS,
       version: '1.3.2',
     };
-    const downgrade = validateRemoteSelectorsBundle(JSON.stringify(downgradeBundle), '1.4.0');
+    const downgrade = validateRemoteSelectorsBundle(JSON.stringify(downgradeBundle), '1.5.0');
     expect(downgrade).toEqual({ valid: false, reason: 'version_downgrade' });
 
     // Oversize > 32 KB rejected
     const huge = ' '.repeat(SELECTORS_MAX_BYTES + 10);
-    expect(validateRemoteSelectorsBundle(huge, '1.4.0')).toEqual({
+    expect(validateRemoteSelectorsBundle(huge, '1.5.0')).toEqual({
       valid: false,
       reason: 'oversize',
     });
@@ -67,13 +67,13 @@ describe('Listing & Remote Selectors Schemas (@openbarrio/core)', () => {
     // Unsafe selector string rejected
     const unsafeBundle = structuredClone(BUNDLED_PORTAL_SELECTORS);
     unsafeBundle.portals.idealista.title = ['<script>alert(1)</script>'];
-    expect(validateRemoteSelectorsBundle(JSON.stringify(unsafeBundle), '1.4.0')).toEqual({
+    expect(validateRemoteSelectorsBundle(JSON.stringify(unsafeBundle), '1.5.0')).toEqual({
       valid: false,
       reason: 'unsafe_selector',
     });
 
     // Invalid JSON rejected
-    expect(validateRemoteSelectorsBundle('{broken', '1.4.0')).toEqual({
+    expect(validateRemoteSelectorsBundle('{broken', '1.5.0')).toEqual({
       valid: false,
       reason: 'invalid_json',
     });

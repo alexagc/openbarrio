@@ -1,0 +1,865 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`VisitChecklistPanel & Export > matches printable checklist DOM snapshot 1`] = `
+<section
+  aria-label="Checklist de visita in situ"
+  class="space-y-4"
+  data-testid="visit-checklist-panel"
+>
+  <div
+    class="p-4 rounded-xl bg-surface-container-low border border-outline-variant space-y-3"
+  >
+    <div
+      class="flex flex-wrap items-start justify-between gap-3"
+    >
+      <div
+        class="space-y-1"
+      >
+        <h3
+          class="font-headline text-base font-bold text-on-surface flex items-center gap-2"
+        >
+          <svg
+            aria-hidden="true"
+            class="lucide lucide-square-check-big lucide-check-square w-4 h-4 text-primary"
+            fill="none"
+            height="24"
+            stroke="currentColor"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            viewBox="0 0 24 24"
+            width="24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              d="M21 10.656V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h12.344"
+            />
+            <path
+              d="m9 11 3 3L22 4"
+            />
+          </svg>
+          <span>
+            Checklist de visita in situ
+          </span>
+        </h3>
+        <p
+          class="text-xs text-on-surface-variant"
+        >
+          Lista determinista generada a partir de alertas oficiales y capas no verificadas del dossier.
+        </p>
+      </div>
+      <div
+        class="flex flex-wrap items-center gap-1.5 no-print"
+      >
+        <button
+          class="px-2.5 py-1.5 rounded bg-surface-container-high hover:bg-surface-variant border border-outline-variant text-xs font-mono text-on-surface flex items-center gap-1.5 transition-colors cursor-pointer"
+          data-testid="checklist-export-md-btn"
+          type="button"
+        >
+          <svg
+            aria-hidden="true"
+            class="lucide lucide-download w-3.5 h-3.5 text-primary"
+            fill="none"
+            height="24"
+            stroke="currentColor"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            viewBox="0 0 24 24"
+            width="24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              d="M12 15V3"
+            />
+            <path
+              d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"
+            />
+            <path
+              d="m7 10 5 5 5-5"
+            />
+          </svg>
+          <span>
+            Exportar .MD
+          </span>
+        </button>
+        <button
+          class="px-2.5 py-1.5 rounded bg-surface-container-high hover:bg-surface-variant border border-outline-variant text-xs font-mono text-on-surface flex items-center gap-1.5 transition-colors cursor-pointer"
+          data-testid="checklist-export-txt-btn"
+          type="button"
+        >
+          <svg
+            aria-hidden="true"
+            class="lucide lucide-file-text w-3.5 h-3.5 text-primary"
+            fill="none"
+            height="24"
+            stroke="currentColor"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            viewBox="0 0 24 24"
+            width="24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              d="M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z"
+            />
+            <path
+              d="M14 2v5a1 1 0 0 0 1 1h5"
+            />
+            <path
+              d="M10 9H8"
+            />
+            <path
+              d="M16 13H8"
+            />
+            <path
+              d="M16 17H8"
+            />
+          </svg>
+          <span>
+            Exportar .TXT
+          </span>
+        </button>
+        <button
+          class="px-2.5 py-1.5 rounded bg-primary/20 hover:bg-primary/30 border border-primary/40 text-xs font-mono font-semibold text-primary flex items-center gap-1.5 transition-colors cursor-pointer"
+          data-testid="checklist-print-btn"
+          type="button"
+        >
+          <svg
+            aria-hidden="true"
+            class="lucide lucide-printer w-3.5 h-3.5"
+            fill="none"
+            height="24"
+            stroke="currentColor"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            viewBox="0 0 24 24"
+            width="24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"
+            />
+            <path
+              d="M6 9V3a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v6"
+            />
+            <rect
+              height="8"
+              rx="1"
+              width="12"
+              x="6"
+              y="14"
+            />
+          </svg>
+          <span>
+            Imprimir A4
+          </span>
+        </button>
+      </div>
+    </div>
+    <div
+      class="flex flex-wrap items-center gap-2 font-mono text-[11px]"
+    >
+      <span
+        class="px-2 py-0.5 rounded bg-surface-container border border-outline-variant text-on-surface"
+      >
+        5 puntos
+      </span>
+      <span
+        class="px-2 py-0.5 rounded bg-emerald-500/15 border border-emerald-500/40 text-emerald-300"
+        data-testid="checklist-checked-counter"
+      >
+        0
+        /
+        5
+         ✓
+      </span>
+      <span
+        class="px-2 py-0.5 rounded bg-rose-500/15 border border-rose-500/40 text-rose-300"
+      >
+        1 críticos
+      </span>
+      <span
+        class="px-2 py-0.5 rounded bg-amber-500/15 border border-amber-500/40 text-amber-300"
+      >
+        3 importantes
+      </span>
+      <span
+        class="px-2 py-0.5 rounded bg-surface-container-high border border-outline text-on-surface-variant"
+      >
+        2 sin verificar
+      </span>
+    </div>
+  </div>
+  <ul
+    class="space-y-2.5"
+  >
+    <li
+      class="p-3 rounded-lg border transition-colors page-break-inside-avoid bg-surface-container-low border-outline-variant"
+      data-layer-status="unavailable"
+      data-severity="critical"
+      data-testid="checklist-item-unverified_snczi"
+    >
+      <div
+        class="flex items-start gap-3"
+      >
+        <button
+          aria-checked="false"
+          aria-label="Fuente MITECO SNCZI no disponible — verificación documental obligatoria"
+          class="mt-0.5 text-primary hover:text-primary-container transition-colors shrink-0 cursor-pointer no-print"
+          role="checkbox"
+          type="button"
+        >
+          <svg
+            aria-hidden="true"
+            class="lucide lucide-square w-4 h-4 text-on-surface-variant"
+            fill="none"
+            height="24"
+            stroke="currentColor"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            viewBox="0 0 24 24"
+            width="24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <rect
+              height="18"
+              rx="2"
+              width="18"
+              x="3"
+              y="3"
+            />
+          </svg>
+        </button>
+        <span
+          aria-hidden="true"
+          class="hidden print:inline-block w-4 h-4 mt-0.5 border-2 border-slate-800 rounded-sm shrink-0"
+        />
+        <div
+          class="min-w-0 flex-1 space-y-1.5"
+        >
+          <div
+            class="flex flex-wrap items-center gap-2"
+          >
+            <svg
+              aria-hidden="true"
+              class="lucide lucide-octagon-exclamation-point lucide-alert-octagon lucide-octagon-alert w-4 h-4 text-rose-400 shrink-0"
+              fill="none"
+              height="24"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              viewBox="0 0 24 24"
+              width="24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="M12 16h.01"
+              />
+              <path
+                d="M12 8v4"
+              />
+              <path
+                d="M15.312 2a2 2 0 0 1 1.414.586l4.688 4.688A2 2 0 0 1 22 8.688v6.624a2 2 0 0 1-.586 1.414l-4.688 4.688a2 2 0 0 1-1.414.586H8.688a2 2 0 0 1-1.414-.586l-4.688-4.688A2 2 0 0 1 2 15.312V8.688a2 2 0 0 1 .586-1.414l4.688-4.688A2 2 0 0 1 8.688 2z"
+              />
+            </svg>
+            <span
+              class="px-2 py-0.5 rounded text-[10px] font-mono font-semibold uppercase border bg-rose-500/20 text-rose-300 border-rose-500/40"
+            >
+              Crítico
+            </span>
+            <span
+              class="px-2 py-0.5 rounded text-[10px] font-mono bg-surface-container-high border border-outline-variant text-on-surface-variant"
+            >
+              Verificación
+            </span>
+            <span
+              class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-mono border bg-surface-container text-outline border-outline-variant "
+              data-status="unavailable"
+              data-testid="layer-status-badge"
+              title="Fuente oficial (MITECO SNCZI) temporalmente no disponible. Este indicador no se estima ni aporta puntos favorables."
+            >
+              <svg
+                aria-hidden="true"
+                class="lucide lucide-cloud-off w-3 h-3 shrink-0"
+                fill="none"
+                height="24"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+                width="24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="M10.94 5.274A7 7 0 0 1 15.71 10h1.79a4.5 4.5 0 0 1 4.222 6.057"
+                />
+                <path
+                  d="M18.796 18.81A4.5 4.5 0 0 1 17.5 19H9A7 7 0 0 1 5.79 5.78"
+                />
+                <path
+                  d="m2 2 20 20"
+                />
+              </svg>
+              <span>
+                No disponible
+              </span>
+            </span>
+          </div>
+          <p
+            class="text-xs sm:text-sm font-semibold text-on-surface "
+          >
+            Fuente MITECO SNCZI no disponible — verificación documental obligatoria
+          </p>
+          <p
+            class="text-xs text-on-surface-variant"
+          >
+            <span
+              class="font-mono font-semibold text-primary"
+            >
+              Preguntar
+              :
+               
+            </span>
+            <span>
+              Solicita información sobre historial de lluvias intensas o drenaje del edificio.
+            </span>
+          </p>
+          <p
+            class="text-xs text-on-surface-variant"
+          >
+            <span
+              class="font-mono font-semibold text-secondary"
+            >
+              Verificar en visita
+              :
+               
+            </span>
+            <span>
+              Revisa sumideros, pendientes del portal y posibles marcas de agua en sótano.
+            </span>
+          </p>
+        </div>
+      </div>
+    </li>
+    <li
+      class="p-3 rounded-lg border transition-colors page-break-inside-avoid bg-surface-container-low border-outline-variant"
+      data-layer-status="ok"
+      data-severity="important"
+      data-testid="checklist-item-age_old_building"
+    >
+      <div
+        class="flex items-start gap-3"
+      >
+        <button
+          aria-checked="false"
+          aria-label="Edificio antiguo (1955, 71 años)"
+          class="mt-0.5 text-primary hover:text-primary-container transition-colors shrink-0 cursor-pointer no-print"
+          role="checkbox"
+          type="button"
+        >
+          <svg
+            aria-hidden="true"
+            class="lucide lucide-square w-4 h-4 text-on-surface-variant"
+            fill="none"
+            height="24"
+            stroke="currentColor"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            viewBox="0 0 24 24"
+            width="24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <rect
+              height="18"
+              rx="2"
+              width="18"
+              x="3"
+              y="3"
+            />
+          </svg>
+        </button>
+        <span
+          aria-hidden="true"
+          class="hidden print:inline-block w-4 h-4 mt-0.5 border-2 border-slate-800 rounded-sm shrink-0"
+        />
+        <div
+          class="min-w-0 flex-1 space-y-1.5"
+        >
+          <div
+            class="flex flex-wrap items-center gap-2"
+          >
+            <svg
+              aria-hidden="true"
+              class="lucide lucide-triangle-exclamation-point lucide-alert-triangle lucide-triangle-alert w-4 h-4 text-amber-400 shrink-0"
+              fill="none"
+              height="24"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              viewBox="0 0 24 24"
+              width="24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"
+              />
+              <path
+                d="M12 9v4"
+              />
+              <path
+                d="M12 17h.01"
+              />
+            </svg>
+            <span
+              class="px-2 py-0.5 rounded text-[10px] font-mono font-semibold uppercase border bg-amber-500/20 text-amber-300 border-amber-500/40"
+            >
+              Importante
+            </span>
+            <span
+              class="px-2 py-0.5 rounded text-[10px] font-mono bg-surface-container-high border border-outline-variant text-on-surface-variant"
+            >
+              Estructura
+            </span>
+          </div>
+          <p
+            class="text-xs sm:text-sm font-semibold text-on-surface "
+          >
+            Edificio antiguo (1955, 71 años)
+          </p>
+          <p
+            class="text-xs text-on-surface-variant"
+          >
+            <span
+              class="font-mono font-semibold text-primary"
+            >
+              Preguntar
+              :
+               
+            </span>
+            <span>
+              Pregunta por derramas recientes o previstas en fontanería, bajantes, cubierta e instalación eléctrica.
+            </span>
+          </p>
+          <p
+            class="text-xs text-on-surface-variant"
+          >
+            <span
+              class="font-mono font-semibold text-secondary"
+            >
+              Verificar en visita
+              :
+               
+            </span>
+            <span>
+              Revisa humedades en techos/esquinas, cuadro eléctrico, presión de agua y aislamiento de ventanas.
+            </span>
+          </p>
+        </div>
+      </div>
+    </li>
+    <li
+      class="p-3 rounded-lg border transition-colors page-break-inside-avoid bg-surface-container-low border-outline-variant"
+      data-layer-status="ok"
+      data-severity="important"
+      data-testid="checklist-item-cee_expired"
+    >
+      <div
+        class="flex items-start gap-3"
+      >
+        <button
+          aria-checked="false"
+          aria-label="Certificado de Eficiencia Energética (CEE) caducado (2024-01-15)"
+          class="mt-0.5 text-primary hover:text-primary-container transition-colors shrink-0 cursor-pointer no-print"
+          role="checkbox"
+          type="button"
+        >
+          <svg
+            aria-hidden="true"
+            class="lucide lucide-square w-4 h-4 text-on-surface-variant"
+            fill="none"
+            height="24"
+            stroke="currentColor"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            viewBox="0 0 24 24"
+            width="24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <rect
+              height="18"
+              rx="2"
+              width="18"
+              x="3"
+              y="3"
+            />
+          </svg>
+        </button>
+        <span
+          aria-hidden="true"
+          class="hidden print:inline-block w-4 h-4 mt-0.5 border-2 border-slate-800 rounded-sm shrink-0"
+        />
+        <div
+          class="min-w-0 flex-1 space-y-1.5"
+        >
+          <div
+            class="flex flex-wrap items-center gap-2"
+          >
+            <svg
+              aria-hidden="true"
+              class="lucide lucide-triangle-exclamation-point lucide-alert-triangle lucide-triangle-alert w-4 h-4 text-amber-400 shrink-0"
+              fill="none"
+              height="24"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              viewBox="0 0 24 24"
+              width="24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"
+              />
+              <path
+                d="M12 9v4"
+              />
+              <path
+                d="M12 17h.01"
+              />
+            </svg>
+            <span
+              class="px-2 py-0.5 rounded text-[10px] font-mono font-semibold uppercase border bg-amber-500/20 text-amber-300 border-amber-500/40"
+            >
+              Importante
+            </span>
+            <span
+              class="px-2 py-0.5 rounded text-[10px] font-mono bg-surface-container-high border border-outline-variant text-on-surface-variant"
+            >
+              Energía
+            </span>
+          </div>
+          <p
+            class="text-xs sm:text-sm font-semibold text-on-surface "
+          >
+            Certificado de Eficiencia Energética (CEE) caducado (2024-01-15)
+          </p>
+          <p
+            class="text-xs text-on-surface-variant"
+          >
+            <span
+              class="font-mono font-semibold text-primary"
+            >
+              Preguntar
+              :
+               
+            </span>
+            <span>
+              Exige el CEE renovado y registrado antes de firmar contrato o arras (RD 390/2021).
+            </span>
+          </p>
+          <p
+            class="text-xs text-on-surface-variant"
+          >
+            <span
+              class="font-mono font-semibold text-secondary"
+            >
+              Verificar en visita
+              :
+               
+            </span>
+            <span>
+              Comprueba el sistema de calefacción/ACS real, orientación y carpinterías.
+            </span>
+          </p>
+        </div>
+      </div>
+    </li>
+    <li
+      class="p-3 rounded-lg border transition-colors page-break-inside-avoid bg-surface-container-low border-outline-variant"
+      data-layer-status="ok"
+      data-severity="important"
+      data-testid="checklist-item-noise_high"
+    >
+      <div
+        class="flex items-start gap-3"
+      >
+        <button
+          aria-checked="false"
+          aria-label="Nivel de ruido ambiental elevado (72 dBA Lden)"
+          class="mt-0.5 text-primary hover:text-primary-container transition-colors shrink-0 cursor-pointer no-print"
+          role="checkbox"
+          type="button"
+        >
+          <svg
+            aria-hidden="true"
+            class="lucide lucide-square w-4 h-4 text-on-surface-variant"
+            fill="none"
+            height="24"
+            stroke="currentColor"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            viewBox="0 0 24 24"
+            width="24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <rect
+              height="18"
+              rx="2"
+              width="18"
+              x="3"
+              y="3"
+            />
+          </svg>
+        </button>
+        <span
+          aria-hidden="true"
+          class="hidden print:inline-block w-4 h-4 mt-0.5 border-2 border-slate-800 rounded-sm shrink-0"
+        />
+        <div
+          class="min-w-0 flex-1 space-y-1.5"
+        >
+          <div
+            class="flex flex-wrap items-center gap-2"
+          >
+            <svg
+              aria-hidden="true"
+              class="lucide lucide-triangle-exclamation-point lucide-alert-triangle lucide-triangle-alert w-4 h-4 text-amber-400 shrink-0"
+              fill="none"
+              height="24"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              viewBox="0 0 24 24"
+              width="24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"
+              />
+              <path
+                d="M12 9v4"
+              />
+              <path
+                d="M12 17h.01"
+              />
+            </svg>
+            <span
+              class="px-2 py-0.5 rounded text-[10px] font-mono font-semibold uppercase border bg-amber-500/20 text-amber-300 border-amber-500/40"
+            >
+              Importante
+            </span>
+            <span
+              class="px-2 py-0.5 rounded text-[10px] font-mono bg-surface-container-high border border-outline-variant text-on-surface-variant"
+            >
+              Entorno
+            </span>
+          </div>
+          <p
+            class="text-xs sm:text-sm font-semibold text-on-surface "
+          >
+            Nivel de ruido ambiental elevado (72 dBA Lden)
+          </p>
+          <p
+            class="text-xs text-on-surface-variant"
+          >
+            <span
+              class="font-mono font-semibold text-primary"
+            >
+              Preguntar
+              :
+               
+            </span>
+            <span>
+              Pregunta por el tipo de acristalamiento (doble/climalit, RPT) y si da a patio interior.
+            </span>
+          </p>
+          <p
+            class="text-xs text-on-surface-variant"
+          >
+            <span
+              class="font-mono font-semibold text-secondary"
+            >
+              Verificar en visita
+              :
+               
+            </span>
+            <span>
+              Visita en hora punta y abre las ventanas unos minutos para comprobar el ruido real.
+            </span>
+          </p>
+        </div>
+      </div>
+    </li>
+    <li
+      class="p-3 rounded-lg border transition-colors page-break-inside-avoid bg-surface-container-low border-outline-variant"
+      data-layer-status="stale"
+      data-severity="info"
+      data-testid="checklist-item-unverified_ite"
+    >
+      <div
+        class="flex items-start gap-3"
+      >
+        <button
+          aria-checked="false"
+          aria-label="Dato desactualizado en ITE Municipal (hace 172 días) — verificar vigencia"
+          class="mt-0.5 text-primary hover:text-primary-container transition-colors shrink-0 cursor-pointer no-print"
+          role="checkbox"
+          type="button"
+        >
+          <svg
+            aria-hidden="true"
+            class="lucide lucide-square w-4 h-4 text-on-surface-variant"
+            fill="none"
+            height="24"
+            stroke="currentColor"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            viewBox="0 0 24 24"
+            width="24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <rect
+              height="18"
+              rx="2"
+              width="18"
+              x="3"
+              y="3"
+            />
+          </svg>
+        </button>
+        <span
+          aria-hidden="true"
+          class="hidden print:inline-block w-4 h-4 mt-0.5 border-2 border-slate-800 rounded-sm shrink-0"
+        />
+        <div
+          class="min-w-0 flex-1 space-y-1.5"
+        >
+          <div
+            class="flex flex-wrap items-center gap-2"
+          >
+            <svg
+              aria-hidden="true"
+              class="lucide lucide-info w-4 h-4 text-sky-400 shrink-0"
+              fill="none"
+              height="24"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              viewBox="0 0 24 24"
+              width="24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <circle
+                cx="12"
+                cy="12"
+                r="10"
+              />
+              <path
+                d="M12 16v-4"
+              />
+              <path
+                d="M12 8h.01"
+              />
+            </svg>
+            <span
+              class="px-2 py-0.5 rounded text-[10px] font-mono font-semibold uppercase border bg-sky-500/20 text-sky-300 border-sky-500/40"
+            >
+              Informativo
+            </span>
+            <span
+              class="px-2 py-0.5 rounded text-[10px] font-mono bg-surface-container-high border border-outline-variant text-on-surface-variant"
+            >
+              Verificación
+            </span>
+            <span
+              class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-mono border bg-amber-500/15 text-amber-300 border-amber-500/50 font-semibold "
+              data-amber="true"
+              data-status="stale"
+              data-testid="layer-status-badge"
+              title="Dato histórico con más de 90 días (ITE Municipal, verificado el 2026-06-01). Se actualizará automáticamente al restablecerse la fuente."
+            >
+              <svg
+                aria-hidden="true"
+                class="lucide lucide-triangle-exclamation-point lucide-alert-triangle lucide-triangle-alert w-3 h-3 shrink-0"
+                fill="none"
+                height="24"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+                width="24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"
+                />
+                <path
+                  d="M12 9v4"
+                />
+                <path
+                  d="M12 17h.01"
+                />
+              </svg>
+              <span>
+                Verificado el 2026-06-01 (ITE Municipal)
+              </span>
+            </span>
+          </div>
+          <p
+            class="text-xs sm:text-sm font-semibold text-on-surface "
+          >
+            Dato desactualizado en ITE Municipal (hace 172 días) — verificar vigencia
+          </p>
+          <p
+            class="text-xs text-on-surface-variant"
+          >
+            <span
+              class="font-mono font-semibold text-primary"
+            >
+              Preguntar
+              :
+               
+            </span>
+            <span>
+              Pide certificado ITE/IEE en vigor directamente al propietario o administrador.
+            </span>
+          </p>
+          <p
+            class="text-xs text-on-surface-variant"
+          >
+            <span
+              class="font-mono font-semibold text-secondary"
+            >
+              Verificar en visita
+              :
+               
+            </span>
+            <span>
+              Inspecciona visualmente fachada, balcones, bajantes y cubierta.
+            </span>
+          </p>
+        </div>
+      </div>
+    </li>
+  </ul>
+  <p
+    class="text-[11px] font-mono text-outline leading-relaxed"
+  >
+    Aviso informativo: esta checklist se genera automáticamente a partir de datos públicos abiertos y no constituye asesoramiento jurídico, técnico ni inmobiliario.
+  </p>
+</section>
+`;

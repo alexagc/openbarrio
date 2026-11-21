@@ -2,6 +2,7 @@ import React from 'react';
 import { Building2, ArrowRight } from 'lucide-react';
 import { useTranslation } from '../../i18n';
 import { useWorkspaceStore } from '../../store/workspace.store';
+import { usePwaStore } from '../../store/pwa.store';
 
 interface FooterProps {
   onOpenMap?: () => void;
@@ -10,6 +11,8 @@ interface FooterProps {
 export const Footer: React.FC<FooterProps> = ({ onOpenMap }) => {
   const { t } = useTranslation();
   const setViewMode = useWorkspaceStore((s) => s.setViewMode);
+  const hasPendingUpdate = usePwaStore((s) => s.hasPendingUpdate);
+  const applyPendingUpdate = usePwaStore((s) => s.applyPendingUpdate);
   const currentYear = new Date().getFullYear();
 
   return (
@@ -226,6 +229,16 @@ export const Footer: React.FC<FooterProps> = ({ onOpenMap }) => {
                 </button>
               </li>
               <li>
+                <button
+                  type="button"
+                  data-testid="footer-privacy-link"
+                  onClick={() => setViewMode('privacy')}
+                  className="hover:text-primary transition-colors text-left cursor-pointer"
+                >
+                  {t('footer.linkPrivacy')}
+                </button>
+              </li>
+              <li>
                 <a
                   className="hover:text-primary transition-colors"
                   href="https://www.apache.org/licenses/LICENSE-2.0"
@@ -247,7 +260,17 @@ export const Footer: React.FC<FooterProps> = ({ onOpenMap }) => {
         {/* Bottom Bar */}
         <div className="pt-6 flex flex-col sm:flex-row items-center justify-between gap-4 font-mono text-xs text-outline">
           <div>{t('footer.copyright', { year: currentYear })}</div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 flex-wrap">
+            {hasPendingUpdate && (
+              <button
+                type="button"
+                data-testid="footer-sw-update-btn"
+                onClick={applyPendingUpdate}
+                className="px-2.5 py-1 rounded bg-primary/15 border border-primary/40 text-primary hover:bg-primary/25 transition-colors cursor-pointer font-semibold"
+              >
+                {t('pwa.updateBtn')}
+              </button>
+            )}
             <span className="text-primary font-medium">{t('footer.spatialCoord')}</span>
             <span>·</span>
             <span>{t('footer.updateFrequency')}</span>

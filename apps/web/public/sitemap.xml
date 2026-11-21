@@ -205,6 +205,20 @@
     <priority>0.8</priority>
   </url>
 
+  <!-- Privacy & Telemetry Policy -->
+  <url>
+    <loc>https://openbarrio.org/privacidad</loc>
+    <xhtml:link rel="alternate" hreflang="es" href="https://openbarrio.org/privacidad"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://openbarrio.org/privacy"/>
+    <xhtml:link rel="alternate" hreflang="ca" href="https://openbarrio.org/privacitat"/>
+    <xhtml:link rel="alternate" hreflang="gl" href="https://openbarrio.org/privacidade"/>
+    <xhtml:link rel="alternate" hreflang="eu" href="https://openbarrio.org/pribatutasuna"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://openbarrio.org/privacidad"/>
+    <lastmod>2026-11-19</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+
   <!-- Sample Key Municipalities -->
   <url>
     <loc>https://openbarrio.org/municipio/madrid</loc>

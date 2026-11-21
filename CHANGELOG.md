@@ -5,6 +5,36 @@ All notable changes to the **OpenBarrio** platform are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5.0] - 2026-11-19 ("Decisión in situ")
+
+### Added
+- **Block 1 — Privacy-First Analytics & Offline Visit Mode PWA (`@openbarrio/core`, `apps/api`, `apps/web`, `docs`)**:
+  - Defined TypeBox contracts for batched civic telemetry (`packages/core/src/types/analytics.ts`) and saved offline visit dossiers (`packages/core/src/types/visit-mode.ts`).
+  - Added `POST /api/v1/telemetry` (`apps/api/src/routes/telemetry.routes.ts`) and D1 migration `apps/api/migrations/0010_telemetry_aggregates.sql` with in-memory isolate batching, strict zero-PII / zero-cadastral-ref rejection, and `0 3 1 * *` monthly cron pruning enforcing 13-month retention.
+  - Added revocable GDPR opt-in consent banner and 5-language `/privacidad` view backed by `docs/privacy.md` and automated `privacy-doc-sync.test.ts`.
+  - Shipped PWA `manifest.webmanifest`, app icons, and minimal versioned Service Worker `apps/web/public/sw.js` (`ob-shell-v1.5.0`) with a controlled manual update toast (zero surprise page reloads), paired with IndexedDB saved visit dossiers (`max 10` LRU) supporting zero-network offline inspection on-site with certified PDF download cleanly disabled offline.
+- **Block 2 — Deterministic Visit Checklist & Decision Profiles (`@openbarrio/core`, `apps/web`, `docs`)**:
+  - Implemented pure zero-LLM `generateVisitChecklist()` (`packages/core/src/checklist/generate-visit-checklist.ts`) emitting 13 deterministic on-site verification rules (including `broadband_verify_portal`) plus mandatory `unverified_<layer>` checks for every stale, unavailable, or out-of-coverage source across all 15 `ALL_LAYER_KEYS`.
+  - Added 5-language Tab 5 Visit Checklist UI (`VisitChecklistPanel.tsx`) with interactive checkboxes, Markdown/TXT export, and A4 print stylesheet.
+  - Introduced BarrioScore **v2.1.0** deterministic Decision Profiles (`family`, `investor`, `senior`, `renter`) in `packages/core/src/scoring/profiles.ts` with clamped `[0.6–1.5]` multipliers, weight renormalization, URL `?profile=` synchronization, active profile chip, dossier section reordering, and public methodology docs `docs/methodology/profiles.md` and `docs/methodology/visit-checklist.md` rendered in `/metodologia`.
+- **Block 3 — GTFS/NAP Transit Isochrones & SETELECO/CNMC Broadband Coverage (`packages/etl`, `@openbarrio/core`, `apps/api`, `apps/web`, `docs`)**:
+  - Documented NAP API access and per-feed licensing in `docs/research/gtfs-nap-licensing.md` and implemented DuckDB Spatial GTFS ingestion (`packages/etl/src/process_gtfs_transit.py`) with D1 migration `apps/api/migrations/0011_transit_stops.sql` and CI-only `NAP_API_KEY` support.
+  - Added `transit` contracts/parser (`packages/core/src/types/transit.ts`), `D1TransitProvider` / `MockTransitProvider`, and an accessible Walk vs. GTFS Transit tab in `PedestrianIsochronesCard.tsx` (following WAI-ARIA `tablist` pattern) declaring parametric walk legs (`4.5 km/h`, `1.25x` tortuosity), operator headways, hub travel times, and real `coveragePct` (`out_of_coverage` when partial or absent, zero BarrioScore weight).
+  - Documented SETELECO/CNMC datasets and granularity limits in `docs/research/broadband-coverage.md`, implemented `packages/etl/src/process_broadband_coverage.py` and D1 migration `apps/api/migrations/0012_broadband_coverage.sql`, and added `BroadbandCoverage` contracts (`packages/core/src/types/broadband.ts`) plus `D1BroadbandProvider` / `MockBroadbandProvider`.
+  - Introduced a broadband-only 6-year staleness window (`BROADBAND_STALE_MAX_DAYS = 2190`) so discontinued historical SETELECO ESP datasets (2013–2020) surface transparently as `stale` while all other 14 layers strictly retain `STALE_MAX_DAYS = 365`.
+  - Added `BroadbandConnectivityCard.tsx` with explicit granularity badges and disclaimers, deterministic `broadband_verify_portal` checklist rule, and `/estado-fuentes` source transparency notes across all 5 languages (`es`, `en`, `ca`, `gl`, `eu`).
+
+### Changed
+- **Monorepo Release Elevation**: Elevated all workspace manifests, OpenAPI metadata, UI version labels, PWA Service Worker `APP_VERSION`, Chrome Extension MV3 `manifest.json`, `BUNDLED_PORTAL_SELECTORS`, and store bundle `apps/extension/openbarrio-extension-v1.5.0.zip` (`76.50 KB`) to `1.5.0`. Verification suite passes with **733/733 tests** across **99 test files** and **0 ESLint warnings** inside Docker Desktop.
+
+### Fixed
+- Fixed clock determinism in `resolveWithStaleWhileRevalidate()` (`apps/api/src/resilience/stale-while-revalidate.ts`) to use `snapshot.ageDays` from `SourceSnapshotStore`'s injected clock when `options.now` is omitted rather than wall-clock `new Date()`.
+- Fixed `<LayerStatusBadge>` prop wiring in `VisitChecklistPanel.tsx` (`info={layerInfo ?? ...}` instead of invalid `status`/`staleDays` props) and aligned strict TypeScript test fixtures across `apps/web/tests/`.
+- Fixed Service Worker static cache response-type check (`apps/web/public/sw.js`) and redundant consent store initializer (`apps/web/src/store/`).
+
+### Security
+- Enforced strict zero-PII and zero-cadastral-reference validation in `POST /api/v1/telemetry`, revocable GDPR opt-in storage, and zero third-party cookies across telemetry and offline PWA visit storage.
+
 ## [1.4.0] - 2026-11-19 ("Confianza")
 
 ### Added

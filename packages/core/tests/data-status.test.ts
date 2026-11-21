@@ -1,6 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import { Value } from '@sinclair/typebox/value';
 import {
+  ALL_LAYER_KEYS,
+  BROADBAND_STALE_MAX_DAYS,
   STALE_FRESH_DAYS,
   STALE_AMBER_DAYS,
   STALE_MAX_DAYS,
@@ -8,6 +10,8 @@ import {
   LayerStatusInfoSchema,
   SourcesStatusResponseSchema,
   computeStaleAgeDays,
+  getStaleMaxDaysForLayer,
+  isLayerStaleExpired,
   isStaleAmber,
   isStaleExpired,
   isLayerUsable,
@@ -24,7 +28,24 @@ describe('Data Status & Typed LayerResult Contracts', () => {
     expect(STALE_FRESH_DAYS).toBe(30);
     expect(STALE_AMBER_DAYS).toBe(90);
     expect(STALE_MAX_DAYS).toBe(365);
+    expect(BROADBAND_STALE_MAX_DAYS).toBe(2190);
     expect(CRITICAL_LAYER_KEYS).toEqual(['sica', 'snczi']);
+    expect(ALL_LAYER_KEYS).toHaveLength(15);
+  });
+
+  it('restricts the 2190-day staleness exception strictly to broadband while keeping 365 days for all other 14 layers', () => {
+    for (const key of ALL_LAYER_KEYS) {
+      if (key === 'broadband') {
+        expect(getStaleMaxDaysForLayer(key)).toBe(2190);
+        expect(isLayerStaleExpired(2150, key)).toBe(false);
+        expect(isLayerStaleExpired(2190, key)).toBe(false);
+        expect(isLayerStaleExpired(2191, key)).toBe(true);
+      } else {
+        expect(getStaleMaxDaysForLayer(key)).toBe(365);
+        expect(isLayerStaleExpired(365, key)).toBe(false);
+        expect(isLayerStaleExpired(366, key)).toBe(true);
+      }
+    }
   });
 
   it('constructs valid LayerResult helpers and converts to LayerStatusInfo', () => {

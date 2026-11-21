@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react';
 import {
+  calculateProfileScore,
   isLayerUsable,
   STALE_AMBER_DAYS,
+  type ActiveProfileId,
   type LayerKey,
   type LayerStatusInfo,
   type PropertyAuditReport,
@@ -9,10 +11,12 @@ import {
 import { computeAuditSha256, buildCatastroVerificationUrl } from '../utils/cryptoSeal';
 import { Shield } from 'lucide-react';
 import { useTranslation } from '../i18n';
+import { useWorkspaceStore } from '../store/workspace.store';
 import { LayerStatusBadge } from './common/LayerStatusBadge';
 
 interface CertifiedPdfReportProps {
   report: PropertyAuditReport;
+  activeProfile?: ActiveProfileId;
 }
 
 const DEFAULT_WEIGHTS = {
@@ -38,8 +42,10 @@ function formatPdfDate(iso?: string, locale = 'es'): string {
   }
 }
 
-export function CertifiedPdfReport({ report }: CertifiedPdfReportProps) {
+export function CertifiedPdfReport({ report, activeProfile: propProfile }: CertifiedPdfReportProps) {
   const { language, t } = useTranslation();
+  const storeProfile = useWorkspaceStore((s) => s.activeProfile);
+  const activeProfile = propProfile ?? storeProfile ?? 'none';
   const [shaSeal, setShaSeal] = useState<string>('Calculando sello criptográfico...');
   const catastroUrl = buildCatastroVerificationUrl(
     report.property.cadastralReference,
@@ -71,6 +77,14 @@ export function CertifiedPdfReport({ report }: CertifiedPdfReportProps) {
   const isUncertain = score.trafficLight === 'UNCERTAIN';
   const sicaStatus = layers?.sica?.status;
   const sncziStatus = layers?.snczi?.status;
+  const profileScore =
+    activeProfile !== 'none'
+      ? calculateProfileScore(
+          score,
+          report.typology ?? property.typology ?? 'RESIDENTIAL',
+          activeProfile
+        )
+      : null;
   const criticalNotEvaluated =
     (score.coverage?.missingCriticalLayers?.length ?? 0) > 0 ||
     !environment.noise ||
@@ -151,7 +165,19 @@ export function CertifiedPdfReport({ report }: CertifiedPdfReportProps) {
             </span>
           </div>
           <span className="text-[10px] font-mono text-slate-600">
-            BarrioScore v{score.methodologyVersion || '2.0.0'}
+            BarrioScore v{score.methodologyVersion || '2.1.0'}
+          </span>
+          <span
+            data-testid="pdf-active-profile-chip"
+            className="px-2 py-0.5 rounded bg-slate-200 text-slate-800 text-[10px] font-mono font-semibold"
+          >
+            {t('profiles.chipLabel', {
+              profile:
+                activeProfile === 'none'
+                  ? t('profiles.none')
+                  : t(`profiles.options.${activeProfile}.label`),
+            })}
+            {profileScore ? ` · ${profileScore.overallScore}/100` : ''}
           </span>
         </div>
         <div className="font-mono text-[9px] text-slate-600 break-all bg-white p-1.5 border border-slate-200 rounded select-all">

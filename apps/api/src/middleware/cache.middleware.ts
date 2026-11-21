@@ -38,12 +38,13 @@ export function edgeCacheMiddleware(options: EdgeCacheOptions = {}): MiddlewareH
     }
 
     const path = c.req.path;
-    // Bypass health, docs, and live status/config endpoints so telemetry is never cached for 90 days
+    // Bypass health, docs, and live status/config/telemetry endpoints so telemetry is never cached for 90 days
     if (
       path === '/health' ||
       path.startsWith('/docs') ||
       path.startsWith('/api/v1/status') ||
-      path.startsWith('/api/v1/extension/')
+      path.startsWith('/api/v1/extension/') ||
+      path.startsWith('/api/v1/telemetry')
     ) {
       return next();
     }

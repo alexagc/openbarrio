@@ -1,6 +1,6 @@
 # BarrioScore Public Methodology Specification
 
-- **Methodology Version:** `2.0.0`
+- **Methodology Version:** `2.1.0`
 - **Source of Truth:** `packages/core/src/scoring/weights.ts`, `packages/core/src/scoring/barrio-score.ts`, `packages/core/src/scoring/traffic-light.ts`, and `packages/core/src/types/data-status.ts`
 - **Published Public Page:** `https://openbarrio.org/metodologia` (`es`, `en`, `ca`, `gl`, `eu`)
 
@@ -77,8 +77,10 @@ Effective weights per cadastral property typology (`SCORING_WEIGHTS_BY_TYPOLOGY`
 ### Layer States
 - `ok`: Live or fresh cached verification within **30** days (`STALE_FRESH_DAYS = 30`).
 - `stale`: Last verified snapshot served while upstream is degraded, aged up to **365** days (`STALE_MAX_DAYS = 365`). UI displays an amber age warning from **90** days onward (`STALE_AMBER_DAYS = 90`).
+  - **Broadband coverage exception (SETELECO / CNMC):** Because open SETELECO Singular Population Entity (ESP) datasets ceased open publication after 2020, the `broadband` layer applies a dedicated 6-year maximum staleness window (`BROADBAND_STALE_MAX_DAYS = 2190`). Historical ESP records (`population_entity`) are always served transparently as `stale` (never `ok`), while all other 14 layers retain `STALE_MAX_DAYS = 365`.
 - `out_of_coverage`: Official registry/map does not cover the parcel (never treated as safe or zero risk; zero pillar credit).
-- `unavailable`: Upstream timeout/error/circuit-open or snapshot older than **365** days (never receives favorable points).
+- `unavailable`: Upstream timeout/error/circuit-open or snapshot older than `STALE_MAX_DAYS` (or `BROADBAND_STALE_MAX_DAYS` for broadband) — never receives favorable points.
+- **Informative-only v1.5.0 layers (`transit`, `broadband`):** GTFS/NAP transit accessibility and SETELECO/CNMC broadband coverage surface transparently alongside declared coverage/granularity and carry **zero** weight in BarrioScore calculation.
 
 ### Traffic Light Rules
 - **`GREEN`**: `overallScore >= 70`, `pillarsWithData >= 3`, AND both critical layers (`sica`, `snczi`) are usable (`ok` or `stale`).
@@ -99,5 +101,6 @@ Verified continuously in `packages/core/tests/barrio-score.golden.test.ts` and `
 
 ## 7. Methodology Changelog
 
+- **`2.1.0`** (`2026-11-20`): Added deterministic decision-profile weight multipliers (family, investor, senior, renter) with [0.6-1.5] clamp and renormalization while preserving immutable base BarrioScore and UNCERTAIN/critical-layer caps.
 - **`2.0.0`** (`2026-11-19`): Eliminated silent favorable defaults on unavailable/out-of-coverage layers; added proportional weight renormalization across verified pillars, UNCERTAIN (<3/5 pillars) traffic-light state, and SICA/SNCZI critical-layer green ceiling.
 - **`1.0.0`** (`2026-10-01`): Initial 5-pillar weighted BarrioScore across Catastro OVC, INE ADRH, MITECO SICA/SNCZI, MIVAU SERPAVI/SIU, and CNIG 15-minute civic connectivity.

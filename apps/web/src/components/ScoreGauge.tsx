@@ -5,7 +5,9 @@ import {
   LayerKey,
   LayerStatusInfo,
   PropertyTypology,
+  calculateProfileScore,
   isLayerUsable,
+  type ActiveProfileId,
 } from '@openbarrio/core';
 import { ShieldCheck, AlertTriangle, ShieldAlert, Compass, HelpCircle } from 'lucide-react';
 import { RadarChart } from './RadarChart';
@@ -17,6 +19,7 @@ interface ScoreGaugeProps {
   percentile?: number;
   typology?: PropertyTypology;
   layers?: Partial<Record<LayerKey, LayerStatusInfo>>;
+  activeProfile?: ActiveProfileId;
 }
 
 export function ScoreGauge({
@@ -25,6 +28,7 @@ export function ScoreGauge({
   percentile,
   typology,
   layers,
+  activeProfile = 'none',
 }: ScoreGaugeProps) {
   const { t } = useTranslation();
   const { overallScore, trafficLight, coverage, pillarAvailability } = score;
@@ -38,6 +42,10 @@ export function ScoreGauge({
     .filter((info): info is LayerStatusInfo => Boolean(info && !isLayerUsable(info.status)));
 
   const isUncertain = trafficLight === 'UNCERTAIN';
+  const profileResult =
+    activeProfile !== 'none'
+      ? calculateProfileScore(score, typology ?? 'RESIDENTIAL', activeProfile)
+      : null;
 
   let badgeText = isRustic
     ? 'Notable · Finca Rústica en Entorno Estable'
@@ -179,12 +187,38 @@ export function ScoreGauge({
               />
             </svg>
             <div className="absolute flex flex-col items-center justify-center">
-              <span className="font-headline-lg text-2xl font-bold text-on-surface font-mono leading-none">
+              <span
+                data-testid="base-barrio-score-value"
+                className="font-headline-lg text-2xl font-bold text-on-surface font-mono leading-none"
+              >
                 {overallScore}
               </span>
               <span className="text-[9px] font-mono text-outline uppercase">/100</span>
             </div>
           </div>
+          {profileResult && (
+            <div
+              data-testid="profile-score-card"
+              className="mt-2.5 w-full px-2.5 py-2 rounded-lg bg-primary/10 border border-primary/30 text-center space-y-0.5"
+            >
+              <span className="block text-[10px] font-mono text-primary font-semibold">
+                {t('profiles.scoreForProfile', {
+                  profile: t(`profiles.options.${activeProfile}.label`),
+                })}
+              </span>
+              <div className="flex items-center justify-center gap-1.5 font-mono">
+                <span
+                  data-testid="profile-score-value"
+                  className="text-base font-bold text-on-surface"
+                >
+                  {profileResult.overallScore}/100
+                </span>
+                <span className="text-[10px] text-on-surface-variant">
+                  ({profileResult.deltaFromBase >= 0 ? `+${profileResult.deltaFromBase}` : profileResult.deltaFromBase})
+                </span>
+              </div>
+            </div>
+          )}
           {typeof percentile === 'number' ? (
             <span className="text-[10px] font-mono text-center text-outline mt-1.5 font-medium">
               Percentil {percentile}º {cityOrProvince}

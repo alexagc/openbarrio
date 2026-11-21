@@ -113,7 +113,7 @@ describe('Barrio Scoring Engine v0.3.0', () => {
     expect(score.acousticComfortScore).toBeGreaterThanOrEqual(85);
     expect(score.climateSafetyScore).toBe(100);
     expect(score.trafficLight).toBe('GREEN');
-    expect(score.methodologyVersion).toBe('2.0.0');
+    expect(score.methodologyVersion).toBe('2.1.0');
 
     // Verify subscores existence in v0.3.0
     expect(score.subscores).toBeDefined();

@@ -38,7 +38,7 @@ OpenBarrio covers the entire territory of Spain, including autonomous communitie
 
 ## 3. Programmatic SEO & Routing Protocol
 
-* **Bidirectional Localized Paths:** Defined in `apps/web/src/utils/seo-routes.ts`. Every tool and programmatic directory page must provide SEO-friendly slugs per language:
+* **Bidirectional Localized Paths:** Defined in `apps/web/src/utils/seo-routes.ts`. Every tool, trust transparency page (`/estado-fuentes`, `/metodologia`, `/privacidad`), and programmatic directory page must provide SEO-friendly slugs per language:
   - ES: `/herramientas/comprobar-metros`
   - EN: `/en/tools/surface-checker`
   - CA: `/ca/eines/comprovar-metres`

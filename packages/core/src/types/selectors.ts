@@ -42,7 +42,7 @@ export type RemoteSelectorsBundle = Static<typeof RemoteSelectorsBundleSchema>;
  * Used on offline/failure/invalid/downgrade remote config fetches.
  */
 export const BUNDLED_PORTAL_SELECTORS: RemoteSelectorsBundle = {
-  version: '1.4.0',
+  version: '1.5.0',
   updatedAt: '2026-11-19T00:00:00.000Z',
   portals: {
     idealista: {

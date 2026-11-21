@@ -235,7 +235,7 @@ export function SearchBar({
       <div className="w-full relative" ref={dropdownRef}>
         <form
           onSubmit={handleSubmit}
-          className="flex items-center bg-surface-container-low border border-outline-variant rounded px-2.5 py-1.5 focus-within:border-primary focus-within:ring-1 focus-within:ring-primary transition-all w-full"
+          className="flex items-center bg-surface-container-low border border-outline-variant rounded px-2.5 py-1.5 focus-within:border-primary focus-within:ring-1 focus-within:ring-primary transition-all w-full min-w-0 overflow-hidden"
         >
           {isLoading ? (
             <Loader2 className="w-4 h-4 text-primary animate-spin mr-2 shrink-0" />
@@ -243,7 +243,7 @@ export function SearchBar({
             <Search className="w-4 h-4 text-outline mr-2 shrink-0" />
           )}
 
-          <span className="bg-surface-variant text-tertiary font-mono text-[10px] uppercase px-1.5 py-0.5 rounded mr-2 tracking-wider shrink-0 font-semibold">
+          <span className="hidden 2xl:inline bg-surface-variant text-tertiary font-mono text-[10px] uppercase px-1.5 py-0.5 rounded mr-2 tracking-wider shrink-0 font-semibold">
             ES.CAT
           </span>
 
@@ -255,7 +255,7 @@ export function SearchBar({
               if (suggestions.length > 0) setShowDropdown(true);
             }}
             placeholder={t('searchBar.placeholder')}
-            className="bg-transparent border-0 p-0 text-on-surface font-mono text-[16px] md:text-xs w-full focus:outline-none focus:ring-0 truncate placeholder:text-outline"
+            className="bg-transparent border-0 p-0 text-on-surface font-mono text-[16px] md:text-xs flex-1 min-w-0 focus:outline-none focus:ring-0 truncate placeholder:text-outline"
           />
 
           {query && (
@@ -285,9 +285,9 @@ export function SearchBar({
             </button>
           )}
 
-          <div className="hidden sm:block h-3.5 w-px bg-outline-variant mx-1.5 shrink-0" />
+          <div className="hidden 2xl:block h-3.5 w-px bg-outline-variant mx-1.5 shrink-0" />
 
-          <div className="hidden sm:flex items-center gap-1.5 px-2 py-0.5 rounded bg-primary-container/20 border border-primary/30 shrink-0">
+          <div className="hidden 2xl:flex items-center gap-1.5 px-2 py-0.5 rounded bg-primary-container/20 border border-primary/30 shrink-0">
             <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
             <span className="text-primary text-[10px] font-mono font-semibold tracking-tight">
               {t('searchBar.validatedCatastro')}

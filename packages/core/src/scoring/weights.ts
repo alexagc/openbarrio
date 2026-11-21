@@ -1,7 +1,7 @@
 import type { PropertyTypology } from '../types/catastro.js';
 import type { PillarAvailability, PillarKey } from './traffic-light.js';
 
-export const METHODOLOGY_VERSION = '2.0.0';
+export const METHODOLOGY_VERSION = '2.1.0';
 
 export interface ScoringWeights {
   connectivity: number;
@@ -206,6 +206,12 @@ export interface MethodologyChangelogEntry {
 }
 
 export const METHODOLOGY_CHANGELOG: MethodologyChangelogEntry[] = [
+  {
+    version: '2.1.0',
+    date: '2026-11-20',
+    summary:
+      'Added deterministic decision-profile weight multipliers (family, investor, senior, renter) with [0.6-1.5] clamp and renormalization while preserving immutable base BarrioScore and UNCERTAIN/critical-layer caps.',
+  },
   {
     version: '2.0.0',
     date: '2026-11-19',

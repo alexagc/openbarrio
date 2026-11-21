@@ -180,6 +180,24 @@ export function runAllSplits() {
       altOutDir: 'packages/etl/dist/openbarrio-etl-dist/chunks_seismic',
       prefix: 'ign_seismic',
     },
+    {
+      candidates: [
+        'packages/etl/dist/transit_stops.sql',
+        'packages/etl/dist/openbarrio-etl-dist/transit_stops.sql',
+      ],
+      outDir: 'packages/etl/chunks/transit_stops',
+      altOutDir: 'packages/etl/dist/openbarrio-etl-dist/chunks_transit',
+      prefix: 'transit_stops',
+    },
+    {
+      candidates: [
+        'packages/etl/dist/broadband_coverage.sql',
+        'packages/etl/dist/openbarrio-etl-dist/broadband_coverage.sql',
+      ],
+      outDir: 'packages/etl/chunks/broadband_coverage',
+      altOutDir: 'packages/etl/dist/openbarrio-etl-dist/chunks_broadband',
+      prefix: 'broadband_coverage',
+    },
   ];
 
   for (const t of targets) {

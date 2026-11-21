@@ -97,6 +97,18 @@
   min-width: 44px;
 }
 
+/* Controlled Toast Top-Layer positioning & discrete transition */
+.ob-toast-popover {
+  transition: opacity 0.2s ease, transform 0.2s ease;
+  transition-behavior: allow-discrete;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ob-toast-popover {
+    transition: none;
+  }
+}
+
 /* Print Optimization for Due Diligence Dossier */
 @media print {
   @page {
