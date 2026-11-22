@@ -477,6 +477,7 @@ jobs:
     if: always() && (inputs.apply_only == true || inputs.force_sync == true || needs.preflight.outputs.any_etl_needed == 'true') && !contains(needs.*.result, 'failure') && !contains(needs.*.result, 'cancelled')
     env:
       HAS_CF_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN != '' }}
+      HAS_CF_ZONE: ${{ secrets.CLOUDFLARE_ZONE_ID != '' }}
       HAS_R2_S3_KEYS: ${{ secrets.R2_ACCESS_KEY_ID != '' && secrets.R2_SECRET_ACCESS_KEY != '' }}
     steps:
       - name: Checkout repository
@@ -717,7 +718,7 @@ jobs:
           command: r2 object put openbarrio-r2/noise.pmtiles --file=${{ github.workspace }}/packages/etl/dist/noise.pmtiles
 
       - name: Purge Cloudflare Edge Cache After D1/R2 Sync (Optional)
-        if: inputs.dry_run != true && env.HAS_CF_TOKEN == 'true' && secrets.CLOUDFLARE_ZONE_ID != '' && (steps.sync-check.outputs.sync_ine == 'true' || steps.sync-check.outputs.sync_civic_cee == 'true' || steps.sync-check.outputs.sync_transit == 'true' || steps.sync-check.outputs.sync_broadband == 'true' || steps.sync-check.outputs.sync_r2 == 'true')
+        if: inputs.dry_run != true && env.HAS_CF_TOKEN == 'true' && env.HAS_CF_ZONE == 'true' && (steps.sync-check.outputs.sync_ine == 'true' || steps.sync-check.outputs.sync_civic_cee == 'true' || steps.sync-check.outputs.sync_transit == 'true' || steps.sync-check.outputs.sync_broadband == 'true' || steps.sync-check.outputs.sync_r2 == 'true')
         continue-on-error: true
         env:
           CF_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
