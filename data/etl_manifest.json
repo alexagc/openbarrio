@@ -1,6 +1,6 @@
 {
   "$schema": "https://openbarrio.org/schemas/etl-manifest-v1.json",
-  "generated_at": "2026-11-03T15:15:43.593Z",
+  "generated_at": "2026-11-21T20:44:00.000Z",
   "datasets": {
     "mivau_serpavi": {
       "name": "MIVAU SERPAVI Statutory Rental Benchmarks",
@@ -19,7 +19,7 @@
       "etag": "\"193400d-3ea5a83-6142bd2db4a80\"",
       "last_modified": "Thu, 21 Mar 2024 13:38:34 GMT",
       "sha256": "7b2c8e38b286eb21bce8e23076d8a7e72118825aadc66ccf03e69dd843c98086",
-      "last_processed_at": "2026-11-03T11:16:04.396Z",
+      "last_processed_at": "2026-11-21T20:44:00.000Z",
       "status": "UP_TO_DATE"
     },
     "cte_radon": {
@@ -43,7 +43,7 @@
       "etag": "\"snczi-cycle2-2026\"",
       "last_modified": "Sun, 01 Nov 2026 00:00:00 GMT",
       "sha256": "b29ab946a8c056b0106520f4a46e3eb12d07b557812dfdcb4075f5b0dd623472",
-      "last_processed_at": "2026-11-03T11:16:03.145Z",
+      "last_processed_at": "2026-11-21T20:44:00.000Z",
       "status": "UP_TO_DATE",
       "fingerprint": "b29ab946a8c056b0106520f4a46e3eb12d07b557812dfdcb4075f5b0dd623472"
     },
@@ -54,7 +54,7 @@
       "etag": "\"sica-phase4-2026\"",
       "last_modified": "Sun, 01 Nov 2026 00:00:00 GMT",
       "sha256": "66f7489ee93da698523c69b2f0b403b251a569177274ffc8610065bba1a68a9f",
-      "last_processed_at": "2026-11-03T00:00:00Z",
+      "last_processed_at": "2026-11-21T20:44:00.000Z",
       "status": "UP_TO_DATE",
       "fingerprint": "66f7489ee93da698523c69b2f0b403b251a569177274ffc8610065bba1a68a9f"
     },
@@ -62,15 +62,31 @@
       "name": "National Civic Public Facilities (Healthcare, Education, Transit, Parks)",
       "version": "2026.1",
       "sha256": "47d95fb54522a3dfe427ac8bea3722a9d379dbe3723e876c5d0c1cd1e98a1373",
-      "last_processed_at": "2026-11-03T15:15:43.502Z",
+      "last_processed_at": "2026-11-21T20:44:00.000Z",
       "status": "UP_TO_DATE"
     },
     "energy_certificates": {
       "name": "Multi-Regional Energy Performance Certificates (CEE)",
       "version": "2026.1",
       "sha256": "8a35bae3e8d8a4e84679fbbc807536f7cc158130cffc6ea6a52cf4ab71c8a978",
-      "last_processed_at": "2026-11-03T15:15:43.592Z",
+      "last_processed_at": "2026-11-21T20:44:00.000Z",
       "status": "UP_TO_DATE"
+    },
+    "broadband_coverage": {
+      "name": "SETELECO / CNMC Broadband & 5G Coverage (All 8,132 Municipalities)",
+      "version": "2025-06-30",
+      "upstream_url": "https://digital.gob.es/content/dam/portal-mtdfp/avance-digital/telecomunicacion-e-infraestructuras-digitales/areas_interes/banda-ancha/cobertura/documents/Cobertura_BA_Espa%C3%B1a_2021-2025_MUN_PROV_CCAA_Nacional_datosgob_DEF.xlsx",
+      "sha256": "",
+      "last_processed_at": "2026-11-21T20:44:00.000Z",
+      "status": "UP_TO_DATE"
+    },
+    "transit_stops": {
+      "name": "GTFS / MITMS NAP Public Transit Stops & Coverage",
+      "version": "pending",
+      "upstream_url": "https://nap.transportes.gob.es/api/Fichero/GetList",
+      "sha256": "",
+      "last_processed_at": null,
+      "status": "PENDING"
     }
   }
 }
