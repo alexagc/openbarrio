@@ -435,7 +435,6 @@ jobs:
           mkdir -p packages/etl/dist
           python3 packages/etl/src/process_gtfs_transit.py \
             --download-nap \
-            --seed-mvp \
             --output-sql packages/etl/dist/transit_stops.sql
 
       - name: Run SETELECO / CNMC Broadband Coverage Processing (Official National XLSX -> D1 SQL)
@@ -737,9 +736,10 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
           if ! git diff --quiet data/etl_manifest.json; then
             echo "Changes detected in data/etl_manifest.json. Committing and pushing to main..."
+            git checkout -- packages/etl/chunks/ || true
             git add data/etl_manifest.json
             git commit -m "chore(etl): update etl_manifest.json [skip ci]"
-            git pull --rebase origin main
+            git pull --rebase --autostash origin main
             git push origin main
           else
             echo "No changes in data/etl_manifest.json. Repository is up-to-date."

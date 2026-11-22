@@ -68,9 +68,20 @@ async function probeNapListFingerprint(apiKey, timeoutMs = 15_000) {
     });
     if (!res.ok) return null;
     const payload = await res.json();
-    const items = Array.isArray(payload) ? payload : payload?.ficheros || payload?.data || [];
+    const items = Array.isArray(payload)
+      ? payload
+      : payload?.conjuntosDatoDto || payload?.ficheros || payload?.data || [];
     const summary = items
-      .map((item) => `${item.ficheroId ?? item.id ?? ''}:${item.fechaActualizacion ?? item.lastUpdate ?? ''}`)
+      .map((item) => {
+        if (Array.isArray(item.ficherosDto)) {
+          const files = item.ficherosDto
+            .map((f) => `${f.ficheroId ?? ''}:${f.fechaActualizacion ?? ''}`)
+            .sort()
+            .join(',');
+          return `${item.conjuntoDatoId ?? ''}[${files}]`;
+        }
+        return `${item.ficheroId ?? item.id ?? ''}:${item.fechaActualizacion ?? item.lastUpdate ?? ''}`;
+      })
       .sort()
       .join('|');
     return crypto.createHash('sha256').update(summary).digest('hex');

@@ -78,6 +78,24 @@ APPROVED_FEEDS = {
     },
 }
 
+# Official MITMS NAP conjuntoDatoId -> approved OpenBarrio feed_id mapping
+NAP_CONJUNTO_TO_FEED = {
+    203: "crtm-madrid",        # CRTM Madrid (Metro)
+    204: "crtm-madrid",        # CRTM Madrid (Metro Ligero)
+    205: "crtm-madrid",        # CRTM Madrid (EMT)
+    211: "crtm-madrid",        # CRTM Madrid (Cercanías)
+    682: "tmb-atm-barcelona",  # TMB Barcelona
+    54: "tmb-atm-barcelona",   # GTFS-ATM Barcelona
+    1145: "emt-atmv-valencia", # EMT València
+    1063: "emt-atmv-valencia", # Metrovalencia
+    32: "tussam-ctan-sevilla", # TUSSAM Sevilla
+    801: "tussam-ctan-sevilla",# CTAN Sevilla
+    142: "renfe-cercanias",    # Renfe Cercanías
+    21: "zaragoza-tranvia",    # Zaragoza Tranvía
+    104: "zaragoza-tranvia",   # Zaragoza Autobús Urbano
+    602: "emt-malaga",         # EMT Málaga
+}
+
 GTFS_ROUTE_TYPE_MAP = {
     0: "tram",
     1: "metro",
@@ -666,11 +684,66 @@ def probe_nap_catalog(api_key: str) -> list[dict]:
         "https://nap.transportes.gob.es/api/Fichero/GetList",
         headers={"ApiKey": api_key, "Accept": "application/json"},
     )
-    with urllib.request.urlopen(req, timeout=15) as resp:
+    with urllib.request.urlopen(req, timeout=30) as resp:
         payload = json.loads(resp.read().decode("utf-8"))
     if isinstance(payload, list):
         return payload
-    return payload.get("ficheros", []) if isinstance(payload, dict) else []
+    if isinstance(payload, dict):
+        return payload.get("conjuntosDatoDto") or payload.get("ficheros") or []
+    return []
+
+
+def download_and_ingest_nap_feeds(con, catalog: list[dict], api_key: str) -> list[tuple]:
+    """Downloads approved GTFS-ZIP archives from MITMS NAP and ingests stops via DuckDB."""
+    stops_out: list[tuple] = []
+    seen_ids: set[str] = set()
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        for entry in catalog:
+            conjunto_id = entry.get("conjuntoDatoId")
+            feed_id = NAP_CONJUNTO_TO_FEED.get(conjunto_id)
+            if not feed_id:
+                continue
+
+            gtfs_files = [
+                f
+                for f in (entry.get("ficherosDto") or [])
+                if "GTFS" in str(f.get("tipoFicheroNombre") or "").upper() and f.get("ficheroId")
+            ]
+            if not gtfs_files:
+                continue
+
+            # Pick most recently updated GTFS-ZIP file for this dataset
+            gtfs_files.sort(key=lambda f: str(f.get("fechaActualizacion") or ""), reverse=True)
+            chosen = gtfs_files[0]
+            fichero_id = chosen["ficheroId"]
+            source_date = str(chosen.get("fechaActualizacion") or "2026-11-01")[:10]
+            zip_path = os.path.join(tmpdir, f"{feed_id}_{fichero_id}.zip")
+            url = f"https://nap.transportes.gob.es/api/Fichero/download/{fichero_id}"
+
+            try:
+                req = urllib.request.Request(url, headers={"ApiKey": api_key})
+                with urllib.request.urlopen(req, timeout=90) as resp, open(zip_path, "wb") as out_fh:
+                    while True:
+                        chunk = resp.read(65536)
+                        if not chunk:
+                            break
+                        out_fh.write(chunk)
+                parsed = process_gtfs_archive(con, zip_path, feed_id, source_date)
+                added = 0
+                for row in parsed:
+                    if row[0] not in seen_ids:
+                        seen_ids.add(row[0])
+                        stops_out.append(row)
+                        added += 1
+                print(
+                    f"Ingested {added} GTFS stops from NAP conjunto={conjunto_id} "
+                    f"(fichero={fichero_id}, feed={feed_id}, date={source_date})."
+                )
+            except Exception as exc:
+                print(f"Warning: Failed to ingest NAP conjunto={conjunto_id} (fichero={fichero_id}): {exc}")
+
+    return stops_out
 
 
 def main():
@@ -688,13 +761,15 @@ def main():
     if args.download_nap:
         nap_key = os.environ.get("NAP_API_KEY", "").strip()
         if not nap_key:
-            print("Warning: NAP_API_KEY secret is not set; skipping live NAP API fetch and falling back to local GTFS/MVP seed.")
+            print("Warning: NAP_API_KEY secret is not set; skipping live NAP API fetch.")
         else:
             try:
                 catalog = probe_nap_catalog(nap_key)
                 print(f"Discovered {len(catalog)} entries in MITMS NAP catalog.")
+                nap_stops = download_and_ingest_nap_feeds(con, catalog, nap_key)
+                stops.extend(nap_stops)
             except Exception as exc:
-                print(f"Warning: Could not query MITMS NAP catalog ({exc}); continuing with local GTFS/MVP seed.")
+                print(f"Warning: Could not query MITMS NAP catalog ({exc}).")
 
     if args.gtfs_dir and os.path.isdir(args.gtfs_dir):
         for fname in sorted(os.listdir(args.gtfs_dir)):
