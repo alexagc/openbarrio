@@ -1,6 +1,6 @@
 {
   "$schema": "https://openbarrio.org/schemas/etl-manifest-v1.json",
-  "generated_at": "2026-11-21T20:44:00.000Z",
+  "generated_at": "2026-11-22T11:56:59.774Z",
   "datasets": {
     "mivau_serpavi": {
       "name": "MIVAU SERPAVI Statutory Rental Benchmarks",
@@ -68,25 +68,25 @@
     "energy_certificates": {
       "name": "Multi-Regional Energy Performance Certificates (CEE)",
       "version": "2026.1",
-      "sha256": "8a35bae3e8d8a4e84679fbbc807536f7cc158130cffc6ea6a52cf4ab71c8a978",
-      "last_processed_at": "2026-11-21T20:44:00.000Z",
+      "sha256": "d2e90d1b42d42275cdbd684208c6b0fb7e498ca547fa9ffc6ca2f2c47b74a0b6",
+      "last_processed_at": "2026-11-22T11:56:30.560Z",
       "status": "UP_TO_DATE"
     },
     "broadband_coverage": {
       "name": "SETELECO / CNMC Broadband & 5G Coverage (All 8,132 Municipalities)",
       "version": "2025-06-30",
       "upstream_url": "https://digital.gob.es/content/dam/portal-mtdfp/avance-digital/telecomunicacion-e-infraestructuras-digitales/areas_interes/banda-ancha/cobertura/documents/Cobertura_BA_Espa%C3%B1a_2021-2025_MUN_PROV_CCAA_Nacional_datosgob_DEF.xlsx",
-      "sha256": "",
-      "last_processed_at": "2026-11-21T20:44:00.000Z",
+      "sha256": "e179d588fd40d283dff99aa22a325f0883b959e2152cbf5d62bbe9d7d1806bcf",
+      "last_processed_at": "2026-11-22T11:56:30.601Z",
       "status": "UP_TO_DATE"
     },
     "transit_stops": {
       "name": "GTFS / MITMS NAP Public Transit Stops & Coverage",
       "version": "pending",
       "upstream_url": "https://nap.transportes.gob.es/api/Fichero/GetList",
-      "sha256": "",
-      "last_processed_at": null,
-      "status": "PENDING"
+      "sha256": "b146685b471b06ab339aab4c58930fae6b908fb9910f9a75c33353aa2d23b359",
+      "last_processed_at": "2026-11-22T11:56:59.772Z",
+      "status": "UP_TO_DATE"
     }
   }
 }

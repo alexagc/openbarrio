@@ -139,6 +139,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.MANIFEST_PUSH_TOKEN || secrets.GITHUB_TOKEN }}
 
       - name: Setup Node.js 22 LTS
         uses: actions/setup-node@v4
@@ -179,6 +181,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.MANIFEST_PUSH_TOKEN || secrets.GITHUB_TOKEN }}
 
       - name: Set up Python 3.11
         uses: actions/setup-python@v5
@@ -248,6 +252,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.MANIFEST_PUSH_TOKEN || secrets.GITHUB_TOKEN }}
 
       - name: Set up Python 3.11
         uses: actions/setup-python@v5
@@ -299,6 +305,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.MANIFEST_PUSH_TOKEN || secrets.GITHUB_TOKEN }}
 
       - name: Set up Python 3.11
         uses: actions/setup-python@v5
@@ -350,6 +358,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.MANIFEST_PUSH_TOKEN || secrets.GITHUB_TOKEN }}
 
       - name: Setup Node 22 LTS & pnpm
         uses: pnpm/action-setup@v4
@@ -413,6 +423,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.MANIFEST_PUSH_TOKEN || secrets.GITHUB_TOKEN }}
 
       - name: Set up Python 3.11
         uses: actions/setup-python@v5
@@ -469,6 +481,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.MANIFEST_PUSH_TOKEN || secrets.GITHUB_TOKEN }}
 
       - name: Setup Node.js & pnpm
         uses: pnpm/action-setup@v4
