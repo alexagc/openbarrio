@@ -118,4 +118,40 @@ describe('Transit Providers (D1TransitProvider & MockTransitProvider)', () => {
     expect(partialRes.coveragePct).toBe(50);
     expect(partialRes.data?.nearestStops).toHaveLength(1);
   });
+
+  it('falls back to stop municipality_code when Catastro municipalityCode (e.g. 28900) differs from INE (28079)', async () => {
+    const db = createMockTransitDb({
+      coverage: {
+        municipality_code: '28079',
+        area_name: 'Madrid',
+        coverage_pct: 100,
+        covered_operators_json: JSON.stringify(['Metro de Madrid', 'EMT Madrid']),
+        missing_operators_json: '[]',
+        source_date: '2026-11-22',
+      },
+      stops: [
+        {
+          stop_id: 'crtm-madrid:GRAN_VIA',
+          feed_id: 'crtm-madrid',
+          operator_name: 'CRTM Madrid (Metro)',
+          municipality_code: '28079',
+          stop_name: 'Gran Vía',
+          mode: 'metro',
+          latitude: 40.4201,
+          longitude: -3.7022,
+          routes_count: 2,
+          peak_headway_min: 3.5,
+          offpeak_headway_min: 5.5,
+          hub_travel_times_json: '[]',
+          source_date: '2026-11-22',
+          license_id: 'MITMS-NAP-RISP',
+        },
+      ],
+    });
+    const provider = new D1TransitProvider({ db });
+    const res = await provider.getTransitAccessibility(40.4202, -3.7023, '28900');
+    expect(res.status).toBe('ok');
+    expect(res.data?.coveragePct).toBe(100);
+    expect(res.data?.nearestStops).toHaveLength(1);
+  });
 });

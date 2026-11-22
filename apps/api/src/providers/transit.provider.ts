@@ -133,10 +133,16 @@ export class D1TransitProvider implements ITransitProvider {
         .all<RawTransitStopRow>();
 
       const stopRows = stopsRes?.results ?? [];
-      const effectiveMuni = municipalityCode?.trim() || stopRows[0]?.municipality_code;
+      const candidateMuniCodes = Array.from(
+        new Set(
+          [municipalityCode?.trim(), stopRows[0]?.municipality_code].filter(
+            (v): v is string => Boolean(v)
+          )
+        )
+      );
 
       let coverageRow: RawTransitCoverageRow | null = null;
-      if (effectiveMuni) {
+      for (const muni of candidateMuniCodes) {
         coverageRow = await this.db
           .prepare(
             `SELECT municipality_code, area_name, coverage_pct,
@@ -144,8 +150,9 @@ export class D1TransitProvider implements ITransitProvider {
              FROM transit_feed_coverage
              WHERE municipality_code = ?`
           )
-          .bind(effectiveMuni)
+          .bind(muni)
           .first<RawTransitCoverageRow>();
+        if (coverageRow) break;
       }
 
       if (!coverageRow && stopRows.length === 0) {
