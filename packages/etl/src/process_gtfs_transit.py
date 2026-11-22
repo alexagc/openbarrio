@@ -78,23 +78,23 @@ APPROVED_FEEDS = {
     },
 }
 
-# Official MITMS NAP conjuntoDatoId -> approved OpenBarrio feed_id mapping
-NAP_CONJUNTO_TO_FEED = {
-    203: "crtm-madrid",        # CRTM Madrid (Metro)
-    204: "crtm-madrid",        # CRTM Madrid (Metro Ligero)
-    205: "crtm-madrid",        # CRTM Madrid (EMT)
-    211: "crtm-madrid",        # CRTM Madrid (Cercanías)
-    682: "tmb-atm-barcelona",  # TMB Barcelona
-    54: "tmb-atm-barcelona",   # GTFS-ATM Barcelona
-    1145: "emt-atmv-valencia", # EMT València
-    1063: "emt-atmv-valencia", # Metrovalencia
-    32: "tussam-ctan-sevilla", # TUSSAM Sevilla
-    801: "tussam-ctan-sevilla",# CTAN Sevilla
-    142: "renfe-cercanias",    # Renfe Cercanías
-    21: "zaragoza-tranvia",    # Zaragoza Tranvía
-    104: "zaragoza-tranvia",   # Zaragoza Autobús Urbano
-    602: "emt-malaga",         # EMT Málaga
-}
+# Official MITMS NAP approved feeds: (conjuntoDatoId, default_fichero_id, feed_id, label)
+APPROVED_NAP_FEEDS = [
+    (203, 986, "crtm-madrid", "CRTM Madrid (Metro)"),
+    (204, 987, "crtm-madrid", "CRTM Madrid (Metro Ligero)"),
+    (211, 990, "crtm-madrid", "CRTM Madrid (Cercanías)"),
+    (205, 988, "crtm-madrid", "CRTM Madrid (EMT)"),
+    (682, 1468, "tmb-atm-barcelona", "TMB Barcelona"),
+    (54, 1020, "tmb-atm-barcelona", "GTFS-ATM Barcelona"),
+    (1145, 1627, "emt-atmv-valencia", "EMT València"),
+    (1063, 1474, "emt-atmv-valencia", "Metrovalencia"),
+    (32, 1077, "tussam-ctan-sevilla", "TUSSAM Sevilla"),
+    (801, 927, "tussam-ctan-sevilla", "CTAN Sevilla"),
+    (142, 959, "renfe-cercanias", "Renfe Cercanías"),
+    (21, 723, "zaragoza-tranvia", "Zaragoza Tranvía"),
+    (104, 725, "zaragoza-tranvia", "Zaragoza Autobús Urbano"),
+    (602, 856, "emt-malaga", "EMT Málaga"),
+]
 
 GTFS_ROUTE_TYPE_MAP = {
     0: "tram",
@@ -697,33 +697,32 @@ def download_and_ingest_nap_feeds(con, catalog: list[dict], api_key: str) -> lis
     """Downloads approved GTFS-ZIP archives from MITMS NAP and ingests stops via DuckDB."""
     stops_out: list[tuple] = []
     seen_ids: set[str] = set()
+    by_conjunto = {entry.get("conjuntoDatoId"): entry for entry in catalog if entry.get("conjuntoDatoId")}
 
     with tempfile.TemporaryDirectory() as tmpdir:
-        for entry in catalog:
-            conjunto_id = entry.get("conjuntoDatoId")
-            feed_id = NAP_CONJUNTO_TO_FEED.get(conjunto_id)
-            if not feed_id:
-                continue
+        for conjunto_id, default_fichero_id, feed_id, label in APPROVED_NAP_FEEDS:
+            entry = by_conjunto.get(conjunto_id)
+            fichero_id = default_fichero_id
+            source_date = "2026-11-22"
 
-            gtfs_files = [
-                f
-                for f in (entry.get("ficherosDto") or [])
-                if "GTFS" in str(f.get("tipoFicheroNombre") or "").upper() and f.get("ficheroId")
-            ]
-            if not gtfs_files:
-                continue
+            if entry:
+                gtfs_files = [
+                    f
+                    for f in (entry.get("ficherosDto") or [])
+                    if "GTFS" in str(f.get("tipoFicheroNombre") or "").upper() and f.get("ficheroId")
+                ]
+                if gtfs_files:
+                    gtfs_files.sort(key=lambda f: str(f.get("fechaActualizacion") or ""), reverse=True)
+                    chosen = gtfs_files[0]
+                    fichero_id = chosen["ficheroId"]
+                    source_date = str(chosen.get("fechaActualizacion") or source_date)[:10]
 
-            # Pick most recently updated GTFS-ZIP file for this dataset
-            gtfs_files.sort(key=lambda f: str(f.get("fechaActualizacion") or ""), reverse=True)
-            chosen = gtfs_files[0]
-            fichero_id = chosen["ficheroId"]
-            source_date = str(chosen.get("fechaActualizacion") or "2026-11-01")[:10]
             zip_path = os.path.join(tmpdir, f"{feed_id}_{fichero_id}.zip")
             url = f"https://nap.transportes.gob.es/api/Fichero/download/{fichero_id}"
 
             try:
                 req = urllib.request.Request(url, headers={"ApiKey": api_key})
-                with urllib.request.urlopen(req, timeout=90) as resp, open(zip_path, "wb") as out_fh:
+                with urllib.request.urlopen(req, timeout=120) as resp, open(zip_path, "wb") as out_fh:
                     while True:
                         chunk = resp.read(65536)
                         if not chunk:
@@ -737,11 +736,11 @@ def download_and_ingest_nap_feeds(con, catalog: list[dict], api_key: str) -> lis
                         stops_out.append(row)
                         added += 1
                 print(
-                    f"Ingested {added} GTFS stops from NAP conjunto={conjunto_id} "
-                    f"(fichero={fichero_id}, feed={feed_id}, date={source_date})."
+                    f"Ingested {added} GTFS stops from NAP '{label}' "
+                    f"(conjunto={conjunto_id}, fichero={fichero_id}, feed={feed_id}, date={source_date})."
                 )
             except Exception as exc:
-                print(f"Warning: Failed to ingest NAP conjunto={conjunto_id} (fichero={fichero_id}): {exc}")
+                print(f"Warning: Failed to ingest NAP '{label}' (fichero={fichero_id}): {exc}")
 
     return stops_out
 
