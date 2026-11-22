@@ -96,6 +96,25 @@ APPROVED_NAP_FEEDS = [
     (602, 856, "emt-malaga", "EMT Málaga"),
 ]
 
+# Official open-data direct GTFS ZIP fallbacks when MITMS NAP /api/Fichero/download/{id} returns HTTP 500
+OFFICIAL_DIRECT_GTFS_FALLBACKS = [
+    (
+        "crtm-madrid",
+        "CRTM Madrid (Metro)",
+        "https://www.arcgis.com/sharing/rest/content/items/5c7f2951962540d69ffe8f640d94c246/data",
+    ),
+    (
+        "crtm-madrid",
+        "CRTM Madrid (Cercanías)",
+        "https://www.arcgis.com/sharing/rest/content/items/1a25440bf66f499bae2657ec7fb40144/data",
+    ),
+    (
+        "renfe-cercanias",
+        "Renfe Cercanías Nacional",
+        "https://ssl.renfe.com/ftransit/Fichero_CER_FOMENTO/fomento_transit.zip",
+    ),
+]
+
 GTFS_ROUTE_TYPE_MAP = {
     0: "tram",
     1: "metro",
@@ -741,6 +760,34 @@ def download_and_ingest_nap_feeds(con, catalog: list[dict], api_key: str) -> lis
                 )
             except Exception as exc:
                 print(f"Warning: Failed to ingest NAP '{label}' (fichero={fichero_id}): {exc}")
+
+        for feed_id, label, direct_url in OFFICIAL_DIRECT_GTFS_FALLBACKS:
+            # Skip direct fallback if this feed already yielded >= 50 stops from NAP
+            feed_count = sum(1 for row in stops_out if row[1] == feed_id)
+            if feed_count >= 50:
+                continue
+            zip_path = os.path.join(tmpdir, f"{feed_id}_direct_{abs(hash(direct_url)) % 100000}.zip")
+            try:
+                req = urllib.request.Request(
+                    direct_url,
+                    headers={"User-Agent": "OpenBarrio-ETL/1.5 (+https://github.com/alexagc/openbarrio)"},
+                )
+                with urllib.request.urlopen(req, timeout=120) as resp, open(zip_path, "wb") as out_fh:
+                    while True:
+                        chunk = resp.read(65536)
+                        if not chunk:
+                            break
+                        out_fh.write(chunk)
+                parsed = process_gtfs_archive(con, zip_path, feed_id, "2026-11-22")
+                added = 0
+                for row in parsed:
+                    if row[0] not in seen_ids:
+                        seen_ids.add(row[0])
+                        stops_out.append(row)
+                        added += 1
+                print(f"Ingested {added} GTFS stops from official open-data fallback '{label}' (feed={feed_id}).")
+            except Exception as exc:
+                print(f"Warning: Official fallback '{label}' failed: {exc}")
 
     return stops_out
 
