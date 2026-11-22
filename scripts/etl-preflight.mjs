@@ -81,13 +81,17 @@ async function probeNapListFingerprint(apiKey, timeoutMs = 15_000) {
 
 function resolveLatestSuccessfulRunId(fallback = DEFAULT_FALLBACK_RUN_ID) {
   try {
+    const repo = process.env.GITHUB_REPOSITORY || 'alexagc/openbarrio';
     const out = execSync(
-      'gh run list --workflow=data-pipeline.yml --status=success --branch=main --limit=1 --json databaseId',
+      `gh api "repos/${repo}/actions/artifacts?name=openbarrio-etl-dist&per_page=10"`,
       { encoding: 'utf-8', stdio: ['ignore', 'pipe', 'ignore'] },
     );
     const parsed = JSON.parse(out);
-    if (Array.isArray(parsed) && parsed[0]?.databaseId) {
-      return String(parsed[0].databaseId);
+    const valid = (parsed?.artifacts || [])
+      .filter((a) => !a.expired && a.workflow_run?.head_branch === 'main' && a.workflow_run?.id)
+      .sort((a, b) => Date.parse(b.created_at) - Date.parse(a.created_at));
+    if (valid[0]?.workflow_run?.id) {
+      return String(valid[0].workflow_run.id);
     }
   } catch {
     // Fallback when running locally or outside GitHub Actions
