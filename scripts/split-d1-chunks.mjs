@@ -37,12 +37,18 @@ export function splitSqlFile(srcPath, outputDir, prefix, maxStatements = MAX_STA
 
   const content = fs.readFileSync(srcPath, 'utf8');
 
-  // Split by statement terminator (semicolon at end of line) and filter out D1-incompatible transaction statements
+  // Split by statement terminator (semicolon at end of line), strip comment lines, and filter out D1-incompatible transaction statements
   const statements = content
     .split(/;\s*(?:\r?\n)+/)
-    .map((s) => s.trim())
+    .map((s) =>
+      s
+        .split(/\r?\n/)
+        .filter((line) => !line.trim().startsWith('--'))
+        .join('\n')
+        .trim()
+    )
     .filter((s) => {
-      if (s.length === 0 || s.startsWith('--')) return false;
+      if (s.length === 0) return false;
       const upper = s.toUpperCase().replace(/\s+/g, ' ');
       if (
         upper === 'BEGIN' ||
