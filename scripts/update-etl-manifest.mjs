@@ -33,7 +33,20 @@ const targetArtifacts = [
     key: 'energy_certificates',
     files: ['packages/etl/dist/energy_certificates.sql', 'packages/etl/dist/openbarrio-etl-dist/energy_certificates.sql'],
   },
+  {
+    key: 'broadband_coverage',
+    files: ['packages/etl/dist/broadband_coverage.sql'],
+  },
+  {
+    key: 'transit_stops',
+    files: ['packages/etl/dist/transit_stops.sql'],
+  },
 ];
+
+const preflightMetaPath = path.resolve('packages/etl/dist/preflight_meta.json');
+const preflightMeta = fs.existsSync(preflightMetaPath)
+  ? JSON.parse(fs.readFileSync(preflightMetaPath, 'utf-8'))
+  : {};
 
 for (const target of targetArtifacts) {
   const existingFile = target.files.map((f) => path.resolve(f)).find((f) => fs.existsSync(f));
@@ -41,6 +54,20 @@ for (const target of targetArtifacts) {
     const fileBuffer = fs.readFileSync(existingFile);
     const sha = crypto.createHash('sha256').update(fileBuffer).digest('hex');
     const dataset = manifest.datasets[target.key];
+    const meta = preflightMeta[target.key];
+
+    if (meta?.etag && dataset.etag !== meta.etag) {
+      dataset.etag = meta.etag;
+      modified = true;
+    }
+    if (meta?.lastModified && dataset.last_modified !== meta.lastModified) {
+      dataset.last_modified = meta.lastModified;
+      modified = true;
+    }
+    if (meta?.upstream_fingerprint && dataset.upstream_fingerprint !== meta.upstream_fingerprint) {
+      dataset.upstream_fingerprint = meta.upstream_fingerprint;
+      modified = true;
+    }
 
     if (dataset.sha256 !== sha || dataset.status !== 'UP_TO_DATE') {
       dataset.sha256 = sha;
