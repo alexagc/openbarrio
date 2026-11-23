@@ -25,18 +25,18 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@hono/node-server": "^2.1.8",
+    "@hono/node-server": "^2.1.9",
     "@hono/swagger-ui": "^0.6.2",
     "@openbarrio/core": "workspace:*",
     "@sinclair/typebox": "^0.34.52",
-    "hono": "^4.13.18"
+    "hono": "^4.13.19"
   },
   "devDependencies": {
     "@types/node": "^26.6.6",
-    "eslint": "^10.14.0",
+    "eslint": "^10.15.0",
     "tsx": "^4.23.15",
     "typescript": "^5.9.3",
-    "vitest": "^5.1.0",
-    "wrangler": "^4.162.0"
+    "vitest": "^5.1.1",
+    "wrangler": "^4.165.0"
   }
 }
